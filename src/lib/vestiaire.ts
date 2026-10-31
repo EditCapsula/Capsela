@@ -364,6 +364,7 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     worn: null,
     shoeType: cat === "chaussures" ? SHOE_TYPE_MAP[(row.sous_type || "").trim().toLowerCase()] : undefined,
     matiere: mapMatiere(row.matiere),
+    matiereBrute: row.matiere?.trim() || undefined,
     coupe: mapCoupe(row.coupe),
     sacType: cat === "sac" ? detectSacType(name) || undefined : undefined,
     bijouType: cat === "bijou" ? detectBijouType(name) || undefined : undefined,

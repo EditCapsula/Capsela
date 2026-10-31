@@ -217,7 +217,7 @@ export function raisonsSuggestion(it: Item, profile: Profile): RaisonSuggestion[
   }
 
   const forme = silhouetteForme(profile.morphology);
-  if (forme && pieceOrienteeParMorphologie(it, profile.morphology)) {
+  if (forme && pieceOrienteeParMorphologie(it, profile.morphology, profile.preferencesSilhouette?.miseEnValeur)) {
     raisons.push({ cle: "silhouette", texte: `Pensée aussi pour ta silhouette ${forme}` });
   }
 

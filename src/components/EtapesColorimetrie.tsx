@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import OptionRow from "@/components/OptionRow";
 import {
   colorimetrieUtilisable,
   estSaison,
@@ -10,7 +9,6 @@ import {
   SAISONS,
   SIGNATURE_AFFICHEE_MAX,
   type Colorimetrie,
-  type QuestionColorimetrie,
 } from "@/lib/colorimetrie";
 import { INTENSITE_VISUELS, paletteColorName, type Intensite } from "@/lib/profile";
 import Card from "@/components/Card";
@@ -55,7 +53,7 @@ function Pictogramme({ nom, taille = 20, className = "text-terracotta" }: { nom:
   );
 }
 
-/* ───────── 1. Présentation ───────── */
+/* ───────── 1. Les questions, en toutes lettres ───────── */
 
 /**
  * LES QUATRE QUESTIONS, dites en toutes lettres (13/10/2026, brief « Optimisation UX de l'écran d'introduction à la colorimétrie »). Le texte
@@ -64,77 +62,80 @@ function Pictogramme({ nom, taille = 20, className = "text-terracotta" }: { nom:
  */
 export const RESUME_DES_QUESTIONS = "le métal qui te va, le blanc près de ton visage, la couleur d'origine de tes cheveux et celle de tes yeux";
 
-/** « Comment ça marche ? » — trois étapes, toutes vraies dans le moteur (docs/colorimetrie.md) ; aucune palette n'est montrée avant les réponses. */
-function CommentCaMarche() {
-  const n = QUESTIONS_COLORIMETRIE.length;
-  const etapes: [string, string][] = [
-    [`Tu réponds à ${n} questions`, `Tu choisis ${RESUME_DES_QUESTIONS}.`],
-    ["Capsela analyse tes réponses", "Elles sont croisées pour identifier ta saison colorimétrique, lorsque le résultat est suffisamment net."],
-    ["Ta palette guide tes tenues", "Tes couleurs influencent en douceur les associations proposées, sans exclure les pièces qui te plaisent."],
-  ];
-  return (
-    <section className="mt-[26px] pt-[22px] border-t border-border" aria-labelledby="colo-comment">
-      <div id="colo-comment" className="t-surtitre text-muted">
-        Comment ça marche ?
-      </div>
-      <ol className="mt-[14px] flex flex-col gap-[14px]">
-        {etapes.map(([titre, texte], i) => (
-          <li key={titre} className="flex items-start gap-[12px]">
-            <span aria-hidden="true" className="w-[26px] h-[26px] rounded-full border border-terracotta text-terracotta text-[12px] flex items-center justify-center flex-shrink-0 mt-[1px]">
-              {i + 1}
-            </span>
-            <span className="min-w-0">
-              <span className="block t-titre-ligne text-ink">{titre}</span>
-              <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[2px]">{texte}</span>
-            </span>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
+/* ───────── 2 bis. Le formulaire sur un écran (31/10/2026, lot 3) ───────── */
 
-/** La réassurance, en trois repères — chacun vrai : quatre questions, aucune photo, un résultat tiré de ses réponses ; puis « Comment ça marche ? ». */
-export function IntroColorimetrie() {
-  const reperes: [Picto, string][] = [
-    ["horloge", "Environ 1 minute"],
-    ["sansPhoto", "Sans photo"],
-    ["etoile", "Résultat personnalisé"],
-  ];
-  return (
-    <>
-      <div className="mt-[26px] grid grid-cols-3 gap-[10px]">
-        {reperes.map(([p, texte]) => (
-          <Card rayon="tuile" className="px-[8px] py-[14px] flex flex-col items-center gap-[8px] text-center" key={texte}>
-            <Pictogramme nom={p} />
-            <span className="text-[12px] leading-[1.3] text-muted-3" style={{ textWrap: "balance" }}>
-              {texte}
-            </span>
-          </Card>
-        ))}
-      </div>
-      <CommentCaMarche />
-    </>
-  );
-}
-
-/* ───────── 2. Une question ───────── */
-
-export function QuestionColorimetrieCartes({
-  question,
-  choisie,
+/**
+ * LES QUATRE QUESTIONS SUR UN ÉCRAN. Cheveux et yeux d'abord (ce qu'on sait de soi), puis « Pour affiner » : bijoux et
+ * blanc, facultatifs mais utiles — sans eux, les profils châtains ou bruns aux yeux marron restent sans saison
+ * (docs/onboarding-evolution, § 1.6). Les visuels sont ceux du questionnaire d'avant, réutilisés tels quels.
+ *
+ * Chaque réponse est une tuile compacte (vignette + libellé) en grille de deux : vingt cartes pleine largeur auraient fait
+ * défiler trois écrans. Même marque de sélection que le reste de l'onboarding (bordure terracotta, fond teinté, coche).
+ */
+export function FormulaireColorimetrie({
+  principales,
+  pourAffiner,
+  reponses,
   onChoisir,
 }: {
-  question: QuestionColorimetrie;
-  choisie: number | null;
-  onChoisir: (indice: number) => void;
+  principales: number[];
+  pourAffiner: number[];
+  reponses: (number | null)[];
+  onChoisir: (question: number, indice: number) => void;
 }) {
+  const bloc = (i: number) => {
+    const q = QUESTIONS_COLORIMETRIE[i];
+    return (
+      <div key={q.id} className="mt-[24px]" role="group" aria-label={q.question}>
+        <div className="text-[14px] font-semibold text-ink leading-[1.35]">{q.question}</div>
+        <div className="grid grid-cols-2 gap-[8px] mt-[10px]">
+          {q.reponses.map((r, j) => {
+            const on = reponses[i] === j;
+            return (
+              <button
+                key={r.libelle}
+                onClick={() => onChoisir(i, j)}
+                aria-pressed={on}
+                className={
+                  "relative flex items-center gap-[10px] pl-[8px] pr-[26px] py-[8px] rounded-tuile text-left cursor-pointer border-[1.5px] transition-colors duration-150 " +
+                  (on ? "border-terracotta" : "border-border bg-card")
+                }
+                style={on ? { background: "var(--color-selected-bg)" } : undefined}
+              >
+                <span aria-hidden="true" className="w-[38px] h-[38px] rounded-champ overflow-hidden flex-shrink-0 bg-warm-bg">
+                  {r.visuel && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.visuel} alt="" width={38} height={38} decoding="async" className="w-full h-full object-cover block" />
+                  )}
+                </span>
+                <span className="text-[12.5px] leading-[1.3] text-ink" style={{ textWrap: "balance" }}>
+                  {r.libelle}
+                </span>
+                {on && (
+                  <span aria-hidden="true" className="absolute top-[7px] right-[7px] w-[16px] h-[16px] rounded-full bg-terracotta flex items-center justify-center">
+                    <svg width="8" height="7" viewBox="0 0 11 9" fill="none">
+                      <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
   return (
-    <div className="flex flex-col gap-[10px] mt-[22px]" role="group" aria-label={question.question}>
-      {question.reponses.map((r, i) => (
-        <OptionRow key={r.libelle} accent vignette={r.visuel} label={r.libelle} on={choisie === i} onClick={() => onChoisir(i)} />
-      ))}
-    </div>
+    <>
+      {principales.map(bloc)}
+      <div className="mt-[30px] pt-[18px] border-t border-border">
+        <div className="t-surtitre text-muted">Pour affiner</div>
+        <div className="text-[12px] text-muted mt-[6px] leading-[1.45]" style={{ textWrap: "pretty" }}>
+          Facultatif, mais ces deux réponses départagent souvent les palettes chaudes et froides.
+        </div>
+        {pourAffiner.map(bloc)}
+      </div>
+    </>
   );
 }
 

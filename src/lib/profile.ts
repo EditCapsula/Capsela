@@ -616,11 +616,12 @@ export function prochaineActionProfil(profile: Profile): ProchaineActionProfil |
       return { cle: "style", message: "Choisis ton style : il définit l'univers de tes recommandations.", cta: "Choisir mon style" };
     case "morphologie":
       return { cle: "morphologie", message: "Renseigne ta silhouette : elle peut orienter les coupes et proportions de ta capsule.", cta: "Compléter ma morphologie" };
-    // Aucun effet moteur pour l'instant (lot 4, après audit) : la phrase ne promet rien de plus que ce que le code fait.
+    // Lot 4 (31/10/2026) : les coupes orientent la sélection de la capsule ; la mise en valeur n'agit que contre une direction
+    // morphologique contraire — sa phrase ne promet donc rien de plus que l'enregistrement.
     case "mise_en_valeur":
       return { cle: "mise_en_valeur", message: "Dis-nous ce que tu aimes mettre en valeur : c'est noté dans ton profil.", cta: "Indiquer ce que j'aime mettre en valeur" };
     case "coupes":
-      return { cle: "coupes", message: "Indique les coupes dans lesquelles tu te sens le mieux : c'est noté dans ton profil.", cta: "Choisir mes coupes" };
+      return { cle: "coupes", message: "Indique les coupes dans lesquelles tu te sens le mieux : elles orientent le choix des pièces de ta capsule.", cta: "Choisir mes coupes" };
     case "palette":
       return { cle: "palette", message: "Choisis tes couleurs : elles orientent la capsule et tes tenues.", cta: "Choisir ma palette" };
     case "tailles":

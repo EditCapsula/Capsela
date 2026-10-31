@@ -2,6 +2,8 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import { fermetureMaille, formalityOf, intensiteOf, isStatement, suggestOccasions, tonsOf } from "./attributes";
 import { isSunny, necessiteLeSoleil, type Weather } from "./data";
 import { effetMorphologique } from "./garmentEffect";
+import { accordCoupe } from "./coupesPieces";
+import type { PreferencesSilhouette } from "./preferencesSilhouette";
 import {
   STYLE_ID_TO_CATALOG_LABEL,
   paletteHexes,
@@ -499,6 +501,23 @@ export type SelectionStrategy = {
    * sport du style, avec repli sur le sport commun. Même convention que les autres leviers : absent = production.
    */
   sportParStyle?: "commun" | "par_style" | "etiquette";
+  /**
+   * COUPES PRÉFÉRÉES DU PROFIL (31/10/2026, lot 4 du brief « Évolution de l'onboarding »). PRODUCTION : "apres_basique" (validé
+   * le 31/10/2026 après mesure, scripts/preferences-silhouette.audit.ts). Absent : le rang n'existe pas (comportement d'avant). Une pièce dont une coupe
+   * connue est préférée (coupesPieces.ts) gagne un rang dans la clé de sélection, placé selon la valeur :
+   *   "avant_basique"   : juste après la couverture d'occasions (la plus forte) ;
+   *   "apres_basique"   : après « basique de capsule », avant la morphologie (la préférence explicite passe avant le conseil) ;
+   *   "apres_direction" : simple départage, après la morphologie.
+   * Jamais avant la couverture d'occasions (contrainte réelle) ; le style a déjà filtré le pool. Une coupe inconnue, ou aucune
+   * préférence, vaut 0 pour tous : le rang ne départage rien.
+   */
+  coupesPreferees?: "avant_basique" | "apres_basique" | "apres_direction";
+  /**
+   * MISE EN VALEUR PRIME SUR LA DIRECTION MORPHOLOGIQUE (31/10/2026, lot 4). PRODUCTION : true (validé le 31/10/2026). Quand la
+   * personne veut mettre en valeur la zone que la direction de sa silhouette minimise (poire + « Mes hanches » ; triangle inversé
+   * + « Mes épaules »), cet axe de `valeurDirection` est neutralisé. L'autre axe reste.
+   */
+  miseEnValeurPrime?: boolean;
 };
 /**
  * Depuis le 29/08/2026, la production ne consulte plus `morphoFit` au rang 3.
@@ -513,7 +532,19 @@ export type SelectionStrategy = {
  * La stratégie reste paramétrable pour que la comparaison reste possible en
  * audit, mais aucun code applicatif ne renseigne ce paramètre.
  */
-export const STRATEGIE_PRODUCTION: SelectionStrategy = { rang3: "neutre", v2: "A", maillesFermeesEte: "exclues" };
+export const STRATEGIE_PRODUCTION: SelectionStrategy = {
+  rang3: "neutre",
+  v2: "A",
+  maillesFermeesEte: "exclues",
+  // Lot 4 (31/10/2026), validé par la propriétaire après mesure (docs/onboarding-evolution/audit-lot4-moteur.md) : la coupe
+  // préférée départage après « basique », avant la direction morphologique ; la mise en valeur neutralise l'axe qui la contredit.
+  // Sans préférence, rien ne change (garde-fou mesuré : 0 capsule différente).
+  coupesPreferees: "apres_basique",
+  miseEnValeurPrime: true,
+};
+
+/** La production juste avant le lot 4 (31/10/2026) — pour que l'audit mesure l'avant et l'après dans la même exécution. */
+export const STRATEGIE_AVANT_LOT4: SelectionStrategy = { rang3: "neutre", v2: "A", maillesFermeesEte: "exclues" };
 
 /** Comportement d'avant le 29/08/2026 — conservé pour les audits comparatifs. */
 export const STRATEGIE_LEGACY: SelectionStrategy = { rang3: "legacy", v2: false, maillesFermeesEte: "admises", sportParStyle: "commun" };
@@ -556,7 +587,15 @@ const SATURATION: Record<"A" | "B", (n: number) => number> = {
  * sélection défendable pour eux, et lui en inventer une contredirait le
  * principe « UNKNOWN plutôt que donnée fausse ».
  */
-function valeurDirection(it: Item, morphology: string | null, retenues: CatalogItem[], saturation: "A" | "B"): number {
+/** L'axe de direction que la mise en valeur déclarée neutralise, ou null (cf. SelectionStrategy.miseEnValeurPrime). */
+export function axeNeutraliseParMiseEnValeur(morphology: string | null, miseEnValeur: readonly string[] | null | undefined): "haut" | "bas" | null {
+  if (!miseEnValeur?.length) return null;
+  if (morphology === "f_poire" && miseEnValeur.includes("hanches")) return "bas";
+  if (morphology === "f_triangle_inverse" && miseEnValeur.includes("epaules")) return "haut";
+  return null;
+}
+
+function valeurDirection(it: Item, morphology: string | null, retenues: CatalogItem[], saturation: "A" | "B", neutralise: "haut" | "bas" | null = null): number {
   if (!morphology) return 0;
   const e = effetMorphologique(it);
   if (e.confiance === "inconnue") return 0;
@@ -564,7 +603,7 @@ function valeurDirection(it: Item, morphology: string | null, retenues: CatalogI
   const dejaLa = (axe: "haut" | "bas") =>
     retenues.filter((r) => axeDirection(r, morphology) === axe).length;
   const axe = axeDirection(it, morphology);
-  if (!axe) return 0;
+  if (!axe || axe === neutralise) return 0;
   const intensite = morphology === "f_poire"
     ? (CATS_HAUT.includes(it.cat) ? e.epaules : 3 - e.hanches)
     : (CATS_BAS.includes(it.cat) ? e.hanches : 3 - e.epaules);
@@ -601,8 +640,10 @@ export function morphologieOrienteLaSelection(morphology: string | null | undefi
  * La saturation ne s'annulant jamais (cf. SATURATION), un axe non nul vaut
  * toujours une valeur strictement positive.
  */
-export function pieceOrienteeParMorphologie(it: Item, morphology: string | null | undefined): boolean {
-  return axeDirection(it, morphology ?? null) !== null;
+export function pieceOrienteeParMorphologie(it: Item, morphology: string | null | undefined, miseEnValeur?: readonly string[] | null): boolean {
+  // L'axe neutralisé par la mise en valeur (production depuis le 31/10/2026) ne compte plus : la fiche ne l'annonce pas.
+  const axe = axeDirection(it, morphology ?? null);
+  return axe !== null && axe !== axeNeutraliseParMiseEnValeur(morphology ?? null, miseEnValeur);
 }
 
 /** Extrémité sur laquelle la pièce apporte une direction utile à cette morphologie, ou null. */
@@ -636,17 +677,25 @@ function pickBestMarginal(
   covered: Set<OccasionKey>,
   morphology: string | null,
   strategy: SelectionStrategy = STRATEGIE_PRODUCTION,
-  retenues: CatalogItem[] = []
+  retenues: CatalogItem[] = [],
+  prefs: PreferencesSilhouette | null = null
 ): CatalogItem | null {
+  const neutralise = strategy.miseEnValeurPrime ? axeNeutraliseParMiseEnValeur(morphology, prefs?.miseEnValeur) : null;
+  const coupe = (it: CatalogItem, place: SelectionStrategy["coupesPreferees"]) =>
+    strategy.coupesPreferees === place ? accordCoupe(it, prefs?.coupes) : 0;
   // Les deux rangs morphologiques sont TOUJOURS présents dans la clé. Sous la
   // stratégie de production, le rang 4 vaut 0 pour tout candidat : une valeur
   // constante ne peut jamais départager, donc la clé se comporte exactement
   // comme l'ancienne [occasions, basique, morphoFit, -id].
+  // Les rangs « coupe » valent 0 pour tous sans le levier (production) : constants, ils ne départagent rien.
   const scoreKey = (it: CatalogItem): number[] => [
     occasionsOf(it).filter((o) => !covered.has(o)).length,
+    coupe(it, "avant_basique"),
     it.estBasiqueCapsule ? 1 : 0,
+    coupe(it, "apres_basique"),
     strategy.rang3 === "legacy" && morphoFit(it, morphology) ? 1 : 0,
-    strategy.v2 ? valeurDirection(it, morphology, retenues, strategy.v2) : 0,
+    strategy.v2 ? valeurDirection(it, morphology, retenues, strategy.v2, neutralise) : 0,
+    coupe(it, "apres_direction"),
     -it.id,
   ];
   // Comparaison lexicographique : le premier critère qui diffère tranche
@@ -713,7 +762,8 @@ function selectGroup(
   visuelsUtilises: Set<string>,
   strategy: SelectionStrategy = STRATEGIE_PRODUCTION,
   /** Pièces déjà retenues dans les groupes précédents — le rang 4 lit la redondance sur la capsule entière, pas sur le seul groupe. */
-  dejaRetenues: CatalogItem[] = []
+  dejaRetenues: CatalogItem[] = [],
+  prefs: PreferencesSilhouette | null = null
 ): CatalogItem[] {
   const picked: CatalogItem[] = [];
   let remaining = quota;
@@ -732,13 +782,13 @@ function selectGroup(
 
   const statementCandidates = pool.filter((it) => isStatement(it) && disponible(it));
   if (statementCandidates.length && remaining > 0) {
-    const best = pickBestMarginal(statementCandidates, covered, morphology, strategy, [...dejaRetenues, ...picked]);
+    const best = pickBestMarginal(statementCandidates, covered, morphology, strategy, [...dejaRetenues, ...picked], prefs);
     if (best) retenir(best);
   }
 
   let candidates = pool.filter((it) => !picked.some((p) => p.id === it.id) && disponible(it));
   while (remaining > 0 && candidates.length) {
-    const best = pickBestMarginal(candidates, covered, morphology, strategy, [...dejaRetenues, ...picked]);
+    const best = pickBestMarginal(candidates, covered, morphology, strategy, [...dejaRetenues, ...picked], prefs);
     if (!best) break;
     retenir(best);
     candidates = candidates.filter((it) => it.id !== best.id && disponible(it));
@@ -891,7 +941,7 @@ export function computeDefaultCapsule(
   for (const group of CAPSULE_GROUPS) {
     const groupPool = nonSportPool.filter((it) => group.cats.includes(it.cat));
     poolByGroup.set(group.name, groupPool);
-    out = [...out, ...selectGroup(groupPool, group.quota, covered, profile.morphology, visuelsUtilises, strategy, out)];
+    out = [...out, ...selectGroup(groupPool, group.quota, covered, profile.morphology, visuelsUtilises, strategy, out, profile.preferencesSilhouette ?? null)];
   }
 
   // Redistribution du reliquat (correctif 26/08/2026, signalé sur l'audit
@@ -936,7 +986,7 @@ export function computeDefaultCapsule(
           return !sig || !visuelsUtilises.has(sig);
         });
         if (!candidates.length) continue;
-        const best = pickBestMarginal(candidates, covered, profile.morphology, strategy, out);
+        const best = pickBestMarginal(candidates, covered, profile.morphology, strategy, out, profile.preferencesSilhouette ?? null);
         if (!best) continue;
         out = [...out, best];
         chosenIds.add(best.id);
@@ -1084,7 +1134,7 @@ export function computeDefaultCapsule(
     if (tier) {
       const closest = Math.min(...tier.map(tempDistance));
       const pick = tier.filter((it) => tempDistance(it) === closest);
-      out = [...out, pickBestMarginal(pick, covered, profile.morphology, strategy, out) || pick[0]];
+      out = [...out, pickBestMarginal(pick, covered, profile.morphology, strategy, out, profile.preferencesSilhouette ?? null) || pick[0]];
     }
   }
 

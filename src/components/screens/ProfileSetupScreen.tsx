@@ -9,8 +9,7 @@ import BoutonRetour from "@/components/BoutonRetour";
 import {
   AnalyseColorimetrie,
   IndecisColorimetrie,
-  IntroColorimetrie,
-  QuestionColorimetrieCartes,
+  FormulaireColorimetrie,
   ResultatColorimetrie,
   SuiteColorimetrie,
 } from "@/components/EtapesColorimetrie";
@@ -20,25 +19,23 @@ import {
   COLORIMETRIE_VIDE,
   estSaison,
   paletteCapsela,
-  QUESTIONS_COLORIMETRIE,
   reponsesEnListe,
   reponsesParQuestion,
   SAISONS,
 } from "@/lib/colorimetrie";
 import {
-  NB_QUESTIONS,
+  QUESTIONS_POUR_AFFINER,
+  QUESTIONS_PRINCIPALES,
+  analyser,
   choisir,
-  commencer,
   conclure,
-  continuer,
-  derniereQuestion,
   parcoursInitial,
-  peutContinuer,
+  peutAnalyser,
   recommencer,
   retour as retourColorimetrie,
   type ParcoursColorimetrie,
 } from "@/lib/colorimetrieParcours";
-import FilEtapes, { ProgressionQuestions } from "@/components/FilEtapes";
+import FilEtapes from "@/components/FilEtapes";
 import OptionRow from "@/components/OptionRow";
 import {
   genderLabel,
@@ -99,10 +96,10 @@ const ALL_STEPS = [
   { key: "morpho", kicker: "Ta silhouette", title: "Quelle est ta silhouette ?", subtitle: "Elle nous aide à te proposer des coupes et des proportions qui te mettent en valeur." },
   /*
    * MISE EN VALEUR ET COUPES (31/10/2026, brief « Évolution de l'onboarding », preferencesSilhouette.ts). Ce que la personne AIME,
-   * à côté de ce que sa silhouette suggère. Le sous-titre du brief (« Capsela adapte ses recommandations à tes envies… ») attend
-   * le branchement moteur (lot 4, après audit) : tant que ces réponses ne changent aucune recommandation, l'écran ne le dit pas.
+   * à côté de ce que sa silhouette suggère. Sous-titre validé le 31/10/2026 avec le lot 4 : vrai dans le code (la mise en valeur
+   * passe avant la direction morphologique de la sélection ; sans direction, elle ne change rien, et la phrase ne promet pas plus).
    */
-  { key: "mise_en_valeur", kicker: "Ta silhouette", title: "Qu'aimes-tu particulièrement mettre en valeur ?", subtitle: "Plusieurs choix possibles, ou aucune préférence." },
+  { key: "mise_en_valeur", kicker: "Ta silhouette", title: "Qu'aimes-tu particulièrement mettre en valeur ?", subtitle: "Plusieurs choix possibles. Capsela en tient compte dans le choix des pièces de ta capsule, avant les repères de silhouette." },
   { key: "coupes", kicker: "Ta silhouette", title: "Dans quelles coupes te sens-tu le mieux ?", subtitle: "Plusieurs choix possibles." },
   /*
    * ORDRE DU PARCOURS (07/10/2026, brief « Optimisation de l'onboarding ») : style, silhouette, couleurs, colorimétrie,
@@ -137,7 +134,9 @@ const ALL_STEPS = [
    * plus bas) ; ces textes-ci sont ceux de la présentation. Le titre du
    * résultat est la saison trouvée.
    */
-  { key: "colorimetrie", kicker: "Quatre questions rapides", title: "Ta colorimétrie", subtitle: "Découvrons les couleurs qui mettent naturellement ton teint en valeur." },
+  // Un écran depuis le 31/10/2026 (lot 3). Titre et sous-titre du brief, au tutoiement de l'app ; le surtitre reprend deux repères de
+  // l'ancienne présentation, toujours vrais : rapide, et aucune photo.
+  { key: "colorimetrie", kicker: "Environ 1 minute · sans photo", title: "Ta colorimétrie", subtitle: "Quelques informations pour identifier les couleurs qui te mettent en valeur." },
   { key: "colorimetrie_resultat", kicker: "Ta palette", title: "Ta palette", subtitle: "" },
   // « Et maintenant ? » n'est plus une étape (31/10/2026, arbitrage 7) : ses trois bénéfices s'affichent sous « Ta palette ».
   { key: "pal_recap", kicker: "Ton profil", title: "Ton profil Capsela est prêt", subtitle: "Capsela combine tes goûts et ta colorimétrie pour des recommandations qui te ressemblent." },
@@ -356,9 +355,8 @@ export default function ProfileSetupScreen() {
       return setStep(indexRecap);
     }
     if (isLast) return finish();
-    // En arrivant sur la colorimétrie PAR L'AVANT, on commence par sa
-    // présentation — même si le questionnaire avait déjà été parcouru.
-    if (STEPS[step + 1]?.key === "colorimetrie") setColo((p) => ({ ...p, vue: "presentation", question: 0 }));
+    // En arrivant sur la colorimétrie PAR L'AVANT, on retrouve le formulaire (réponses déjà données gardées).
+    if (STEPS[step + 1]?.key === "colorimetrie") setColo((p) => ({ ...p, vue: "formulaire" }));
     setStep(sansPresentationDejaFaite(step + 1));
   };
   // EN MODIFICATION, LE RETOUR RAMÈNE À L'ÉCRAN D'APPEL (25/09/2026). Avant,
@@ -369,8 +367,7 @@ export default function ProfileSetupScreen() {
   // Mon compte.
   const entryIndex = Math.max(0, STEPS.findIndex((s) => s.key === entryStepKey));
   const back = () => {
-    // Dans le parcours colorimétrie, le retour remonte d'abord d'une question
-    // (le brief retire « Question précédente » : c'est ce bouton qui le fait).
+    // Dans le parcours colorimétrie, le retour ramène d'abord de « Pas de saison nette » au formulaire.
     if (STEPS[step]?.key === "colorimetrie") {
       const precedent = retourColorimetrie(colo);
       if (precedent) return setColo(precedent);
@@ -390,11 +387,10 @@ export default function ProfileSetupScreen() {
     else if (profile.completed) actions.goProfile();
   };
   const meta = STEPS[step];
-  const enQuestion = meta.key === "colorimetrie" && colo.vue === "question";
   const enAnalyse = meta.key === "colorimetrie" && colo.vue === "analyse";
   // Aucun retour pendant l'analyse : elle dure moins de deux secondes.
   const indexColorimetrie = STEPS.findIndex((s) => s.key === "colorimetrie");
-  const showBack = !enAnalyse && (step > 0 || state.profileSetupFromEdit || profile.completed || (meta.key === "colorimetrie" && colo.vue !== "presentation"));
+  const showBack = !enAnalyse && (step > 0 || state.profileSetupFromEdit || profile.completed || (meta.key === "colorimetrie" && colo.vue !== "formulaire"));
 
   /** Fin de l'analyse : le résultat (étape suivante), ou « Pas de saison nette » sur place. */
   const finAnalyse = () => {
@@ -416,9 +412,7 @@ export default function ProfileSetupScreen() {
   /** L'en-tête de chaque écran : celui de l'étape, sauf dans le parcours colorimétrie où il suit le sous-écran. */
   const saisonResultat = estSaison(draft.colorimetrie?.saison) ? SAISONS[draft.colorimetrie.saison] : null;
   const enTete: { kicker: string | null; title: string; subtitle: string | null } =
-    meta.key === "colorimetrie" && colo.vue === "question"
-      ? { kicker: "Ta colorimétrie", title: QUESTIONS_COLORIMETRIE[colo.question].question, subtitle: null }
-      : meta.key === "colorimetrie" && colo.vue === "analyse"
+    meta.key === "colorimetrie" && colo.vue === "analyse"
         ? { kicker: "Analyse en cours", title: "Capsela analyse tes réponses…", subtitle: null }
         : meta.key === "colorimetrie" && colo.vue === "indecis"
           ? {
@@ -578,12 +572,9 @@ export default function ProfileSetupScreen() {
           // tout l'écran remontait d'un cran entre la dernière question et l'analyse.
           <div className="w-[38px] h-[38px]" />
         )}
-        {/* UN SEUL LANGAGE DE PROGRESSION (brief colorimétrie) : pendant les
-            questions, « 1 / 4 » remplace le fil de l'onboarding ; pendant
-            l'analyse, aucun compteur. */}
-        {enQuestion ? (
-          <ProgressionQuestions courante={colo.question} total={NB_QUESTIONS} />
-        ) : enAnalyse ? (
+        {/* Pendant l'analyse, aucun compteur. Les questions de colorimétrie tiennent sur un écran depuis le 31/10/2026 : plus de
+            « 1 / 4 » à côté du fil de l'onboarding. */}
+        {enAnalyse ? (
           <div />
         ) : (
           <FilEtapes total={STEPS.length} courante={step} />
@@ -685,12 +676,12 @@ export default function ProfileSetupScreen() {
 
       {/* Le corps du parcours colorimétrie ; son bouton principal et son lien
           secondaire sont dans le pied d'écran (piedColorimetrie). */}
-      {meta.key === "colorimetrie" && colo.vue === "presentation" && <IntroColorimetrie />}
-      {meta.key === "colorimetrie" && colo.vue === "question" && (
-        <QuestionColorimetrieCartes
-          question={QUESTIONS_COLORIMETRIE[colo.question]}
-          choisie={colo.reponses[colo.question]}
-          onChoisir={(i) => setColo((p) => choisir(p, i))}
+      {meta.key === "colorimetrie" && colo.vue === "formulaire" && (
+        <FormulaireColorimetrie
+          principales={QUESTIONS_PRINCIPALES}
+          pourAffiner={QUESTIONS_POUR_AFFINER}
+          reponses={colo.reponses}
+          onChoisir={(q, i) => setColo((p) => choisir(p, q, i))}
         />
       )}
       {meta.key === "colorimetrie" && colo.vue === "analyse" && <AnalyseColorimetrie onFini={finAnalyse} />}
@@ -928,10 +919,9 @@ export default function ProfileSetupScreen() {
   const piedColorimetrie = (): Pied | undefined => {
     if (meta.key === "colorimetrie") {
       switch (colo.vue) {
-        case "presentation":
-          return { libelle: "Commencer l'analyse", onClick: () => setColo(commencer), actif: true, lien: { libelle: "Passer pour l'instant", onClick: passerColorimetrie } };
-        case "question":
-          return { libelle: derniereQuestion(colo) ? "Voir mon résultat" : "Continuer", onClick: () => setColo(continuer), actif: peutContinuer(colo) };
+        case "formulaire":
+          // Un seul bouton (brief, lot 3) : « Analyser ma palette », actif dès que cheveux et yeux ont une réponse.
+          return { libelle: "Analyser ma palette", onClick: () => setColo(analyser), actif: peutAnalyser(colo), lien: { libelle: "Passer pour l'instant", onClick: passerColorimetrie } };
         case "analyse":
           return null;
         case "indecis":
@@ -1007,7 +997,7 @@ export default function ProfileSetupScreen() {
     <div className="absolute inset-0 flex flex-col">
       <div className="relative flex-1 min-h-0 flex flex-col">
         {/* `key` : chaque étape (et chaque sous-écran de la colorimétrie) s'ouvre en haut, jamais au défilement de la précédente. */}
-        <div key={`${meta.key}-${colo.vue}-${colo.question}`} className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">
+        <div key={`${meta.key}-${colo.vue}`} className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">
           {pageBody}
         </div>
         {/* Le refus d'un troisième style : une bulle discrète au-dessus du bouton, quelques secondes (pas dans la page : sur deux lignes,

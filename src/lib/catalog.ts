@@ -9,6 +9,11 @@ import type { CategoryKey, Item, Season, ShoeType } from "./types";
 export interface CatalogItem extends Item {
   /** 'femme'/'homme' pour une pièce genrée (exclue de l'autre capsule), 'unisexe' pour une pièce commune aux deux. */
   genre: "femme" | "homme" | "unisexe";
+  /**
+   * La matière telle qu'écrite au catalogue (« Lin / viscose », « Crêpe structuré »…), à côté de `matiere`, ramenée à une liste fermée.
+   * Lue par coupesPieces.ts (31/10/2026) : « structuré » ou « épais » ne survivent pas à la liste fermée.
+   */
+  matiereBrute?: string;
 }
 
 // name, cat, colorName, hex

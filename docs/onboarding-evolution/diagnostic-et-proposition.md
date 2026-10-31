@@ -230,3 +230,10 @@ Les tests (phase 4) : les 13 cas du brief, rattachés aux lots ; plus le maintie
 ## Intensité des couleurs — arbitrage du 31/10/2026
 
 Les 4 options actuelles sont **conservées** (Douces et discrètes, Profondes et intenses, Lumineuses, Un mélange) : `intensiteConflict` (capsule.ts) les lit, et le catalogue est étiqueté sur ces registres. La maquette ChatGPT (3 options dont « naturelles et équilibrées ») n'est pas reprise. Seul le visuel change : une vignette d'étoffe par option, au format des questions de colorimétrie (OptionRow `accent`), à la place des pastilles. Visuels reçus et intégrés le 31/10/2026 (`public/onboarding/intensite/`, 288 px).
+
+## Lot 3 — colorimétrie sur un écran (31/10/2026)
+
+- Un seul écran, sans présentation ni question par écran : cheveux et yeux d'abord, puis « Pour affiner » (bijoux, blanc), facultatif. Bouton unique « Analyser ma palette », actif dès que cheveux et yeux ont une réponse ; « Passer pour l'instant » reste.
+- « Je ne sais pas » ajouté aux cheveux et aux yeux, neutre et EN DERNIER : les indices déjà enregistrés (0 à 3) gardent leur sens.
+- Règles de saison, visuels, contrôle `colorimetrieUtilisable`, effets visage et bijoux : inchangés. Analyse, « Pas de saison nette » et « Ta palette » (avec « Refaire le test ») inchangés.
+- Retirés car inutilisés : la présentation (`IntroColorimetrie`, « Comment ça marche ? ») et la carte d'une question (`QuestionColorimetrieCartes`).

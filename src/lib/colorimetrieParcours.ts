@@ -1,73 +1,71 @@
 import { QUESTIONS_COLORIMETRIE, saisonDuQuestionnaire, type SaisonCle } from "./colorimetrie";
 
 /*
- * LE PARCOURS COLORIMÉTRIE DE L'ONBOARDING (30/09/2026, brief « Refonte UX/UI
- * du parcours colorimétrie ») — la machine à états, pure et testée.
+ * LE PARCOURS COLORIMÉTRIE DE L'ONBOARDING — la machine à états, pure et testée.
  *
- *   présentation → question 1…4 → analyse → résultat (étape suivante)
- *                                         ↘ pas de saison nette
+ * DEPUIS LE 31/10/2026 (brief « Évolution de l'onboarding », lot 3) : UN SEUL ÉCRAN.
  *
- * Elle vit dans ProfileSetupScreen et non dans l'écran de l'étape : le bouton
- * RETOUR de l'en-tête doit remonter d'une question (le brief retire « Question
- * précédente » et « Revenir à la présentation »), et le bouton principal du
- * pied d'écran dit « Continuer » ou « Voir mon résultat ». Les deux sont
- * dessinés par l'onboarding ; ils ont besoin de l'état.
+ *   formulaire (cheveux, yeux ; « pour affiner » : bijoux, blanc) → analyse → résultat (étape suivante)
+ *                                                                          ↘ pas de saison nette
  *
- * Une réponse se CHOISIT, puis on continue : plus d'avance automatique au
- * toucher, qui ne laissait pas voir ce qu'on venait de choisir.
+ * Avant : présentation, puis une question par écran (30/09/2026). Les QUATRE questions sont gardées, leurs réponses et
+ * leurs poids aussi (arbitrage du 31/10/2026) : seule la mise en page change. Les règles de saison
+ * (saisonDuQuestionnaire) ne sont pas touchées.
+ *
+ * Cheveux et yeux demandent une réponse (« Je ne sais pas » en est une) ; bijoux et blanc sont facultatifs. Une
+ * question sans réponse ne compte pas (saisonDuQuestionnaire l'ignore) : elle ne pénalise rien.
+ *
+ * Elle vit dans ProfileSetupScreen et non dans l'écran de l'étape : le bouton RETOUR de l'en-tête et le bouton
+ * principal du pied d'écran sont dessinés par l'onboarding ; ils ont besoin de l'état.
  */
 
-export type VueColorimetrie = "presentation" | "question" | "analyse" | "indecis";
+export type VueColorimetrie = "formulaire" | "analyse" | "indecis";
 
 export interface ParcoursColorimetrie {
   vue: VueColorimetrie;
-  /** Index de la question affichée (vue "question"). */
-  question: number;
   /** Un indice de réponse par question, dans l'ordre de QUESTIONS_COLORIMETRIE. */
   reponses: (number | null)[];
 }
 
 export const NB_QUESTIONS = QUESTIONS_COLORIMETRIE.length;
 
+const indexDe = (id: string) => QUESTIONS_COLORIMETRIE.findIndex((q) => q.id === id);
+
+/** L'ordre d'affichage : ce qu'on connaît de soi d'abord, puis ce qui affine. Des indices de QUESTIONS_COLORIMETRIE. */
+export const QUESTIONS_PRINCIPALES = ["cheveux", "yeux"].map(indexDe);
+export const QUESTIONS_POUR_AFFINER = ["bijoux", "blanc"].map(indexDe);
+
 export function parcoursInitial(reponses: (number | null)[] = QUESTIONS_COLORIMETRIE.map(() => null)): ParcoursColorimetrie {
-  return { vue: "presentation", question: 0, reponses: [...reponses] };
+  return { vue: "formulaire", reponses: QUESTIONS_COLORIMETRIE.map((_, i) => reponses[i] ?? null) };
 }
 
-/** « Commencer » : première question, en gardant les réponses déjà données (reprise d'un questionnaire). */
-export function commencer(p: ParcoursColorimetrie): ParcoursColorimetrie {
-  return { ...p, vue: "question", question: 0 };
-}
-
-/** « Refaire le questionnaire » : tout recommence, réponses comprises. */
+/** « Refaire le test » / « Refaire le questionnaire » : tout recommence, réponses comprises. */
 export function recommencer(): ParcoursColorimetrie {
-  return { ...parcoursInitial(), vue: "question" };
+  return parcoursInitial();
 }
 
-export function choisir(p: ParcoursColorimetrie, indice: number): ParcoursColorimetrie {
-  if (p.vue !== "question" || !QUESTIONS_COLORIMETRIE[p.question]?.reponses[indice]) return p;
-  return { ...p, reponses: p.reponses.map((r, i) => (i === p.question ? indice : r)) };
+/** Une réponse par question ; toucher la réponse déjà choisie la retire (une question facultative peut rester vide). */
+export function choisir(p: ParcoursColorimetrie, question: number, indice: number): ParcoursColorimetrie {
+  if (p.vue !== "formulaire" || !QUESTIONS_COLORIMETRIE[question]?.reponses[indice]) return p;
+  const valeur = p.reponses[question] === indice ? null : indice;
+  return { ...p, reponses: p.reponses.map((r, i) => (i === question ? valeur : r)) };
 }
 
-export const peutContinuer = (p: ParcoursColorimetrie) => p.vue === "question" && p.reponses[p.question] != null;
-export const derniereQuestion = (p: ParcoursColorimetrie) => p.question >= NB_QUESTIONS - 1;
+export const peutAnalyser = (p: ParcoursColorimetrie) => p.vue === "formulaire" && QUESTIONS_PRINCIPALES.every((i) => p.reponses[i] != null);
 
-/** « Continuer » / « Voir mon résultat ». Sans réponse à la question affichée, rien ne bouge. */
-export function continuer(p: ParcoursColorimetrie): ParcoursColorimetrie {
-  if (!peutContinuer(p)) return p;
-  return derniereQuestion(p) ? { ...p, vue: "analyse" } : { ...p, question: p.question + 1 };
+/** « Analyser ma palette ». Sans cheveux ni yeux, rien ne bouge. */
+export function analyser(p: ParcoursColorimetrie): ParcoursColorimetrie {
+  return peutAnalyser(p) ? { ...p, vue: "analyse" } : p;
 }
 
 /**
- * Le bouton retour de l'en-tête. Rend l'état précédent DANS l'étape, ou null
- * quand il faut quitter l'étape (depuis la présentation). Pendant l'analyse,
- * aucun retour : l'écran dure moins de deux secondes et ne montre pas le bouton.
+ * Le bouton retour de l'en-tête. Rend l'état précédent DANS l'étape, ou null quand il faut quitter l'étape (depuis le
+ * formulaire). Pendant l'analyse, aucun retour : l'écran dure moins de deux secondes et ne montre pas le bouton.
  */
 export function retour(p: ParcoursColorimetrie): ParcoursColorimetrie | null {
   switch (p.vue) {
-    case "question":
-      return p.question > 0 ? { ...p, question: p.question - 1 } : { ...p, vue: "presentation" };
     case "indecis":
-      return { ...p, vue: "question", question: NB_QUESTIONS - 1 };
+      return { ...p, vue: "formulaire" };
     case "analyse":
       return p;
     default:
@@ -76,13 +74,10 @@ export function retour(p: ParcoursColorimetrie): ParcoursColorimetrie | null {
 }
 
 /**
- * Fin de l'analyse. Une saison : l'onboarding passe au résultat, et l'étape
- * se replace sur la dernière question — un retour depuis le résultat y
- * ramène, réponses intactes. Pas de saison : « Pas de saison nette ».
+ * Fin de l'analyse. Une saison : l'onboarding passe au résultat, et l'étape revient au formulaire, réponses intactes
+ * (un retour depuis le résultat y ramène). Pas de saison : « Pas de saison nette ».
  */
 export function conclure(p: ParcoursColorimetrie): { parcours: ParcoursColorimetrie; saison: SaisonCle | null } {
   const saison = saisonDuQuestionnaire(p.reponses);
-  return saison
-    ? { parcours: { ...p, vue: "question", question: NB_QUESTIONS - 1 }, saison }
-    : { parcours: { ...p, vue: "indecis" }, saison: null };
+  return saison ? { parcours: { ...p, vue: "formulaire" }, saison } : { parcours: { ...p, vue: "indecis" }, saison: null };
 }
