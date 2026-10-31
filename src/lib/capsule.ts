@@ -297,6 +297,25 @@ const STYLE_FIT: Record<string, RegExp> = {
   "Créatif": /graphique|illustr|imprimé|arty|artistique|abstrait|color-block|colorblock|patchwork|empiècement|asymétri|sculptur|jacquard|bicolore|contrast/,
 };
 
+/** Familles du bloc Sport pour l'option « par_style » (SelectionStrategy.sportParStyle). */
+const FAMILLES_SPORT: CategoryKey[][] = [["haut", "pull"], ["pantalon", "jean", "jupe", "short"], ["chaussures"]];
+
+/**
+ * Le bloc Sport « par style » : dans chaque famille, les pièces du style du profil (et les essentiels fonctionnels, gourde et sac de
+ * sport) ; à défaut, tout le sport de la famille. Jamais appelé en production (levier d'audit, cf. SelectionStrategy.sportParStyle).
+ */
+function sportDuStyle(sportPool: CatalogItem[], styles: string[], essentiel: (it: Item) => boolean): CatalogItem[] {
+  const duStyle = (it: CatalogItem) => essentiel(it) || styles.some((st) => styleFit(it, st));
+  const familleDe = (it: CatalogItem) => FAMILLES_SPORT.findIndex((f) => f.includes(it.cat));
+  const out: CatalogItem[] = [];
+  for (let f = -1; f < FAMILLES_SPORT.length; f++) {
+    const famille = sportPool.filter((it) => familleDe(it) === f);
+    const retenues = famille.filter(duStyle);
+    out.push(...(retenues.length ? retenues : famille));
+  }
+  return out;
+}
+
 export function styleFit(it: Item, style: string): boolean {
   if (it.styleTags) return it.styleTags.includes(style);
   const rx = STYLE_FIT[style];
@@ -469,6 +488,15 @@ export type SelectionStrategy = {
    * copie plutôt que le moteur.
    */
   tempRepresentative?: Partial<Record<CapsuleSeason, number>>;
+  /**
+   * Bloc Sport de la capsule. "commun" est la production (arbitrage du 24/08/2026) : toutes les pièces de sport du pool, quel que soit
+   * le style. "par_style" (option C, mesurée le 31/10/2026, docs/capsules/creatif/) : famille par famille (hauts, bas, chaussures,
+   * autres), les pièces de sport du style du profil ; une famille où le style n'en a aucune reprend le sport commun de cette famille,
+   * pour qu'une tenue Sport reste toujours possible. "etiquette" (option C2, même jour) : une pièce de sport n'entre que si elle porte
+   * le style du profil (gourde et sac de sport toujours) — sans repli, le sport commun devant alors porter tous les styles. Même
+   * convention que les autres leviers : absent = production.
+   */
+  sportParStyle?: "commun" | "par_style" | "etiquette";
 };
 /**
  * Depuis le 29/08/2026, la production ne consulte plus `morphoFit` au rang 3.
@@ -1064,7 +1092,13 @@ export function computeDefaultCapsule(
   // le total global de la capsule, mais toujours présentes, jamais
   // soumises au tri qualitatif ci-dessus (même logique que la garantie
   // chaussures d'intérieur juste au-dessus pour le Cocooning).
-  out = [...out, ...sportPool];
+  const sportRetenu =
+    !styles.length || !strategy.sportParStyle || strategy.sportParStyle === "commun"
+      ? sportPool
+      : strategy.sportParStyle === "par_style"
+        ? sportDuStyle(sportPool, styles, isSportEssential)
+        : sportPool.filter((it) => isSportEssential(it) || styles.some((st) => styleFit(it, st)));
+  out = [...out, ...sportRetenu];
 
   // Application du budget (étape 5). Le plafond n'est PAS une troncature des
   // dernières pièces sélectionnées : celles-ci ne sont pas les moins

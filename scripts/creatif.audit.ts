@@ -1,6 +1,7 @@
 import { describe, it } from "vitest";
 import { readFileSync } from "fs";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
+import { enLigne, lireCsv } from "./catalogueCsv";
 import { computeDefaultCapsule, representativeWeatherFor } from "../src/lib/capsule";
 import { generateOutfitWithFallback } from "../src/lib/logic";
 import { formalityOf } from "../src/lib/attributes";
@@ -28,55 +29,6 @@ const OCCASIONS: OccasionKey[] = ["quotidien", "travail_formel", "date", "soiree
 const TIRAGES = 20;
 /** 01-etiqueter-existants.sql, blocs 1.a et 1.b (le bloc 1.c, unisexes, reste commenté : décision en attente). */
 const ETIQUETES = [504, 505, 506, 512, 521, 565, 574, 577, 609, 675, 709, 710, 750, 752, 807, 813, 817, 836, 846, 851, 852, 901, 905, 910, 911, 957, 973, 1063, 481, 520, 971, 972];
-
-/** Lecteur CSV RFC 4180 (champs entre guillemets, guillemets doublés, retours à la ligne dans un champ). */
-function lireCsv(texte: string): Record<string, string>[] {
-  const lignes: string[][] = [];
-  let champ = "";
-  let ligne: string[] = [];
-  let entre = false;
-  for (let i = 0; i < texte.length; i++) {
-    const c = texte[i];
-    if (entre) {
-      if (c === '"' && texte[i + 1] === '"') {
-        champ += '"';
-        i++;
-      } else if (c === '"') entre = false;
-      else champ += c;
-    } else if (c === '"') entre = true;
-    else if (c === ",") {
-      ligne.push(champ);
-      champ = "";
-    } else if (c === "\n" || c === "\r") {
-      if (c === "\r" && texte[i + 1] === "\n") i++;
-      ligne.push(champ);
-      lignes.push(ligne);
-      ligne = [];
-      champ = "";
-    } else champ += c;
-  }
-  if (champ || ligne.length) lignes.push([...ligne, champ]);
-  const [entete, ...corps] = lignes;
-  const cles = entete.map((h) => h.replace(/^﻿/, ""));
-  return corps.filter((l) => l.length === cles.length).map((l) => Object.fromEntries(cles.map((k, j) => [k, l[j]])));
-}
-
-function enLigne(r: Record<string, string>): VestiaireRow {
-  const bool = (v: string) => (v === "true" ? true : v === "false" ? false : null);
-  const num = (v: string) => (v === "" ? null : Number(v));
-  const txt = (v: string | undefined) => (v === undefined || v === "" ? null : v);
-  return {
-    ...(Object.fromEntries(Object.entries(r).map(([k, v]) => [k, txt(v)])) as unknown as VestiaireRow),
-    id: Number(r.id),
-    meteo_min_temp: num(r.meteo_min_temp),
-    meteo_max_temp: num(r.meteo_max_temp),
-    resiste_pluie: bool(r.resiste_pluie),
-    est_basique_capsule: bool(r.est_basique_capsule),
-    statement: bool(r.statement),
-    necessite_soleil: bool(r.necessite_soleil),
-    frozen: bool(r.frozen),
-  } as VestiaireRow;
-}
 
 const versPool = (rows: VestiaireRow[]) => rows.map(rowToCatalogItem).filter((x): x is CatalogItem => x !== null);
 // Le harnais d'audit (scripts/harnaisAudit.ts) : un style vide est refusé, l'absence de style se demande par `null`.

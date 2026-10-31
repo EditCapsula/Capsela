@@ -170,3 +170,29 @@ catalogue de production s'il a changé depuis l'export.
 `02-creer-pieces.sql` (bloc 2.0, recalage du compteur d'identifiants à 1090, et bloc 2.a). Contrôle : 201 pièces créées
 (`styles = 'Créatif'`), 32 étiquetées (`styles like '%, Créatif'`). Restent en commentaire, non appliqués : 1.c (4 unisexes) et 2.b
 (17 pièces de sport). Ne pas relancer 02 : il recréerait les 201 pièces en double.
+
+## 9. Le sport — option C mesurée le 31/10/2026 (rien n'est changé en production)
+
+Contexte : le bloc Sport d'une capsule prend tout le sport du pool, quel que soit le style (capsule.ts, arbitrage du 24/08/2026). Les
+17 pièces de sport Créatif (bloc 2.b) n'ont donc pas été créées. Levier d'audit ajouté, inactif en production :
+`SelectionStrategy.sportParStyle` (`capsule.ts`). Mesure : `scripts/creatif-sport.audit.ts`, une exécution, même catalogue de base
+(export + SQL 01 et 02.a), 9 styles femme et 7 homme × 4 saisons, 20 tirages Sport par capsule.
+
+| Scénario | Capsules des AUTRES styles modifiées (femme / homme) | Tenues Sport complètes | Pièces de sport propres au Créatif dans ses tenues Sport (femme / homme) |
+|---|---|---|---|
+| S0 — production actuelle | 0 / 0 | 100 % | 0 % / 0 % |
+| S1 — + les 17 pièces, règle actuelle | 32 / 24 (hors sport aussi) | 100 % | 32 % / 25 % |
+| S2 — règle C « par famille », sans les 17 | 22 / 16 | 100 % | 0 % / 0 % |
+| S3 — règle C « par famille », avec les 17 | 28 / 20 | **homme Créatif printemps : 0 %** | 50 % / 41 % |
+| S4 — C2, sans les 17 | 0 / 0 | 100 % | 0 % / 0 % |
+| S5 — C2, avec les 17 | **0 / 0** | **100 %, tous styles, toutes saisons** | **30 % / 20 %** |
+
+C2 = la règle « etiquette » (une pièce de sport n'entre dans une capsule que si elle porte le style du profil ; gourde et sac de sport
+toujours) ET le sport commun actuel étiqueté avec tous les styles (#491 brassière, #493/#522 sweat, #494/#523 legging, #495/#524
+jogging ; #521, #971, #972 les portent déjà).
+
+**DÉMONTRÉ** (sur cet export) : la règle C « par famille » modifie le bloc sport des autres styles (le sport commun actuel n'est pas
+étiqueté pour tous) et casse le Sport Créatif homme au printemps (seul bas Créatif : un short, refusé au printemps). C2 n'a ni l'un ni
+l'autre défaut : avec les 17 pièces, seules les 4 capsules Créatif de chaque genre changent. **ARBITRAGE ÉDITORIAL** requis : C2 revient
+sur la règle du 24/08/2026 (« le sport n'est pas filtré par style ») et impose qu'une future pièce de sport commune porte tous les styles.
+Ordre de mise en production, si validé : 1) étiqueter le sport commun, 2) créer les 17 pièces, 3) passer la production sur « etiquette ».
