@@ -269,8 +269,7 @@ export default function ProfileScreen() {
             onClick={() => ouvrirChamp("morphologie")}
           />
         )}
-        {/* MISE EN VALEUR ET COUPES (31/10/2026). Aucun effet sur les recommandations tant que le branchement moteur (lot 4) n'est pas
-            audité : l'explication décrit, elle ne promet rien. */}
+        {/* MISE EN VALEUR ET COUPES (31/10/2026). Branchées sur la sélection de la capsule (lot 4, validé le 31/10/2026). */}
         {champs.some((c) => c.cle === "mise_en_valeur") && (
           <LigneProfil
             icone={I_SILHOUETTE}
@@ -286,7 +285,7 @@ export default function ProfileScreen() {
           titre="Coupes préférées"
           valeur={libelleCoupes(profile.preferencesSilhouette.coupes) ?? "Non renseignées"}
           renseigne={renseigne("coupes")}
-          explication="Les coupes dans lesquelles tu te sens le mieux."
+          explication="Oriente le choix des pièces de ta capsule."
           onClick={() => ouvrirChamp("coupes")}
         />
         <LigneProfil

@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import { readFileSync } from "fs";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
-import { computeDefaultCapsule, occasionsOf, pieceOrienteeParMorphologie, representativeWeatherFor, STRATEGIE_PRODUCTION, type SelectionStrategy } from "../src/lib/capsule";
+import { computeDefaultCapsule, occasionsOf, pieceOrienteeParMorphologie, representativeWeatherFor, STRATEGIE_AVANT_LOT4, type SelectionStrategy } from "../src/lib/capsule";
 import { generateOutfitWithFallback } from "../src/lib/logic";
 import { coupesDeLaPiece } from "../src/lib/coupesPieces";
 import type { CatalogItem } from "../src/lib/catalog";
@@ -15,7 +15,7 @@ import { enLigne, lireCsv } from "./catalogueCsv";
 //
 // Règle d'audit (AGENTS.md) : configuration gelée, MÊME exécution, MÊME pool, un levier à la fois puis la combinaison.
 //   Pool    = la production au 31/10/2026 : export CSV + SQL 01, 02, 04 (sport commun étiqueté tous styles) et 05 simulés.
-//   Fixes   = STRATEGIE_PRODUCTION (sport « etiquette », morphologie rang 4 « A »), météo représentative de chaque saison.
+//   Fixes   = STRATEGIE_AVANT_LOT4 (la production d'avant le lot 4 ; la production actuelle = apres_basique + prime) (sport « etiquette », morphologie rang 4 « A »), météo représentative de chaque saison.
 //   Leviers = coupesPreferees (absent | avant_basique | apres_basique | apres_direction) ; miseEnValeurPrime (absent | true).
 // Mesures : capsules modifiées ; part des vêtements de la capsule ayant une coupe préférée ; pièces « basiques » perdues ;
 // occasions couvertes ; tenues complètes (8 occasions × 5 tirages) ; direction morphologique (poire, triangle inversé).
@@ -91,10 +91,10 @@ describe("Lot 4 — préférences de silhouette dans la sélection", () => {
     for (const g of ["femme", "homme"] as const)
       for (const st of exposedStyleIds(g))
         for (const s of SAISONS) {
-          const ref = empreinte(mesurer(pool, g, st, s, { miseEnValeur: null, coupes: null }, STRATEGIE_PRODUCTION).capsule);
+          const ref = empreinte(mesurer(pool, g, st, s, { miseEnValeur: null, coupes: null }, STRATEGIE_AVANT_LOT4).capsule);
           for (const pl of PLACEMENTS)
             for (const prefs of [{ miseEnValeur: null, coupes: null }, { miseEnValeur: [], coupes: [] }] as PreferencesSilhouette[])
-              if (empreinte(mesurer(pool, g, st, s, prefs, { ...STRATEGIE_PRODUCTION, coupesPreferees: pl, miseEnValeurPrime: true }).capsule) !== ref) ecarts++;
+              if (empreinte(mesurer(pool, g, st, s, prefs, { ...STRATEGIE_AVANT_LOT4, coupesPreferees: pl, miseEnValeurPrime: true }).capsule) !== ref) ecarts++;
         }
     console.log(`Garde-fou — sans préférence ou « Cela dépend », capsules différentes de la production avec les leviers : ${ecarts}`);
 
@@ -105,11 +105,11 @@ describe("Lot 4 — préférences de silhouette dans la sélection", () => {
         const prefs: PreferencesSilhouette = { miseEnValeur: null, coupes: [coupe as CoupePreferee] };
         const lignes: string[] = [];
         const base: Mesure[] = [];
-        for (const st of exposedStyleIds(g)) for (const s of SAISONS) base.push(mesurer(pool, g, st, s, prefs, STRATEGIE_PRODUCTION, null, true));
+        for (const st of exposedStyleIds(g)) for (const s of SAISONS) base.push(mesurer(pool, g, st, s, prefs, STRATEGIE_AVANT_LOT4, null, true));
         lignes.push(`   production        part ${moy(base.map((m) => m.partCoupe)).toFixed(1)} % · basiques ${moy(base.map((m) => m.basiques)).toFixed(1)} · occasions ${moy(base.map((m) => m.occasions)).toFixed(2)} · tenues complètes ${pct(base.reduce((a, m) => a + m.completes, 0), base.length * OCCASIONS.length * TIRAGES)} %`);
         for (const pl of PLACEMENTS) {
           const ms: Mesure[] = [];
-          for (const st of exposedStyleIds(g)) for (const s of SAISONS) ms.push(mesurer(pool, g, st, s, prefs, { ...STRATEGIE_PRODUCTION, coupesPreferees: pl }, null, true));
+          for (const st of exposedStyleIds(g)) for (const s of SAISONS) ms.push(mesurer(pool, g, st, s, prefs, { ...STRATEGIE_AVANT_LOT4, coupesPreferees: pl }, null, true));
           const changees = ms.filter((m, i) => empreinte(m.capsule) !== empreinte(base[i].capsule)).length;
           const pireOcc = Math.min(...ms.map((m, i) => m.occasions - base[i].occasions));
           lignes.push(
@@ -129,8 +129,8 @@ describe("Lot 4 — préférences de silhouette dans la sélection", () => {
       let tenuesLevier = 0;
       for (const st of exposedStyleIds("femme"))
         for (const s of SAISONS) {
-          const a = mesurer(pool, "femme", st, s, prefs, STRATEGIE_PRODUCTION, morpho, true);
-          const b = mesurer(pool, "femme", st, s, prefs, { ...STRATEGIE_PRODUCTION, miseEnValeurPrime: true }, morpho, true);
+          const a = mesurer(pool, "femme", st, s, prefs, STRATEGIE_AVANT_LOT4, morpho, true);
+          const b = mesurer(pool, "femme", st, s, prefs, { ...STRATEGIE_AVANT_LOT4, miseEnValeurPrime: true }, morpho, true);
           res.base.push(a.capsule);
           res.levier.push(b.capsule);
           tenuesBase += a.completes;
@@ -148,14 +148,14 @@ describe("Lot 4 — préférences de silhouette dans la sélection", () => {
     console.log(`\n══ COMBINAISON — femme poire, « Mes hanches », coupes fluides ══`);
     const prefs: PreferencesSilhouette = { miseEnValeur: ["hanches"], coupes: ["fluides"] };
     const ref: Mesure[] = [];
-    for (const st of exposedStyleIds("femme")) for (const s of SAISONS) ref.push(mesurer(pool, "femme", st, s, prefs, STRATEGIE_PRODUCTION, "f_poire"));
+    for (const st of exposedStyleIds("femme")) for (const s of SAISONS) ref.push(mesurer(pool, "femme", st, s, prefs, STRATEGIE_AVANT_LOT4, "f_poire"));
     for (const pl of PLACEMENTS) {
       const seul: Mesure[] = [];
       const combo: Mesure[] = [];
       for (const st of exposedStyleIds("femme"))
         for (const s of SAISONS) {
-          seul.push(mesurer(pool, "femme", st, s, prefs, { ...STRATEGIE_PRODUCTION, coupesPreferees: pl }, "f_poire"));
-          combo.push(mesurer(pool, "femme", st, s, prefs, { ...STRATEGIE_PRODUCTION, coupesPreferees: pl, miseEnValeurPrime: true }, "f_poire"));
+          seul.push(mesurer(pool, "femme", st, s, prefs, { ...STRATEGIE_AVANT_LOT4, coupesPreferees: pl }, "f_poire"));
+          combo.push(mesurer(pool, "femme", st, s, prefs, { ...STRATEGIE_AVANT_LOT4, coupesPreferees: pl, miseEnValeurPrime: true }, "f_poire"));
         }
       console.log(
         `  ${pl.padEnd(17)} part fluide : production ${moy(ref.map((m) => m.partCoupe)).toFixed(1)} % · coupe seule ${moy(seul.map((m) => m.partCoupe)).toFixed(1)} % · coupe + mise en valeur ${moy(combo.map((m) => m.partCoupe)).toFixed(1)} %`

@@ -39,3 +39,19 @@ describe("mise en valeur et direction morphologique", () => {
     expect(axeNeutraliseParMiseEnValeur("f_poire", [])).toBeNull();
   });
 });
+
+describe("production du lot 4 (31/10/2026)", () => {
+  it("sans préférence, la capsule de production est celle d'avant le lot 4 ; avec une coupe préférée, elle peut changer", async () => {
+    const { computeDefaultCapsule, representativeWeatherFor, STRATEGIE_AVANT_LOT4, STRATEGIE_PRODUCTION } = await import("../capsule");
+    const { EMPTY_PROFILE } = await import("../profile");
+    expect(STRATEGIE_PRODUCTION).toMatchObject({ coupesPreferees: "apres_basique", miseEnValeurPrime: true });
+    const w = representativeWeatherFor("Printemps");
+    const ids = (c: { id: number }[]) => c.map((x) => x.id).sort((a, b) => a - b).join();
+    for (const styles of [["minimaliste"], ["boheme"], ["casual_chic"]]) {
+      const p = { ...EMPTY_PROFILE, gender: "femme" as const, styles };
+      expect(ids(computeDefaultCapsule(p, w, [], "Printemps", undefined, STRATEGIE_PRODUCTION))).toBe(ids(computeDefaultCapsule(p, w, [], "Printemps", undefined, STRATEGIE_AVANT_LOT4)));
+      const neutre = { ...p, preferencesSilhouette: { miseEnValeur: [], coupes: [] } };
+      expect(ids(computeDefaultCapsule(neutre, w, [], "Printemps"))).toBe(ids(computeDefaultCapsule(p, w, [], "Printemps", undefined, STRATEGIE_AVANT_LOT4)));
+    }
+  });
+});

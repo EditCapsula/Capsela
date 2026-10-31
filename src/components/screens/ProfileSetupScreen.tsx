@@ -96,10 +96,10 @@ const ALL_STEPS = [
   { key: "morpho", kicker: "Ta silhouette", title: "Quelle est ta silhouette ?", subtitle: "Elle nous aide à te proposer des coupes et des proportions qui te mettent en valeur." },
   /*
    * MISE EN VALEUR ET COUPES (31/10/2026, brief « Évolution de l'onboarding », preferencesSilhouette.ts). Ce que la personne AIME,
-   * à côté de ce que sa silhouette suggère. Le sous-titre du brief (« Capsela adapte ses recommandations à tes envies… ») attend
-   * le branchement moteur (lot 4, après audit) : tant que ces réponses ne changent aucune recommandation, l'écran ne le dit pas.
+   * à côté de ce que sa silhouette suggère. Sous-titre validé le 31/10/2026 avec le lot 4 : vrai dans le code (la mise en valeur
+   * passe avant la direction morphologique de la sélection ; sans direction, elle ne change rien, et la phrase ne promet pas plus).
    */
-  { key: "mise_en_valeur", kicker: "Ta silhouette", title: "Qu'aimes-tu particulièrement mettre en valeur ?", subtitle: "Plusieurs choix possibles, ou aucune préférence." },
+  { key: "mise_en_valeur", kicker: "Ta silhouette", title: "Qu'aimes-tu particulièrement mettre en valeur ?", subtitle: "Plusieurs choix possibles. Capsela en tient compte dans le choix des pièces de ta capsule, avant les repères de silhouette." },
   { key: "coupes", kicker: "Ta silhouette", title: "Dans quelles coupes te sens-tu le mieux ?", subtitle: "Plusieurs choix possibles." },
   /*
    * ORDRE DU PARCOURS (07/10/2026, brief « Optimisation de l'onboarding ») : style, silhouette, couleurs, colorimétrie,

@@ -1,8 +1,8 @@
 # Lot 4 — préférences de silhouette dans le moteur : audit et proposition de pondération
 
-31/10/2026. **Rien n'est appliqué en production** : les deux leviers existent (`SelectionStrategy.coupesPreferees`,
-`SelectionStrategy.miseEnValeurPrime`, capsule.ts) mais `STRATEGIE_PRODUCTION` ne les renseigne pas. Script :
-`scripts/preferences-silhouette.audit.ts`.
+31/10/2026. **Appliqué en production le 31/10/2026, après validation de la propriétaire** (points 1 à 4 ci-dessous) :
+`STRATEGIE_PRODUCTION` porte `coupesPreferees: "apres_basique"` et `miseEnValeurPrime: true` ; la production d'avant est
+`STRATEGIE_AVANT_LOT4`, référence de l'audit (`scripts/preferences-silhouette.audit.ts`, résultats identiques après le passage).
 
 ## Configuration gelée (AGENTS.md, points 1 à 3)
 
@@ -59,7 +59,7 @@ silhouette 7,1 → 6,5. Triangle inversé + « Mes épaules » : 24/36, 7,0 → 
 **Combinaison** (poire, « Mes hanches », coupes fluides) : part fluide 17,0 % en production ; `apres_basique` 23,0 % ;
 `apres_direction` 20,9 % seule, 22,3 % avec la mise en valeur.
 
-## Proposition (ARBITRAGE ÉDITORIAL, à valider)
+## Proposition (ARBITRAGE ÉDITORIAL — validée et appliquée le 31/10/2026)
 
 1. **Coupes : `apres_basique`.** La préférence explicite passe avant le conseil morphologique (principe du brief), jamais avant les
    occasions, et ne coûte aucune pièce basique. Gain : +0,7 à +5,8 pts côté femme, +0,3 à +2,0 pts côté homme.

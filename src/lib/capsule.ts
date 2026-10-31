@@ -502,8 +502,8 @@ export type SelectionStrategy = {
    */
   sportParStyle?: "commun" | "par_style" | "etiquette";
   /**
-   * COUPES PRÉFÉRÉES DU PROFIL (31/10/2026, lot 4 du brief « Évolution de l'onboarding ») — LEVIER D'AUDIT, absent en production
-   * tant que la propriétaire n'a pas validé une pondération (scripts/preferences-silhouette.audit.ts). Une pièce dont une coupe
+   * COUPES PRÉFÉRÉES DU PROFIL (31/10/2026, lot 4 du brief « Évolution de l'onboarding »). PRODUCTION : "apres_basique" (validé
+   * le 31/10/2026 après mesure, scripts/preferences-silhouette.audit.ts). Absent : le rang n'existe pas (comportement d'avant). Une pièce dont une coupe
    * connue est préférée (coupesPieces.ts) gagne un rang dans la clé de sélection, placé selon la valeur :
    *   "avant_basique"   : juste après la couverture d'occasions (la plus forte) ;
    *   "apres_basique"   : après « basique de capsule », avant la morphologie (la préférence explicite passe avant le conseil) ;
@@ -513,7 +513,7 @@ export type SelectionStrategy = {
    */
   coupesPreferees?: "avant_basique" | "apres_basique" | "apres_direction";
   /**
-   * MISE EN VALEUR PRIME SUR LA DIRECTION MORPHOLOGIQUE (31/10/2026, lot 4) — LEVIER D'AUDIT, absent en production. Quand la
+   * MISE EN VALEUR PRIME SUR LA DIRECTION MORPHOLOGIQUE (31/10/2026, lot 4). PRODUCTION : true (validé le 31/10/2026). Quand la
    * personne veut mettre en valeur la zone que la direction de sa silhouette minimise (poire + « Mes hanches » ; triangle inversé
    * + « Mes épaules »), cet axe de `valeurDirection` est neutralisé. L'autre axe reste.
    */
@@ -532,7 +532,19 @@ export type SelectionStrategy = {
  * La stratégie reste paramétrable pour que la comparaison reste possible en
  * audit, mais aucun code applicatif ne renseigne ce paramètre.
  */
-export const STRATEGIE_PRODUCTION: SelectionStrategy = { rang3: "neutre", v2: "A", maillesFermeesEte: "exclues" };
+export const STRATEGIE_PRODUCTION: SelectionStrategy = {
+  rang3: "neutre",
+  v2: "A",
+  maillesFermeesEte: "exclues",
+  // Lot 4 (31/10/2026), validé par la propriétaire après mesure (docs/onboarding-evolution/audit-lot4-moteur.md) : la coupe
+  // préférée départage après « basique », avant la direction morphologique ; la mise en valeur neutralise l'axe qui la contredit.
+  // Sans préférence, rien ne change (garde-fou mesuré : 0 capsule différente).
+  coupesPreferees: "apres_basique",
+  miseEnValeurPrime: true,
+};
+
+/** La production juste avant le lot 4 (31/10/2026) — pour que l'audit mesure l'avant et l'après dans la même exécution. */
+export const STRATEGIE_AVANT_LOT4: SelectionStrategy = { rang3: "neutre", v2: "A", maillesFermeesEte: "exclues" };
 
 /** Comportement d'avant le 29/08/2026 — conservé pour les audits comparatifs. */
 export const STRATEGIE_LEGACY: SelectionStrategy = { rang3: "legacy", v2: false, maillesFermeesEte: "admises", sportParStyle: "commun" };
@@ -628,8 +640,10 @@ export function morphologieOrienteLaSelection(morphology: string | null | undefi
  * La saturation ne s'annulant jamais (cf. SATURATION), un axe non nul vaut
  * toujours une valeur strictement positive.
  */
-export function pieceOrienteeParMorphologie(it: Item, morphology: string | null | undefined): boolean {
-  return axeDirection(it, morphology ?? null) !== null;
+export function pieceOrienteeParMorphologie(it: Item, morphology: string | null | undefined, miseEnValeur?: readonly string[] | null): boolean {
+  // L'axe neutralisé par la mise en valeur (production depuis le 31/10/2026) ne compte plus : la fiche ne l'annonce pas.
+  const axe = axeDirection(it, morphology ?? null);
+  return axe !== null && axe !== axeNeutraliseParMiseEnValeur(morphology ?? null, miseEnValeur);
 }
 
 /** Extrémité sur laquelle la pièce apporte une direction utile à cette morphologie, ou null. */
