@@ -165,3 +165,8 @@ autres styles ; les pièces de sport créées les modifient toutes, parce que le
 (capsule.ts, arbitrage du 24/08/2026). En L2s, les tenues Sport restent complètes, avec environ 20 à 50 % de pièces Créatif selon les tirages (sport commun du
 catalogue étiqueté en 1.b). **NON DÉMONTRÉ** : le rendu des visuels générés pour les nouvelles pièces, et le comportement sur le
 catalogue de production s'il a changé depuis l'export.
+
+**Appliqué en production le 31/10/2026** par la propriétaire : `01-etiqueter-existants.sql` (blocs 1.a et 1.b), puis
+`02-creer-pieces.sql` (bloc 2.0, recalage du compteur d'identifiants à 1090, et bloc 2.a). Contrôle : 201 pièces créées
+(`styles = 'Créatif'`), 32 étiquetées (`styles like '%, Créatif'`). Restent en commentaire, non appliqués : 1.c (4 unisexes) et 2.b
+(17 pièces de sport). Ne pas relancer 02 : il recréerait les 201 pièces en double.
