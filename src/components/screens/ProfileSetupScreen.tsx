@@ -285,8 +285,8 @@ export default function ProfileSetupScreen() {
   );
   // UNE COLORIMÉTRIE DÉJÀ FAITE SE RETROUVE, ELLE NE SE REFAIT PAS (14/10/2026, demandé : « si l'utilisateur a déjà fait le test et revient
   // à cette étape, le résultat déjà obtenu doit s'afficher, avec la possibilité de refaire le test »). Arriver sur l'étape colorimétrie —
-  // par l'avant, par l'arrière ou depuis le profil — avec un résultat exploitable ouvre directement « Ta palette », qui porte le lien
-  // « Refaire le test ». La présentation et le questionnaire ne s'ouvrent que pour une première fois, ou sur ce lien.
+  // par l'avant, par l'arrière ou depuis le profil — avec un résultat exploitable ouvre directement « Ta palette ». Le lien « Refaire le
+  // test » qu'elle portait est retiré le 31/10/2026 (arbitrage) : la présentation et le questionnaire ne s'ouvrent qu'une première fois.
   const dejaFaite = colorimetrieUtilisable(draft.colorimetrie);
   const sansPresentationDejaFaite = (i: number) => (dejaFaite && STEPS[i]?.key === "colorimetrie" ? i + 1 : i);
   const [step, setStep] = useState(() =>
@@ -394,7 +394,6 @@ export default function ProfileSetupScreen() {
   const enAnalyse = meta.key === "colorimetrie" && colo.vue === "analyse";
   // Aucun retour pendant l'analyse : elle dure moins de deux secondes.
   const showBack = !enAnalyse && (step > 0 || state.profileSetupFromEdit || profile.completed || (meta.key === "colorimetrie" && colo.vue !== "presentation"));
-  const indexColorimetrie = STEPS.findIndex((s) => s.key === "colorimetrie");
 
   /** Fin de l'analyse : le résultat (étape suivante), ou « Pas de saison nette » sur place. */
   const finAnalyse = () => {
@@ -942,14 +941,8 @@ export default function ProfileSetupScreen() {
         libelle: isLast ? (state.profileSetupFromEdit ? "Enregistrer les modifications" : "Créer mon dressing") : "Continuer",
         onClick: next,
         actif: true,
-        // Refaire le test : le questionnaire depuis le début, réponses effacées. Le résultat actuel reste tant qu'un nouveau n'est pas trouvé.
-        lien: {
-          libelle: "Refaire le test",
-          onClick: () => {
-            setColo(recommencer());
-            setStep(Math.max(0, indexColorimetrie));
-          },
-        },
+        // PLUS DE « REFAIRE LE TEST » (31/10/2026, arbitrage de la propriétaire) : ne pas inciter à multiplier les tests. Le résultat
+        // obtenu reste le résultat ; aucun lien ne relance le questionnaire depuis cet écran.
       };
     }
     return undefined;
