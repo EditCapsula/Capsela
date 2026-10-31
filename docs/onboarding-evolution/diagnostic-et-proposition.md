@@ -224,7 +224,7 @@ Les tests (phase 4) : les 13 cas du brief, rattachés aux lots ; plus le maintie
 - **Lot 1 — données** (31/10/2026) : `preferencesSilhouette.ts`, migration 0054 appliquée, écriture isolée dans `auth.tsx`.
 - **Lot 2 — écrans** (31/10/2026) : Genre et tailles sur un écran (les tailles gardent leur écran seul en modification depuis Mon profil) ; étapes Mise en valeur (facultative, 8 options ; non posée à un homme, arbitrage du 31/10/2026)  et Coupes (réponse requise, « Cela dépend » en est une) ; intensité sous les couleurs ; « Et maintenant ? » sous « Ta palette » ; récapitulatif modifiable ligne par ligne (« Continuer » y ramène) ; deux lignes dans Mon profil, comptées dans la complétude. Côté homme, cartes sans visuel en attendant les images. Le sous-titre du brief pour Mise en valeur attend le lot 4 (il annonce un effet sur les recommandations qui n'existe pas encore).
 - **Revue de cohérence** (31/10/2026) : bouton fixe en bas sur toutes les étapes ; chaque étape s'ouvre en haut ; une seule marque de sélection (bordure terracotta, fond teinté, coche pleine) pour Genre, Silhouette, Intensité et les tailles ; hauteur du fil réservée, le titre tombe au même endroit partout ; sections secondaires en surtitre.
-- **« Refaire le test » retiré** de « Ta palette » (31/10/2026, arbitrage : ne pas inciter à multiplier les tests).
+- **« Refaire le test »** : retiré puis remis le 31/10/2026 sur « Ta palette » (seul endroit d'où l'on repasse le test).
 - **Restent** : lot 3 (colorimétrie sur un écran), lot 4 (moteur, après audit), lot 5 (coupes du catalogue).
 
 ## Intensité des couleurs — arbitrage du 31/10/2026

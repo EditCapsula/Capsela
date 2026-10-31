@@ -262,6 +262,6 @@ n'est reconnue sous aucune teinte.
 ## Une colorimétrie déjà faite se retrouve (14/10/2026)
 Demandé : en revenant sur l'étape après avoir déjà fait le test, on doit voir le résultat obtenu, avec la possibilité de refaire le test. Avec une colorimétrie exploitable (`colorimetrieUtilisable`), arriver sur l'étape colorimétrie ouvre directement « Ta palette » (le résultat) au lieu de la présentation. C'est vrai par l'avant, depuis le profil (Palette → Continuer → Continuer) et en reculant (le retour saute la présentation).
 
-**Retiré le 31/10/2026** (arbitrage de la propriétaire : ne pas inciter à multiplier les tests). Avant : sous le bouton « Continuer », un lien « Refaire le test » relançait le questionnaire depuis le début, réponses effacées. Le résultat actuel reste enregistré tant qu'un nouveau n'est pas trouvé.
+Sous le bouton « Continuer », un lien « Refaire le test » relance (retiré puis remis le 31/10/2026 : c'est le seul endroit d'où l'on repasse le test) le questionnaire depuis le début, réponses effacées. Le résultat actuel reste enregistré tant qu'un nouveau n'est pas trouvé.
 
 Vérifié en rendu réel (mode démo, 390 px) : résultat affiché, retour vers « Quelle intensité… », retour au résultat, « Refaire le test » ouvre la question 1/4.
