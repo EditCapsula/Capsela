@@ -138,7 +138,7 @@ select count(*) from public.profiles where styles::text ilike '%audacieux%';
 | 10 | Profil Capsela | `pal_recap` devient éditable : chaque ligne rouvre son étape en édition ciblée (mécanique existante) |
 | 11 | Dressing | inchangé |
 
-Dans **Mon profil**, deux lignes s'ajoutent : « Mise en valeur » et « Coupes préférées ». Elles ne comptent pas dans la complétude (recommandation : ce sont des préférences facultatives, et « aucune » est une réponse valide).
+Dans **Mon profil**, deux lignes s'ajoutent : « Mise en valeur » et « Coupes préférées ». Elles comptent dans la complétude (arbitrage du 31/10/2026, cf. question 5).
 
 ### 2.2 La colorimétrie sur un écran (recommandation)
 
@@ -204,6 +204,6 @@ Les tests (phase 4) : les 13 cas du brief, rattachés aux lots ; plus le maintie
 2. **Bijoux et Blanc** — **TRANCHÉ le 31/10/2026 : conservés**, en bloc « Pour affiner » sur l'écran unique.
 3. **Options de cheveux et d'yeux** — **TRANCHÉ le 31/10/2026 : options et visuels actuels conservés**, règles de saison inchangées.
 4. **Fluides et Structurées** : les déduire de la matière (à instruire), ou les stocker sans effet moteur au départ ?
-5. **Complétude** : les nouveaux champs restent-ils hors du pourcentage (recommandé) ?
+5. **Complétude** — **TRANCHÉ le 31/10/2026 : les deux nouveaux champs COMPTENT dans `completudeProfil`** ; une baisse du pourcentage des profils existants est acceptée. « Aucune préférence » / « Cela dépend du vêtement » valent réponse (champ renseigné). Le message de `prochaineActionProfil` pour ces champs ne dira que ce qui est vrai dans le code (règle « sert à »).
 6. **Visuels** : je fournis les prompts pour les 8 et 6 visuels ; l'écran sort-il d'abord en cartes typographiques ?
 7. **Prénom, Intensité, « Et maintenant ? »** : prénom avant Genre et tailles, intensité dans Couleurs préférées, « Et maintenant ? » fusionné dans Palette — d'accord ?
