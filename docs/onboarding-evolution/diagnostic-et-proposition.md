@@ -203,7 +203,11 @@ Les tests (phase 4) : les 13 cas du brief, rattachés aux lots ; plus le maintie
 1. **Carnation** — **TRANCHÉ le 31/10/2026 par la propriétaire : option A.** La carnation n'est pas collectée ; la règle de CLAUDE.md et son test restent en vigueur.
 2. **Bijoux et Blanc** — **TRANCHÉ le 31/10/2026 : conservés**, en bloc « Pour affiner » sur l'écran unique.
 3. **Options de cheveux et d'yeux** — **TRANCHÉ le 31/10/2026 : options et visuels actuels conservés**, règles de saison inchangées.
-4. **Fluides et Structurées** : les déduire de la matière (à instruire), ou les stocker sans effet moteur au départ ?
+4. **Fluides et Structurées** — **TRANCHÉ le 31/10/2026 : déduits.** Règle candidate (ARBITRAGE ÉDITORIAL à valider, mesurée sur l'export du 31/10, 448 vêtements, accessoires exclus) :
+   - le NOM d'abord : « fluide, drapé, flou, vaporeux » → Fluide ; « blazer, tailleur, trench, caban, perfecto, costume, structuré » → Structurée ;
+   - sinon la MATIÈRE : « structuré, tweed, feutre » → Structurée ; « soie, satin, viscose, crêpe, jersey, lyocell, tencel, modal, mousseline » → Fluide ; une matière « épaisse » ne se déduit pas ;
+   - sinon rien (aucun bonus, aucune pénalité).
+   Résultat : 91 Fluides, 55 Structurées, 302 sans avis (33 % couverts). 10 conflits nom/matière, tous tranchés par le nom (blazers et tops « structurés » en lin / viscose, pantalons tailleur, robe courte structurée en crêpe). Déduction en code (lecture), aucune écriture en base.
 5. **Complétude** — **TRANCHÉ le 31/10/2026 : les deux nouveaux champs COMPTENT dans `completudeProfil`** ; une baisse du pourcentage des profils existants est acceptée. « Aucune préférence » / « Cela dépend du vêtement » valent réponse (champ renseigné). Le message de `prochaineActionProfil` pour ces champs ne dira que ce qui est vrai dans le code (règle « sert à »).
 6. **Visuels** : je fournis les prompts pour les 8 et 6 visuels ; l'écran sort-il d'abord en cartes typographiques ?
 7. **Prénom, Intensité, « Et maintenant ? »** : prénom avant Genre et tailles, intensité dans Couleurs préférées, « Et maintenant ? » fusionné dans Palette — d'accord ?
