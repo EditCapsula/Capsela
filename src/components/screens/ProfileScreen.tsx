@@ -271,14 +271,16 @@ export default function ProfileScreen() {
         )}
         {/* MISE EN VALEUR ET COUPES (31/10/2026). Aucun effet sur les recommandations tant que le branchement moteur (lot 4) n'est pas
             audité : l'explication décrit, elle ne promet rien. */}
-        <LigneProfil
-          icone={I_SILHOUETTE}
-          titre="Mise en valeur"
-          valeur={libelleMiseEnValeur(profile.preferencesSilhouette.miseEnValeur, profile.gender) ?? "Non renseignée"}
-          renseigne={renseigne("mise_en_valeur")}
-          explication="Ce que tu aimes particulièrement mettre en valeur."
-          onClick={() => ouvrirChamp("mise_en_valeur")}
-        />
+        {champs.some((c) => c.cle === "mise_en_valeur") && (
+          <LigneProfil
+            icone={I_SILHOUETTE}
+            titre="Mise en valeur"
+            valeur={libelleMiseEnValeur(profile.preferencesSilhouette.miseEnValeur, profile.gender) ?? "Non renseignée"}
+            renseigne={renseigne("mise_en_valeur")}
+            explication="Ce que tu aimes particulièrement mettre en valeur."
+            onClick={() => ouvrirChamp("mise_en_valeur")}
+          />
+        )}
         <LigneProfil
           icone={I_CINTRE}
           titre="Coupes préférées"

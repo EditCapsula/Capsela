@@ -37,11 +37,12 @@ describe("préférences de silhouette — changement", () => {
 });
 
 describe("préférences de silhouette — affichage et choix", () => {
-  it("homme : cinq options, sans décolleté, courbes ni hanches ; aucun visuel femme", async () => {
+  it("homme : pas de mise en valeur ; coupes sans visuel femme", async () => {
     const m = await import("../preferencesSilhouette");
-    expect(m.misesEnValeurProposees("homme")).toEqual(["taille", "jambes", "epaules", "bras", "dos"]);
+    expect(m.miseEnValeurPosee("homme")).toBe(false);
+    expect(m.misesEnValeurProposees("homme")).toEqual([]);
     expect(m.misesEnValeurProposees("femme")).toHaveLength(8);
-    expect(m.visuelMiseEnValeur("taille", "homme")).toBeNull();
+    expect(m.misesEnValeurProposees(null)).toHaveLength(8);
     expect(m.visuelCoupe("fluides", "homme")).toBeNull();
     expect(m.visuelCoupe("fluides", "femme")).toBe("/onboarding/coupes/fluides.webp");
   });

@@ -75,6 +75,7 @@ import {
   LIBELLES_COUPES,
   LIBELLES_MISE_EN_VALEUR,
   miseEnValeurDuGenre,
+  miseEnValeurPosee,
   misesEnValeurProposees,
   VISUEL_NEUTRE,
   visuelCoupe,
@@ -142,10 +143,12 @@ const ALL_STEPS = [
   { key: "pal_recap", kicker: "Ton profil", title: "Ton profil Capsela est prêt", subtitle: "Capsela combine tes goûts et ta colorimétrie pour des recommandations qui te ressemblent." },
 ] as const;
 
+// Les tailles prennent la même marque de sélection que les cartes (31/10/2026, revue de cohérence) : bordure terracotta et fond
+// teinté, plus l'encre pleine. Bordure d'épaisseur fixe : la puce ne bouge pas au toucher.
 function chipCls(on: boolean): string {
   return (
-    "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border " +
-    (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
+    "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans text-ink border-[1.5px] transition-colors duration-150 " +
+    (on ? "border-terracotta bg-selected-bg" : "bg-card border-border")
   );
 }
 
@@ -270,6 +273,7 @@ export default function ProfileSetupScreen() {
   const STEPS = ALL_STEPS.filter(
     (s) =>
       (s.key !== "morpho" || draft.gender === "femme") &&
+      (s.key !== "mise_en_valeur" || miseEnValeurPosee(draft.gender)) &&
       // L'étape prénom n'est posée qu'à qui n'en a pas — sauf quand on vient
       // explicitement la modifier (Mon compte → Prénom, 26/09/2026) : sans
       // cette exception, l'édition ouvrait l'étape « genre ».
@@ -471,12 +475,16 @@ export default function ProfileSetupScreen() {
     ...(draft.gender === "femme" && draft.morphology
       ? [{ label: "Silhouette", value: MORPHOLOGY_LABELS[draft.morphology], swatches: [] as string[], etape: "morpho" }]
       : []),
-    {
-      label: "Mise en valeur",
-      value: libelleMiseEnValeur(draft.preferencesSilhouette.miseEnValeur, draft.gender) ?? "non précisée",
-      swatches: [],
-      etape: "mise_en_valeur",
-    },
+    ...(miseEnValeurPosee(draft.gender)
+      ? [
+          {
+            label: "Mise en valeur",
+            value: libelleMiseEnValeur(draft.preferencesSilhouette.miseEnValeur, draft.gender) ?? "non précisée",
+            swatches: [] as string[],
+            etape: "mise_en_valeur",
+          },
+        ]
+      : []),
     { label: "Coupes", value: libelleCoupes(draft.preferencesSilhouette.coupes) ?? "à choisir", swatches: [], etape: "coupes" },
     {
       etape: "pal_couleurs",
@@ -582,11 +590,10 @@ export default function ProfileSetupScreen() {
         )}
         <div className="w-[38px]" />
       </div>
-      {filDArianne && (
-        <div className="text-center text-[11px] text-muted mt-2" aria-live="polite">
-          {filDArianne}
-        </div>
-      )}
+      {/* Hauteur réservée même sans fil (Genre et tailles, modification) : le titre tombe au même endroit sur toutes les étapes. */}
+      <div className="text-center text-[11px] text-muted mt-2 h-[16px] leading-[16px]" aria-live="polite">
+        {filDArianne}
+      </div>
 
       <div className="mt-[26px]">
         {enTete.kicker && <div className="t-surtitre text-terracotta">{enTete.kicker}</div>}
@@ -645,10 +652,12 @@ export default function ProfileSetupScreen() {
         <PaletteDots options={PAL_COULEURS} selected={draft.paletteCouleurs} onSelect={toggleCouleur} />
       )}
       {meta.key === "pal_couleurs" && (
-        <div className="mt-[34px]">
-          <div className="t-titre-vignette text-ink">Quelle intensité de couleurs portes-tu volontiers ?</div>
-          <div className="text-[12px] text-muted mt-[6px]">Facultatif.</div>
-        </div>
+        // Même construction que « Tes tailles habituelles » sous le genre : une section secondaire d'un écran se signale par un
+        // surtitre et une ligne d'aide, jamais par un second titre.
+        <>
+          <div className="t-surtitre text-muted mt-[30px]">Ton intensité de couleurs</div>
+          <div className="text-[12px] text-muted mt-[6px]">Celle que tu portes volontiers. Facultatif.</div>
+        </>
       )}
 
       {/* L'intensité seule, en cartes radio pleine largeur plutôt qu'en chips
@@ -860,7 +869,7 @@ export default function ProfileSetupScreen() {
               <CarteChoix
                 key={v}
                 libelle={LIBELLES_MISE_EN_VALEUR[v]}
-                visuel={visuelMiseEnValeur(v, draft.gender)}
+                visuel={visuelMiseEnValeur(v)}
                 on={(draft.preferencesSilhouette.miseEnValeur ?? []).includes(v)}
                 onClick={() => patchSilhouette({ miseEnValeur: basculerOption(miseEnValeurDuGenre(draft.preferencesSilhouette.miseEnValeur, draft.gender), v) })}
               />
@@ -905,7 +914,6 @@ export default function ProfileSetupScreen() {
         </>
       )}
 
-      {!["mise_en_valeur", "coupes", "pal_couleurs", "colorimetrie", "colorimetrie_resultat"].includes(meta.key) && <div className="flex-1" />}
     </>
   );
 
@@ -990,38 +998,34 @@ export default function ProfileSetupScreen() {
   // bouton reste accessible sans défiler, même quand le résultat est long.
   // L'étape Style aussi (31/10/2026, brief « Ajustement UX – sélection des styles ») : son bouton reste accessible pendant le défilement,
   // sans jamais recouvrir les dernières cartes.
-  const deuxZones = ["style", "mise_en_valeur", "coupes", "pal_couleurs", "colorimetrie", "colorimetrie_resultat"].includes(meta.key);
-  if (deuxZones) {
-    return (
-      <div className="absolute inset-0 flex flex-col">
-        <div className="relative flex-1 min-h-0 flex flex-col">
-          <div className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">{pageBody}</div>
-          {/* Le refus d'un troisième style : une bulle discrète au-dessus du bouton, quelques secondes (pas dans la page : sur deux lignes,
-              elle aurait fait sauter la grille à chaque apparition). */}
-          {meta.key === "style" && styleBloque && (
-            <div role="status" className="detail-part absolute inset-x-0 bottom-3 mx-auto max-w-[480px] px-7 pointer-events-none">
-              <div className="bg-ink rounded-feuille px-4 py-[10px] text-[12px] text-cream leading-[1.4] text-center shadow-lg">
-                Tu as déjà choisi deux styles. Retire-en un pour en sélectionner un autre.
-              </div>
-            </div>
-          )}
+  // TOUTES LES ÉTAPES EN DEUX ZONES (31/10/2026, demandé : « bouton sticky ? ») : depuis que Genre et tailles partagent un écran, le
+  // bouton d'une étape courte pouvait passer sous le pli. Un seul gabarit pour tout le parcours : le bouton reste visible, et ne
+  // recouvre jamais le contenu.
+  return (
+    <div className="absolute inset-0 flex flex-col">
+      <div className="relative flex-1 min-h-0 flex flex-col">
+        {/* `key` : chaque étape (et chaque sous-écran de la colorimétrie) s'ouvre en haut, jamais au défilement de la précédente. */}
+        <div key={`${meta.key}-${colo.vue}-${colo.question}`} className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">
+          {pageBody}
         </div>
-        {continueButton && (
-          <div
-            className="flex-shrink-0 px-7 bg-cream border-t border-border flex flex-col"
-            style={{ paddingBottom: pied?.lien ? "calc(4px + env(safe-area-inset-bottom))" : "calc(16px + env(safe-area-inset-bottom))" }}
-          >
-            {continueButton}
+        {/* Le refus d'un troisième style : une bulle discrète au-dessus du bouton, quelques secondes (pas dans la page : sur deux lignes,
+            elle aurait fait sauter la grille à chaque apparition). */}
+        {meta.key === "style" && styleBloque && (
+          <div role="status" className="detail-part absolute inset-x-0 bottom-3 mx-auto max-w-[480px] px-7 pointer-events-none">
+            <div className="bg-ink rounded-feuille px-4 py-[10px] text-[12px] text-cream leading-[1.4] text-center shadow-lg">
+              Tu as déjà choisi deux styles. Retire-en un pour en sélectionner un autre.
+            </div>
           </div>
         )}
       </div>
-    );
-  }
-
-  return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-2 pb-7">
-      {pageBody}
-      {continueButton}
+      {continueButton && (
+        <div
+          className="flex-shrink-0 px-7 bg-cream border-t border-border flex flex-col"
+          style={{ paddingBottom: pied?.lien ? "calc(4px + env(safe-area-inset-bottom))" : "calc(16px + env(safe-area-inset-bottom))" }}
+        >
+          {continueButton}
+        </div>
+      )}
     </div>
   );
 }

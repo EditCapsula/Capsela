@@ -83,9 +83,13 @@ export default function OptionRow({
       onClick={onClick}
       aria-pressed={on}
       className={
-        "flex items-center gap-3 px-4 py-[15px] rounded-bloc cursor-pointer text-[13px] leading-[1.4] text-left border " +
-        (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
+        // UN SEUL LANGAGE DE SÉLECTION DANS L'ONBOARDING (31/10/2026, revue de cohérence demandée) : bordure terracotta, fond à peine
+        // teinté, coche pleine — comme les cartes de style, de coupes et la variante `accent`. Avant, cette variante passait la carte
+        // en encre pleine : deux marques de sélection différentes d'un écran à l'autre. Bordure d'épaisseur fixe : rien ne bouge.
+        "flex items-center gap-3 px-4 py-[15px] rounded-bloc cursor-pointer text-[13px] leading-[1.4] text-left text-ink border-[1.5px] transition-colors duration-150 " +
+        (on ? "border-terracotta" : "bg-card border-border")
       }
+      style={on ? { background: "var(--color-selected-bg)" } : undefined}
     >
       <span className="flex-1 min-w-0">
         {/* Libellé et pastilles sur une ligne, la phrase dessous sur toute
@@ -113,9 +117,7 @@ export default function OptionRow({
                     background: hex,
                     // Liseré couleur de carte (crème, ou encre une fois sélectionnée), puis un filet à peine
                     // visible qui détache les teintes claires de la carte claire et les profondes de l'encre.
-                    boxShadow: on
-                      ? "0 0 0 1.5px var(--color-ink), 0 0 0 2.5px rgba(243,238,229,.28)"
-                      : "0 0 0 1.5px var(--color-card), inset 0 0 0 1px rgba(29,26,22,.09)",
+                    boxShadow: "0 0 0 1.5px var(--color-card), inset 0 0 0 1px rgba(29,26,22,.09)",
                   }}
                 />
               ))}
@@ -125,7 +127,7 @@ export default function OptionRow({
         {description && (
           <span
             className="block text-[11.5px] leading-[1.45] mt-[4px]"
-            style={{ color: on ? "rgba(243,238,229,.72)" : "var(--color-muted)", textWrap: "pretty" }}
+            style={{ color: "var(--color-muted)", textWrap: "pretty" }}
           >
             {description}
           </span>

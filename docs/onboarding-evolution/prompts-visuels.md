@@ -41,17 +41,7 @@ Les deux réponses neutres (« Aucune préférence particulière », « Cela dé
 
 ## Profil homme (31/10/2026)
 
-Proposition : pour un homme, « Mon décolleté », « Mes courbes » et « Mes hanches » ne sont pas proposés ; 5 options de mise en valeur (taille, jambes, épaules, bras, dos) et les 5 coupes, avec des pièces homme. 10 visuels, même base commune. Fichiers : `public/onboarding/mise-en-valeur/homme/<option>.webp`, `public/onboarding/coupes/homme/<option>.webp`.
-
-### Mise en valeur — homme (5)
-
-| Option | Prompt (après la base) |
-|---|---|
-| Ma taille | Un pantalon à pinces taille haute en laine encre posé à plat, une chemise écrue rentrée dedans et une ceinture en cuir camel ; la ligne de taille est le sujet. |
-| Mes jambes | Un pantalon droit en laine sable posé à plat sur toute sa longueur, pli central marqué, une paire de mocassins en cuir camel au bas. |
-| Mes épaules | Une veste en laine camel aux épaules nettes et bien construites, sur un cintre en bois ; la ligne d'épaule est le sujet. |
-| Mes bras | Un polo en maille fine écrue à manches courtes, posé à plat, manches près du bras bien visibles. |
-| Mon dos | Une chemise en lin terracotta vue de dos sur un cintre en bois, empiècement d'épaules et pli creux au milieu du dos. |
+Pas de mise en valeur pour un homme (arbitrage du 31/10/2026) : seules les 5 coupes ont besoin de visuels homme. Fichiers : `public/onboarding/coupes/homme/<option>.webp`.
 
 ### Coupes préférées — homme (5)
 

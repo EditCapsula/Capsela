@@ -74,16 +74,18 @@ export const LIBELLE_SANS_MISE_EN_VALEUR = "Aucune préférence particulière";
 export const LIBELLE_SANS_COUPE = "Cela dépend du vêtement";
 
 /**
- * Les options proposées selon le genre (arbitrage du 31/10/2026) : pour un homme, ni décolleté, ni courbes, ni hanches — cinq
- * options. Genre non renseigné : la liste complète, comme la grille de styles. Une valeur hors de la liste du genre, restée d'un
- * autre genre, n'est ni affichée ni comptée (`miseEnValeurDuGenre`).
+ * PAS DE MISE EN VALEUR POUR UN HOMME (arbitrage du 31/10/2026, qui remplace celui du même jour à cinq options) : l'étape n'est
+ * pas posée, le champ n'est ni affiché ni compté. Genre non renseigné : la liste complète, comme la grille de styles.
  */
-const MISE_EN_VALEUR_HOMME: readonly MiseEnValeur[] = ["taille", "jambes", "epaules", "bras", "dos"];
-export function misesEnValeurProposees(gender: string | null): readonly MiseEnValeur[] {
-  return gender === "homme" ? MISE_EN_VALEUR_HOMME : MISES_EN_VALEUR;
+export function miseEnValeurPosee(gender: string | null): boolean {
+  return gender !== "homme";
 }
+export function misesEnValeurProposees(gender: string | null): readonly MiseEnValeur[] {
+  return miseEnValeurPosee(gender) ? MISES_EN_VALEUR : [];
+}
+/** Les choix gardés pour ce genre ; `null` si la question ne se pose pas ou n'a jamais été posée. */
 export function miseEnValeurDuGenre(valeurs: MiseEnValeur[] | null, gender: string | null): MiseEnValeur[] | null {
-  if (valeurs === null) return null;
+  if (valeurs === null || !miseEnValeurPosee(gender)) return null;
   const permis = misesEnValeurProposees(gender);
   const gardees = valeurs.filter((v) => permis.includes(v));
   // Des choix tous hors du genre ne deviennent pas « aucune préférence » : la question est à reposer.
@@ -94,8 +96,8 @@ export function miseEnValeurDuGenre(valeurs: MiseEnValeur[] | null, gender: stri
  * Visuels (31/10/2026) : détails de vêtements femme, sans mannequin, en 3:4. Côté homme, les visuels sont à produire
  * (docs/onboarding-evolution/prompts-visuels.md) : `null`, la carte s'affiche alors sans image — jamais un visuel femme.
  */
-export function visuelMiseEnValeur(v: MiseEnValeur, gender: string | null): string | null {
-  return gender === "homme" ? null : `/onboarding/mise-en-valeur/${v}.webp`;
+export function visuelMiseEnValeur(v: MiseEnValeur): string {
+  return `/onboarding/mise-en-valeur/${v}.webp`;
 }
 export function visuelCoupe(c: CoupePreferee, gender: string | null): string | null {
   return gender === "homme" ? null : `/onboarding/coupes/${c}.webp`;

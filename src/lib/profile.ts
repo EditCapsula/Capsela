@@ -1,4 +1,4 @@
-import { miseEnValeurDuGenre, PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
+import { miseEnValeurDuGenre, miseEnValeurPosee, PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
 import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
 export { PAL_COULEURS } from "./palCouleurs";
 import { PAL_COULEURS } from "./palCouleurs";
@@ -554,10 +554,11 @@ export function champsProfilStyle(profile: Profile): ChampCompletude[] {
   }
   // Mise en valeur et coupes (31/10/2026, arbitrage : elles COMPTENT, même si le pourcentage des profils existants baisse). La
   // réponse neutre (« Aucune préférence », « Cela dépend ») est une réponse : seul `null` (jamais posé) manque.
-  champs.push(
-    { cle: "mise_en_valeur", libelle: "Mise en valeur", renseigne: miseEnValeurDuGenre(profile.preferencesSilhouette.miseEnValeur, profile.gender) !== null },
-    { cle: "coupes", libelle: "Coupes préférées", renseigne: profile.preferencesSilhouette.coupes !== null }
-  );
+  // Pas de mise en valeur pour un homme (31/10/2026) : le champ n'existe pas pour lui, comme la morphologie.
+  if (miseEnValeurPosee(profile.gender)) {
+    champs.push({ cle: "mise_en_valeur", libelle: "Mise en valeur", renseigne: miseEnValeurDuGenre(profile.preferencesSilhouette.miseEnValeur, profile.gender) !== null });
+  }
+  champs.push({ cle: "coupes", libelle: "Coupes préférées", renseigne: profile.preferencesSilhouette.coupes !== null });
   champs.push(
     { cle: "palette", libelle: "Palette", renseigne: profile.paletteCouleurs.length > 0 },
     { cle: "tailles", libelle: "Tailles", renseigne: Boolean(profile.tailleHaut && profile.tailleBas && profile.pointure) }

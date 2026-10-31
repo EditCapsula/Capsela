@@ -29,7 +29,7 @@ describe("complétude du profil style", () => {
 
   it("côté Homme, la morphologie n'existe pas : elle n'est ni comptée ni manquante", () => {
     const c = completudeProfil({ ...complet, gender: "homme", styles: ["minimaliste"], morphology: null });
-    expect(c.total).toBe(6);
+    expect(c.total).toBe(5);
     expect(c.manquants).toEqual([]);
   });
 
@@ -52,9 +52,10 @@ describe("complétude du profil style", () => {
     expect(neutres.pourcentage).toBe(100);
   });
 
-  it("homme : une mise en valeur réservée à un autre genre (décolleté) ne compte pas comme réponse", () => {
-    const c = completudeProfil({ ...complet, gender: "homme", morphology: null, preferencesSilhouette: { miseEnValeur: ["decollete"], coupes: [] } });
-    expect(c.manquants.map((m) => m.cle)).toEqual(["mise_en_valeur"]);
+  it("homme : pas de mise en valeur — ni comptée, ni manquante (arbitrage du 31/10/2026)", () => {
+    const c = completudeProfil({ ...complet, gender: "homme", morphology: null, preferencesSilhouette: { miseEnValeur: null, coupes: [] } });
+    expect(c.manquants).toEqual([]);
+    expect(c.total).toBe(5);
   });
 
   it("un style non proposé pour le genre ne compte pas", () => {
