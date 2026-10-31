@@ -1,3 +1,4 @@
+import { miseEnValeurDuGenre, miseEnValeurPosee, PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
 import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
 export { PAL_COULEURS } from "./palCouleurs";
 import { PAL_COULEURS } from "./palCouleurs";
@@ -43,6 +44,8 @@ export interface Profile {
   city: string;
   completed: boolean;
   prefs: ProfilePrefs;
+  /** Mise en valeur et coupes préférées (31/10/2026, preferencesSilhouette.ts) : `null` par champ = jamais posé. */
+  preferencesSilhouette: PreferencesSilhouette;
 }
 
 export const DEFAULT_PREFS: ProfilePrefs = {
@@ -71,6 +74,7 @@ export const EMPTY_PROFILE: Profile = {
   city: "Paris",
   completed: false,
   prefs: DEFAULT_PREFS,
+  preferencesSilhouette: PREFERENCES_SILHOUETTE_VIDES,
 };
 
 export const GENDERS: { key: Gender; label: string }[] = [
@@ -118,22 +122,30 @@ const pal = (nom: string): string => {
  * personnelle n'a pas), une valeur propre à l'illustration, choisie pour
  * rester élégante : aucune teinte néon.
  */
-export const INTENSITE_VISUELS: Record<Intensite, { description: string; pastilles: string[]; libelleRecap?: string }> = {
+/**
+ * `etoffe` (31/10/2026, arbitrage : les 4 options gardées, visuel d'étoffe à la place des pastilles sur l'étape) : une étoffe drapée
+ * montre le REGISTRE sans se lire comme une couleur choisie. Les pastilles restent pour le récapitulatif et « Ta palette ».
+ */
+export const INTENSITE_VISUELS: Record<Intensite, { description: string; pastilles: string[]; etoffe: string; libelleRecap?: string }> = {
   "Douces et discrètes": {
+    etoffe: "/onboarding/intensite/douces.webp",
     description: "Des tons neutres et pastel, pour des looks tout en douceur.",
     // crème, beige clair, vieux rose, taupe clair, sauge très désaturée
     pastilles: [pal("Crème"), pal("Sable"), pal("Rose poudré"), "#BDB2A3", "#B8BEAF"],
   },
   "Profondes et intenses": {
+    etoffe: "/onboarding/intensite/profondes.webp",
     description: "Des couleurs riches et affirmées, pour plus de caractère.",
     pastilles: [pal("Bordeaux"), pal("Marine"), pal("Vert bouteille"), pal("Chocolat"), pal("Prune")],
   },
   Lumineuses: {
+    etoffe: "/onboarding/intensite/lumineuses.webp",
     description: "Des teintes claires et éclatantes, pour des looks qui illuminent.",
     // jaune soleil, corail, rose vif, turquoise, bleu lumineux
     pastilles: ["#E6C24F", "#E57C60", "#D65C82", "#3E9E9A", "#5B93CF"],
   },
   "Un mélange": {
+    etoffe: "/onboarding/intensite/melange.webp",
     description: "J'aime varier entre des tons doux, intenses et lumineux.",
     // Au récapitulatif, « Un mélange » ne dit pas de quoi (30/09/2026, demandé) :
     // on y écrit ce que le mélange contient. La valeur enregistrée ne change pas.
@@ -527,7 +539,7 @@ export const WORK_DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
  * Les tailles ne comptent comme renseignées que complètes (haut, bas,
  * pointure) : chacune pré-remplit l'ajout d'une pièce de sa catégorie.
  */
-export type ChampProfilStyle = "genre" | "style" | "morphologie" | "palette" | "tailles";
+export type ChampProfilStyle = "genre" | "style" | "morphologie" | "mise_en_valeur" | "coupes" | "palette" | "tailles";
 
 export interface ChampCompletude {
   cle: ChampProfilStyle;
@@ -548,6 +560,13 @@ export function champsProfilStyle(profile: Profile): ChampCompletude[] {
       renseigne: Boolean(profile.morphology) && !fieldNeedsRevalidation(morpho, profile),
     });
   }
+  // Mise en valeur et coupes (31/10/2026, arbitrage : elles COMPTENT, même si le pourcentage des profils existants baisse). La
+  // réponse neutre (« Aucune préférence », « Cela dépend ») est une réponse : seul `null` (jamais posé) manque.
+  // Pas de mise en valeur pour un homme (31/10/2026) : le champ n'existe pas pour lui, comme la morphologie.
+  if (miseEnValeurPosee(profile.gender)) {
+    champs.push({ cle: "mise_en_valeur", libelle: "Mise en valeur", renseigne: miseEnValeurDuGenre(profile.preferencesSilhouette.miseEnValeur, profile.gender) !== null });
+  }
+  champs.push({ cle: "coupes", libelle: "Coupes préférées", renseigne: profile.preferencesSilhouette.coupes !== null });
   champs.push(
     { cle: "palette", libelle: "Palette", renseigne: profile.paletteCouleurs.length > 0 },
     { cle: "tailles", libelle: "Tailles", renseigne: Boolean(profile.tailleHaut && profile.tailleBas && profile.pointure) }
@@ -597,6 +616,11 @@ export function prochaineActionProfil(profile: Profile): ProchaineActionProfil |
       return { cle: "style", message: "Choisis ton style : il définit l'univers de tes recommandations.", cta: "Choisir mon style" };
     case "morphologie":
       return { cle: "morphologie", message: "Renseigne ta silhouette : elle peut orienter les coupes et proportions de ta capsule.", cta: "Compléter ma morphologie" };
+    // Aucun effet moteur pour l'instant (lot 4, après audit) : la phrase ne promet rien de plus que ce que le code fait.
+    case "mise_en_valeur":
+      return { cle: "mise_en_valeur", message: "Dis-nous ce que tu aimes mettre en valeur : c'est noté dans ton profil.", cta: "Indiquer ce que j'aime mettre en valeur" };
+    case "coupes":
+      return { cle: "coupes", message: "Indique les coupes dans lesquelles tu te sens le mieux : c'est noté dans ton profil.", cta: "Choisir mes coupes" };
     case "palette":
       return { cle: "palette", message: "Choisis tes couleurs : elles orientent la capsule et tes tenues.", cta: "Choisir ma palette" };
     case "tailles":

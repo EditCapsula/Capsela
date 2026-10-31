@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { lirePreferencesSilhouette, memesPreferencesSilhouette, preferencesSilhouetteVersLigne } from "./preferencesSilhouette";
 import { COLORIMETRIE_VIDE, rafraichirColorimetrie, type Colorimetrie } from "./colorimetrie";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { DEFAULT_PREFS, EMPTY_PROFILE, stylesDuGenre, type Profile } from "./profile";
@@ -110,7 +111,14 @@ function rowToProfile(row: Record<string, unknown>): Profile {
     city: (row.city as string) || "Paris",
     completed: Boolean(row.completed),
     prefs: { ...DEFAULT_PREFS, ...((row.prefs as object) ?? {}) },
+    // Colonne de 0054 : absente avant la migration (undefined), null pour une ligne jamais renseignée.
+    preferencesSilhouette: lirePreferencesSilhouette(row.preferences_silhouette),
   };
+}
+
+/** Un profil démo enregistré avant un nouveau champ ne le porte pas : complété par ses valeurs vides. */
+function completerDemo(demo: DemoAuth): DemoAuth {
+  return demo.profile ? { ...demo, profile: { ...EMPTY_PROFILE, ...demo.profile, preferencesSilhouette: lirePreferencesSilhouette(demo.profile.preferencesSilhouette) } } : demo;
 }
 
 function profileToRow(p: Profile) {
@@ -197,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const raw = localStorage.getItem(DEMO_KEY);
         if (raw) {
-          const demo = JSON.parse(raw) as DemoAuth;
+          const demo = completerDemo(JSON.parse(raw) as DemoAuth);
           setDemoUser(demo);
           setProfile(demo.profile ?? EMPTY_PROFILE);
         }
@@ -267,7 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const readStoredDemo = (): DemoAuth | null => {
     try {
       const raw = localStorage.getItem(DEMO_KEY);
-      return raw ? (JSON.parse(raw) as DemoAuth) : null;
+      return raw ? completerDemo(JSON.parse(raw) as DemoAuth) : null;
     } catch {
       return null;
     }
@@ -407,6 +415,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .from("profiles")
       .upsert({ id: user.id, ...profileToRow(p) });
     if (err) setError("Impossible d'enregistrer le profil : " + err.message);
+    // `preferences_silhouette` (0054) est écrite À PART, et seulement quand elle change : jamais dans
+    // profileToRow, sinon chaque sauvegarde de profil échouerait tant que la migration n'est pas
+    // appliquée (règle de CLAUDE.md). Son échec est signalé, le reste du profil est enregistré.
+    else if (!memesPreferencesSilhouette(p.preferencesSilhouette, profile.preferencesSilhouette)) {
+      const { error: errPref } = await getSupabase()
+        .from("profiles")
+        .update({ preferences_silhouette: preferencesSilhouetteVersLigne(p.preferencesSilhouette) })
+        .eq("id", user.id);
+      if (errPref) setError("Ton profil est enregistré, mais pas tes préférences de mise en valeur et de coupes : " + errPref.message);
+    }
   };
 
   const saveColorimetrie = async (c: Colorimetrie) => {

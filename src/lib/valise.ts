@@ -203,6 +203,15 @@ export interface MeteoJour {
   temp: number;
   label: string;
   prevue: boolean;
+  /**
+   * Vrai quand ce jour a reçu les TEMPÉRATURES HABITUELLES du lieu à cette date (climatologie, moyenne des cinq années précédentes,
+   * fetchClimat) et non une prévision (31/10/2026) : l'écran peut alors les dire, comme telles, pour des dates passées ou hors de
+   * l'horizon de prévision. Absent : prévision, ou repli sur la météo d'aujourd'hui (rien de vrai à dire du lieu).
+   */
+  habituelle?: boolean;
+  /** Les températures habituelles basse et haute de ce jour (avec `habituelle`). */
+  tempMin?: number;
+  tempMax?: number;
 }
 
 /**
@@ -274,6 +283,13 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
 }
 
 /** Amplitude des températures prévues, ou null quand aucun jour n'a de prévision. */
+/** Les températures habituelles du séjour (jours `habituelle`), de la plus basse à la plus haute ; null s'il n'y en a pas. */
+export function amplitudeHabituelle(meteos: MeteoJour[]): { min: number; max: number; jours: number } | null {
+  const h = meteos.filter((m) => m.habituelle);
+  if (!h.length) return null;
+  return { min: Math.min(...h.map((m) => m.tempMin ?? m.temp)), max: Math.max(...h.map((m) => m.tempMax ?? m.temp)), jours: h.length };
+}
+
 export function amplitudePrevue(meteos: MeteoJour[]): { min: number; max: number; jours: number } | null {
   const prevues = meteos.filter((m) => m.prevue);
   if (!prevues.length) return null;

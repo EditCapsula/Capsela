@@ -121,3 +121,22 @@ export function garderRecentes(liste: VilleRecente[]): void {
     // stockage indisponible : les villes récentes ne durent que le temps de la session
   }
 }
+
+const sansAccents = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+
+/**
+ * LE LIEU D'UNE VALISE QUI N'A GARDÉ QUE SON NOM (31/10/2026, Toubab Dialaw) : parmi les villes trouvées pour ce nom, celle qui porte
+ * exactement ce nom (accents et casse ignorés), sinon la première — l'ordre de pertinence du géocodage. null : aucune ville trouvée,
+ * et rien n'est inventé. Le nom gardé est celui de la ville choisie à la création (« Toubab Dialaw ») ou la saisie (« Lisbonne,
+ * Portugal ») : seule la partie avant la virgule est comparée.
+ */
+export function villePourLeNom(villes: VilleSuggeree[] | null, nom: string): VilleSuggeree | null {
+  if (!villes?.length) return null;
+  const cherche = sansAccents(nom.split(",")[0]);
+  return villes.find((v) => sansAccents(v.name) === cherche) ?? villes[0];
+}

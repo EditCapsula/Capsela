@@ -49,6 +49,14 @@ describe("valises — la valise enregistrée", () => {
     expect(rowToValise({ ...row, piece_ids: ["1", "4"] }).pieceIds).toEqual([1, 4]);
   });
 
+  it("garde le lieu d'une valise d'une destination, avec ses coordonnées (31/10/2026, Toubab Dialaw)", () => {
+    const avecLieu: ValiseGardee = { ...V2, destination: "Toubab Dialaw", lieu: { name: "Toubab Dialaw", country: "SN", lat: 14.6, lon: -17.13 } };
+    expect(rowToValise({ id: 12, ...valiseToRow(avecLieu) })).toEqual(avecLieu);
+    expect(normaliserValise(avecLieu)?.lieu).toEqual(avecLieu.lieu);
+    // Une valise d'avant n'a pas de lieu : rien n'est inventé.
+    expect(rowToValise({ id: 12, ...valiseToRow(V2) }).lieu).toBeUndefined();
+  });
+
   it("ajoute une valise en tête, ou remplace celle de même identifiant", () => {
     const autre = { ...V2, id: "local-a", destination: "Rome" };
     expect(avecValise([V2], autre).map((v) => v.id)).toEqual(["local-a", "12"]);

@@ -396,3 +396,17 @@ Demandé : reprendre l'organisation et les textes d'une capture partagée. L'ét
 - **Le modèle ne change pas** : départ, retour et jour d'arrivée de chaque autre ville. Les dates d'une destination en sont la lecture (`periodesDesDestinations`) ; les choisir les écrit (`appliquerPeriode`). La fin d'une destination est l'arrivée dans la suivante, le jour du trajet.
 - **Une destination ajoutée** partage les dates de la dernière, coupées au milieu (`arriveeAuMilieu`). Si la dernière compte moins de deux nuits, ses dates restent à choisir.
 - **Un seul calendrier ouvert**, sous la destination dont on choisit les dates. Le premier jour possible est le lendemain du début de la précédente. « Continuer » attend que chaque destination ait une ville et des dates complètes.
+
+## Le lieu et la météo d'une valise (31/10/2026)
+
+Signalé sur une valise Toubab Dialaw (22 → 29 octobre) : des pièces de printemps-été ajoutées au dressing n'entraient pas à la
+recomposition, et le résultat disait « Météo non disponible ». Cause : une valise ne gardait que le NOM de sa destination ; recomposer
+repartait sans coordonnées, donc sans les températures habituelles de ses dates (climatologie, `fetchClimat`), et le calcul retombait
+sur la météo d'aujourd'hui chez soi — fraîche en automne, elle écartait les pièces d'été d'un séjour au Sénégal.
+
+- Une valise d'une destination garde son lieu et ses coordonnées (`lieu`, dans `calcul` : aucune migration). Recomposer et modifier
+  le reprennent ; une valise plus ancienne le retrouve par son nom (`villePourLeNom`, `lieux.ts` : le nom exact d'abord, sinon la
+  première ville trouvée ; rien d'inventé si la recherche ne trouve rien).
+- Les jours composés avec la climatologie sont marqués (`MeteoJour.habituelle`, avec leurs températures basse et haute). Hors de
+  l'horizon de prévision (dates passées ou lointaines), le résultat les affiche comme « températures habituelles à ces dates », jamais
+  comme une prévision. Une valise composée sans climatologie garde « Météo non disponible pour ces dates ».

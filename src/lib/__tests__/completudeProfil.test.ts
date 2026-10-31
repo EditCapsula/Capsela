@@ -10,37 +10,52 @@ const complet: Profile = {
   tailleHaut: "M",
   tailleBas: "40",
   pointure: "39",
+  preferencesSilhouette: { miseEnValeur: ["taille"], coupes: [] },
 };
 
 describe("complétude du profil style", () => {
-  it("profil féminin complet : 5 sur 5, rien ne manque", () => {
+  it("profil féminin complet : 7 sur 7, rien ne manque", () => {
     const c = completudeProfil(complet);
-    expect(c).toMatchObject({ total: 5, renseignes: 5, pourcentage: 100 });
+    expect(c).toMatchObject({ total: 7, renseignes: 7, pourcentage: 100 });
     expect(c.manquants).toEqual([]);
   });
 
   it("profil vide : la morphologie n'est pas comptée tant que le genre est inconnu", () => {
     const c = completudeProfil(EMPTY_PROFILE);
-    expect(c.total).toBe(4);
-    expect(c.manquants.map((m) => m.cle)).toEqual(["genre", "style", "palette", "tailles"]);
+    expect(c.total).toBe(6);
+    expect(c.manquants.map((m) => m.cle)).toEqual(["genre", "style", "mise_en_valeur", "coupes", "palette", "tailles"]);
     expect(c.pourcentage).toBe(0);
   });
 
   it("côté Homme, la morphologie n'existe pas : elle n'est ni comptée ni manquante", () => {
     const c = completudeProfil({ ...complet, gender: "homme", styles: ["minimaliste"], morphology: null });
-    expect(c.total).toBe(4);
+    expect(c.total).toBe(5);
     expect(c.manquants).toEqual([]);
   });
 
   it("des tailles partielles ne comptent pas comme renseignées", () => {
     const c = completudeProfil({ ...complet, pointure: null });
     expect(c.manquants.map((m) => m.cle)).toEqual(["tailles"]);
-    expect(c.pourcentage).toBe(80);
+    expect(c.pourcentage).toBe(86);
   });
 
   it("une morphologie hors des valeurs du genre compte comme manquante", () => {
     const c = completudeProfil({ ...complet, morphology: "valeur_inconnue" });
     expect(c.manquants.map((m) => m.cle)).toEqual(["morphologie"]);
+  });
+
+  it("mise en valeur et coupes (31/10/2026) : jamais posées = manquantes ; la réponse neutre vaut réponse", () => {
+    const jamais = completudeProfil({ ...complet, preferencesSilhouette: { miseEnValeur: null, coupes: null } });
+    expect(jamais.manquants.map((m) => m.cle)).toEqual(["mise_en_valeur", "coupes"]);
+    expect(jamais.pourcentage).toBe(71);
+    const neutres = completudeProfil({ ...complet, preferencesSilhouette: { miseEnValeur: [], coupes: [] } });
+    expect(neutres.pourcentage).toBe(100);
+  });
+
+  it("homme : pas de mise en valeur — ni comptée, ni manquante (arbitrage du 31/10/2026)", () => {
+    const c = completudeProfil({ ...complet, gender: "homme", morphology: null, preferencesSilhouette: { miseEnValeur: null, coupes: [] } });
+    expect(c.manquants).toEqual([]);
+    expect(c.total).toBe(5);
   });
 
   it("un style non proposé pour le genre ne compte pas", () => {
@@ -67,6 +82,11 @@ describe("prochaine action du profil — dérivée des champs réellement manqua
     expect(prochaineActionProfil(EMPTY_PROFILE)?.cle).toBe("genre");
     expect(prochaineActionProfil({ ...EMPTY_PROFILE, gender: "femme" })?.cle).toBe("style");
     expect(prochaineActionProfil({ ...complet, tailleHaut: "", pointure: "" })?.cta).toBe("Renseigner ma taille de haut");
+  });
+  it("mise en valeur manquante : action honnête, sans promesse sur les recommandations", () => {
+    const a = prochaineActionProfil({ ...complet, preferencesSilhouette: { miseEnValeur: null, coupes: [] } });
+    expect(a?.cle).toBe("mise_en_valeur");
+    expect(a!.message).not.toMatch(/recommand|adapte/i);
   });
   it("homme : la morphologie n'est jamais proposée", () => {
     const a = prochaineActionProfil({ ...complet, gender: "homme", morphology: null, pointure: "" });

@@ -3,6 +3,7 @@ import type { Weather } from "../data";
 import {
   allegement,
   alternatives,
+  amplitudeHabituelle,
   amplitudePrevue,
   BAGAGES,
   MINIMUM_PIECES_VALISE,
@@ -577,5 +578,14 @@ describe("composerValise — étape 4, varier (22/10/2026)", () => {
   it("une occasion d'un seul jour n'est pas concernée", () => {
     const unJour = situationsDuSejour(["quotidien", "soiree"], [meteo("2026-10-16")]);
     expect(looksDuSoir(composerValise(DRESSING, unJour, 22, gen()))).toBe(1);
+  });
+});
+
+describe("amplitudeHabituelle — les températures habituelles d'un séjour (31/10/2026)", () => {
+  it("de la plus basse à la plus haute des jours habituels, et rien sans climatologie", () => {
+    const m = (jour: string, o: Partial<{ temp: number; habituelle: boolean; tempMin: number; tempMax: number; prevue: boolean }>) => ({ jour, temp: 25, label: "Ensoleillé", prevue: false, ...o });
+    expect(amplitudeHabituelle([m("2026-10-22", { habituelle: true, tempMin: 24, tempMax: 29 }), m("2026-10-23", { habituelle: true, tempMin: 23, tempMax: 30 })])).toEqual({ min: 23, max: 30, jours: 2 });
+    // Un jour prévu, ou le repli sur la météo d'aujourd'hui, ne sont pas des températures habituelles.
+    expect(amplitudeHabituelle([m("2026-10-22", { prevue: true }), m("2026-10-23", {})])).toBeNull();
   });
 });

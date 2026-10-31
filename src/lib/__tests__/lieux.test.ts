@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ajouterRecente, libelleDestination, lireRecentes, presenterResultats, type VilleRecente } from "../lieux";
+import { ajouterRecente, libelleDestination, lireRecentes, presenterResultats, villePourLeNom, type VilleRecente } from "../lieux";
 import { clePrevision, type VilleSuggeree } from "../weather";
 
 // L'étape « Où » (08/10/2026) : des résultats lisibles, des villes récentes sans doublon, une prévision gardée par point.
@@ -57,5 +57,21 @@ describe("clé de prévision", () => {
     expect(clePrevision("Rome", { lat: 41.9028, lon: 12.4964 })).toBe(clePrevision("Rome", { lat: 41.9031, lon: 12.4962 }));
     expect(clePrevision("Rome", { lat: 41.9, lon: 12.49 })).not.toBe(clePrevision("Rome", { lat: 43.21, lon: -75.45 }));
     expect(clePrevision(" Paris ", null)).toBe("paris");
+  });
+});
+
+describe("villePourLeNom — le lieu d'une valise qui n'a gardé que son nom (31/10/2026)", () => {
+  const v = (name: string, country: string, lat = 0): VilleSuggeree => ({ name, country, state: "", lat, lon: 0 });
+  it("préfère la ville qui porte exactement ce nom, accents et casse ignorés", () => {
+    expect(villePourLeNom([v("Dialaw", "SN", 1), v("Toubab Dialaw", "SN", 2)], "toubab dialaw")?.lat).toBe(2);
+    expect(villePourLeNom([v("Sao Paulo", "BR", 1), v("São Paulo", "BR", 2)], "São Paulo")?.lat).toBe(1);
+  });
+  it("compare le nom avant la virgule (« Lisbonne, Portugal »), sinon prend la première ville trouvée", () => {
+    expect(villePourLeNom([v("Lisboa", "PT", 1), v("Lisbonne", "PT", 2)], "Lisbonne, Portugal")?.lat).toBe(2);
+    expect(villePourLeNom([v("Lisboa", "PT", 1)], "Lisbonne")?.lat).toBe(1);
+  });
+  it("rien trouvé : null, jamais un lieu inventé", () => {
+    expect(villePourLeNom([], "Toubab Dialaw")).toBeNull();
+    expect(villePourLeNom(null, "Toubab Dialaw")).toBeNull();
   });
 });

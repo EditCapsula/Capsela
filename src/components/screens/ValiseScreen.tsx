@@ -22,6 +22,7 @@ import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import {
   allegement,
   alternatives,
+  amplitudeHabituelle,
   amplitudePrevue,
   categoriesPourCompleter,
   completerAvecCapsule,
@@ -121,7 +122,8 @@ import {
   type ItemProgramme,
 } from "@/lib/programmeValise";
 import { ChoixVille } from "@/components/EtapeLieu";
-import { fetchClimat, previsionGardee, type Climat, type VilleSuggeree } from "@/lib/weather";
+import { fetchClimat, fetchVilles, previsionGardee, type Climat, type VilleSuggeree } from "@/lib/weather";
+import { villePourLeNom } from "@/lib/lieux";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import Card from "@/components/Card";
@@ -1007,7 +1009,16 @@ export default function ValiseScreen() {
       if (m) return { jour: j, temp: m.temp, label: m.label, prevue: true };
       if (climat) {
         const temp = Math.round((climat.tempMin + climat.tempMax) / 2);
-        return { jour: j, temp, label: climat.pluie >= 0.6 ? "Pluvieux" : climat.tempMax >= 25 ? "Ensoleillé" : "Nuageux", prevue: false };
+        return {
+          jour: j,
+          temp,
+          label: climat.pluie >= 0.6 ? "Pluvieux" : climat.tempMax >= 25 ? "Ensoleillé" : "Nuageux",
+          prevue: false,
+          // Températures habituelles du lieu (31/10/2026) : l'écran du résultat peut les dire, comme telles, hors de l'horizon de prévision.
+          habituelle: true,
+          tempMin: Math.round(climat.tempMin),
+          tempMax: Math.round(climat.tempMax),
+        };
       }
       return { jour: j, temp: weather.temp, label: weather.label, prevue: false };
     });
@@ -1132,6 +1143,9 @@ export default function ValiseScreen() {
       id,
       destination: rep.etapes?.length ? libelleItineraire(rep.etapes) : rep.ville ? rep.ville.name : villeDuLieu(rep.destination.trim()),
       ...(rep.etapes && rep.etapes.length > 1 ? { etapes: rep.etapes } : {}),
+      // Le lieu et ses coordonnées (31/10/2026) : recomposer et modifier le reprennent, sans quoi la valise perd les températures
+      // habituelles de ses dates.
+      ...(!rep.etapes?.length && rep.ville ? { lieu: { name: rep.ville.name, country: rep.ville.country, lat: rep.ville.lat, lon: rep.ville.lon } } : {}),
       depart: rep.depart,
       retour: rep.retour,
       bagage: rep.bagage,
@@ -1170,11 +1184,22 @@ export default function ValiseScreen() {
       idEnModification
     );
   };
-  /** Recomposer la valise affichée avec le dressing d'aujourd'hui (des pièces y ont été ajoutées) : mêmes réponses, même valise. */
-  const recomposer = () => {
+  /**
+   * Le lieu d'une valise d'une destination : celui qu'elle a gardé, sinon (valise d'avant le 31/10/2026) la ville trouvée pour son nom
+   * (villePourLeNom). null : introuvable — la valise se compose alors comme avant, sans climatologie.
+   */
+  const villeDeLaValise = async (v: ValiseGardee): Promise<VilleSuggeree | null> =>
+    v.lieu ? { ...v.lieu, state: "" } : villePourLeNom(await fetchVilles(v.destination).catch(() => null), v.destination);
+  /**
+   * Recomposer la valise affichée avec le dressing d'aujourd'hui (des pièces y ont été ajoutées) : mêmes réponses, même valise, MÊME
+   * LIEU (31/10/2026, signalé sur Toubab Dialaw : la recomposition repartait sans coordonnées, donc sans les températures habituelles
+   * de ses dates — la météo d'aujourd'hui chez soi écartait les pièces d'été d'un séjour au Sénégal).
+   */
+  const recomposer = async () => {
     if (!valise) return;
+    const ville = valise.etapes?.length ? null : await villeDeLaValise(valise);
     void lancer(
-      { destination: valise.destination, ville: null, ...(valise.etapes ? { etapes: valise.etapes } : {}), depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme, activites: valise.activites, choix: valise.choix, evenements: valise.evenements },
+      { destination: valise.destination, ville, ...(valise.etapes ? { etapes: valise.etapes } : {}), depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme, activites: valise.activites, choix: valise.choix, evenements: valise.evenements },
       valise.id
     );
   };
@@ -1248,8 +1273,14 @@ export default function ValiseScreen() {
     setVille(
       premiere && premiere.lat != null && premiere.lon != null
         ? { name: villeDuLieu(premiere.destination), country: premiere.pays ?? "", state: "", lat: premiere.lat, lon: premiere.lon, ...(premiere.pays ? { capitaleDe: villeDuLieu(premiere.destination) } : {}) }
-        : null
+        : valise.lieu
+          ? { ...valise.lieu, state: "" }
+          : null
     );
+    // Une valise d'avant le 31/10/2026 n'a pas gardé son lieu : il est retrouvé par son nom, sans attendre (la ville choisie l'emporte).
+    if (!premiere && !valise.lieu) {
+      void villeDeLaValise(valise).then((v) => v && setVille((actuelle) => actuelle ?? v));
+    }
     setAutresEtapes(suivantes);
     setDepart(valise.depart);
     setRetour(valise.retour);
@@ -1766,6 +1797,9 @@ function Resultat({
   const meteosPrevues = previsionVive && previsionVive.ville === villePrevision ? meteosPrevuesDuSejour(previsionVive.p, joursDeLaVille) : [];
   const amplitude = amplitudePrevue(meteosPrevues);
   const previsionAttendue = villePrevision != null && !(previsionVive && previsionVive.ville === villePrevision);
+  // Hors de l'horizon de prévision (dates passées ou lointaines, 31/10/2026) : les températures habituelles du lieu que le calcul a
+  // reçues, dites comme telles — jamais « prévus ». Une valise composée sans climatologie (repli sur la météo d'aujourd'hui) n'en a pas.
+  const habituelles = amplitudeHabituelle(valise.meteos);
 
   // Les looks de chaque pièce de remplacement sont comptés par le moteur à
   // l'ouverture de la feuille — pas avant, c'est le calcul le plus coûteux.
@@ -2694,7 +2728,8 @@ function Resultat({
         ].join(" · ")}
       </div>
 
-      {/* La météo, compacte : celle de la prévision d'aujourd'hui, pour les jours qu'elle couvre — rien d'autre. */}
+      {/* La météo, compacte : celle de la prévision d'aujourd'hui, pour les jours qu'elle couvre ; hors de son horizon (dates passées ou
+          lointaines), les températures habituelles du lieu que le calcul a reçues, dites comme telles (31/10/2026) — rien d'autre. */}
       {(amplitude || !previsionAttendue) && (
         <div className="flex flex-wrap gap-x-5 gap-y-[10px] mt-4 text-[12px] text-ink">
           {amplitude ? (
@@ -2711,6 +2746,14 @@ function Resultat({
                 <span className="text-[13px] font-medium leading-[1.25]">{pluie ? "Pluie annoncée" : "Pas de pluie annoncée"}</span>
               </span>
             </>
+          ) : habituelles ? (
+            <span className="inline-flex items-center gap-[9px]">
+              <span className="text-terracotta">{G_METEO_PETIT}</span>
+              <span className="leading-[1.25]">
+                <span className="block text-[13px] font-medium">{libelleAmplitude(habituelles)}</span>
+                <span className="block text-[11px] text-muted">températures habituelles à ces dates</span>
+              </span>
+            </span>
           ) : (
             <span className="inline-flex items-center gap-[9px]">
               <span className="text-muted">{G_METEO_PETIT}</span>

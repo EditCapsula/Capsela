@@ -1,7 +1,7 @@
 "use client";
 
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -41,6 +41,7 @@ import {
 import FilEtapes, { ProgressionQuestions } from "@/components/FilEtapes";
 import OptionRow from "@/components/OptionRow";
 import {
+  genderLabel,
   GENDERS,
   INTENSITE_OPTIONS,
   INTENSITE_VISUELS,
@@ -64,6 +65,23 @@ import {
   type Profile,
 } from "@/lib/profile";
 import Button from "@/components/Button";
+import {
+  basculerOption,
+  COUPES_PREFEREES,
+  libelleCoupes,
+  libelleMiseEnValeur,
+  LIBELLE_SANS_COUPE,
+  LIBELLE_SANS_MISE_EN_VALEUR,
+  LIBELLES_COUPES,
+  LIBELLES_MISE_EN_VALEUR,
+  miseEnValeurDuGenre,
+  miseEnValeurPosee,
+  misesEnValeurProposees,
+  VISUEL_NEUTRE,
+  visuelCoupe,
+  visuelMiseEnValeur,
+  type PreferencesSilhouette,
+} from "@/lib/preferencesSilhouette";
 import Card from "@/components/Card";
 import Input from "@/components/Input";
 
@@ -79,6 +97,13 @@ const ALL_STEPS = [
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
   { key: "style", kicker: "Ton style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis 1 ou 2 styles maximum." },
   { key: "morpho", kicker: "Ta silhouette", title: "Quelle est ta silhouette ?", subtitle: "Elle nous aide à te proposer des coupes et des proportions qui te mettent en valeur." },
+  /*
+   * MISE EN VALEUR ET COUPES (31/10/2026, brief « Évolution de l'onboarding », preferencesSilhouette.ts). Ce que la personne AIME,
+   * à côté de ce que sa silhouette suggère. Le sous-titre du brief (« Capsela adapte ses recommandations à tes envies… ») attend
+   * le branchement moteur (lot 4, après audit) : tant que ces réponses ne changent aucune recommandation, l'écran ne le dit pas.
+   */
+  { key: "mise_en_valeur", kicker: "Ta silhouette", title: "Qu'aimes-tu particulièrement mettre en valeur ?", subtitle: "Plusieurs choix possibles, ou aucune préférence." },
+  { key: "coupes", kicker: "Ta silhouette", title: "Dans quelles coupes te sens-tu le mieux ?", subtitle: "Plusieurs choix possibles." },
   /*
    * ORDRE DU PARCOURS (07/10/2026, brief « Optimisation de l'onboarding ») : style, silhouette, couleurs, colorimétrie,
    * profil — les goûts d'abord, la couleur ensuite, le récapitulatif en dernier (et il mène au dressing). Les tailles,
@@ -104,7 +129,7 @@ const ALL_STEPS = [
    * palette ».
    */
   { key: "pal_couleurs", kicker: "Tes couleurs", title: "Quelles couleurs aimes-tu porter ?", subtitle: "Choisis les couleurs que tu aimes porter ou aimerais porter souvent." },
-  { key: "pal_intensite", kicker: "Tes couleurs", title: "Quelle intensité de couleurs portes-tu volontiers ?", subtitle: "Cela nous aide à créer des looks dans ton style." },
+  // L'intensité n'est plus une étape (31/10/2026, arbitrage 7) : elle est posée sous les couleurs, sur le même écran.
   /*
    * LE PARCOURS COLORIMÉTRIE (refonte UX/UI du 30/09/2026) : présentation,
    * quatre questions, analyse, résultat, « Et maintenant ? ». Les sous-écrans
@@ -114,14 +139,16 @@ const ALL_STEPS = [
    */
   { key: "colorimetrie", kicker: "Quatre questions rapides", title: "Ta colorimétrie", subtitle: "Découvrons les couleurs qui mettent naturellement ton teint en valeur." },
   { key: "colorimetrie_resultat", kicker: "Ta palette", title: "Ta palette", subtitle: "" },
-  { key: "colorimetrie_suite", kicker: "Ta colorimétrie", title: "Et maintenant ?", subtitle: "Capsela utilise ta palette pour personnaliser ton expérience." },
+  // « Et maintenant ? » n'est plus une étape (31/10/2026, arbitrage 7) : ses trois bénéfices s'affichent sous « Ta palette ».
   { key: "pal_recap", kicker: "Ton profil", title: "Ton profil Capsela est prêt", subtitle: "Capsela combine tes goûts et ta colorimétrie pour des recommandations qui te ressemblent." },
 ] as const;
 
+// Les tailles prennent la même marque de sélection que les cartes (31/10/2026, revue de cohérence) : bordure terracotta et fond
+// teinté, plus l'encre pleine. Bordure d'épaisseur fixe : la puce ne bouge pas au toucher.
 function chipCls(on: boolean): string {
   return (
-    "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border " +
-    (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
+    "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans text-ink border-[1.5px] transition-colors duration-150 " +
+    (on ? "border-terracotta bg-selected-bg" : "bg-card border-border")
   );
 }
 
@@ -188,6 +215,45 @@ function PaletteDots({
   );
 }
 
+/**
+ * Carte d'une option à visuel (mise en valeur, coupes — 31/10/2026). Même langage que les cartes de style : bordure fixe dont
+ * seule la couleur change, anneau de 1 px et coche terracotta à la sélection, visuel 3:4 sans rognage. Sans visuel (côté homme,
+ * visuels à produire), la carte garde son libellé seul — jamais une image d'un autre genre.
+ */
+function CarteChoix({ libelle, visuel, on, onClick }: { libelle: string; visuel: string | null; on: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={on}
+      className={
+        "relative text-left rounded-tuile overflow-hidden border-[1.5px] cursor-pointer flex flex-col transition-[border-color,box-shadow,background-color] duration-[180ms] ease-out motion-reduce:transition-none " +
+        (on ? "border-terracotta" : "border-border")
+      }
+      style={{ background: on ? "var(--color-selected-bg)" : "var(--color-card)", boxShadow: on ? "0 0 0 1px var(--color-terracotta)" : "none" }}
+    >
+      {visuel && (
+        <div className="w-full flex-shrink-0 bg-border" style={{ aspectRatio: "3/4" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={visuel} alt="" width={300} height={400} loading="lazy" decoding="async" className="w-full h-full object-cover block" />
+        </div>
+      )}
+      <span
+        className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-[1.5px] transition-colors duration-[180ms] motion-reduce:transition-none"
+        style={{ background: on ? "var(--color-terracotta)" : "#FFFFFF", borderColor: on ? "var(--color-terracotta)" : "#B08968" }}
+      >
+        {on && (
+          <svg width="11" height="9" viewBox="0 0 11 9" fill="none" className="coche-style">
+            <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
+      <div className={"px-[13px] " + (visuel ? "py-[11px]" : "py-[18px] pr-[40px]")}>
+        <div className="t-titre-vignette text-ink">{libelle}</div>
+      </div>
+    </button>
+  );
+}
+
 export default function ProfileSetupScreen() {
   const { profile, saveProfile, saveColorimetrie } = useAuth();
   const { state, actions } = useCapsela();
@@ -207,11 +273,15 @@ export default function ProfileSetupScreen() {
   const STEPS = ALL_STEPS.filter(
     (s) =>
       (s.key !== "morpho" || draft.gender === "femme") &&
+      (s.key !== "mise_en_valeur" || miseEnValeurPosee(draft.gender)) &&
       // L'étape prénom n'est posée qu'à qui n'en a pas — sauf quand on vient
       // explicitement la modifier (Mon compte → Prénom, 26/09/2026) : sans
       // cette exception, l'édition ouvrait l'étape « genre ».
       (s.key !== "prenom" || !profile.displayName.trim() || (state.profileSetupFromEdit && state.profileSetupStep === "prenom")) &&
-      ((s.key !== "colorimetrie_resultat" && s.key !== "colorimetrie_suite") || colorimetrieUtilisable(draft.colorimetrie))
+      (s.key !== "colorimetrie_resultat" || colorimetrieUtilisable(draft.colorimetrie)) &&
+      // GENRE ET TAILLES SUR UN ÉCRAN (31/10/2026, brief) : les tailles sont posées sous le genre. L'étape « taille » seule ne sert
+      // plus qu'à les modifier depuis Mon profil.
+      (s.key !== "taille" || (state.profileSetupFromEdit && state.profileSetupStep === "taille"))
   );
   // UNE COLORIMÉTRIE DÉJÀ FAITE SE RETROUVE, ELLE NE SE REFAIT PAS (14/10/2026, demandé : « si l'utilisateur a déjà fait le test et revient
   // à cette étape, le résultat déjà obtenu doit s'afficher, avec la possibilité de refaire le test »). Arriver sur l'étape colorimétrie —
@@ -228,6 +298,11 @@ export default function ProfileSetupScreen() {
   const [colo, setColo] = useState<ParcoursColorimetrie>(() => parcoursInitial(reponsesEnListe(profile.colorimetrie?.reponses)));
 
   const patch = (p: Partial<Profile>) => setDraft((d) => ({ ...d, ...p }));
+  const patchSilhouette = (p: Partial<PreferencesSilhouette>) =>
+    setDraft((d) => ({ ...d, preferencesSilhouette: { ...d.preferencesSilhouette, ...p } }));
+  // LE RÉCAPITULATIF SE MODIFIE SECTION PAR SECTION (31/10/2026, brief) : toucher une ligne ouvre son étape, et « Continuer »
+  // y ramène directement, sans rejouer les étapes intermédiaires.
+  const [retourRecap, setRetourRecap] = useState(false);
 
   // Autant de couleurs qu'on veut depuis le 30/10/2026 (demandé) ; six au plus auparavant (brief UX « Ta palette » du 24/08/2026).
   const toggleCouleur = (hex: string) => {
@@ -240,10 +315,13 @@ export default function ProfileSetupScreen() {
   // Un troisième style est BLOQUÉ, pas substitué (07/10/2026) : le remplacer en silence changeait un choix sans le dire.
   // Seuls comptent les styles que le genre propose (stylesDuGenre) : un style resté d'un autre genre (Glamour après un passage à Homme) ne
   // doit ni occuper une des deux places ni rester dans le profil.
+  const nbStyles = stylesDuGenre(draft.styles, draft.gender).length;
   const selectStyle = (id: string) => {
     const valides = stylesDuGenre(draft.styles, draft.gender);
     if (!valides.includes(id) && valides.length >= MAX_STYLES) {
-      setStyleBloque(true);
+      // Un false puis true : un second refus pendant que le message est affiché relance son délai.
+      setStyleBloque(false);
+      setTimeout(() => setStyleBloque(true), 0);
       return;
     }
     setStyleBloque(false);
@@ -258,7 +336,7 @@ export default function ProfileSetupScreen() {
   // l'ordre de ALL_STEPS). Seul le groupe palette (pal_couleurs → pal_ressenti
   // → pal_recap) reste multi-étapes même en édition : ces trois étapes
   // forment un seul geste ("Mes goûts"), jamais séparables.
-  const PALETTE_GROUP = ["pal_couleurs", "pal_intensite", "colorimetrie", "colorimetrie_resultat", "colorimetrie_suite", "pal_recap"];
+  const PALETTE_GROUP = ["pal_couleurs", "colorimetrie", "colorimetrie_resultat", "pal_recap"];
   const entryStepKey = state.profileSetupStep || "genre";
   const editGroupEndKey = PALETTE_GROUP.includes(entryStepKey) ? "pal_recap" : entryStepKey;
   const editGroupEndIndex = STEPS.findIndex((s) => s.key === editGroupEndKey);
@@ -271,7 +349,12 @@ export default function ProfileSetupScreen() {
     else actions.openAdd();
   };
 
+  const indexRecap = STEPS.findIndex((s) => s.key === "pal_recap");
   const next = () => {
+    if (retourRecap && indexRecap >= 0 && STEPS[step]?.key !== "pal_recap") {
+      setRetourRecap(false);
+      return setStep(indexRecap);
+    }
     if (isLast) return finish();
     // En arrivant sur la colorimétrie PAR L'AVANT, on commence par sa
     // présentation — même si le questionnaire avait déjà été parcouru.
@@ -292,6 +375,10 @@ export default function ProfileSetupScreen() {
       const precedent = retourColorimetrie(colo);
       if (precedent) return setColo(precedent);
     }
+    if (retourRecap && indexRecap >= 0) {
+      setRetourRecap(false);
+      return setStep(indexRecap);
+    }
     // En reculant depuis « Ta palette », la présentation d'une colorimétrie déjà faite est sautée (cf. sansPresentationDejaFaite).
     const precedente = dejaFaite && STEPS[step - 1]?.key === "colorimetrie" && STEPS[step]?.key === "colorimetrie_resultat" ? step - 2 : step - 1;
     if (state.profileSetupFromEdit) {
@@ -306,8 +393,8 @@ export default function ProfileSetupScreen() {
   const enQuestion = meta.key === "colorimetrie" && colo.vue === "question";
   const enAnalyse = meta.key === "colorimetrie" && colo.vue === "analyse";
   // Aucun retour pendant l'analyse : elle dure moins de deux secondes.
-  const showBack = !enAnalyse && (step > 0 || state.profileSetupFromEdit || profile.completed || (meta.key === "colorimetrie" && colo.vue !== "presentation"));
   const indexColorimetrie = STEPS.findIndex((s) => s.key === "colorimetrie");
+  const showBack = !enAnalyse && (step > 0 || state.profileSetupFromEdit || profile.completed || (meta.key === "colorimetrie" && colo.vue !== "presentation"));
 
   /** Fin de l'analyse : le résultat (étape suivante), ou « Pas de saison nette » sur place. */
   const finAnalyse = () => {
@@ -348,9 +435,9 @@ export default function ProfileSetupScreen() {
   // par le récapitulatif ; la silhouette n'existe pas pour tous les profils (cf. STEPS), le compte suit donc le parcours servi.
   const SECTIONS: { label: string; cles: string[] }[] = [
     { label: "Ton style", cles: ["style"] },
-    ...(STEPS.some((x) => x.key === "morpho") ? [{ label: "Ta silhouette", cles: ["morpho"] }] : []),
-    { label: "Tes couleurs", cles: ["pal_couleurs", "pal_intensite"] },
-    { label: "Ta colorimétrie", cles: ["colorimetrie", "colorimetrie_resultat", "colorimetrie_suite"] },
+    { label: "Ta silhouette", cles: ["morpho", "mise_en_valeur", "coupes"] },
+    { label: "Tes couleurs", cles: ["pal_couleurs"] },
+    { label: "Ta colorimétrie", cles: ["colorimetrie", "colorimetrie_resultat"] },
     { label: "Ton profil", cles: ["pal_recap"] },
     { label: "Ton dressing", cles: [] },
   ];
@@ -360,25 +447,53 @@ export default function ProfileSetupScreen() {
       ? `${sectionCourante + 1} / ${SECTIONS.length} · ${SECTIONS[sectionCourante].label}`
       : null;
   const [styleBloque, setStyleBloque] = useState(false);
+  // Le refus d'un troisième style se dit un instant, puis s'efface (31/10/2026, brief « Ajustement UX – sélection des styles ») : jamais
+  // un message permanent. Un nouveau refus relance le délai.
+  useEffect(() => {
+    if (!styleBloque) return;
+    const t = setTimeout(() => setStyleBloque(false), 3500);
+    return () => clearTimeout(t);
+  }, [styleBloque]);
   // Seules les étapes style et palette exigent une sélection non vide
   // (styles : recette 20/08/2026 ; palette : Tâche 8, min 1 couleur) — les
   // autres étapes gardent leur comportement existant, jamais bloquant.
   const canContinue =
     (meta.key !== "prenom" || draft.displayName.trim().length > 0) &&
     (meta.key !== "style" || draft.styles.length > 0) &&
-    (meta.key !== "pal_couleurs" || draft.paletteCouleurs.length >= MIN_PALETTE_COULEURS);
+    (meta.key !== "pal_couleurs" || draft.paletteCouleurs.length >= MIN_PALETTE_COULEURS) &&
+    // Les coupes demandent une réponse (« Cela dépend du vêtement » en est une) ; la mise en valeur est facultative.
+    (meta.key !== "coupes" || draft.preferencesSilhouette.coupes !== null);
 
-  const recapRows = [
-    { label: "Style", value: libelleStyles(draft.styles, draft.gender) || "à choisir", swatches: [] as string[] },
-    ...(draft.gender === "femme" && draft.morphology
-      ? [{ label: "Silhouette", value: MORPHOLOGY_LABELS[draft.morphology], swatches: [] as string[] }]
-      : []),
+  const recapRows: { label: string; value: string; swatches: string[]; etape?: string }[] = [
     {
+      label: "Genre",
+      value: [genderLabel(draft.gender), draft.tailleHaut, draft.tailleBas, draft.pointure].filter(Boolean).join(" · ") || "à préciser",
+      swatches: [],
+      etape: "genre",
+    },
+    { label: "Style", value: libelleStyles(draft.styles, draft.gender) || "à choisir", swatches: [] as string[], etape: "style" },
+    ...(draft.gender === "femme" && draft.morphology
+      ? [{ label: "Silhouette", value: MORPHOLOGY_LABELS[draft.morphology], swatches: [] as string[], etape: "morpho" }]
+      : []),
+    ...(miseEnValeurPosee(draft.gender)
+      ? [
+          {
+            label: "Mise en valeur",
+            value: libelleMiseEnValeur(draft.preferencesSilhouette.miseEnValeur, draft.gender) ?? "non précisée",
+            swatches: [] as string[],
+            etape: "mise_en_valeur",
+          },
+        ]
+      : []),
+    { label: "Coupes", value: libelleCoupes(draft.preferencesSilhouette.coupes) ?? "à choisir", swatches: [], etape: "coupes" },
+    {
+      etape: "pal_couleurs",
       label: "Couleurs",
       value: draft.paletteCouleurs.map(paletteColorName).filter(Boolean).join(", ") || "à choisir",
       swatches: draft.paletteCouleurs,
     },
     {
+      etape: "pal_couleurs",
       label: "Intensité",
       value: draft.paletteIntensite
         ? (INTENSITE_VISUELS[draft.paletteIntensite]?.libelleRecap ?? draft.paletteIntensite)
@@ -393,6 +508,7 @@ export default function ProfileSetupScreen() {
       // « Saison » depuis le questionnaire (30/09/2026) : ce n'est plus une
       // analyse. « Pas encore définie » et non « aucune » : elle est à venir,
       // pas refusée.
+      etape: "colorimetrie",
       label: "Saison",
       value: colorimetrieUtilisable(draft.colorimetrie)
         ? draft.colorimetrie.libelle || "Définie"
@@ -414,6 +530,37 @@ export default function ProfileSetupScreen() {
   // sauf pal_couleurs, structure inchangée), soit dans la zone scrollable
   // d'un layout à deux zones distinctes pour pal_couleurs (cf. plus bas) —
   // jamais un second rendu divergent du même contenu.
+  const blocTailles = (
+        <div className="mt-[26px]">
+          <div className="t-surtitre text-muted mb-[11px]">Taille de haut</div>
+          <div className="flex gap-2 flex-wrap">
+            {TAILLES_HAUT.map((t) => (
+              <button key={t} onClick={() => patch({ tailleHaut: t })} className={chipCls(draft.tailleHaut === t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <div className="t-surtitre text-muted mt-[22px] mb-[11px]">
+            {tailleBasLabelFor(draft.gender)}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {taillesBas.map((t) => (
+              <button key={t} onClick={() => patch({ tailleBas: t })} className={chipCls(draft.tailleBas === t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <div className="t-surtitre text-muted mt-[22px] mb-[11px]">Pointure</div>
+          <Input
+            inputMode="numeric"
+            className="w-[120px]"
+            placeholder="Ex. 39"
+            value={draft.pointure ?? ""}
+            onChange={(e) => patch({ pointure: e.target.value.replace(/[^0-9]/g, "").slice(0, 2) || null })}
+          />
+        </div>
+  );
+
   const pageBody = (
     <>
       <AppHeader showAvatar={false} />
@@ -443,11 +590,10 @@ export default function ProfileSetupScreen() {
         )}
         <div className="w-[38px]" />
       </div>
-      {filDArianne && (
-        <div className="text-center text-[11px] text-muted mt-2" aria-live="polite">
-          {filDArianne}
-        </div>
-      )}
+      {/* Hauteur réservée même sans fil (Genre et tailles, modification) : le titre tombe au même endroit sur toutes les étapes. */}
+      <div className="text-center text-[11px] text-muted mt-2 h-[16px] leading-[16px]" aria-live="polite">
+        {filDArianne}
+      </div>
 
       <div className="mt-[26px]">
         {enTete.kicker && <div className="t-surtitre text-terracotta">{enTete.kicker}</div>}
@@ -492,9 +638,26 @@ export default function ProfileSetupScreen() {
           ))}
         </div>
       )}
+      {/* Les tailles sous le genre (31/10/2026) : elles n'apparaissent qu'une fois le genre choisi, dont dépend la liste des tailles
+          de bas. En modification depuis Mon profil, chaque information garde son propre écran. */}
+      {meta.key === "genre" && !state.profileSetupFromEdit && draft.gender && (
+        <>
+          <div className="t-surtitre text-muted mt-[30px]">Tes tailles habituelles</div>
+          <div className="text-[12px] text-muted mt-[6px]">Pré-remplies quand tu ajoutes une pièce.</div>
+          {blocTailles}
+        </>
+      )}
 
       {meta.key === "pal_couleurs" && (
         <PaletteDots options={PAL_COULEURS} selected={draft.paletteCouleurs} onSelect={toggleCouleur} />
+      )}
+      {meta.key === "pal_couleurs" && (
+        // Même construction que « Tes tailles habituelles » sous le genre : une section secondaire d'un écran se signale par un
+        // surtitre et une ligne d'aide, jamais par un second titre.
+        <>
+          <div className="t-surtitre text-muted mt-[30px]">Ton intensité de couleurs</div>
+          <div className="text-[12px] text-muted mt-[6px]">Celle que tu portes volontiers. Facultatif.</div>
+        </>
       )}
 
       {/* L'intensité seule, en cartes radio pleine largeur plutôt qu'en chips
@@ -504,14 +667,15 @@ export default function ProfileSetupScreen() {
           chaque carte montre aussi cinq pastilles de sa famille de couleurs
           et une phrase (INTENSITE_VISUELS) : on compare les quatre d'un coup
           d'œil, sans que le choix enregistré change. */}
-      {meta.key === "pal_intensite" && (
-        <div className="flex flex-col gap-[10px] mt-[26px]">
+      {meta.key === "pal_couleurs" && (
+        <div className="flex flex-col gap-[10px] mt-[14px]">
           {INTENSITE_OPTIONS.map((it: Intensite) => (
             <OptionRow
               key={it}
               label={it}
+              accent
+              vignette={INTENSITE_VISUELS[it].etoffe}
               description={INTENSITE_VISUELS[it].description}
-              pastilles={INTENSITE_VISUELS[it].pastilles}
               on={draft.paletteIntensite === it}
               onClick={() => patch({ paletteIntensite: it })}
             />
@@ -532,12 +696,14 @@ export default function ProfileSetupScreen() {
       {meta.key === "colorimetrie" && colo.vue === "analyse" && <AnalyseColorimetrie onFini={finAnalyse} />}
       {meta.key === "colorimetrie" && colo.vue === "indecis" && <IndecisColorimetrie />}
       {meta.key === "colorimetrie_resultat" && <ResultatColorimetrie colorimetrie={draft.colorimetrie} intensite={draft.paletteIntensite} />}
-      {meta.key === "colorimetrie_suite" && <SuiteColorimetrie />}
+      {meta.key === "colorimetrie_resultat" && <SuiteColorimetrie />}
 
       {meta.key === "pal_recap" && (
         <Card className="mt-6 p-[18px]">
-          {recapRows.map((r) => (
-            <div key={r.label} className="flex items-center gap-3 py-[11px] border-b border-border last:border-b-0">
+          {recapRows.map((r) => {
+            const cible = r.etape ? STEPS.findIndex((x) => x.key === r.etape) : -1;
+            const ligne = (
+            <>
               <span className="w-[92px] flex-shrink-0 t-surtitre text-muted">{r.label}</span>
               <div className="flex items-center gap-[6px] flex-wrap flex-1 min-w-0">
                 {r.swatches.map((hex) => (
@@ -549,49 +715,42 @@ export default function ProfileSetupScreen() {
                 ))}
                 <span className="text-[12px] text-ink">{r.value}</span>
               </div>
-            </div>
-          ))}
+            </>
+            );
+            const cls = "w-full flex items-center gap-3 py-[11px] border-b border-border last:border-b-0 text-left";
+            return cible >= 0 ? (
+              <button
+                key={r.label}
+                className={cls + " cursor-pointer"}
+                aria-label={`Modifier : ${r.label}`}
+                onClick={() => {
+                  setRetourRecap(true);
+                  setStep(sansPresentationDejaFaite(cible));
+                }}
+              >
+                {ligne}
+                <span aria-hidden="true" className="text-[12px] text-terracotta flex-shrink-0">Modifier</span>
+              </button>
+            ) : (
+              <div key={r.label} className={cls}>
+                {ligne}
+              </div>
+            );
+          })}
         </Card>
       )}
 
-      {meta.key === "taille" && (
-        <div className="mt-[26px]">
-          <div className="t-surtitre text-muted mb-[11px]">Taille de haut</div>
-          <div className="flex gap-2 flex-wrap">
-            {TAILLES_HAUT.map((t) => (
-              <button key={t} onClick={() => patch({ tailleHaut: t })} className={chipCls(draft.tailleHaut === t)}>
-                {t}
-              </button>
-            ))}
-          </div>
-          <div className="t-surtitre text-muted mt-[22px] mb-[11px]">
-            {tailleBasLabelFor(draft.gender)}
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {taillesBas.map((t) => (
-              <button key={t} onClick={() => patch({ tailleBas: t })} className={chipCls(draft.tailleBas === t)}>
-                {t}
-              </button>
-            ))}
-          </div>
-          <div className="t-surtitre text-muted mt-[22px] mb-[11px]">Pointure</div>
-          <Input
-            inputMode="numeric"
-            className="w-[120px]"
-            placeholder="Ex. 39"
-            value={draft.pointure ?? ""}
-            onChange={(e) => patch({ pointure: e.target.value.replace(/[^0-9]/g, "").slice(0, 2) || null })}
-          />
-        </div>
-      )}
+      {meta.key === "taille" && blocTailles}
 
-      {meta.key === "style" && styleBloque && (
-        <p role="status" className="text-[12px] text-terracotta-deep mt-4 leading-[1.45]">
-          Tu peux choisir deux styles au maximum. Retire-en un pour en choisir un autre.
+      {/* OÙ EN EST LA SÉLECTION (31/10/2026, brief « Ajustement UX – sélection des styles ») : rien avant le premier choix (le sous-titre
+          dit déjà « 1 ou 2 styles maximum »), puis 1/2, puis 2/2. Hauteur réservée : la grille ne saute pas quand le compteur apparaît. */}
+      {meta.key === "style" && (
+        <p role="status" aria-live="polite" className="h-[18px] mt-[6px] text-[12px] text-muted leading-[18px]">
+          {nbStyles === 1 ? "1/2 style sélectionné" : nbStyles >= MAX_STYLES ? `${MAX_STYLES}/${MAX_STYLES} styles sélectionnés` : ""}
         </p>
       )}
       {meta.key === "style" && (
-        <div className="grid grid-cols-2 gap-[11px] mt-[26px]">
+        <div className="grid grid-cols-2 gap-[11px] mt-[8px]">
           {exposedStyleIds(draft.gender).map((id) => {
             const cfg = styleConfigFor(draft.gender)[id];
             const on = draft.styles.includes(id);
@@ -609,10 +768,13 @@ export default function ProfileSetupScreen() {
                   // couleur change à la sélection, jamais la largeur, pour
                   // qu'aucune card ne bouge d'un pixel au clic (indépendant
                   // de box-sizing, garanti par construction).
-                  "relative text-left rounded-tuile overflow-hidden border-[1.5px] cursor-pointer flex flex-col " +
+                  // Sélectionnée (31/10/2026) : la bordure se marque d'un anneau de 1 px en plus (box-shadow, hors du flux : aucune card ne
+                  // bouge), le fond s'éclaire ; transition de 180 ms, coupée si le téléphone demande moins d'animations.
+                  "relative text-left rounded-tuile overflow-hidden border-[1.5px] cursor-pointer flex flex-col transition-[border-color,box-shadow,background-color] duration-[180ms] ease-out motion-reduce:transition-none " +
                   (on ? "border-terracotta" : "border-border")
                 }
-                style={{ background: on ? "var(--color-selected-bg)" : "var(--color-card)" }}
+                aria-pressed={on}
+                style={{ background: on ? "var(--color-selected-bg)" : "var(--color-card)", boxShadow: on ? "0 0 0 1px var(--color-terracotta)" : "none" }}
               >
                 {visuel ? (
                   /* LE FORMAT EXACT DU VISUEL (3:4), et non le 5:4 des
@@ -654,11 +816,11 @@ export default function ProfileSetupScreen() {
                 />
                 )}
                 <span
-                  className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-[1.5px]"
+                  className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-[1.5px] transition-colors duration-[180ms] motion-reduce:transition-none"
                   style={{ background: on ? "var(--color-terracotta)" : "#FFFFFF", borderColor: on ? "var(--color-terracotta)" : "#B08968" }}
                 >
                   {on && (
-                    <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                    <svg width="11" height="9" viewBox="0 0 11 9" fill="none" className="coche-style">
                       <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
@@ -701,7 +863,58 @@ export default function ProfileSetupScreen() {
         </>
       )}
 
-      {!["pal_couleurs", "colorimetrie", "colorimetrie_resultat", "colorimetrie_suite"].includes(meta.key) && <div className="flex-1" />}
+      {meta.key === "mise_en_valeur" && (
+        <>
+          <div className="grid grid-cols-2 gap-[11px] mt-[22px]">
+            {misesEnValeurProposees(draft.gender).map((v) => (
+              <CarteChoix
+                key={v}
+                libelle={LIBELLES_MISE_EN_VALEUR[v]}
+                visuel={visuelMiseEnValeur(v)}
+                on={(draft.preferencesSilhouette.miseEnValeur ?? []).includes(v)}
+                onClick={() => patchSilhouette({ miseEnValeur: basculerOption(miseEnValeurDuGenre(draft.preferencesSilhouette.miseEnValeur, draft.gender), v) })}
+              />
+            ))}
+          </div>
+          {/* La réponse neutre est exclusive : la choisir efface les options, choisir une option l'efface. */}
+          <div className="mt-[11px]">
+            <OptionRow
+              accent
+              vignette={VISUEL_NEUTRE}
+              label={LIBELLE_SANS_MISE_EN_VALEUR}
+              on={Array.isArray(draft.preferencesSilhouette.miseEnValeur) && draft.preferencesSilhouette.miseEnValeur.length === 0}
+              onClick={() => patchSilhouette({ miseEnValeur: [] })}
+            />
+          </div>
+        </>
+      )}
+
+      {meta.key === "coupes" && (
+        <>
+          <div className="grid grid-cols-2 gap-[11px] mt-[22px]">
+            {COUPES_PREFEREES.map((c) => (
+              <CarteChoix
+                key={c}
+                libelle={LIBELLES_COUPES[c]}
+                visuel={visuelCoupe(c, draft.gender)}
+                on={(draft.preferencesSilhouette.coupes ?? []).includes(c)}
+                onClick={() => patchSilhouette({ coupes: basculerOption(draft.preferencesSilhouette.coupes, c) })}
+              />
+            ))}
+          </div>
+          <div className="mt-[11px]">
+            <OptionRow
+              accent
+              vignette={VISUEL_NEUTRE}
+              label={LIBELLE_SANS_COUPE}
+              on={Array.isArray(draft.preferencesSilhouette.coupes) && draft.preferencesSilhouette.coupes.length === 0}
+              onClick={() => patchSilhouette({ coupes: [] })}
+            />
+          </div>
+          <div className="text-[12px] text-muted mt-[12px]">Tu pourras les modifier à tout moment dans ton profil.</div>
+        </>
+      )}
+
     </>
   );
 
@@ -731,27 +944,11 @@ export default function ProfileSetupScreen() {
         onClick: next,
         actif: true,
         // Refaire le test : le questionnaire depuis le début, réponses effacées. Le résultat actuel reste tant qu'un nouveau n'est pas trouvé.
+        // Retiré puis remis le 31/10/2026 (arbitrage) : c'est le seul endroit d'où l'on peut repasser le test.
         lien: {
           libelle: "Refaire le test",
           onClick: () => {
             setColo(recommencer());
-            setStep(Math.max(0, indexColorimetrie));
-          },
-        },
-      };
-    }
-    if (meta.key === "colorimetrie_suite") {
-      return {
-        libelle: "Continuer mon profil",
-        onClick: next,
-        actif: true,
-        // Reprend le questionnaire avec les réponses déjà données : on
-        // modifie, on ne recommence pas de zéro. Le résultat actuel reste
-        // tant qu'un nouveau n'est pas trouvé.
-        lien: {
-          libelle: "Modifier ma colorimétrie",
-          onClick: () => {
-            setColo(commencer(parcoursInitial(reponsesEnListe(draft.colorimetrie?.reponses))));
             setStep(Math.max(0, indexColorimetrie));
           },
         },
@@ -801,27 +998,36 @@ export default function ProfileSetupScreen() {
   // scrollable unique, strictement inchangée.
   // Le parcours colorimétrie prend la même structure (30/09/2026) : son
   // bouton reste accessible sans défiler, même quand le résultat est long.
-  const deuxZones = ["pal_couleurs", "colorimetrie", "colorimetrie_resultat", "colorimetrie_suite"].includes(meta.key);
-  if (deuxZones) {
-    return (
-      <div className="absolute inset-0 flex flex-col">
-        <div className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">{pageBody}</div>
-        {continueButton && (
-          <div
-            className="flex-shrink-0 px-7 bg-cream border-t border-border flex flex-col"
-            style={{ paddingBottom: pied?.lien ? "calc(4px + env(safe-area-inset-bottom))" : "calc(16px + env(safe-area-inset-bottom))" }}
-          >
-            {continueButton}
+  // L'étape Style aussi (31/10/2026, brief « Ajustement UX – sélection des styles ») : son bouton reste accessible pendant le défilement,
+  // sans jamais recouvrir les dernières cartes.
+  // TOUTES LES ÉTAPES EN DEUX ZONES (31/10/2026, demandé : « bouton sticky ? ») : depuis que Genre et tailles partagent un écran, le
+  // bouton d'une étape courte pouvait passer sous le pli. Un seul gabarit pour tout le parcours : le bouton reste visible, et ne
+  // recouvre jamais le contenu.
+  return (
+    <div className="absolute inset-0 flex flex-col">
+      <div className="relative flex-1 min-h-0 flex flex-col">
+        {/* `key` : chaque étape (et chaque sous-écran de la colorimétrie) s'ouvre en haut, jamais au défilement de la précédente. */}
+        <div key={`${meta.key}-${colo.vue}-${colo.question}`} className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">
+          {pageBody}
+        </div>
+        {/* Le refus d'un troisième style : une bulle discrète au-dessus du bouton, quelques secondes (pas dans la page : sur deux lignes,
+            elle aurait fait sauter la grille à chaque apparition). */}
+        {meta.key === "style" && styleBloque && (
+          <div role="status" className="detail-part absolute inset-x-0 bottom-3 mx-auto max-w-[480px] px-7 pointer-events-none">
+            <div className="bg-ink rounded-feuille px-4 py-[10px] text-[12px] text-cream leading-[1.4] text-center shadow-lg">
+              Tu as déjà choisi deux styles. Retire-en un pour en sélectionner un autre.
+            </div>
           </div>
         )}
       </div>
-    );
-  }
-
-  return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-2 pb-7">
-      {pageBody}
-      {continueButton}
+      {continueButton && (
+        <div
+          className="flex-shrink-0 px-7 bg-cream border-t border-border flex flex-col"
+          style={{ paddingBottom: pied?.lien ? "calc(4px + env(safe-area-inset-bottom))" : "calc(16px + env(safe-area-inset-bottom))" }}
+        >
+          {continueButton}
+        </div>
+      )}
     </div>
   );
 }
