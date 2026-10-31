@@ -229,4 +229,4 @@ Les tests (phase 4) : les 13 cas du brief, rattachés aux lots ; plus le maintie
 
 ## Intensité des couleurs — arbitrage du 31/10/2026
 
-Les 4 options actuelles sont **conservées** (Douces et discrètes, Profondes et intenses, Lumineuses, Un mélange) : `intensiteConflict` (capsule.ts) les lit, et le catalogue est étiqueté sur ces registres. La maquette ChatGPT (3 options dont « naturelles et équilibrées ») n'est pas reprise. Seul le visuel change : une vignette d'étoffe par option, au format des questions de colorimétrie (OptionRow `accent`), à la place des pastilles. Prompts donnés le 31/10/2026 ; intégration à réception des images.
+Les 4 options actuelles sont **conservées** (Douces et discrètes, Profondes et intenses, Lumineuses, Un mélange) : `intensiteConflict` (capsule.ts) les lit, et le catalogue est étiqueté sur ces registres. La maquette ChatGPT (3 options dont « naturelles et équilibrées ») n'est pas reprise. Seul le visuel change : une vignette d'étoffe par option, au format des questions de colorimétrie (OptionRow `accent`), à la place des pastilles. Visuels reçus et intégrés le 31/10/2026 (`public/onboarding/intensite/`, 288 px).

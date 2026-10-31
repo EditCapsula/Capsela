@@ -61,7 +61,15 @@ export default function OptionRow({
             )}
           </span>
         )}
-        <span className="flex-1 min-w-0 text-[14px] leading-[1.35] text-ink">{label}</span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[14px] leading-[1.35] text-ink">{label}</span>
+          {/* La phrase sous le libellé (31/10/2026, étape Intensité passée à la variante à vignette) : facultative, comme ailleurs. */}
+          {description && (
+            <span className="block text-[11.5px] leading-[1.45] mt-[3px] text-muted" style={{ textWrap: "pretty" }}>
+              {description}
+            </span>
+          )}
+        </span>
         <span
           aria-hidden="true"
           className={

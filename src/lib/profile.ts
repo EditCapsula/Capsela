@@ -122,22 +122,30 @@ const pal = (nom: string): string => {
  * personnelle n'a pas), une valeur propre à l'illustration, choisie pour
  * rester élégante : aucune teinte néon.
  */
-export const INTENSITE_VISUELS: Record<Intensite, { description: string; pastilles: string[]; libelleRecap?: string }> = {
+/**
+ * `etoffe` (31/10/2026, arbitrage : les 4 options gardées, visuel d'étoffe à la place des pastilles sur l'étape) : une étoffe drapée
+ * montre le REGISTRE sans se lire comme une couleur choisie. Les pastilles restent pour le récapitulatif et « Ta palette ».
+ */
+export const INTENSITE_VISUELS: Record<Intensite, { description: string; pastilles: string[]; etoffe: string; libelleRecap?: string }> = {
   "Douces et discrètes": {
+    etoffe: "/onboarding/intensite/douces.webp",
     description: "Des tons neutres et pastel, pour des looks tout en douceur.",
     // crème, beige clair, vieux rose, taupe clair, sauge très désaturée
     pastilles: [pal("Crème"), pal("Sable"), pal("Rose poudré"), "#BDB2A3", "#B8BEAF"],
   },
   "Profondes et intenses": {
+    etoffe: "/onboarding/intensite/profondes.webp",
     description: "Des couleurs riches et affirmées, pour plus de caractère.",
     pastilles: [pal("Bordeaux"), pal("Marine"), pal("Vert bouteille"), pal("Chocolat"), pal("Prune")],
   },
   Lumineuses: {
+    etoffe: "/onboarding/intensite/lumineuses.webp",
     description: "Des teintes claires et éclatantes, pour des looks qui illuminent.",
     // jaune soleil, corail, rose vif, turquoise, bleu lumineux
     pastilles: ["#E6C24F", "#E57C60", "#D65C82", "#3E9E9A", "#5B93CF"],
   },
   "Un mélange": {
+    etoffe: "/onboarding/intensite/melange.webp",
     description: "J'aime varier entre des tons doux, intenses et lumineux.",
     // Au récapitulatif, « Un mélange » ne dit pas de quoi (30/09/2026, demandé) :
     // on y écrit ce que le mélange contient. La valeur enregistrée ne change pas.

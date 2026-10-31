@@ -672,8 +672,9 @@ export default function ProfileSetupScreen() {
             <OptionRow
               key={it}
               label={it}
+              accent
+              vignette={INTENSITE_VISUELS[it].etoffe}
               description={INTENSITE_VISUELS[it].description}
-              pastilles={INTENSITE_VISUELS[it].pastilles}
               on={draft.paletteIntensite === it}
               onClick={() => patch({ paletteIntensite: it })}
             />
