@@ -226,3 +226,7 @@ Les tests (phase 4) : les 13 cas du brief, rattachés aux lots ; plus le maintie
 - **Revue de cohérence** (31/10/2026) : bouton fixe en bas sur toutes les étapes ; chaque étape s'ouvre en haut ; une seule marque de sélection (bordure terracotta, fond teinté, coche pleine) pour Genre, Silhouette, Intensité et les tailles ; hauteur du fil réservée, le titre tombe au même endroit partout ; sections secondaires en surtitre.
 - **« Refaire le test » retiré** de « Ta palette » (31/10/2026, arbitrage : ne pas inciter à multiplier les tests).
 - **Restent** : lot 3 (colorimétrie sur un écran), lot 4 (moteur, après audit), lot 5 (coupes du catalogue).
+
+## Intensité des couleurs — arbitrage du 31/10/2026
+
+Les 4 options actuelles sont **conservées** (Douces et discrètes, Profondes et intenses, Lumineuses, Un mélange) : `intensiteConflict` (capsule.ts) les lit, et le catalogue est étiqueté sur ces registres. La maquette ChatGPT (3 options dont « naturelles et équilibrées ») n'est pas reprise. Seul le visuel change : une vignette d'étoffe par option, au format des questions de colorimétrie (OptionRow `accent`), à la place des pastilles. Prompts donnés le 31/10/2026 ; intégration à réception des images.
