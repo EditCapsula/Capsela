@@ -1,5 +1,6 @@
 "use client";
 
+import { libelleCoupes, libelleMiseEnValeur } from "@/lib/preferencesSilhouette";
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import {
@@ -101,6 +102,8 @@ export default function ProfileScreen() {
     if (cle === "genre") setGenreOuvert(true);
     else if (cle === "style") actions.goProfileSetup("style", true);
     else if (cle === "morphologie") actions.goProfileSetup("morpho", true);
+    else if (cle === "mise_en_valeur") actions.goProfileSetup("mise_en_valeur", true);
+    else if (cle === "coupes") actions.goProfileSetup("coupes", true);
     else if (cle === "palette") actions.goProfileSetup("pal_couleurs", true);
     else actions.goProfileSetup("taille", true);
   };
@@ -266,6 +269,24 @@ export default function ProfileScreen() {
             onClick={() => ouvrirChamp("morphologie")}
           />
         )}
+        {/* MISE EN VALEUR ET COUPES (31/10/2026). Aucun effet sur les recommandations tant que le branchement moteur (lot 4) n'est pas
+            audité : l'explication décrit, elle ne promet rien. */}
+        <LigneProfil
+          icone={I_SILHOUETTE}
+          titre="Mise en valeur"
+          valeur={libelleMiseEnValeur(profile.preferencesSilhouette.miseEnValeur, profile.gender) ?? "Non renseignée"}
+          renseigne={renseigne("mise_en_valeur")}
+          explication="Ce que tu aimes particulièrement mettre en valeur."
+          onClick={() => ouvrirChamp("mise_en_valeur")}
+        />
+        <LigneProfil
+          icone={I_CINTRE}
+          titre="Coupes préférées"
+          valeur={libelleCoupes(profile.preferencesSilhouette.coupes) ?? "Non renseignées"}
+          renseigne={renseigne("coupes")}
+          explication="Les coupes dans lesquelles tu te sens le mieux."
+          onClick={() => ouvrirChamp("coupes")}
+        />
         <LigneProfil
           icone={I_PALETTE}
           titre="Palette"

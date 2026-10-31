@@ -1,4 +1,4 @@
-import { PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
+import { miseEnValeurDuGenre, PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
 import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
 export { PAL_COULEURS } from "./palCouleurs";
 import { PAL_COULEURS } from "./palCouleurs";
@@ -531,7 +531,7 @@ export const WORK_DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
  * Les tailles ne comptent comme renseignées que complètes (haut, bas,
  * pointure) : chacune pré-remplit l'ajout d'une pièce de sa catégorie.
  */
-export type ChampProfilStyle = "genre" | "style" | "morphologie" | "palette" | "tailles";
+export type ChampProfilStyle = "genre" | "style" | "morphologie" | "mise_en_valeur" | "coupes" | "palette" | "tailles";
 
 export interface ChampCompletude {
   cle: ChampProfilStyle;
@@ -552,6 +552,12 @@ export function champsProfilStyle(profile: Profile): ChampCompletude[] {
       renseigne: Boolean(profile.morphology) && !fieldNeedsRevalidation(morpho, profile),
     });
   }
+  // Mise en valeur et coupes (31/10/2026, arbitrage : elles COMPTENT, même si le pourcentage des profils existants baisse). La
+  // réponse neutre (« Aucune préférence », « Cela dépend ») est une réponse : seul `null` (jamais posé) manque.
+  champs.push(
+    { cle: "mise_en_valeur", libelle: "Mise en valeur", renseigne: miseEnValeurDuGenre(profile.preferencesSilhouette.miseEnValeur, profile.gender) !== null },
+    { cle: "coupes", libelle: "Coupes préférées", renseigne: profile.preferencesSilhouette.coupes !== null }
+  );
   champs.push(
     { cle: "palette", libelle: "Palette", renseigne: profile.paletteCouleurs.length > 0 },
     { cle: "tailles", libelle: "Tailles", renseigne: Boolean(profile.tailleHaut && profile.tailleBas && profile.pointure) }
@@ -601,6 +607,11 @@ export function prochaineActionProfil(profile: Profile): ProchaineActionProfil |
       return { cle: "style", message: "Choisis ton style : il définit l'univers de tes recommandations.", cta: "Choisir mon style" };
     case "morphologie":
       return { cle: "morphologie", message: "Renseigne ta silhouette : elle peut orienter les coupes et proportions de ta capsule.", cta: "Compléter ma morphologie" };
+    // Aucun effet moteur pour l'instant (lot 4, après audit) : la phrase ne promet rien de plus que ce que le code fait.
+    case "mise_en_valeur":
+      return { cle: "mise_en_valeur", message: "Dis-nous ce que tu aimes mettre en valeur : c'est noté dans ton profil.", cta: "Indiquer ce que j'aime mettre en valeur" };
+    case "coupes":
+      return { cle: "coupes", message: "Indique les coupes dans lesquelles tu te sens le mieux : c'est noté dans ton profil.", cta: "Choisir mes coupes" };
     case "palette":
       return { cle: "palette", message: "Choisis tes couleurs : elles orientent la capsule et tes tenues.", cta: "Choisir ma palette" };
     case "tailles":

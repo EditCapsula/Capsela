@@ -218,3 +218,9 @@ Les tests (phase 4) : les 13 cas du brief, rattachés aux lots ; plus le maintie
 
 - **Limite d'âge** : la propriétaire renonce à la supprimer. Seuil de 15 ans inchangé (`ageMinimum.ts`, CGU et politique de confidentialité).
 - **Évolution future, non instruite** : qu'une personne puisse créer et gérer des profils pour d'autres (ses enfants, son conjoint) depuis son compte. Points à instruire le moment venu : un profil par personne dans un même compte (dressing, capsule, colorimétrie séparés), le consentement d'un parent pour un profil de moins de 15 ans (art. 8 RGPD, art. 45 LIL) et la mise à jour des textes légaux.
+
+## Avancement
+
+- **Lot 1 — données** (31/10/2026) : `preferencesSilhouette.ts`, migration 0054 appliquée, écriture isolée dans `auth.tsx`.
+- **Lot 2 — écrans** (31/10/2026) : Genre et tailles sur un écran (les tailles gardent leur écran seul en modification depuis Mon profil) ; étapes Mise en valeur (facultative, 8 options femme / 5 homme) et Coupes (réponse requise, « Cela dépend » en est une) ; intensité sous les couleurs ; « Et maintenant ? » sous « Ta palette » ; récapitulatif modifiable ligne par ligne (« Continuer » y ramène) ; deux lignes dans Mon profil, comptées dans la complétude. Côté homme, cartes sans visuel en attendant les images. Le sous-titre du brief pour Mise en valeur attend le lot 4 (il annonce un effet sur les recommandations qui n'existe pas encore).
+- **Restent** : lot 3 (colorimétrie sur un écran), lot 4 (moteur, après audit), lot 5 (coupes du catalogue).

@@ -35,3 +35,29 @@ describe("préférences de silhouette — changement", () => {
     expect(memesPreferencesSilhouette({ miseEnValeur: [], coupes: null }, PREFERENCES_SILHOUETTE_VIDES)).toBe(false);
   });
 });
+
+describe("préférences de silhouette — affichage et choix", () => {
+  it("homme : cinq options, sans décolleté, courbes ni hanches ; aucun visuel femme", async () => {
+    const m = await import("../preferencesSilhouette");
+    expect(m.misesEnValeurProposees("homme")).toEqual(["taille", "jambes", "epaules", "bras", "dos"]);
+    expect(m.misesEnValeurProposees("femme")).toHaveLength(8);
+    expect(m.visuelMiseEnValeur("taille", "homme")).toBeNull();
+    expect(m.visuelCoupe("fluides", "homme")).toBeNull();
+    expect(m.visuelCoupe("fluides", "femme")).toBe("/onboarding/coupes/fluides.webp");
+  });
+
+  it("retirer la dernière option ramène à « pas répondu », jamais à « aucune préférence »", async () => {
+    const { basculerOption } = await import("../preferencesSilhouette");
+    expect(basculerOption(null, "dos")).toEqual(["dos"]);
+    expect(basculerOption([], "dos")).toEqual(["dos"]);
+    expect(basculerOption(["dos"], "dos")).toBeNull();
+  });
+
+  it("libellés : neutre explicite, null si jamais posé", async () => {
+    const { libelleCoupes, libelleMiseEnValeur } = await import("../preferencesSilhouette");
+    expect(libelleCoupes([])).toBe("Cela dépend du vêtement");
+    expect(libelleCoupes(null)).toBeNull();
+    expect(libelleMiseEnValeur(["taille", "dos"], "femme")).toBe("Ma taille, Mon dos");
+    expect(libelleMiseEnValeur(["decollete"], "homme")).toBeNull();
+  });
+});
