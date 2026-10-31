@@ -362,6 +362,9 @@ export const QUESTIONS_COLORIMETRIE: QuestionColorimetrie[] = [
       { libelle: "Blond doré, roux ou cuivré", chaleur: 2, profondeur: 0, explication: "Ta couleur naturelle apporte une chaleur marquée.", visuel: V("cheveux-blond-dore") },
       { libelle: "Châtain", chaleur: 0, profondeur: 1, explication: "Ta couleur naturelle apporte une profondeur intermédiaire.", visuel: V("cheveux-chatain") },
       { libelle: "Brun foncé ou noir", chaleur: 0, profondeur: 2, explication: "Ta couleur naturelle apporte une profondeur marquée.", visuel: V("cheveux-brun") },
+      // « Je ne sais pas » aussi pour les cheveux et les yeux (31/10/2026, brief « Évolution de l'onboarding ») : neutre, ajouté EN
+      // DERNIER pour que les indices déjà enregistrés (0 à 3) gardent leur sens.
+      NSP,
     ],
   },
   {
@@ -374,6 +377,9 @@ export const QUESTIONS_COLORIMETRIE: QuestionColorimetrie[] = [
       { libelle: "Verts ou noisette", chaleur: 1, profondeur: 0, explication: "Leur tonalité apporte une note chaude.", visuel: V("yeux-verts") },
       { libelle: "Marron", chaleur: 0, profondeur: 1, explication: "Leur tonalité ajoute de la profondeur.", visuel: V("yeux-marron") },
       { libelle: "Marron très foncé ou noirs", chaleur: 0, profondeur: 2, explication: "Leur tonalité renforce le contraste.", visuel: V("yeux-tres-fonces") },
+      // « Je ne sais pas » aussi pour les cheveux et les yeux (31/10/2026, brief « Évolution de l'onboarding ») : neutre, ajouté EN
+      // DERNIER pour que les indices déjà enregistrés (0 à 3) gardent leur sens.
+      NSP,
     ],
   },
 ];
