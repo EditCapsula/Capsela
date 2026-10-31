@@ -211,3 +211,10 @@ Les tests (phase 4) : les 13 cas du brief, rattachés aux lots ; plus le maintie
 5. **Complétude** — **TRANCHÉ le 31/10/2026 : les deux nouveaux champs COMPTENT dans `completudeProfil`** ; une baisse du pourcentage des profils existants est acceptée. « Aucune préférence » / « Cela dépend du vêtement » valent réponse (champ renseigné). Le message de `prochaineActionProfil` pour ces champs ne dira que ce qui est vrai dans le code (règle « sert à »).
 6. **Visuels** : je fournis les prompts pour les 8 et 6 visuels ; l'écran sort-il d'abord en cartes typographiques ?
 7. **Prénom, Intensité, « Et maintenant ? »** — **TRANCHÉ le 31/10/2026 : validé** (prénom avant Genre et tailles, intensité dans Couleurs préférées, « Et maintenant ? » fusionné dans Palette).
+
+---
+
+## Hors périmètre — consigné le 31/10/2026
+
+- **Limite d'âge** : la propriétaire renonce à la supprimer. Seuil de 15 ans inchangé (`ageMinimum.ts`, CGU et politique de confidentialité).
+- **Évolution future, non instruite** : qu'une personne puisse créer et gérer des profils pour d'autres (ses enfants, son conjoint) depuis son compte. Points à instruire le moment venu : un profil par personne dans un même compte (dressing, capsule, colorimétrie séparés), le consentement d'un parent pour un profil de moins de 15 ans (art. 8 RGPD, art. 45 LIL) et la mise à jour des textes légaux.
