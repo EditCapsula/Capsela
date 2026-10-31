@@ -208,3 +208,6 @@ Ordre de mise en production, impératif :
    le legging et le jogging de sport, étiquetés aujourd'hui Streetwear seulement).
 2. Fusion de la PR (le code du sport par étiquette part en ligne).
 3. `sql/05-creer-sport-creatif.sql` — APRÈS la mise en ligne (avant, ces pièces entreraient dans toutes les capsules).
+
+**`sql/04-etiqueter-sport-commun.sql` appliqué en production le 31/10/2026** par la propriétaire (étape 1 de l'ordre ci-dessus).
+Restent : la fusion de la PR, puis `sql/05-creer-sport-creatif.sql`.
