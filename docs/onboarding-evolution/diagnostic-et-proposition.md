@@ -64,7 +64,7 @@ Mécanismes à préserver (DÉMONTRÉ, `ProfileSetupScreen.tsx`) :
 | saison | oui (`colorimetrie`) |
 | fiabilité | partiellement : `colorimetrie.confiance` est facultative ; le questionnaire ne la pose pas |
 
-« Audacieux » n'est pas une valeur de style dans le code : c'est une humeur de soirée (`humeur.ts`, Planifier). Je ne peux pas vérifier la base depuis le conteneur. Requête de contrôle, en lecture seule :
+« Audacieux » n'est pas une valeur de style dans le code : c'est une humeur de soirée (`humeur.ts`, Planifier). **Confirmé le 31/10/2026 par la propriétaire : aucun profil ne porte ce style** ; la mention du brief était une erreur. Rien à reprendre. Je ne peux pas vérifier la base depuis le conteneur. Requête de contrôle, en lecture seule :
 
 ```sql
 select count(*) from public.profiles where styles::text ilike '%audacieux%';
@@ -201,8 +201,8 @@ Les tests (phase 4) : les 13 cas du brief, rattachés aux lots ; plus le maintie
 ## Questions à trancher
 
 1. **Carnation** — **TRANCHÉ le 31/10/2026 par la propriétaire : option A.** La carnation n'est pas collectée ; la règle de CLAUDE.md et son test restent en vigueur.
-2. **Bijoux et Blanc** : les garder sur l'écran unique en bloc « Pour affiner » (recommandé), ou accepter que les profils bruns aux yeux marron finissent sans saison ?
-3. **Options de cheveux et d'yeux** : garder les options et visuels actuels (recommandé), ou adopter celles du brief, ce qui demande de nouveaux visuels et de nouvelles règles ?
+2. **Bijoux et Blanc** — **TRANCHÉ le 31/10/2026 : conservés**, en bloc « Pour affiner » sur l'écran unique.
+3. **Options de cheveux et d'yeux** — **TRANCHÉ le 31/10/2026 : options et visuels actuels conservés**, règles de saison inchangées.
 4. **Fluides et Structurées** : les déduire de la matière (à instruire), ou les stocker sans effet moteur au départ ?
 5. **Complétude** : les nouveaux champs restent-ils hors du pourcentage (recommandé) ?
 6. **Visuels** : je fournis les prompts pour les 8 et 6 visuels ; l'écran sort-il d'abord en cartes typographiques ?
