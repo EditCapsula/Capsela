@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAPSULE_MAX_PIECES, computeDefaultCapsule } from "../capsule";
+import { CAPSULE_MAX_PIECES, computeDefaultCapsule, STRATEGIE_PRODUCTION } from "../capsule";
 import type { CatalogItem } from "../catalog";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 import { at, item } from "./fixtures";
@@ -167,5 +167,38 @@ describe("Plafond de 40 pièces, Sport compris", () => {
     for (const cat of ["haut", "pantalon", "chaussures", "veste", "manteau", "sac", "accessoire", "bijou"]) {
       expect(capsule.some((it) => it.cat === cat)).toBe(true);
     }
+  });
+});
+
+describe("Sport par étiquette de style (option C2, 31/10/2026)", () => {
+  const TOUS = "Minimaliste, Casual chic, Classique chic, Romantique, Bohème, Streetwear, Preppy, Glamour, Créatif";
+  const saisons = "Printemps, Été, Automne, Hiver";
+  const sport = [
+    item({ id: 950, category: "pantalons", name: "Legging de sport", niveau_formalite: "sport", styles: TOUS, saison_capsule: saisons }),
+    item({ id: 951, category: "pantalons", name: "Legging imprimé", niveau_formalite: "sport", styles: "Créatif", saison_capsule: saisons }),
+    item({ id: 952, category: "hauts", name: "Débardeur de sport", niveau_formalite: "sport", saison_capsule: saisons }),
+    item({ id: 953, category: "pulls_gilets", name: "Sweat de sport", niveau_formalite: "sport", styles: "Streetwear", saison_capsule: saisons }),
+  ];
+  const catalogue = [...catalogueSansRobes(), ...sport];
+  const ids = (c: CatalogItem[]) => new Set(c.filter((it) => it.niveauFormalite === 0).map((it) => it.name));
+  const capsule = (styles: string[], strategy = STRATEGIE_PRODUCTION) =>
+    ids(computeDefaultCapsule(profile({ styles }), at(16, "Printemps / Été"), [], "Printemps", catalogue, strategy));
+
+  it("une pièce de sport propre à un style n'entre que dans ce style", () => {
+    expect(capsule(["minimaliste"]).has("Legging imprimé")).toBe(false);
+    expect(capsule(["creatif"]).has("Legging imprimé")).toBe(true);
+    expect(capsule(["minimaliste"]).has("Sweat de sport")).toBe(false);
+  });
+
+  it("le sport commun (tous les styles) et le sport sans étiquette (catalogue de démo) entrent partout", () => {
+    for (const st of ["minimaliste", "creatif", "glamour"]) {
+      expect(capsule([st]).has("Legging de sport")).toBe(true);
+      expect(capsule([st]).has("Débardeur de sport")).toBe(true);
+    }
+  });
+
+  it("la règle d'avant (« commun ») reste disponible pour les audits : tout le sport, quel que soit le style", () => {
+    const avant = capsule(["minimaliste"], { ...STRATEGIE_PRODUCTION, sportParStyle: "commun" });
+    expect([...avant].sort()).toEqual(["Débardeur de sport", "Legging de sport", "Legging imprimé", "Sweat de sport"]);
   });
 });

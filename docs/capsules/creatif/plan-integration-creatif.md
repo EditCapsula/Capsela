@@ -196,3 +196,15 @@ jogging ; #521, #971, #972 les portent déjà).
 l'autre défaut : avec les 17 pièces, seules les 4 capsules Créatif de chaque genre changent. **ARBITRAGE ÉDITORIAL** requis : C2 revient
 sur la règle du 24/08/2026 (« le sport n'est pas filtré par style ») et impose qu'une future pièce de sport commune porte tous les styles.
 Ordre de mise en production, si validé : 1) étiqueter le sport commun, 2) créer les 17 pièces, 3) passer la production sur « etiquette ».
+
+**Validé le 31/10/2026 par la propriétaire : option C2.** Le moteur passe au sport par étiquette (`SelectionStrategy.sportParStyle`
+absent = « etiquette », `capsule.ts` ; « commun » reste disponible pour les audits). Règle d'entretien : une pièce de sport COMMUNE
+porte tous les styles ; une pièce de sport propre à un style ne porte que lui ; une pièce sans étiquette (catalogue de démo) entre
+partout. Mesure reproduite sur le code de production (S4, S5), et l'état intermédiaire (S6 : SQL 04 appliqué, ancien code) ne change
+aucune capsule.
+
+Ordre de mise en production, impératif :
+1. `sql/04-etiqueter-sport-commun.sql` — AVANT la fusion de la PR (sinon, une fois le code en ligne, les styles perdraient le sweat,
+   le legging et le jogging de sport, étiquetés aujourd'hui Streetwear seulement).
+2. Fusion de la PR (le code du sport par étiquette part en ligne).
+3. `sql/05-creer-sport-creatif.sql` — APRÈS la mise en ligne (avant, ces pièces entreraient dans toutes les capsules).

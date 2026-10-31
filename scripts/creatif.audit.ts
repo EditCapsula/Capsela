@@ -2,7 +2,7 @@ import { describe, it } from "vitest";
 import { readFileSync } from "fs";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { enLigne, lireCsv } from "./catalogueCsv";
-import { computeDefaultCapsule, representativeWeatherFor } from "../src/lib/capsule";
+import { computeDefaultCapsule, representativeWeatherFor, STRATEGIE_PRODUCTION, type SelectionStrategy } from "../src/lib/capsule";
 import { generateOutfitWithFallback } from "../src/lib/logic";
 import { formalityOf } from "../src/lib/attributes";
 import type { CatalogItem } from "../src/lib/catalog";
@@ -25,6 +25,8 @@ import { assertCatalogueStyles, profilAudit } from "./harnaisAudit";
 //         npx vitest run --config vitest.audit.config.mts scripts/creatif.audit.ts
 
 const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
+/** Mesures du 30/10/2026, faites avec le bloc Sport d'alors (« commun ») : explicite pour rester reproductibles (production « etiquette » depuis le 31/10/2026). */
+const REGLE_DU_30_10: SelectionStrategy = { ...STRATEGIE_PRODUCTION, sportParStyle: "commun" };
 const OCCASIONS: OccasionKey[] = ["quotidien", "travail_formel", "date", "soiree", "sport", "cocooning", "voyage", "evenement_perso"];
 const TIRAGES = 20;
 /** 01-etiqueter-existants.sql, blocs 1.a et 1.b (le bloc 1.c, unisexes, reste commenté : décision en attente). */
@@ -67,8 +69,8 @@ describe("Style Créatif — mesure L0 / L1 / L2", () => {
         const w = representativeWeatherFor(saison);
         const lignes: string[] = [];
         for (const [nom, pool] of etats) {
-          const sansStyle = computeDefaultCapsule(profil(genre, []), w, [], saison, pool);
-          const capsule = computeDefaultCapsule(profil(genre, ["creatif"]), w, [], saison, pool);
+          const sansStyle = computeDefaultCapsule(profil(genre, []), w, [], saison, pool, REGLE_DU_30_10);
+          const capsule = computeDefaultCapsule(profil(genre, ["creatif"]), w, [], saison, pool, REGLE_DU_30_10);
           const actif = empreinte(capsule) !== empreinte(sansStyle);
           const creatifs = capsule.filter(estCreatif).length;
           let completes = 0;
@@ -95,7 +97,7 @@ describe("Style Créatif — mesure L0 / L1 / L2", () => {
         console.log(`${saison}\n${lignes.join("\n")}`);
         // Par occasion, en L2s : la tenue s'obtient-elle, et avec combien de pièces Créatif ?
         const pool2 = etats[3][1];
-        const capsule2 = computeDefaultCapsule(profil(genre, ["creatif"]), w, [], saison, pool2);
+        const capsule2 = computeDefaultCapsule(profil(genre, ["creatif"]), w, [], saison, pool2, REGLE_DU_30_10);
         const parOcc = OCCASIONS.map((occ) => {
           let ok = 0;
           let cr = 0;
@@ -117,8 +119,8 @@ describe("Style Créatif — mesure L0 / L1 / L2", () => {
       // Contrôle du harnais : deux calculs sur le MÊME pool donnent-ils la même capsule ? Sinon, une différence L0/L2 ne prouve rien.
       {
         const w = representativeWeatherFor("Printemps");
-        const a = empreinte(computeDefaultCapsule(profil(genre, ["minimaliste"]), w, [], "Printemps", etats[0][1]));
-        const b = empreinte(computeDefaultCapsule(profil(genre, ["minimaliste"]), w, [], "Printemps", etats[0][1]));
+        const a = empreinte(computeDefaultCapsule(profil(genre, ["minimaliste"]), w, [], "Printemps", etats[0][1], REGLE_DU_30_10));
+        const b = empreinte(computeDefaultCapsule(profil(genre, ["minimaliste"]), w, [], "Printemps", etats[0][1], REGLE_DU_30_10));
         console.log(`\nContrôle ${genre} — même pool, deux calculs : ${a === b ? "identiques (déterministe)" : "DIFFÉRENTS (non déterministe)"}`);
       }
       // Préservation : la capsule de chaque AUTRE style est-elle identique en L0 et en L2 ?
@@ -128,8 +130,8 @@ describe("Style Créatif — mesure L0 / L1 / L2", () => {
         for (const saison of SAISONS) {
           const w = representativeWeatherFor(saison);
           for (const id of autres) {
-            const a = empreinte(computeDefaultCapsule(profil(genre, [id]), w, [], saison, etats[0][1]));
-            const b = empreinte(computeDefaultCapsule(profil(genre, [id]), w, [], saison, pool));
+            const a = empreinte(computeDefaultCapsule(profil(genre, [id]), w, [], saison, etats[0][1], REGLE_DU_30_10));
+            const b = empreinte(computeDefaultCapsule(profil(genre, [id]), w, [], saison, pool, REGLE_DU_30_10));
             if (a !== b) changees.push(`${id}/${saison}`);
           }
         }
@@ -139,8 +141,8 @@ describe("Style Créatif — mesure L0 / L1 / L2", () => {
       for (const [nom, pool] of etats.slice(1)) {
         const w = representativeWeatherFor("Printemps");
         const id = autres[0];
-        const c0 = computeDefaultCapsule(profil(genre, [id]), w, [], "Printemps", etats[0][1]);
-        const c1 = computeDefaultCapsule(profil(genre, [id]), w, [], "Printemps", pool);
+        const c0 = computeDefaultCapsule(profil(genre, [id]), w, [], "Printemps", etats[0][1], REGLE_DU_30_10);
+        const c1 = computeDefaultCapsule(profil(genre, [id]), w, [], "Printemps", pool, REGLE_DU_30_10);
         const i0 = new Set(c0.map((x) => x.id));
         const i1 = new Set(c1.map((x) => x.id));
         const entrent = c1.filter((x) => !i0.has(x.id)).map((x) => `${x.id} ${x.name} [${(x.styleTags ?? []).join("/")}]`);

@@ -226,7 +226,8 @@ insert into vestiaire_universel (name, category, genre, styles, saison_capsule, 
   ('Sac structuré', 'sacs', 'homme', 'Créatif', 'Hiver', 'Sac', 'Cuir', 'Noir', '#2A2724', null, 'quotidien,voyage', 'decontracte', 'base', false, true, 'missing', false), -- H-CR-HIV-30
   ('Pantalon habillé', 'pantalons', 'homme', 'Créatif', 'Hiver', 'Pantalon', 'Laine froide', 'Noir', '#2A2724', null, 'evenement_perso,soiree', 'habille', 'base', false, false, 'missing', false); -- H-CR-HIV-33
 
--- 2.b DÉCISION EN ATTENTE — 17 pièces de SPORT. Le bloc Sport d'une capsule n'est jamais filtré par style (arbitrage du
+-- 2.b NE PAS DÉCOMMENTER : remplacé par 05-creer-sport-creatif.sql (option C2 validée le 31/10/2026), à lancer après le déploiement.
+-- 17 pièces de SPORT. Le bloc Sport d'une capsule n'est jamais filtré par style (arbitrage du
 -- 24/08/2026) : créées, elles entrent dans les capsules de TOUS les styles. Mesuré (scripts/creatif.audit.ts) : avec elles, 32 capsules
 -- femme sur 32 et 24 homme sur 24 des autres styles changent ; sans elles, aucune — et les tenues Sport Créatif restent complètes (100 %)
 -- avec le sport commun du catalogue. Laissées en commentaire : à décommenter seulement si tu le décides.

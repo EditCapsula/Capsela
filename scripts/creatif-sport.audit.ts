@@ -24,7 +24,7 @@ import { enLigne, lireCsv } from "./catalogueCsv";
 //   S0 = P · commun (référence)   S1 = P+S · commun   S2 = P · par_style   S3 = P+S · par_style
 //   S4 = P · C2   S5 = P+S · C2 — C2 : règle « etiquette » (une pièce de sport n'entre que si elle porte le style du profil) ET le sport
 //   commun actuel (brassière, sweat, legging, jogging : #491, #493, #494, #495, #522, #523, #524) étiqueté avec tous les styles,
-//   simulé en mémoire.
+//   simulé en mémoire. S6 = P étiqueté (SQL 04) avec la règle d'avant : l'état entre le SQL 04 et le déploiement du code.
 // Mesures, pour chaque style exposé × genre × saison : capsule identique à S0 ou non (et si la différence touche autre chose que le
 // sport) ; tenues Sport complètes sur 20 tirages ; part des pièces du style dans les tenues Sport.
 //
@@ -34,9 +34,11 @@ import { enLigne, lireCsv } from "./catalogueCsv";
 const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
 const TIRAGES = 20;
 const ETIQUETES = [504, 505, 506, 512, 521, 565, 574, 577, 609, 675, 709, 710, 750, 752, 807, 813, 817, 836, 846, 851, 852, 901, 905, 910, 911, 957, 973, 1063, 481, 520, 971, 972];
-const COMMUN: SelectionStrategy = STRATEGIE_PRODUCTION;
+// La règle d'avant le 31/10/2026 (référence S0/S1) : la production est désormais « etiquette ».
+const COMMUN: SelectionStrategy = { ...STRATEGIE_PRODUCTION, sportParStyle: "commun" };
 const PAR_STYLE: SelectionStrategy = { ...STRATEGIE_PRODUCTION, sportParStyle: "par_style" };
-const ETIQUETTE: SelectionStrategy = { ...STRATEGIE_PRODUCTION, sportParStyle: "etiquette" };
+// La production depuis le 31/10/2026 : STRATEGIE_PRODUCTION telle quelle (sportParStyle absent = « etiquette »).
+const ETIQUETTE: SelectionStrategy = STRATEGIE_PRODUCTION;
 /** C2 — le sport commun actuel (brassière, sweat, legging, jogging), étiqueté avec tous les styles. T-shirt technique #521 et
  * baskets de sport #971/#972 portent déjà les huit styles et « Créatif » (SQL 01). */
 const SPORT_COMMUN = [491, 493, 494, 495, 522, 523, 524];
@@ -77,6 +79,8 @@ describe("Option C — bloc Sport par style", () => {
       ["S3 P+S·par_style", PS, PAR_STYLE],
       ["S4 P·C2", PC2, ETIQUETTE],
       ["S5 P+S·C2", PSC2, ETIQUETTE],
+      // L'état intermédiaire de la mise en production : SQL 04 (sport commun étiqueté) appliqué, code pas encore déployé.
+      ["S6 P(04)·commun", PC2, COMMUN],
     ];
     console.log(`\nCatalogue P ${P.length} articles · P+S ${PS.length} (dont ${sportCrees.size} pièces de sport Créatif).`);
 

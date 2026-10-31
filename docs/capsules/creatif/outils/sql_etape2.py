@@ -241,7 +241,8 @@ sport = [l for l in lignes if l[0]["niveau_formalite"] == "sport"]
 S += bloc(hors_sport, False)
 S += [
     "",
-    f"-- 2.b DÉCISION EN ATTENTE — {len(sport)} pièces de SPORT. Le bloc Sport d'une capsule n'est jamais filtré par style (arbitrage du",
+    "-- 2.b NE PAS DÉCOMMENTER : remplacé par 05-creer-sport-creatif.sql (option C2 validée le 31/10/2026), à lancer après le déploiement.",
+    f"-- {len(sport)} pièces de SPORT. Le bloc Sport d'une capsule n'est jamais filtré par style (arbitrage du",
     "-- 24/08/2026) : créées, elles entrent dans les capsules de TOUS les styles. Mesuré (scripts/creatif.audit.ts) : avec elles, 32 capsules",
     "-- femme sur 32 et 24 homme sur 24 des autres styles changent ; sans elles, aucune — et les tenues Sport Créatif restent complètes (100 %)",
     "-- avec le sport commun du catalogue. Laissées en commentaire : à décommenter seulement si tu le décides.",
@@ -258,6 +259,31 @@ if sans_couleur:
     S += [f"--   {x['id']} {x['piece']} : {x['couleurs']}" for x in sans_couleur]
     S.append("")
 open(f"{D}/02-creer-pieces.sql", "w").write("\n".join(S))
+
+# ── 05. Les 17 pièces de sport Créatif (bloc 2.b), à créer APRÈS le déploiement du sport par étiquette (option C2, 31/10/2026) ───────
+C = [
+    "-- Style Créatif — 05 : CRÉER les 17 pièces de sport Créatif (bloc 2.b de 02), 31/10/2026.",
+    "-- À lancer à la main, SEULEMENT APRÈS la mise en ligne du sport par étiquette (option C2, PR « sport par style ») ET après",
+    "-- 04-etiqueter-sport-commun.sql. Avec l'ancienne règle, ces pièces entreraient dans les capsules de TOUS les styles ; avec C2, dans",
+    "-- les seules capsules Créatif (mesuré : scripts/creatif-sport.audit.ts, scénario S5 — aucune capsule d'un autre style modifiée).",
+    "-- Nouvelles lignes seulement, styles = « Créatif » seul. Ne pas lancer deux fois. Annulation en fin de fichier.",
+    "",
+    "-- 05.0 Précaution : le compteur d'identifiants après le plus grand id existant. Ne modifie aucune ligne.",
+    "select setval(pg_get_serial_sequence('vestiaire_universel', 'id'), (select max(id) from vestiaire_universel));",
+    "",
+    "insert into vestiaire_universel (" + ", ".join(COLS) + ") values",
+]
+C += bloc(sport, False)
+C += [
+    "",
+    "-- Contrôle : doit renvoyer 17.",
+    "select count(*) from vestiaire_universel where styles = 'Créatif' and niveau_formalite = 'sport';",
+    "",
+    "-- Annulation (retour arrière seulement) :",
+    "-- delete from vestiaire_universel where styles = 'Créatif' and niveau_formalite = 'sport';",
+    "",
+]
+open(f"{D}/05-creer-sport-creatif.sql", "w").write("\n".join(C))
 
 A = [
     "-- Style Créatif, étape 2 — 3/3 : ANNULER 01 et 02 (30/10/2026). Ne sert qu'en cas de retour arrière.",
