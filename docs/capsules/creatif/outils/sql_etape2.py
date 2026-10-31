@@ -215,6 +215,11 @@ S = [
     "--                     habillé ; Travail ou Rendez-vous → business casual ; sinon décontracté ;",
     "--   image_status      « missing » : visuel à générer par la chaîne existante (generate-catalog-image), aucune image fournie ici.",
     "",
+    "-- 2.0 Précaution (31/10/2026, première exécution : 0 pièce créée) : la table attribue les id (identity), mais le catalogue a été",
+    "-- importé avec ses propres id ; si le compteur n'a jamais été recalé, il peut proposer un id déjà pris et faire refuser TOUTE",
+    "-- l'insertion. On le place après le plus grand id existant. Ne modifie aucune ligne.",
+    "select setval(pg_get_serial_sequence('vestiaire_universel', 'id'), (select max(id) from vestiaire_universel));",
+    "",
     "-- 2.a Toutes les pièces hors sport.",
     "insert into vestiaire_universel (" + ", ".join(COLS) + ") values",
 ]
