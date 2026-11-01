@@ -23,6 +23,7 @@ describe("clesLocalesDuCompte", () => {
       "capsela.valise.u1",
       "capsela.recommandees.u1",
       "capsela.accords.u1",
+      "capsela.piecesEcartees.u1",
       "capsela.villesRecentes",
     ]);
   });

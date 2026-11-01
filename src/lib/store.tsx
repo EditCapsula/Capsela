@@ -50,6 +50,7 @@ import { aDesManches } from "./manches";
 import { aUnMotif } from "./motifs";
 import { genererTenueDiversifiee, recentsDuJour } from "./diversite";
 import { ecrireRecommandation, lireRecommandations, type TableRecommandations } from "./recommandationsRecentes";
+import { ecrirePiecesEcartees, lirePiecesEcartees } from "./piecesEcartees";
 import { basculerSaison, saisonsDe, seasonDepuisSaisons } from "./saisons";
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
@@ -1300,6 +1301,26 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     recommandeesRef.current = lireRecommandations(userId, jourLocal());
   }, [userId]);
+
+  // Les pièces de capsule écartées (« J'ai déjà », retrait), gardées sur
+  // l'appareil (piecesEcartees.ts, 01/11/2026) : relues quand le compte est
+  // connu (elles remplacent alors celles d'un autre compte ou du mode démo),
+  // puis réécrites à chaque changement. `ecarteesDuCompte` ne passe au nouveau
+  // compte qu'avec sa liste lue : on n'écrit jamais sous un compte la liste
+  // d'un autre, ni la liste vide du démarrage.
+  const [ecarteesDuCompte, setEcarteesDuCompte] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    const lues = lirePiecesEcartees(userId);
+    // Lecture synchrone de l'appareil, une fois par compte : même exception que le chargement du dressing en mode démo.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setState((st) => ({ ...st, suggestedExcluded: lues }));
+    setEcarteesDuCompte(userId);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [userId]);
+  useEffect(() => {
+    if (ecarteesDuCompte !== userId) return;
+    ecrirePiecesEcartees(userId, state.suggestedExcluded);
+  }, [userId, ecarteesDuCompte, state.suggestedExcluded]);
 
   const regen = (
     s: AppState,
