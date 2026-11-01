@@ -146,7 +146,10 @@ export default function TabBar() {
       // sinon la nav pourrait se retrouver partiellement sous la barre
       // système sur certains téléphones. --bottom-nav-height (globals.css)
       // reste la hauteur HORS safe-area, cohérente avec .pb-safe-nav.
-      style={{ paddingBottom: "calc(22px + env(safe-area-inset-bottom))" }}
+      // HAUTEUR FIXÉE SUR --bottom-nav-height (01/11/2026, signalé : « il y a toujours quelques pixels entre le bloc du CTA flottant et
+      // le menu »). Laissée à son contenu, la barre mesurait 78,5 px au lieu des 80 que tous les éléments flottants supposent (CTA de la
+      // Capsule, confirmations, actions de la fiche) : un liseré de fond passait entre eux et elle, plus ou moins large selon les polices.
+      style={{ paddingBottom: "calc(22px + env(safe-area-inset-bottom))", height: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))" }}
     >
       {TABS.map((tab) => {
         // Les avis de styliste enregistrés (liste, détail) vivent dans le

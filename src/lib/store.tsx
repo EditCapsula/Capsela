@@ -50,6 +50,7 @@ import { aDesManches } from "./manches";
 import { aUnMotif } from "./motifs";
 import { genererTenueDiversifiee, recentsDuJour } from "./diversite";
 import { ecrireRecommandation, lireRecommandations, type TableRecommandations } from "./recommandationsRecentes";
+import { ecrirePiecesEcartees, lirePiecesEcartees } from "./piecesEcartees";
 import { basculerSaison, saisonsDe, seasonDepuisSaisons } from "./saisons";
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
@@ -530,6 +531,8 @@ export interface Actions {
   swapPiece: (id: number, cat: CategoryKey) => void;
   /** Ajoute une pièce à l'affichage de la tenue du jour (recette 23/08/2026, "Ajouter à la tenue" des suggestions R-S13/R-S14) — aperçu de composition, jamais une acquisition ; sans effet si déjà présente. */
   addPieceToOutfit: (id: number) => void;
+  /** Remplace une pièce de la tenue du jour par une autre, à sa place (01/11/2026, « touche de couleur » : un haut choisi remplace le haut). */
+  remplacerDansTenue: (ancienId: number, nouvelId: number) => void;
   /** Annule un addPieceToOutfit (toast "Annuler", recette 23/08/2026) — retire une pièce de l'affichage de la tenue du jour ; sans effet si absente. */
   removePieceFromOutfit: (id: number) => void;
   /** Déclenche la génération du visuel d'une pièce du catalogue si elle n'en a pas encore (sans effet sinon). */
@@ -1094,13 +1097,20 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     const m = previsionPour(previsionJour.prevision, cle, "Toute la journée");
     return m ? { min: Math.round(m.tempMin), max: Math.round(m.tempMax) } : null;
   }, [state.jourDecalage, previsionJour, villeMeteo, dateConsultee]);
-  const meteoDuJour: Weather = useMemo(
-    () =>
+  // LA SOIRÉE DU JOUR CONSULTÉ (01/11/2026, demandé : « il faut vérifier la température de fin de journée pour être pertinent ») :
+  // la minimale des créneaux 18 h – 24 h, pour le conseil « il va faire frais ce soir ». Sans prévision, rien.
+  const tempSoir = useMemo(() => {
+    if (previsionJour?.ville !== villeMeteo || !previsionJour.prevision) return undefined;
+    const soir = previsionPour(previsionJour.prevision, jourLocal(dateConsultee), "Soirée");
+    return soir ? Math.round(soir.tempMin) : undefined;
+  }, [previsionJour, villeMeteo, dateConsultee]);
+  const meteoDuJour: Weather = useMemo(() => {
+    const base =
       state.jourDecalage === 0
         ? weather
-        : weatherForDay(meteoPrevue ? meteoPrevue.temp : geoCity.temp, meteoPrevue ? meteoPrevue.label : geoCity.label, saisonCalendairePour(dateConsultee), CHALEUR_HORS_SAISON),
-    [state.jourDecalage, weather, meteoPrevue, geoCity, dateConsultee]
-  );
+        : weatherForDay(meteoPrevue ? meteoPrevue.temp : geoCity.temp, meteoPrevue ? meteoPrevue.label : geoCity.label, saisonCalendairePour(dateConsultee), CHALEUR_HORS_SAISON);
+    return tempSoir === undefined ? base : { ...base, tempSoir };
+  }, [state.jourDecalage, weather, meteoPrevue, geoCity, dateConsultee, tempSoir]);
 
   // Vestiaire universel (Supabase) : remplace le catalogue statique dès qu'il
   // est disponible. En mode démo, si la requête échoue, ou si la table/les
@@ -1291,6 +1301,26 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     recommandeesRef.current = lireRecommandations(userId, jourLocal());
   }, [userId]);
+
+  // Les pièces de capsule écartées (« J'ai déjà », retrait), gardées sur
+  // l'appareil (piecesEcartees.ts, 01/11/2026) : relues quand le compte est
+  // connu (elles remplacent alors celles d'un autre compte ou du mode démo),
+  // puis réécrites à chaque changement. `ecarteesDuCompte` ne passe au nouveau
+  // compte qu'avec sa liste lue : on n'écrit jamais sous un compte la liste
+  // d'un autre, ni la liste vide du démarrage.
+  const [ecarteesDuCompte, setEcarteesDuCompte] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    const lues = lirePiecesEcartees(userId);
+    // Lecture synchrone de l'appareil, une fois par compte : même exception que le chargement du dressing en mode démo.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setState((st) => ({ ...st, suggestedExcluded: lues }));
+    setEcarteesDuCompte(userId);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [userId]);
+  useEffect(() => {
+    if (ecarteesDuCompte !== userId) return;
+    ecrirePiecesEcartees(userId, state.suggestedExcluded);
+  }, [userId, ecarteesDuCompte, state.suggestedExcluded]);
 
   const regen = (
     s: AppState,
@@ -2852,6 +2882,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     addPieceToOutfit: (id) =>
       setState((s) => (s.outfit.includes(id) ? s : { ...s, outfit: [...s.outfit, id] })),
+    remplacerDansTenue: (ancienId, nouvelId) =>
+      setState((s) =>
+        s.outfit.includes(nouvelId) || !s.outfit.includes(ancienId) ? s : { ...s, outfit: s.outfit.map((id) => (id === ancienId ? nouvelId : id)) }
+      ),
     removePieceFromOutfit: (id) =>
       setState((s) => ({ ...s, outfit: s.outfit.filter((oid) => oid !== id) })),
     requestCatalogImage,

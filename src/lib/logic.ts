@@ -173,7 +173,13 @@ export function estContexteMaison(occasion: OccasionKey, workMode: WorkMode = "P
  * de sous-contexte Présentiel/Télétravail sélectionnable, donc isHomeContext
  * s'y limite naturellement à Cocooning.
  */
-export function applySportCocooningFilter(items: Item[], occasion: OccasionKey, workMode: WorkMode = "Présentiel"): Item[] {
+export function applySportCocooningFilter(
+  items: Item[],
+  occasion: OccasionKey,
+  workMode: WorkMode = "Présentiel",
+  /** Levier d'audit : reproduit l'avant du 01/11/2026 (une veste ou un manteau admis en Télétravail). */
+  vesteEnTeletravail = false
+): Item[] {
   let r = items;
   // La gourde n'a de fonction qu'en Sport (recette 22/08/2026, "valable que
   // pour le sport") — exclue de toute autre occasion, y compris du picker
@@ -212,9 +218,10 @@ export function applySportCocooningFilter(items: Item[], occasion: OccasionKey, 
   // travail_formel) : partagé par plusieurs règles (R-B13/R-B14/R-B17),
   // jamais en Présentiel.
   const isHomeContext = estContexteMaison(occasion, workMode);
-  if (occasion === "cocooning") {
-    // R-B12 — pas de veste/manteau chez soi (Cocooning uniquement — en
-    // Télétravail on peut porter un gilet/une veste, rien ne l'interdit).
+  if (isHomeContext && !(occasion !== "cocooning" && vesteEnTeletravail)) {
+    // R-B12 — pas de veste/manteau chez soi. Cocooning depuis toujours ; Télétravail depuis le 01/11/2026 (demandé, en capture d'un
+    // trench sur une robe en télétravail : « en télétravail propose plutôt un gilet et pas de manteau ni de veste »). Le gilet est
+    // posé plus loin dans generateOutfit (R-S27).
     r = r.filter((i) => !OUTERWEAR_CATS.includes(i.cat));
   }
   if (isHomeContext) {
@@ -399,6 +406,10 @@ export interface LeviersMesure {
   sansChaussuresHabilleesEnSoiree?: boolean;
   /** Reproduit le comportement d'AVANT le 01/11/2026 : une veste ou un manteau de sport peut se poser sur une robe (R-B24). */
   vesteDeSportSurRobe?: boolean;
+  /** Reproduit le comportement d'AVANT le 01/11/2026 : en Voyage, sans haut ni bas de voyage, pas de relais par une tenue de sport (R-S26). */
+  sansSportEnVoyage?: boolean;
+  /** Reproduit le comportement d'AVANT le 01/11/2026 : en Télétravail, veste et manteau admis, pas de gilet posé (R-B12 étendue, R-S27). */
+  vesteEnTeletravail?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
@@ -412,6 +423,14 @@ export interface LeviersMesure {
   manchesIgnorees?: boolean;
   /** Reproduit le comportement d'AVANT le 19/10/2026 : aucun manteau ajouté par le froid, et le manteau soumis au plancher de formalité. */
   sansManteauParLeFroid?: boolean;
+}
+
+/**
+ * Ce que le conseil de la veste peut affirmer (01/11/2026) : « il va faire frais ce soir » quand la température du SOIR est connue
+ * (Weather.tempSoir), « il fait frais aujourd'hui » sinon — jamais une affirmation sur le soir sans prévision du soir.
+ */
+export function fraicheurDuSoir(weather: Pick<Weather, "tempSoir">): string {
+  return weather.tempSoir != null ? "il va faire frais ce soir" : "il fait frais aujourd'hui";
 }
 
 /** Sous cette température, une tenue sans couche de dessus est à compléter d'une veste (R-S14) — le seuil de la suggestion, désormais aussi celui de la veste intégrée. */
@@ -915,7 +934,7 @@ export function generateOutfit(
   // restreint ; appliquée à toute source de pool, y compris aux catégories
   // qui bypassent par ailleurs le simple filtre heuristique d'occasion (chaussures/sac).
   const hardCategoryFilter = (items: Item[], minFormalityOverride?: number): Item[] => {
-    let r = applySportCocooningFilter(items, occasion, workMode);
+    let r = applySportCocooningFilter(items, occasion, workMode, leviers?.vesteEnTeletravail);
     // R-B18 — aucun accessoire n'a de fonction en Télétravail (bijou/sac déjà
     // couverts ailleurs ; concerne ceinture, foulard, lunettes...).
     if (occasion === "travail_formel" && workMode === "Télétravail") {
@@ -1087,7 +1106,23 @@ export function generateOutfit(
   // palier demandé est inchangée, seul le repli devient réellement effectif.
   const hardBaseNoOcc = hardCategoryFilter(seasonBase, formalityOverride);
   const hardBaseNoTemp = applyDeclaredOccasionFilter(hardBaseNoOcc);
-  const hardBase = applyTempFilter(hardBaseNoTemp);
+  const hardBaseVoyageSansSport = applyTempFilter(hardBaseNoTemp);
+  // R-S26 (01/11/2026, arbitré par la propriétaire, option A : « tu tentes en priorité le haut et le bas confortable. Si pas de haut
+  // ni de bas tu pousses une tenue de sport ») — en Voyage, quand aucun haut ET aucun bas ne sont admis pour le voyage, les hauts et
+  // les bas de sport (vetementDeSport) le deviennent : la tenue de sport passe avant la robe ou la combinaison. Ils gardent toutes les
+  // règles dures (saison, météo, catégorie) ; seuls le plancher de formalité et l'occasion déclarée (souvent « Sport » seul) cèdent.
+  // Secours seulement : un haut et un bas de voyage existent-ils, rien ne change (Court trajet comme Longue distance).
+  const hardBase = (() => {
+    if (occasion !== "voyage" || leviers?.sansSportEnVoyage) return hardBaseVoyageSansSport;
+    const a = (cats: readonly CategoryKey[]) => hardBaseVoyageSansSport.some((i) => cats.includes(i.cat));
+    if (a(["haut"]) && a(BOTTOMS)) return hardBaseVoyageSansSport;
+    const sport = applyTempFilter(hardCategoryFilter(seasonBase, 0)).filter(
+      (i) => (TOP_LAYER_CATS.includes(i.cat) || BOTTOMS.includes(i.cat)) && vetementDeSport(i) && !hardBaseVoyageSansSport.includes(i)
+    );
+    const hautPossible = a(["haut"]) || sport.some((i) => i.cat === "haut");
+    const basPossible = a(BOTTOMS) || sport.some((i) => BOTTOMS.includes(i.cat));
+    return hautPossible && basPossible ? [...hardBaseVoyageSansSport, ...sport] : hardBaseVoyageSansSport;
+  })();
   // Dernier barreau du repli de poolFor — règles dures et météo appliquées,
   // seule l'occasion déclarée est relâchée.
   const hardBaseNoOccWithTemp = applyTempFilter(hardBaseNoOcc);
@@ -1379,7 +1414,10 @@ export function generateOutfit(
   // quand haut + bas exigerait de relâcher l'occasion (même garantie « toujours une tenue » que robeAutorisee ci-dessus).
   // poolFor n'est appelé qu'une fois le tirage à 40 % passé, comme avant : il signale les relâchements qu'il fait (occasionRelachee).
   const eviterCombinaison = occasion === "voyage" && !leviers?.combinaisonEnVoyage;
-  const piecesUniques = Math.random() < 0.4 && robeAutorisee ? poolFor(ONEPIECE_CATS, true) : [];
+  // Sans aucun haut ou sans aucun bas dans le pool, la pièce unique est la seule tenue possible : tentée à chaque essai (01/11/2026).
+  // Avant, à 40 % des essais seulement : une fois sur ~20 000, aucun des 20 essais ne la tentait et la tenue restait vide.
+  const sansHautOuSansBas = !hasCat(["haut"]) || !hasCat(BOTTOMS);
+  const piecesUniques = (sansHautOuSansBas || Math.random() < 0.4) && robeAutorisee ? poolFor(ONEPIECE_CATS, true) : [];
   const combinaisonEvitee = eviterCombinaison && hautBasSansRelachement && piecesUniques.every((i) => i.cat === "combinaison");
   const useRobe = piecesUniques.length > 0 && !combinaisonEvitee;
   socleRobe = useRobe;
@@ -1552,6 +1590,24 @@ export function generateOutfit(
   ) {
     const manteau = pick(["manteau"], false);
     if (manteau && !ids.includes(manteau.id)) ids.push(manteau.id);
+  }
+  // R-S27 (01/11/2026, demandé : « en télétravail propose plutôt un gilet ») — là où une veste ou un manteau seraient venus (veste par
+  // temps frais, manteau sous SEUIL_MANTEAU), un gilet : une maille OUVERTE (fermetureMaille), jamais un pull fermé par-dessus la
+  // robe ou le haut. Sans gilet de saison dans le pool, rien n'est ajouté. Pas si la tenue a déjà une maille.
+  if (
+    estContexteMaison(occasion, workMode) &&
+    occasion !== "cocooning" &&
+    !leviers?.vesteEnTeletravail &&
+    (vesteFraicheRequise || weather.temp < SEUIL_MANTEAU) &&
+    !chosen.some((c) => c.cat === "pull") &&
+    !ids.some((id) => pool.find((x) => x.id === id)?.cat === "pull")
+  ) {
+    const gilets = poolFor(["pull"], false).filter((i) => i.cat === "pull" && fermetureMaille(i) === "ouverte" && !ids.includes(i.id));
+    const gilet = rand(harmonize(gilets, chosen, false));
+    if (gilet) {
+      ids.push(gilet.id);
+      chosen.push(gilet);
+    }
   }
   // R-B5 assoupli (nuance demandée le 19/08/2026) : une robe/combinaison
   // reste self-sufficient face à un haut/bas "base" (redondant), mais une
@@ -2578,7 +2634,11 @@ export function computeLookScore(
   // zippé recevait « ajoute une veste ») : maille ouverte (gilet, cardigan, zippé — fermetureMaille) ou sweat à capuche, toutes
   // occasions. Un pull simple, enfilé sous rien, ne compte pas : c'est le haut, pas une couche en plus.
   const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau" || estCoucheDuSoir(i));
-  if (!chezSoi && weather.temp <= SEUIL_SOIREE_FRAICHE && !hasOuterwear && !dismissed.has("veste_soir")) {
+  // LA TEMPÉRATURE DU SOIR (01/11/2026, demandé : « si le conseil s'affiche parce que la température a été vérifiée pour le soir on est
+  // ok, sinon il faut vérifier la température de fin de journée ») : la minimale de la soirée quand la prévision la donne
+  // (Weather.tempSoir), sinon la température du jour — et le texte ne parle alors plus du soir (fraicheurDuSoir).
+  const tempReference = weather.tempSoir ?? weather.temp;
+  if (!chezSoi && tempReference <= SEUIL_SOIREE_FRAICHE && !hasOuterwear && !dismissed.has("veste_soir")) {
     // Occasion sport (recette 25/08/2026, signalé : blazer structuré
     // suggéré sur une tenue baskets + short cycliste) — préférence molle
     // pour une veste décontractée (formalityOf <= 1, ex. coupe-vent/
@@ -2591,7 +2651,7 @@ export function computeLookScore(
       .sort(dressingDAbord);
     const decontracte = occasion === "sport" ? vesteManteauCandidates.filter((i) => formalityOf(i) <= 1) : [];
     // Sous SEUIL_MANTEAU (19/10/2026), un manteau passe devant une veste : par grand froid, une veste ne suffit pas.
-    const parLeFroid = weather.temp < SEUIL_MANTEAU ? vesteManteauCandidates.filter((i) => i.cat === "manteau") : [];
+    const parLeFroid = tempReference < SEUIL_MANTEAU ? vesteManteauCandidates.filter((i) => i.cat === "manteau") : [];
     // En Sport, le hoodie d'abord (17/10/2026, signalé : « on avait convenu d'afficher directement un hoodie s'il y en a un dans la
     // capsule » — la tenue Sport montrait une silhouette de blazer à ajouter). Une maille qui se porte par-dessus (estCoucheDuSoir :
     // sweat à capuche, zippé, gilet), du dressing ou de la capsule, passe devant toute veste ; sans elle, la règle d'avant.
@@ -2603,7 +2663,7 @@ export function computeLookScore(
         : [];
     proactives.push({
       key: "veste_soir",
-      text: "N'hésite pas à compléter cette tenue avec une veste, il va faire frais ce soir.",
+      text: `N'hésite pas à compléter cette tenue avec une veste, ${fraicheurDuSoir(weather)}.`,
       suggestedId: (coucheSport.length ? coucheSport : decontracte.length ? decontracte : parLeFroid.length ? parLeFroid : vesteManteauCandidates)[0]?.id,
     });
   }

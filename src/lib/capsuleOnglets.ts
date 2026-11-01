@@ -1,0 +1,302 @@
+import { huesHarmonious, isStatement } from "./attributes";
+import { styleFit } from "./capsule";
+import { CATS } from "./data";
+import { paletteHexes, STYLE_ID_TO_CATALOG_LABEL, styleLabel, type Profile, type StyleId } from "./profile";
+import { raisonsSuggestion } from "./capsuleEcran";
+import type { CapsuleSeason, CategoryKey, Item } from "./types";
+
+/*
+ * LES QUATRE ONGLETS DE « MA CAPSULE » (refonte du 01/11/2026, maquettes de la propriétaire : Composer, Explorer, Pièces clés,
+ * Détails).
+ *
+ * Comme capsuleEcran.ts, rien ici ne choisit une pièce de la capsule : `computeDefaultCapsule` le fait et n'est pas touché. Ces
+ * fonctions rangent ce qu'il a rendu (et les pièces du dressing de la saison) pour l'afficher, et n'écrivent jamais une phrase
+ * qu'une donnée ne rend pas vraie. Pures, donc testées.
+ */
+
+/** Une pièce montrée par l'écran : une suggestion de la capsule, ou une pièce du dressing de la saison. */
+export interface EntreeCapsule {
+  item: Item;
+  possedee: boolean;
+}
+
+/** Clé d'une entrée, unique même si un identifiant du dressing croise un identifiant du catalogue (favoris, listes React). */
+export const cleEntree = (e: EntreeCapsule): string => `${e.possedee ? "d" : "c"}${e.item.id}`;
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// COMPOSER
+// ---------------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Les emplacements de la composition, dans l'ordre des tuiles. Un emplacement montre UNE pièce à la fois ; ses flèches ne
+ * changent que lui (brief, 3.2 : « les autres catégories conservent leur sélection »).
+ *
+ * `facultatif` : l'emplacement peut rester vide (« Sans »), position -1. Les hauts, les bas et les chaussures font la silhouette ;
+ * la robe la remplace (une robe choisie retire le haut et le bas de la planche, un haut ou un bas choisi retire la robe).
+ */
+export type CleEmplacement = "haut" | "bas" | "robe" | "maille" | "dessus" | "chaussures" | "sac" | "accessoire";
+
+export interface DefEmplacement {
+  cle: CleEmplacement;
+  libelle: string;
+  cats: CategoryKey[];
+  facultatif: boolean;
+}
+
+export const EMPLACEMENTS: DefEmplacement[] = [
+  { cle: "haut", libelle: "Hauts", cats: ["haut"], facultatif: false },
+  { cle: "bas", libelle: "Bas", cats: ["pantalon", "jean", "jupe", "short"], facultatif: false },
+  { cle: "robe", libelle: "Robes", cats: ["robe", "combinaison"], facultatif: true },
+  { cle: "maille", libelle: "Mailles", cats: ["pull"], facultatif: true },
+  { cle: "dessus", libelle: "Vestes", cats: ["veste", "manteau"], facultatif: true },
+  { cle: "chaussures", libelle: "Chaussures", cats: ["chaussures"], facultatif: false },
+  { cle: "sac", libelle: "Sacs", cats: ["sac"], facultatif: true },
+  { cle: "accessoire", libelle: "Accessoires", cats: ["bijou", "accessoire"], facultatif: true },
+];
+
+export const emplacementDe = (cat: CategoryKey): CleEmplacement | null => EMPLACEMENTS.find((e) => e.cats.includes(cat))?.cle ?? null;
+
+/** Les pièces de chaque emplacement : celles du dressing d'abord, puis les suggestions (même ordre que l'écran d'avant). */
+export function piecesParEmplacement(entrees: EntreeCapsule[]): Record<CleEmplacement, EntreeCapsule[]> {
+  const out = Object.fromEntries(EMPLACEMENTS.map((e) => [e.cle, [] as EntreeCapsule[]])) as Record<CleEmplacement, EntreeCapsule[]>;
+  for (const e of [...entrees.filter((x) => x.possedee), ...entrees.filter((x) => !x.possedee)]) {
+    const cle = emplacementDe(e.item.cat);
+    if (cle) out[cle].push(e);
+  }
+  return out;
+}
+
+/** Position choisie dans chaque emplacement (-1 : « Sans »). */
+export type SelectionComposer = Partial<Record<CleEmplacement, number>>;
+
+/**
+ * La composition d'arrivée. ARBITRAGE ÉDITORIAL (01/11/2026) : la première pièce de chaque emplacement indispensable ; la robe
+ * seulement s'il manque un haut ou un bas ; la maille en automne et en hiver ; la veste hors été ; le sac et l'accessoire pour
+ * finir la tenue, comme sur la maquette.
+ */
+export function selectionDeDepart(groupes: Record<CleEmplacement, EntreeCapsule[]>, saison: CapsuleSeason): SelectionComposer {
+  const froid = saison === "Automne" || saison === "Hiver";
+  const aBase = groupes.haut.length > 0 && groupes.bas.length > 0;
+  const sel: SelectionComposer = {};
+  for (const e of EMPLACEMENTS) {
+    if (!groupes[e.cle].length) continue;
+    let actif = true;
+    if (e.cle === "robe") actif = !aBase;
+    if (e.cle === "maille") actif = froid;
+    if (e.cle === "dessus") actif = saison !== "Été";
+    sel[e.cle] = actif ? 0 : -1;
+  }
+  return sel;
+}
+
+/** La position d'un emplacement, bornée à ses pièces (une capsule recalculée peut en avoir moins). */
+export function position(sel: SelectionComposer, cle: CleEmplacement, n: number): number {
+  const p = sel[cle] ?? -1;
+  return p >= n ? n - 1 : p;
+}
+
+/** Pièce suivante (pas = 1) ou précédente (-1) d'un emplacement, en boucle ; « Sans » fait partie de la boucle s'il est facultatif. */
+export function avancer(sel: SelectionComposer, cle: CleEmplacement, n: number, pas: 1 | -1): SelectionComposer {
+  if (n === 0) return sel;
+  const def = EMPLACEMENTS.find((e) => e.cle === cle)!;
+  const min = def.facultatif ? -1 : 0;
+  const taille = n - min;
+  const actuelle = position(sel, cle, n);
+  const suivante = ((actuelle - min + pas + taille) % taille) + min;
+  return exclusivite({ ...sel, [cle]: suivante }, cle);
+}
+
+/** Place une pièce précise dans son emplacement (« Composer avec cette pièce »), les autres emplacements gardant la leur. */
+export function choisir(sel: SelectionComposer, cle: CleEmplacement, index: number): SelectionComposer {
+  return exclusivite({ ...sel, [cle]: index }, cle);
+}
+
+/** La robe et le duo haut + bas s'excluent : on garde ce que l'on vient de toucher. */
+function exclusivite(sel: SelectionComposer, touche: CleEmplacement): SelectionComposer {
+  if (touche === "robe" && (sel.robe ?? -1) >= 0) return sel;
+  if ((touche === "haut" || touche === "bas") && (sel.robe ?? -1) >= 0) return { ...sel, robe: -1 };
+  return sel;
+}
+
+/** Les pièces posées sur la planche, dans l'ordre des emplacements. Une robe choisie remplace le haut et le bas. */
+export function piecesComposees(groupes: Record<CleEmplacement, EntreeCapsule[]>, sel: SelectionComposer): EntreeCapsule[] {
+  const robe = position(sel, "robe", groupes.robe.length) >= 0;
+  const out: EntreeCapsule[] = [];
+  for (const e of EMPLACEMENTS) {
+    if (robe && (e.cle === "haut" || e.cle === "bas")) continue;
+    const p = position(sel, e.cle, groupes[e.cle].length);
+    if (p >= 0) out.push(groupes[e.cle][p]);
+  }
+  return out;
+}
+
+/**
+ * « Pourquoi cette tenue ? » de Composer. La composition est faite par l'utilisatrice, pas par le moteur : on ne dit donc que ce
+ * que les données de SES pièces rendent vrai, sans score ni compatibilité inventés (brief, 3.4). Aucune raison : la zone ne
+ * s'affiche pas.
+ *   - style : toutes les pièces vêtements sont dans un style du profil (`styleFit`, le filtre de la capsule) ;
+ *   - palette : les pièces dont la teinte exacte est une couleur choisie du profil ;
+ *   - couleurs : chaque paire de pièces principales (haut, bas, robe, maille, veste) a des teintes voisines ou complémentaires
+ *     (`huesHarmonious`, la règle d'harmonie du moteur) ;
+ *   - indispensables : au moins deux pièces indispensables (`estBasiqueCapsule`).
+ */
+export function raisonsComposition(pieces: Item[], profile: Profile): string[] {
+  const raisons: string[] = [];
+  const vetements = pieces.filter((it) => !["chaussures", "sac", "bijou", "accessoire"].includes(it.cat));
+  const style = (profile.styles || []).find((id) => {
+    const libelle = STYLE_ID_TO_CATALOG_LABEL[id as StyleId];
+    return libelle && vetements.length > 0 && vetements.every((it) => styleFit(it, libelle));
+  });
+  if (style) raisons.push(`Toutes ses pièces sont dans ton style ${styleLabel(style, profile.gender)}.`);
+  const palette = new Set(paletteHexes(profile).map((h) => h.toLowerCase()));
+  const dansPalette = pieces.filter((it) => palette.has(it.hex.toLowerCase())).length;
+  if (dansPalette > 0) raisons.push(dansPalette > 1 ? `${dansPalette} pièces aux couleurs de ta palette.` : "Une pièce aux couleurs de ta palette.");
+  if (vetements.length >= 2 && vetements.every((a, i) => vetements.slice(i + 1).every((b) => huesHarmonious(a.hex, b.hex)))) {
+    raisons.push("Des couleurs voisines ou complémentaires, qui s'accordent.");
+  }
+  const indispensables = pieces.filter((it) => it.estBasiqueCapsule).length;
+  if (indispensables >= 2) raisons.push(`Construite sur ${indispensables} indispensables, faciles à associer.`);
+  return raisons;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// EXPLORER
+// ---------------------------------------------------------------------------------------------------------------------------
+
+export type TriExplorer = "capsule" | "dressing" | "suggestions" | "nom";
+
+export interface FiltresExplorer {
+  /** "toutes", "favoris" ou une catégorie. */
+  categorie: "toutes" | "favoris" | CategoryKey;
+  /** Nom de couleur (Item.color), ou null. */
+  couleur: string | null;
+  tri: TriExplorer;
+}
+
+export const FILTRES_PAR_DEFAUT: FiltresExplorer = { categorie: "toutes", couleur: null, tri: "capsule" };
+
+/** Les catégories présentes, dans l'ordre de CATS, avec leur nombre de pièces. Jamais une catégorie vide (brief, 4.2). */
+export function categoriesPresentes(entrees: EntreeCapsule[]): { cat: CategoryKey; libelle: string; n: number }[] {
+  return CATS.map(([cat, , pluriel]) => ({ cat, libelle: pluriel, n: entrees.filter((e) => e.item.cat === cat).length })).filter((c) => c.n > 0);
+}
+
+/** Les couleurs présentes, de la plus représentée à la moins, avec leur teinte. Une pièce sans nom de couleur n'en ajoute pas. */
+export function couleursPresentes(entrees: EntreeCapsule[]): { nom: string; hex: string; n: number }[] {
+  const parNom = new Map<string, { nom: string; hex: string; n: number }>();
+  for (const { item } of entrees) {
+    const nom = (item.color || "").trim();
+    if (!nom) continue;
+    const cle = nom.toLowerCase();
+    const c = parNom.get(cle);
+    if (c) c.n += 1;
+    else parNom.set(cle, { nom, hex: item.hex, n: 1 });
+  }
+  return [...parNom.values()].sort((a, b) => b.n - a.n || a.nom.localeCompare(b.nom, "fr"));
+}
+
+export function filtrerExplorer(entrees: EntreeCapsule[], f: FiltresExplorer, favoris: ReadonlySet<string>): EntreeCapsule[] {
+  const gardees = entrees.filter(
+    (e) =>
+      (f.categorie === "toutes" || (f.categorie === "favoris" ? favoris.has(cleEntree(e)) : e.item.cat === f.categorie)) &&
+      (!f.couleur || (e.item.color || "").trim().toLowerCase() === f.couleur.toLowerCase())
+  );
+  const rangCat = (e: EntreeCapsule) => CATS.findIndex(([c]) => c === e.item.cat);
+  const ordre = new Map(entrees.map((e, i) => [cleEntree(e), i]));
+  const capsule = (a: EntreeCapsule, b: EntreeCapsule) => rangCat(a) - rangCat(b) || ordre.get(cleEntree(a))! - ordre.get(cleEntree(b))!;
+  const tris: Record<TriExplorer, (a: EntreeCapsule, b: EntreeCapsule) => number> = {
+    capsule,
+    dressing: (a, b) => Number(b.possedee) - Number(a.possedee) || capsule(a, b),
+    suggestions: (a, b) => Number(a.possedee) - Number(b.possedee) || capsule(a, b),
+    nom: (a, b) => a.item.name.localeCompare(b.item.name, "fr"),
+  };
+  return [...gardees].sort(tris[f.tri]);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// PIÈCES CLÉS
+// ---------------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Deux familles (arbitré par la propriétaire le 01/11/2026 : « stratégique on enlève ») :
+ *   - Indispensable : `estBasiqueCapsule`, la donnée du catalogue que la sélection lit comme départage ;
+ *   - Signature : `isStatement`, la lecture qui réserve sa place à une pièce de caractère dans la sélection.
+ * Une pièce qui serait les deux est Signature (ce qu'elle a de plus distinctif).
+ */
+export type FamilleCle = "indispensable" | "signature";
+
+export interface PieceCle {
+  item: Item;
+  famille: FamilleCle;
+  /** Une phrase vraie : ce que dit la famille, puis la première raison que la sélection a lue pour cette pièce. */
+  explication: string;
+}
+
+const PHRASE_FAMILLE: Record<FamilleCle, string> = {
+  indispensable: "Une base facile à associer.",
+  signature: "Elle donne du caractère à tes tenues.",
+};
+
+/**
+ * 5 à 8 pièces au plus, PARMI les suggestions de la capsule. Les pièces clés de saison déjà retenues (`piecesCles`) passent devant
+ * si elles qualifient ; ensuite une pièce par catégorie avant d'en prendre une seconde, pour que la sélection couvre la silhouette ;
+ * 3 signatures au plus, pour rester une sélection. Sans aucune pièce qualifiée, la liste est vide et l'onglet le dit.
+ */
+export function piecesClesParFamille(capsule: Item[], prioritaires: Item[], profile: Profile, max = 8): PieceCle[] {
+  const familleDe = (it: Item): FamilleCle | null => (isStatement(it) ? "signature" : it.estBasiqueCapsule ? "indispensable" : null);
+  const candidates = [...prioritaires.filter((p) => capsule.some((c) => c.id === p.id)), ...capsule].filter(
+    (it, i, arr) => arr.findIndex((x) => x.id === it.id) === i && familleDe(it)
+  );
+  const retenues: Item[] = [];
+  const signatures = () => retenues.filter((it) => familleDe(it) === "signature").length;
+  for (const passe of [0, 1]) {
+    for (const it of candidates) {
+      if (retenues.length >= max) break;
+      if (retenues.includes(it)) continue;
+      if (familleDe(it) === "signature" && signatures() >= 3) continue;
+      if (passe === 0 && retenues.some((r) => r.cat === it.cat)) continue;
+      retenues.push(it);
+    }
+  }
+  return retenues.map((item) => {
+    const famille = familleDe(item)!;
+    const raison = raisonsSuggestion(item, profile).find((r) => r.cle !== "indispensable");
+    return { item, famille, explication: raison ? `${PHRASE_FAMILLE[famille]} ${raison.texte}.` : PHRASE_FAMILLE[famille] };
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// DÉTAILS
+// ---------------------------------------------------------------------------------------------------------------------------
+
+export interface DetailsCapsule {
+  pieces: number;
+  couleurs: number;
+  categories: number;
+  palette: { nom: string; hex: string; n: number }[];
+  composition: { cat: CategoryKey; libelle: string; n: number }[];
+  dansLeDressing: number;
+  suggestions: number;
+  indispensables: number;
+  signatures: number;
+}
+
+/**
+ * Les chiffres de l'onglet Détails, tous COMPTÉS sur les pièces affichées. Pas de nombre d'associations : la formule
+ * combinatoire a été retirée le 22/09/2026, l'audit l'ayant trouvée fausse de ×0,5 à ×1,7 (cf. compteur-looks.audit.ts).
+ */
+export function detailsCapsule(entrees: EntreeCapsule[]): DetailsCapsule {
+  const palette = couleursPresentes(entrees);
+  const composition = categoriesPresentes(entrees);
+  const suggestions = entrees.filter((e) => !e.possedee).map((e) => e.item);
+  return {
+    pieces: entrees.length,
+    couleurs: palette.length,
+    categories: composition.length,
+    palette,
+    composition,
+    dansLeDressing: entrees.filter((e) => e.possedee).length,
+    suggestions: suggestions.length,
+    indispensables: suggestions.filter((it) => it.estBasiqueCapsule && !isStatement(it)).length,
+    signatures: suggestions.filter((it) => isStatement(it)).length,
+  };
+}

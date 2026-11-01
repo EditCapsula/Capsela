@@ -59,7 +59,9 @@ export default function SegmentedControl<K extends string>({
       aria-label={ariaLabel}
       className={pastilles ? "grid gap-2" : "grid gap-1 rounded-full p-1"}
       style={{
-        gridTemplateColumns: pastilles ? `repeat(${segments.length}, minmax(0, 1fr))` : `repeat(${segments.length}, auto)`,
+        // Pastilles serrées (Ma Capsule, quatre onglets, 01/11/2026) : colonnes sur le CONTENU, comme la piste — en parts égales,
+        // « Composer » et « Pièces clés » étaient coupés à 320 px. Les colonnes `auto` se partagent ensuite la place restante.
+        gridTemplateColumns: pastilles && !serre ? `repeat(${segments.length}, minmax(0, 1fr))` : `repeat(${segments.length}, auto)`,
         // Jeton existant : le crème sombre déjà utilisé pour les surfaces
         // creuses. Aucune couleur nouvelle.
         background: pastilles ? undefined : "var(--color-chip-soft-bg)",

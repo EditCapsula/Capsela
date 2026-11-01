@@ -4,7 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
-import { CATLABEL, CATS } from "@/lib/data";
+import OptionRow from "@/components/OptionRow";
+import SegmentedControl, { type Segment } from "@/components/SegmentedControl";
+import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import { CATLABEL } from "@/lib/data";
 import {
   CAPSULE_SEASONS,
   computeDefaultCapsule,
@@ -14,19 +17,44 @@ import {
 } from "@/lib/capsule";
 import {
   alternativesDeRemplacement,
-  introCapsule,
   margeVignette,
   piecesCles,
   piecesDuDressingPourSaison,
   raisonsSuggestion,
   type AlternativeRemplacement,
 } from "@/lib/capsuleEcran";
+import {
+  avancer,
+  categoriesPresentes,
+  choisir,
+  cleEntree,
+  couleursPresentes,
+  detailsCapsule,
+  emplacementDe,
+  EMPLACEMENTS,
+  FILTRES_PAR_DEFAUT,
+  filtrerExplorer,
+  piecesClesParFamille,
+  piecesComposees,
+  piecesParEmplacement,
+  position,
+  raisonsComposition,
+  selectionDeDepart,
+  type CleEmplacement,
+  type EntreeCapsule,
+  type FiltresExplorer,
+  type SelectionComposer,
+  type TriExplorer,
+} from "@/lib/capsuleOnglets";
+import { ecrireFavorisPieces, lireFavorisPieces } from "@/lib/favorisPieces";
+import { suivreEvenement } from "@/lib/mesureAudience";
+import { clePieces } from "@/lib/outfitFeedback";
 import { useAuth } from "@/lib/auth";
 import { libelleStyles, silhouetteForme, styleLabel, stylesLabels } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { resolvePhotoCatalogue } from "@/lib/catalogImages";
 import { analyserImage, placementDansCadre, type Analyse } from "@/lib/cadrageImage";
-import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
+import type { DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 
@@ -52,6 +80,11 @@ import Card from "@/components/Card";
  * suggestion — le moteur n'est pas modifié — et ne s'affichent pas pendant
  * l'exploration d'un autre style, qui est un aperçu de ce style seul (la
  * tenue explorée n'utilise pas non plus le dressing, cf. viewExploredOutfit).
+ *
+ * QUATRE ONGLETS (refonte du 01/11/2026, maquettes de la propriétaire) : Composer (une planche dont chaque emplacement varie
+ * seul), Explorer (la galerie, ses filtres et les favoris), Pièces clés (indispensables et pièces signature), Détails (les chiffres
+ * comptés de la capsule). Les quatre lisent la même capsule ; leurs dérivés sont dans capsuleOnglets.ts, purs et testés. La
+ * saison se choisit en touchant son nom, dans le titre. Les catégories repliables d'avant ont disparu (brief, 4).
  */
 
 /**
@@ -119,36 +152,15 @@ const VISUEL_SAISON_HOMME: Record<CapsuleSeason, string> = {
   Hiver: "/images/saisons/homme-hiver.webp",
 };
 
-/**
- * Catégories ouvertes à l'arrivée (polish V2, 26/09/2026) : les deux
- * premières — les hauts et la maille, dans l'ordre de CATS. Les suivantes
- * sont repliées en une ligne (nom, nombre de pièces) : toutes restent
- * accessibles, mais la page ne s'ouvre plus sur un catalogue.
- */
-const OUVERTES_PAR_DEFAUT = 2;
-
-/** Chevron d'une catégorie : › repliée, ˄ ouverte. Il pivote, rien d'autre ne bouge. */
-function Chevron({ ouvert }: { ouvert: boolean }) {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ transform: ouvert ? "rotate(180deg)" : "rotate(-90deg)", transition: "transform .2s ease" }}
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
-
 /** « 1 pièce » / « 12 pièces ». */
 function pieces(n: number): string {
   return `${n} ${n > 1 ? "pièces" : "pièce"}`;
+}
+
+/** « a », « a et b », « a, b et c ». */
+function enumeration(parties: string[]): string {
+  if (parties.length <= 1) return parties.join("");
+  return parties.slice(0, -1).join(", ") + " et " + parties[parties.length - 1];
 }
 
 /**
@@ -282,32 +294,81 @@ function Statut({ possedee }: { possedee: boolean }) {
   );
 }
 
-/**
- * Nom d'une pièce : deux lignes au plus, et TOUJOURS la hauteur de deux
- * lignes (min-h = 2 × interligne) — un nom court ne fait pas remonter le
- * statut, un nom long ne déséquilibre pas la rangée.
- */
-function NomPiece({ nom }: { nom: string }) {
-  return <div className="text-[12px] text-ink leading-[16px] min-h-[32px] line-clamp-2 mt-[8px]">{nom}</div>;
-}
+type Fiche = { id: number; vue: "detail" | "remplacer" };
+type Onglet = "composer" | "explorer" | "cles" | "details";
+type Feuille = "saison" | "pourquoi" | "categorie" | "couleur" | "tri" | null;
 
-function CartePiece({ item, possedee, onClick, className = "" }: { item: Item; possedee: boolean; onClick: () => void; className?: string }) {
+const ONGLETS: readonly Segment<Onglet>[] = [
+  { key: "composer", label: "Composer" },
+  { key: "explorer", label: "Explorer" },
+  { key: "cles", label: "Pièces clés" },
+  { key: "details", label: "Détails" },
+];
+
+const LIBELLES_TRI: Record<TriExplorer, string> = {
+  capsule: "Par catégorie",
+  dressing: "Mes pièces d'abord",
+  suggestions: "Suggestions d'abord",
+  nom: "Par nom",
+};
+
+/** Glyphes des tuiles de Composer : au trait, `currentColor`, même grammaire que GlyphesOccasion.tsx (viewBox 24, trait 1,5). */
+const GLYPHES: Record<CleEmplacement, React.ReactNode> = {
+  haut: <path d="M8 4l-4 3 2 4 2-1v10h8V10l2 1 2-4-4-3c-.5 1.5-2 2.5-4 2.5S8.5 5.5 8 4z" />,
+  bas: <path d="M7 3h10l1 18h-4l-2-11-2 11H6L7 3zM7 6h10" />,
+  robe: <path d="M9 3h6l-1 5 4 13H6l4-13-1-5z" />,
+  maille: <path d="M8 4l-4 3 1 11h3v3h8v-3h3l1-11-4-3c-.5 1.5-2 2.5-4 2.5S8.5 5.5 8 4zM9 17h6" />,
+  dessus: <path d="M8 3l-4 3v15h5v-9M16 3l4 3v15h-5v-9M8 3l4 8 4-8M12 11v10" />,
+  chaussures: <path d="M3 17c0-4 1-8 2-10 2 3 4 6 9 7l5 1c1.5.3 2 1.5 2 3H3zM5 17v3" />,
+  sac: <path d="M5 9h14l-1 11H6L5 9zM9 9V7a3 3 0 016 0v2" />,
+  accessoire: (
+    <>
+      <circle cx="12" cy="14" r="5" />
+      <path d="M10 6l2-3 2 3-2 3z" />
+    </>
+  ),
+};
+
+function Glyphe({ cle }: { cle: CleEmplacement }) {
   return (
-    <button onClick={onClick} className={"min-w-0 text-left cursor-pointer " + className} aria-label={`${item.name}, ${possedee ? "dans ton dressing" : "suggestion"}`}>
-      <Vignette item={item} />
-      <NomPiece nom={item.name} />
-      <div className="mt-[3px]">
-        <Statut possedee={possedee} />
-      </div>
-    </button>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {GLYPHES[cle]}
+    </svg>
   );
 }
 
-type Fiche = { id: number; vue: "detail" | "remplacer" };
+function Fleche({ sens }: { sens: "gauche" | "droite" }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={sens === "gauche" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
+    </svg>
+  );
+}
+
+function Coeur({ plein }: { plein: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill={plein ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
+    </svg>
+  );
+}
+
+/** Statut d'une pièce dans Explorer et Pièces clés : « Sélection Capsela » (maquette du 01/11/2026) ou « Dans ton dressing ». */
+function Pastille({ possedee }: { possedee: boolean }) {
+  return possedee ? (
+    <span className="inline-flex items-center gap-[3px] text-[10px] leading-[14px] text-muted whitespace-nowrap">
+      <span aria-hidden="true">✓</span>Dans ton dressing
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-[4px] rounded-full px-[8px] py-[3px] text-[10px] leading-[12px] text-terracotta-deep whitespace-nowrap" style={{ background: "var(--color-chip-soft-bg)" }}>
+      <span aria-hidden="true">✦</span>Sélection Capsela
+    </span>
+  );
+}
 
 export default function CapsuleScreen() {
   const { state, weather, actions, vestiairePool } = useCapsela();
-  const { profile } = useAuth();
+  const { profile, userId } = useAuth();
 
   const capsuleSeason: CapsuleSeason = state.capsuleSeason || currentSeasonKey();
 
@@ -320,50 +381,27 @@ export default function CapsuleScreen() {
     () => (exploredStyleId ? { ...profile, styles: [exploredStyleId] } : profile),
     [profile, exploredStyleId]
   );
+  // UNE SEULE CAPSULE pour les quatre onglets (brief, 10) : ils lisent tous `entrees`, recalculées au changement de saison, d'exclusion
+  // ou de dressing. Rien ne mélange deux saisons.
   const capsule = useMemo(
     () => computeDefaultCapsule(capsuleProfile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool),
     [capsuleProfile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool]
   );
 
-  // Affichage seul ici (pas de déclenchement) : la capsule liste 15-30
-  // pièces d'un coup, donc y déclencher la génération pour toutes en même
-  // temps équivaudrait à une génération en masse, explicitement exclue tant
-  // que le système n'est pas validé. Le déclenchement à la demande, pièce
-  // par pièce, se fait à l'ouverture d'une fiche (celle de cet écran, comme
-  // PieceScreen et ItemOutfitsScreen).
+  // Affichage seul ici (pas de déclenchement) : la génération d'un visuel se fait à l'ouverture d'une fiche, pièce par pièce.
 
-  // Style renseigné en profil (recette 25/08/2026) — les styles choisis (deux au plus),
-  // même convention que ProfileScreen (libelleStyles) ;
-  // "" si aucun style n'a été renseigné, jamais un style inventé.
+  // Style renseigné en profil (recette 25/08/2026) — "" si aucun style n'a été renseigné, jamais un style inventé.
   const userStyleLabel = libelleStyles(profile.styles, profile.gender);
   const nbStylesProfil = stylesLabels(profile.styles, profile.gender).length;
-  // Style exploré (recette 24/08/2026) — n'affecte que ce libellé d'affichage,
-  // jamais profile.styles ; la capsule ci-dessus est déjà calculée sur ce
-  // même style temporaire.
   const exploredStyleLabel = exploredStyleId ? styleLabel(exploredStyleId, profile.gender) : null;
 
   /**
-   * Ce à quoi cette sélection doit vraiment quelque chose, et rien d'autre.
-   *
-   * La morphologie n'apparaît que si elle ORIENTE la sélection
-   * (`morphologieOrienteLaSelection` : poire et triangle inversé). Pour
-   * rectangle, sablier et pomme, `valeurDirection` rend 0 et la capsule est
-   * identique avec ou sans morphologie déclarée — l'annoncer serait promettre
-   * une personnalisation qui n'a pas lieu.
-   *
-   * Chaque valeur est un bouton vers l'étape de profil correspondante, qui
-   * revient ici (`goProfileSetup(..., true)` mémorise l'écran d'appel).
-   *
-   * Sans aucun critère renseigné, la ligne « Pensées pour » ne s'affiche pas
-   * (25/09/2026) : l'ancien repli « pensée pour ton style et ta palette »
-   * l'affirmait justement quand ni l'un ni l'autre n'était connu.
+   * Ce à quoi cette sélection doit vraiment quelque chose, et rien d'autre (25/09/2026) : la morphologie seulement si elle ORIENTE
+   * la sélection (`morphologieOrienteLaSelection`). Chaque valeur ouvre l'étape de profil correspondante, qui revient ici.
    */
   const criteres = useMemo(() => {
     const aUnePalette =
       profile.paletteCouleurs.length > 0 || !!profile.paletteAffinite || !!profile.paletteIntensite;
-    // « en A » / « en V » plutôt que la proposition entière de
-    // MORPHOLOGY_LABELS : « ta morphologie Hanches plus marquées que les
-    // épaules » se lit mal au fil d'une phrase.
     const forme = morphologieOrienteLaSelection(profile.morphology)
       ? silhouetteForme(profile.morphology)
       : "";
@@ -378,25 +416,113 @@ export default function CapsuleScreen() {
     () => (exploredStyleId ? [] : piecesDuDressingPourSaison(state.items, capsuleSeason)),
     [exploredStyleId, state.items, capsuleSeason]
   );
-  const cles = useMemo(() => piecesCles(capsule, 3, capsuleSeason), [capsule, capsuleSeason]);
-  const intro = useMemo(() => introCapsule(capsule), [capsule]);
+  const entrees = useMemo<EntreeCapsule[]>(
+    () => [...possedees.map((item) => ({ item, possedee: true })), ...capsule.map((item) => ({ item, possedee: false }))],
+    [possedees, capsule]
+  );
 
-  const groups = CATS.map(([key, , plural]) => {
-    const siennes = possedees.filter((i) => i.cat === key);
-    const suggestions = capsule.filter((i) => i.cat === key);
-    return { key, label: plural, siennes, suggestions, total: siennes.length + suggestions.length };
-  }).filter((g) => g.total > 0);
-
-  // Catégories ouvertes ou repliées À LA MAIN, par rapport à leur état
-  // d'arrivée (OUVERTES_PAR_DEFAUT) : un clic bascule. Sur place, aucune
-  // navigation nouvelle ; l'état survit au changement de saison.
-  // AU RETOUR D'UNE FICHE (22/10/2026, memoireEcrans.ts) : les catégories dépliées ou repliées et le défilement d'avant.
-  type ContexteCapsule = { bascules: CategoryKey[]; defilement: number };
+  // ----- Contexte repris au retour d'une fiche (22/10/2026, memoireEcrans.ts) : onglet, filtres, composition, défilement. -----
+  type ContexteCapsule = {
+    onglet: Onglet;
+    filtres: FiltresExplorer;
+    grille: boolean;
+    composition: { cle: string; sel: SelectionComposer; actif: CleEmplacement | null } | null;
+    defilement: number;
+  };
   const repris = useContexteRepris<ContexteCapsule>("capsule");
-  const [bascules, setBascules] = useState<CategoryKey[]>(repris?.bascules ?? []);
+  const [onglet, setOnglet] = useState<Onglet>(repris?.onglet ?? "composer");
+  const [filtres, setFiltres] = useState<FiltresExplorer>(repris?.filtres ?? FILTRES_PAR_DEFAUT);
+  const [grille, setGrille] = useState(repris?.grille ?? true);
   const zone = useRef<HTMLDivElement | null>(null);
   const defilement = useDefilementRepris(zone, repris?.defilement);
-  useGarderContexte("capsule", (): ContexteCapsule => ({ bascules, defilement: defilement.position.current }));
+
+  // ----- COMPOSER -----
+  // La composition appartient à une capsule : changer de saison ou de style exploré la remet à son départ (brief, 2.2).
+  const cleComposition = `${capsuleSeason}|${exploredStyleId ?? ""}`;
+  const groupes = useMemo(() => piecesParEmplacement(entrees), [entrees]);
+  const [composition, setComposition] = useState<ContexteCapsule["composition"]>(repris?.composition ?? null);
+  const selection = useMemo<SelectionComposer>(
+    () => (composition && composition.cle === cleComposition ? composition.sel : selectionDeDepart(groupes, capsuleSeason)),
+    [composition, cleComposition, groupes, capsuleSeason]
+  );
+  const presents = EMPLACEMENTS.filter((e) => groupes[e.cle].length > 0);
+  const actifDemande = composition && composition.cle === cleComposition ? composition.actif : null;
+  const emplacementActif = presents.find((e) => e.cle === actifDemande) ?? presents[0] ?? null;
+  const changerSelection = (sel: SelectionComposer, actif: CleEmplacement | null = emplacementActif?.cle ?? null) =>
+    setComposition({ cle: cleComposition, sel, actif });
+  // Mémorisées : la planche (FlatLayCapsela) ne se recompose que si les pièces changent.
+  const composees = useMemo(() => piecesComposees(groupes, selection), [groupes, selection]);
+  const piecesTenue = useMemo(() => composees.map((e) => e.item), [composees]);
+  const raisonsTenue = raisonsComposition(piecesTenue, capsuleProfile);
+  const cleTenue = clePieces(piecesTenue.map((it) => it.id)).join(",");
+  const tenueEnregistree = state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue);
+
+  useGarderContexte("capsule", (): ContexteCapsule => ({ onglet, filtres, grille, composition, defilement: defilement.position.current }));
+
+  const avancerActif = (pas: 1 | -1) => {
+    if (!emplacementActif) return;
+    changerSelection(avancer(selection, emplacementActif.cle, groupes[emplacementActif.cle].length, pas));
+  };
+  // Le glissement horizontal sur la planche change la pièce de l'emplacement actif ; un geste surtout vertical reste un défilement.
+  const toucher = useRef<{ x: number; y: number } | null>(null);
+
+  const composerAvec = (it: Item, possedee: boolean) => {
+    const cle = emplacementDe(it.cat);
+    if (!cle) return;
+    const index = groupes[cle].findIndex((e) => e.item.id === it.id && e.possedee === possedee);
+    if (index < 0) return;
+    changerSelection(choisir(selection, cle, index), cle);
+    setFiche(null);
+    setOnglet("composer");
+    zone.current?.scrollTo({ top: 0 });
+  };
+
+  // ----- EXPLORER -----
+  const [favoris, setFavoris] = useState<string[]>(() => lireFavorisPieces(userId));
+  const favorisSet = useMemo(() => new Set(favoris), [favoris]);
+  const basculerFavori = (e: EntreeCapsule) => {
+    const cle = cleEntree(e);
+    const suivants = favorisSet.has(cle) ? favoris.filter((k) => k !== cle) : [...favoris, cle];
+    setFavoris(suivants);
+    ecrireFavorisPieces(userId, suivants);
+  };
+  const categories = useMemo(() => categoriesPresentes(entrees), [entrees]);
+  const couleurs = useMemo(() => couleursPresentes(entrees), [entrees]);
+  // Un filtre devenu sans objet (autre saison, catégorie disparue) ne laisse pas une galerie vide sans raison.
+  const filtresValides: FiltresExplorer = {
+    ...filtres,
+    categorie: filtres.categorie === "toutes" || filtres.categorie === "favoris" || categories.some((c) => c.cat === filtres.categorie) ? filtres.categorie : "toutes",
+    couleur: filtres.couleur && couleurs.some((c) => c.nom.toLowerCase() === filtres.couleur!.toLowerCase()) ? filtres.couleur : null,
+  };
+  const galerie = filtrerExplorer(entrees, filtresValides, favorisSet);
+  const libelleCategorie =
+    filtresValides.categorie === "toutes"
+      ? "Toutes les pièces"
+      : filtresValides.categorie === "favoris"
+        ? "Mes favoris"
+        : (categories.find((c) => c.cat === filtresValides.categorie)?.libelle ?? "Toutes les pièces");
+  const couleurFiltre = filtresValides.couleur ? couleurs.find((c) => c.nom.toLowerCase() === filtresValides.couleur!.toLowerCase()) : null;
+
+  // ----- PIÈCES CLÉS et DÉTAILS -----
+  const clesSaison = useMemo(() => piecesCles(capsule, 3, capsuleSeason), [capsule, capsuleSeason]);
+  const clesFamilles = useMemo(() => piecesClesParFamille(capsule, clesSaison, capsuleProfile), [capsule, clesSaison, capsuleProfile]);
+  const details = useMemo(() => detailsCapsule(entrees), [entrees]);
+  const maxCompo = Math.max(1, ...details.composition.map((c) => c.n));
+
+  // ----- Feuilles -----
+  const [feuille, setFeuille] = useState<Feuille>(null);
+  // Les capsules des autres saisons, comptées seulement quand la feuille de saison est ouverte : quatre appels du moteur, à la
+  // demande. Une saison sans pièce le dit au lieu d'ouvrir une capsule vide (brief, 2.2).
+  const piecesParSaison = useMemo(() => {
+    if (feuille !== "saison") return null;
+    return Object.fromEntries(
+      CAPSULE_SEASONS.map((s) => [
+        s,
+        (s === capsuleSeason ? capsule.length : computeDefaultCapsule(capsuleProfile, weather, state.suggestedExcluded, s, vestiairePool).length) +
+          (exploredStyleId ? 0 : piecesDuDressingPourSaison(state.items, s).length),
+      ])
+    ) as Record<CapsuleSeason, number>;
+  }, [feuille, capsuleSeason, capsule.length, capsuleProfile, weather, state.suggestedExcluded, vestiairePool, exploredStyleId, state.items]);
 
   const [fiche, setFiche] = useState<Fiche | null>(null);
   // Relue à chaque rendu plutôt que figée à l'ouverture : la génération de son
@@ -432,9 +558,15 @@ export default function CapsuleScreen() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  const mesure = (id: number) => ({ piece_id: id, saison: capsuleSeason, provenance: onglet });
+
   const ouvrir = (item: Item, possedee: boolean) => {
-    if (possedee) actions.openItem(item.id, false);
-    else setFiche({ id: item.id, vue: "detail" });
+    if (possedee) {
+      actions.openItem(item.id, false);
+      return;
+    }
+    setFiche({ id: item.id, vue: "detail" });
+    suivreEvenement("fiche_piece_capsule", mesure(item.id));
   };
 
   const choisirAlternative = (a: AlternativeRemplacement) => {
@@ -451,43 +583,41 @@ export default function CapsuleScreen() {
 
   const raisons = pieceFiche ? raisonsSuggestion(pieceFiche, capsuleProfile) : [];
   const syntheseFiche = pieceFiche ? [CATLABEL[pieceFiche.cat], pieceFiche.color, pieceFiche.matiere].filter(Boolean).join(" · ") : "";
+  const pieceFicheComposable = pieceFiche ? emplacementDe(pieceFiche.cat) !== null && groupes[emplacementDe(pieceFiche.cat)!].some((e) => !e.possedee && e.item.id === pieceFiche.id) : false;
 
   return (
     <>
       <div
         ref={zone}
         onScroll={defilement.onScroll}
-        className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]"
-        // Réserve la barre du bas ET le bouton principal qui flotte au-dessus.
-        style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 92px)" }}
+        className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav"
       >
         <AppHeader />
 
+        {/*
+          EN-TÊTE (refonte du 01/11/2026). La saison est le second temps du titre, en italique terracotta, et c'est ELLE qui s'ouvre
+          sur le choix des saisons (brief, 2.2) : ni pastilles permanentes, ni chevron. « N looks possibles » reste retiré
+          (22/09/2026, compteur faux de ×0,5 à ×1,7) : le nombre affiché est compté, pas estimé.
+        */}
         <div className="mt-[18px]">
-          <div className="t-titre-ecran text-ink">
-            Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
-          </div>
-          {/*
-            « N looks possibles » retiré le 22/09/2026. La formule combinatoire
-            `(hauts × bas + robes) × chaussures` ignore la formalité par
-            occasion, les occasions déclarées, la palette et les bornes météo :
-            l'audit `compteur-looks.audit.ts` l'a mesurée contre le nombre de
-            tenues que le moteur produit réellement, et l'écart va de ×0,5 à
-            ×1,7 selon les profils. Un nombre faux n'est pas rattrapable par une
-            formulation, donc c'est le nombre qui part, pas son étiquette. Reste
-            `capsule.length`, qui est compté, pas estimé — et présenté depuis le
-            25/09/2026 pour ce qu'il est : une sélection, pas un stock.
-          */}
-          <div className="font-serif text-[17px] text-ink leading-[1.3] mt-[10px]">
+          <h1 className="t-titre-ecran text-ink">
+            Ma Capsule{" "}
+            <button
+              type="button"
+              onClick={() => setFeuille("saison")}
+              className="italic text-terracotta cursor-pointer"
+              aria-label={`Saison ${capsuleSeason}, changer de saison`}
+            >
+              {capsuleSeason}
+            </button>
+          </h1>
+          <div className="t-chapeau text-ink-soft mt-[6px]">
             {pieces(capsule.length)} {capsule.length > 1 ? "sélectionnées" : "sélectionnée"}{" "}
-            {exploredStyleLabel ? "dans ce style" : "pour toi"}
+            {exploredStyleLabel ? "dans ce style" : "pour composer ton style"}
+            {possedees.length > 0 && <>, et {pieces(possedees.length)} de ton dressing.</>}
+            {!possedees.length && "."}
           </div>
-          {possedees.length > 0 && (
-            <div className="text-[12px] text-muted mt-[2px]">
-              et {pieces(possedees.length)} de ton dressing pour cette saison
-            </div>
-          )}
-          <div className="text-[12px] text-muted leading-[1.5] mt-[8px]">
+          <div className="text-[12px] text-muted leading-[1.5] mt-[4px]">
             {exploredStyleLabel ? (
               <>
                 Aperçu du style <span className="text-ink">{exploredStyleLabel}</span> — pas ton style habituel.
@@ -533,192 +663,545 @@ export default function CapsuleScreen() {
                 Revenir à mon style
               </button>
             </div>
-            <Button variante="principal" className="mt-[14px]"
-              onClick={actions.viewExploredOutfit}
-            >
+            <Button variante="principal" className="mt-[14px]" onClick={actions.viewExploredOutfit}>
               Voir ma tenue
             </Button>
           </Card>
         )}
 
-        <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[18px]">
-          {CAPSULE_SEASONS.map((s) => {
-            const on = capsuleSeason === s;
-            return (
-              <button
-                key={s}
-                onClick={() => actions.setCapsuleSeason(s)}
-                aria-pressed={on}
-                className={
-                  "flex-none py-[9px] px-4 rounded-full text-[12px] cursor-pointer border whitespace-nowrap " +
-                  // Actif en terracotta profond (polish V2) : le même fond plein
-                  // que le chip d'occasion actif de la Tenue, plutôt que l'encre.
-                  (on ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-ink")
-                }
-              >
-                {s}
-              </button>
-            );
-          })}
+        <div className="mt-[16px]">
+          <SegmentedControl segments={ONGLETS} actif={onglet} onChange={setOnglet} ariaLabel="Vues de la capsule" variante="pastilles" serre />
         </div>
 
-        {/* Bandeau de saison, sous le sélecteur : il change avec lui.
-            2:1 depuis le polish V2 du 26/09/2026 (16:9 le 25/09, 3:2
-            auparavant) : il installe la saison sans monopoliser le premier
-            écran — à 390 px, 20 px de moins, pris en haut et en bas, où les
-            visuels n'ont que du décor (branchages, ciel, rebord de pierre).
-            Dimensions déclarées pour que rien ne saute au chargement. */}
-        <Card className="mt-[16px] overflow-hidden" style={{ aspectRatio: "2/1" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            key={capsuleSeason}
-            src={profile.gender === "homme" ? VISUEL_SAISON_HOMME[capsuleSeason] : VISUEL_SAISON[capsuleSeason]}
-            alt=""
-            width={profile.gender === "homme" ? 768 : 1200}
-            height={profile.gender === "homme" ? 512 : 800}
-            decoding="async"
-            onError={(e) => {
-              // Visuel Homme absent : le visuel générique de la saison, une seule fois.
-              const repli = VISUEL_SAISON[capsuleSeason];
-              if (!e.currentTarget.src.endsWith(repli)) e.currentTarget.src = repli;
-            }}
-            className="w-full h-full object-cover block"
-          />
-        </Card>
-
-        {/* Introduction : une phrase courte, vraie de la capsule affichée
-            (introCapsule). Filet terracotta plutôt qu'un encadré, pour
-            qu'elle reste une respiration et pas une carte. */}
-        {capsule.length > 0 && (
-          <div className="mt-[16px] border-l-2 border-terracotta pl-[12px] font-serif italic text-[14px] text-ink leading-[1.45]">
-            {intro}
+        {entrees.length === 0 && (
+          <div className="mt-[28px] text-center">
+            <div className="text-[13px] text-ink">Aucune pièce pour la capsule {capsuleSeason}.</div>
+            <button onClick={() => setFeuille("saison")} className="mt-[6px] text-[13px] text-terracotta cursor-pointer py-[8px] px-2">
+              Choisir une autre saison
+            </button>
           </div>
         )}
 
-        {/* PIÈCES CLÉS — trois cartes sur une ligne, strictement identiques
-            (même vignette, même nom sur deux lignes réservées), sans
-            description : le nom suffit. Masquées sous deux pièces, où
-            « pièces clés » ne voudrait plus rien dire. Sous-titre du brief
-            polish V2 (26/09/2026). */}
-        {cles.length >= 2 && (
-          <div className="mt-[30px]">
-            <div className="t-surtitre text-muted">Les {cles.length} pièces clés</div>
-            <div className="text-[12px] text-muted mt-[4px] mb-[12px]">Celles qui donnent le ton à ta capsule.</div>
-            <div className="grid grid-cols-3 gap-[10px]">
-              {cles.map((it) => (
-                <button key={it.id} onClick={() => ouvrir(it, false)} className="min-w-0 text-left cursor-pointer" aria-label={`${it.name}, pièce clé`}>
-                  <Vignette item={it} />
-                  <NomPiece nom={it.name} />
+        {/* ====================================== COMPOSER ====================================== */}
+        {onglet === "composer" && entrees.length > 0 && (
+          <div className="mt-[16px]">
+            {/*
+              La planche : le moteur de flat lay de la Tenue du jour (FlatLayCapsela, contexte look-detail), pas une grille. Les
+              flèches et le glissement ne changent que la pièce de l'emplacement choisi dessous (brief, 3.2).
+            */}
+            <div
+              className="relative rounded-feuille overflow-hidden"
+              style={{ aspectRatio: "100 / 100", background: "var(--color-hero-background)", touchAction: "pan-y" }}
+              onTouchStart={(e) => (toucher.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
+              onTouchEnd={(e) => {
+                const debut = toucher.current;
+                toucher.current = null;
+                if (!debut) return;
+                const dx = e.changedTouches[0].clientX - debut.x;
+                const dy = e.changedTouches[0].clientY - debut.y;
+                if (Math.abs(dx) > 40 && Math.abs(dx) > 1.5 * Math.abs(dy)) avancerActif(dx < 0 ? 1 : -1);
+              }}
+            >
+              <div className="absolute inset-0" role="img" aria-label={"Composition : " + piecesTenue.map((p) => p.name).join(", ")}>
+                {piecesTenue.length > 0 && (
+                  <FlatLayCapsela
+                    items={piecesTenue}
+                    context="look-detail"
+                    // Graine de la capsule, pas des pièces : changer une pièce ne redistribue pas toute la planche.
+                    layoutSeed={cleComposition}
+                    onPiece={(it) => ouvrir(it, composees.find((e) => e.item.id === it.id)?.possedee ?? false)}
+                  />
+                )}
+              </div>
+              {emplacementActif && groupes[emplacementActif.cle].length + (emplacementActif.facultatif ? 1 : 0) > 1 && (
+                <>
+                  <button
+                    onClick={() => avancerActif(-1)}
+                    aria-label={`${emplacementActif.libelle} : pièce précédente`}
+                    className="absolute left-[10px] top-1/2 -translate-y-1/2 w-[44px] h-[44px] rounded-full bg-card text-ink flex items-center justify-center shadow-sm cursor-pointer"
+                  >
+                    <Fleche sens="gauche" />
+                  </button>
+                  <button
+                    onClick={() => avancerActif(1)}
+                    aria-label={`${emplacementActif.libelle} : pièce suivante`}
+                    className="absolute right-[10px] top-1/2 -translate-y-1/2 w-[44px] h-[44px] rounded-full bg-card text-ink flex items-center justify-center shadow-sm cursor-pointer"
+                  >
+                    <Fleche sens="droite" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Les emplacements : le choisi en terracotta, sa position discrète dessous (« 3 / 11 », « Sans » pour un emplacement vide). */}
+            <div className="scrollarea -mx-6 px-6 flex gap-[8px] overflow-x-auto mt-[12px] pb-[2px]" role="tablist" aria-label="Pièce à faire varier">
+              {presents.map((e) => {
+                const n = groupes[e.cle].length;
+                const p = position(selection, e.cle, n);
+                const on = emplacementActif?.cle === e.cle;
+                return (
+                  <button
+                    key={e.cle}
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => changerSelection(selection, e.cle)}
+                    className={
+                      "flex-none w-[78px] rounded-tuile border py-[9px] flex flex-col items-center gap-[3px] cursor-pointer " +
+                      (on ? "border-terracotta text-terracotta-deep" : "border-border bg-card text-ink")
+                    }
+                    style={on ? { background: "var(--color-chip-soft-bg)" } : undefined}
+                  >
+                    <Glyphe cle={e.cle} />
+                    <span className="text-[11px] leading-[14px]">{e.libelle}</span>
+                    <span className={"text-[10px] leading-[12px] " + (on ? "text-terracotta" : "text-muted")}>{p < 0 ? `Sans · ${n}` : `${p + 1} / ${n}`}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {raisonsTenue.length > 0 && (
+              <button
+                onClick={() => setFeuille("pourquoi")}
+                className="mt-[14px] w-full flex items-center gap-[12px] rounded-bloc px-4 py-[13px] text-left cursor-pointer"
+                style={{ background: "var(--color-chip-soft-bg)" }}
+              >
+                <span aria-hidden="true" className="text-terracotta text-[16px] flex-shrink-0">✦</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[13px] text-ink font-semibold">Pourquoi cette tenue ?</span>
+                  <span className="block text-[12px] text-ink-soft leading-[1.4] mt-[2px]">{raisonsTenue[0]}</span>
+                </span>
+                <span aria-hidden="true" className="text-muted flex-shrink-0">
+                  <Fleche sens="droite" />
+                </span>
+              </button>
+            )}
+
+            {piecesTenue.length >= 2 && (
+              <Button
+                variante={tenueEnregistree ? "contour" : "principal"}
+                className="mt-[14px]"
+                onClick={() => {
+                  actions.basculerIdeeLook(piecesTenue.map((it) => it.id), "all");
+                  setToast(tenueEnregistree ? "Tenue retirée de tes looks" : "Tenue enregistrée dans tes looks");
+                }}
+              >
+                {tenueEnregistree ? "Enregistrée dans mes looks" : "Enregistrer cette tenue"}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* ====================================== EXPLORER ====================================== */}
+        {onglet === "explorer" && entrees.length > 0 && (
+          <div className="mt-[6px]">
+            {/* Les filtres restent accessibles pendant le défilement (brief, 4.2). */}
+            <div className="sticky top-0 z-10 -mx-6 px-6 pt-[10px] pb-[8px]" style={{ background: "var(--color-cream)" }}>
+              <div className="flex items-center gap-[8px]">
+                <button
+                  onClick={() => setFeuille("categorie")}
+                  className="flex-1 min-w-0 flex items-center justify-between gap-2 border border-border bg-card rounded-full px-4 h-[42px] text-[13px] text-ink cursor-pointer"
+                >
+                  <span className="truncate">{libelleCategorie}</span>
+                  <span aria-hidden="true" className="text-muted rotate-90">
+                    <Fleche sens="droite" />
+                  </span>
                 </button>
-              ))}
+                <button
+                  onClick={() => setFeuille("couleur")}
+                  aria-label={couleurFiltre ? `Couleur : ${couleurFiltre.nom}` : "Filtrer par couleur"}
+                  className={"flex-none w-[42px] h-[42px] rounded-full border bg-card flex items-center justify-center cursor-pointer " + (couleurFiltre ? "border-terracotta" : "border-border")}
+                >
+                  <span
+                    className="w-[20px] h-[20px] rounded-full"
+                    style={{
+                      background: couleurFiltre?.hex ?? `conic-gradient(${couleurs.slice(0, 6).map((c) => c.hex).join(", ") || "var(--color-border)"})`,
+                      boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)",
+                    }}
+                  />
+                </button>
+                <button
+                  onClick={() => setFeuille("tri")}
+                  aria-label={`Trier : ${LIBELLES_TRI[filtresValides.tri]}`}
+                  className="flex-none w-[42px] h-[42px] rounded-full border border-border bg-card text-ink flex items-center justify-center cursor-pointer"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+                    <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+                    <circle cx="16" cy="7" r="2" />
+                    <circle cx="10" cy="17" r="2" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex items-center justify-between mt-[10px]">
+                <div className="text-[13px] text-ink">
+                  {pieces(galerie.length)}
+                  {(filtresValides.categorie !== "toutes" || couleurFiltre) && (
+                    <button onClick={() => setFiltres({ ...FILTRES_PAR_DEFAUT, tri: filtresValides.tri })} className="ml-[10px] text-[12px] text-terracotta cursor-pointer">
+                      Tout afficher
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-[4px]" role="group" aria-label="Présentation">
+                  {[true, false].map((g) => (
+                    <button
+                      key={String(g)}
+                      onClick={() => setGrille(g)}
+                      aria-pressed={grille === g}
+                      aria-label={g ? "En grille" : "En liste"}
+                      className={"w-[34px] h-[34px] flex items-center justify-center rounded-[8px] cursor-pointer " + (grille === g ? "text-terracotta" : "text-muted")}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                        {g ? <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" /> : <path d="M4 6h16M4 12h16M4 18h16" />}
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {galerie.length === 0 ? (
+              <div className="mt-[24px] text-center text-[13px] text-muted">
+                {filtresValides.categorie === "favoris" ? "Touche le cœur d'une pièce pour la retrouver ici." : "Aucune pièce ne correspond à ces filtres."}
+              </div>
+            ) : grille ? (
+              <div className="grid grid-cols-2 gap-x-[12px] gap-y-[18px] mt-[6px]">
+                {galerie.map((e) => (
+                  <div key={cleEntree(e)} className="relative min-w-0">
+                    <button onClick={() => ouvrir(e.item, e.possedee)} className="block w-full text-left cursor-pointer" aria-label={`${e.item.name}, ${e.possedee ? "dans ton dressing" : "sélection Capsela"}`}>
+                      <Vignette item={e.item} />
+                      <div className="text-[13px] text-ink leading-[17px] mt-[8px] line-clamp-2">{e.item.name}</div>
+                      <div className="text-[11px] text-muted mt-[2px]">{CATLABEL[e.item.cat]}</div>
+                      <div className="mt-[6px]">
+                        <Pastille possedee={e.possedee} />
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => basculerFavori(e)}
+                      aria-pressed={favorisSet.has(cleEntree(e))}
+                      aria-label={favorisSet.has(cleEntree(e)) ? `Retirer ${e.item.name} de mes favoris` : `Ajouter ${e.item.name} à mes favoris`}
+                      className={"absolute top-[6px] right-[6px] w-[40px] h-[40px] flex items-center justify-center cursor-pointer " + (favorisSet.has(cleEntree(e)) ? "text-terracotta" : "text-ink-soft")}
+                    >
+                      {/* Pastille claire : le cœur reste lisible sur une pièce sombre. */}
+                      <span className="w-[32px] h-[32px] rounded-full flex items-center justify-center" style={{ background: "rgba(250,247,241,.88)" }}>
+                        <Coeur plein={favorisSet.has(cleEntree(e))} />
+                      </span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-[6px] border-t border-border">
+                {galerie.map((e) => (
+                  <div key={cleEntree(e)} className="flex items-center gap-[12px] border-b border-border py-[10px]">
+                    <button onClick={() => ouvrir(e.item, e.possedee)} className="flex-1 min-w-0 flex items-center gap-[12px] text-left cursor-pointer">
+                      <span className="w-[56px] flex-shrink-0">
+                        <Vignette item={e.item} arrondi={10} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[13px] text-ink leading-[1.3] truncate">{e.item.name}</span>
+                        <span className="block text-[11px] text-muted mt-[2px]">{CATLABEL[e.item.cat]}</span>
+                        <span className="block mt-[5px]">
+                          <Pastille possedee={e.possedee} />
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => basculerFavori(e)}
+                      aria-pressed={favorisSet.has(cleEntree(e))}
+                      aria-label={favorisSet.has(cleEntree(e)) ? `Retirer ${e.item.name} de mes favoris` : `Ajouter ${e.item.name} à mes favoris`}
+                      className={"flex-none w-[40px] h-[40px] flex items-center justify-center cursor-pointer " + (favorisSet.has(cleEntree(e)) ? "text-terracotta" : "text-ink-soft")}
+                    >
+                      <Coeur plein={favorisSet.has(cleEntree(e))} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Même action qu'avant (openAdd) : l'ajout passe après la découverte (25/09/2026). */}
+            <div className="mt-[28px] text-center">
+              <div className="text-[12px] text-muted">Une pièce manque dans ta capsule ?</div>
+              <button onClick={actions.openAdd} className="mt-[2px] text-[13px] text-terracotta cursor-pointer py-[8px] px-2">
+                + Ajouter une pièce que je possède
+              </button>
             </div>
           </div>
         )}
 
-        {/* CATÉGORIES (polish V2, 26/09/2026). Une liste calme, filet entre
-            chaque ligne : les deux premières catégories ouvertes, les autres
-            repliées en une ligne — le nom d'abord, le nombre de pièces
-            ensuite, le chevron pour l'état. L'en-tête entier ouvre ou referme.
-            Ouverte, une catégorie montre TOUTES ses pièces sur une rangée qui
-            défile : deux cartes entières et le bord de la troisième, qui dit
-            qu'il y en a d'autres sans « Voir tout ». Les cartes d'une
-            catégorie repliée ne sont pas montées : aucune image chargée pour
-            rien. L'état vit dans l'écran et survit au changement de saison. */}
-        <div key={capsuleSeason} className="mt-[30px] border-t border-border">
-          {groups.map((g, idx) => {
-            const ouverte = idx < OUVERTES_PAR_DEFAUT !== bascules.includes(g.key);
-            const cartes = [
-              ...g.siennes.map((it) => ({ it, possedee: true })),
-              ...g.suggestions.map((it) => ({ it, possedee: false })),
-            ];
-            const basculer = () => setBascules((b) => (b.includes(g.key) ? b.filter((k) => k !== g.key) : [...b, g.key]));
-            return (
-              <section key={g.key} className="border-b border-border">
-                <button
-                  onClick={basculer}
-                  aria-expanded={ouverte}
-                  aria-label={`${g.label}, ${pieces(g.total)}, ${ouverte ? "replier" : "afficher les pièces"}`}
-                  className="w-full min-h-[60px] py-[12px] flex items-center justify-between gap-3 text-left cursor-pointer"
-                >
-                  <span className="min-w-0">
-                    <span className="block t-groupe text-ink">{g.label}</span>
-                    <span className="block text-[11px] text-muted mt-[3px]">{pieces(g.total)}</span>
-                  </span>
-                  <span aria-hidden="true" className="flex-shrink-0 text-muted">
-                    <Chevron ouvert={ouverte} />
-                  </span>
-                </button>
-                {ouverte && (
-                  <div
-                    className={
-                      "scrollarea -mx-6 px-6 scroll-px-6 flex gap-[12px] overflow-x-auto snap-x snap-mandatory pt-[2px] pb-[22px] " +
-                      // Ouverte à la main : les cartes entrent en fondu ; les
-                      // deux catégories ouvertes à l'arrivée, elles, sont là.
-                      (bascules.includes(g.key) ? "motion-safe:animate-[capsule-apparition_240ms_ease-out_both]" : "")
-                    }
+        {/* ====================================== PIÈCES CLÉS ====================================== */}
+        {onglet === "cles" && entrees.length > 0 && (
+          <div className="mt-[16px]">
+            <Card rayon="bloc" className="overflow-hidden flex items-stretch">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                key={capsuleSeason}
+                src={profile.gender === "homme" ? VISUEL_SAISON_HOMME[capsuleSeason] : VISUEL_SAISON[capsuleSeason]}
+                alt=""
+                decoding="async"
+                onError={(e) => {
+                  // Visuel Homme absent : le visuel générique de la saison, une seule fois.
+                  const repli = VISUEL_SAISON[capsuleSeason];
+                  if (!e.currentTarget.src.endsWith(repli)) e.currentTarget.src = repli;
+                }}
+                className="w-[36%] flex-none object-cover block"
+              />
+              <div className="flex-1 min-w-0 px-4 py-[16px]">
+                <div className="t-titre-carte text-ink">Les incontournables de ta capsule</div>
+                <div className="text-[12px] text-ink-soft leading-[1.45] mt-[6px]">
+                  Les indispensables qui s&apos;associent facilement, et les pièces signature qui donnent le ton.
+                </div>
+              </div>
+            </Card>
+
+            {clesFamilles.length === 0 ? (
+              <div className="mt-[22px] text-center text-[13px] text-muted">
+                Aucune pièce de cette capsule n&apos;est marquée indispensable ou signature.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-[10px] mt-[14px]">
+                {clesFamilles.map((c) => (
+                  <button
+                    key={c.item.id}
+                    onClick={() => ouvrir(c.item, false)}
+                    className="flex items-center gap-[14px] bg-card border border-border rounded-bloc p-[10px] text-left cursor-pointer"
                   >
-                    {cartes.map(({ it, possedee }) => (
-                      <CartePiece
-                        key={it.id}
-                        item={it}
-                        possedee={possedee}
-                        onClick={() => ouvrir(it, possedee)}
-                        className="flex-none w-[42%] snap-start"
-                      />
-                    ))}
+                    <span className="w-[86px] flex-shrink-0">
+                      <Vignette item={c.item} arrondi={12} />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block t-titre-vignette text-ink">{c.item.name}</span>
+                      <span
+                        className="inline-block mt-[6px] rounded-full px-[9px] py-[3px] text-[10px] leading-[12px] text-terracotta-deep"
+                        style={{ background: "var(--color-chip-soft-bg)" }}
+                      >
+                        {c.famille === "signature" ? "Pièce signature" : "Indispensable"}
+                      </span>
+                      <span className="block text-[12px] text-ink-soft leading-[1.45] mt-[6px]">{c.explication}</span>
+                    </span>
+                    <span aria-hidden="true" className="text-muted flex-shrink-0">
+                      <Fleche sens="droite" />
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ====================================== DÉTAILS ====================================== */}
+        {onglet === "details" && entrees.length > 0 && (
+          <div className="mt-[18px]">
+            <div className="t-titre-carte text-ink">Ton vestiaire en un coup d&apos;œil</div>
+            {/* Des chiffres COMPTÉS. Pas d'« associations possibles » : le compteur a été retiré le 22/09/2026 (faux de ×0,5 à ×1,7). */}
+            <div className="grid grid-cols-3 gap-[8px] mt-[12px]">
+              {[
+                { n: details.pieces, l: details.pieces > 1 ? "Pièces" : "Pièce" },
+                { n: details.couleurs, l: details.couleurs > 1 ? "Couleurs" : "Couleur" },
+                { n: details.categories, l: details.categories > 1 ? "Catégories" : "Catégorie" },
+              ].map((s) => (
+                <Card key={s.l} rayon="bloc" className="py-[14px] text-center">
+                  <div className="t-chiffre text-ink">{s.n}</div>
+                  <div className="text-[11px] text-muted mt-[4px]">{s.l}</div>
+                </Card>
+              ))}
+            </div>
+
+            {details.palette.length > 0 && (
+              <>
+                <div className="t-titre-carte text-ink mt-[26px]">La palette de ta saison</div>
+                <div className="text-[12px] text-muted mt-[4px]">Les couleurs des pièces de cette capsule, de la plus présente à la moins.</div>
+                <ul className="flex flex-wrap gap-[10px] mt-[12px]">
+                  {details.palette.map((c) => (
+                    <li key={c.nom} className="flex flex-col items-center w-[52px]">
+                      <span className="w-[34px] h-[34px] rounded-full" style={{ background: c.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }} />
+                      <span className="text-[10px] text-muted mt-[4px] text-center leading-[12px] line-clamp-2">{c.nom}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            <div className="t-titre-carte text-ink mt-[26px]">La composition de ta capsule</div>
+            <ul className="mt-[12px] flex flex-col gap-[12px]">
+              {details.composition.map((c) => (
+                <li key={c.cat}>
+                  <div className="flex items-baseline justify-between text-[12px]">
+                    <span className="text-ink">{c.libelle}</span>
+                    <span className="text-muted">{pieces(c.n)}</span>
                   </div>
-                )}
-              </section>
-            );
-          })}
-        </div>
+                  <div className="h-[6px] rounded-full mt-[5px] overflow-hidden" style={{ background: "var(--color-chip-soft-bg)" }}>
+                    <div className="h-full rounded-full bg-terracotta" style={{ width: `${(100 * c.n) / maxCompo}%` }} />
+                  </div>
+                </li>
+              ))}
+            </ul>
 
-        {/* Ce à quoi sert la capsule, juste avant l'action principale : elle
-            nourrit les tenues (le pool de la tenue du jour est composé depuis
-            la capsule et le dressing, composeWardrobePool). */}
-        {capsule.length > 0 && <div className="mt-[34px] text-center text-[13px] text-muted-3">Ta capsule sert à composer tes tenues.</div>}
+            {/* Les relations réelles capsule ↔ dressing : les pièces de la saison déjà à toi, les suggestions encore à découvrir. */}
+            {!exploredStyleId && (
+              <Card rayon="bloc" className="mt-[26px] px-4 py-[16px]">
+                <div className="t-titre-carte text-ink">Ta capsule prend vie</div>
+                <ul className="mt-[10px] flex flex-col gap-[6px] text-[13px] text-ink">
+                  <li>
+                    <span className="font-semibold">{details.dansLeDressing}</span> {details.dansLeDressing > 1 ? "pièces" : "pièce"} de ton dressing pour cette saison
+                  </li>
+                  <li>
+                    <span className="font-semibold">{details.suggestions}</span> {details.suggestions > 1 ? "suggestions" : "suggestion"} de Capsela à découvrir
+                  </li>
+                </ul>
+                <button onClick={actions.openAdd} className="mt-[8px] text-[13px] text-terracotta cursor-pointer py-[6px]">
+                  + Ajouter une pièce que je possède
+                </button>
+              </Card>
+            )}
 
-        {/* L'ajout d'une pièce passe après la découverte (25/09/2026) : c'est
-            Capsela qui prépare, pas l'utilisatrice qui remplit. Depuis le
-            polish, deux lignes centrées sans encadré, pour ne pas concurrencer
-            le bouton principal. Même action qu'avant (openAdd). */}
-        <div className="mt-[28px] text-center">
-          <div className="text-[12px] text-muted">Une pièce manque dans ta capsule ?</div>
-          <button onClick={actions.openAdd} className="mt-[2px] text-[13px] text-terracotta cursor-pointer py-[8px] px-2">
-            + Ajouter une pièce que je possède
-          </button>
-        </div>
-      </div>
-
-      {/* Bouton principal, fixe au-dessus de la barre du bas. Le dégradé crème
-          empêche les cartes qui défilent dessous de se lire à travers. */}
-      <div
-        className="absolute inset-x-0 z-10 px-6 pt-[14px] pointer-events-none"
-        style={{
-          bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))",
-          paddingBottom: 12,
-          background: "linear-gradient(to top, var(--color-cream) 70%, rgba(243,238,229,0))",
-        }}
-      >
-        <Button variante="principal"
-          onClick={actions.goTenues}
-          // Terracotta profond (polish V2) : crème sur terracotta ne donnait
-          // que 3,8:1 de contraste, sous le seuil AA du texte courant ; 4,5:1
-          // sur le fond profond, déjà celui des boutons pleins de Planifier.
-        >
-          Découvrir mes tenues
-        </Button>
+            {/* Les atouts : seulement ce que les chiffres ci-dessus rendent vrai. */}
+            {(details.palette.length > 0 || userStyleLabel || details.indispensables + details.signatures > 0) && (
+              <div className="mt-[14px] rounded-bloc px-4 py-[16px]" style={{ background: "var(--color-chip-soft-bg)" }}>
+                <div className="t-titre-carte text-ink">Les atouts de ta capsule</div>
+                <ul className="mt-[10px] flex flex-col gap-[8px]">
+                  {[
+                    details.palette.length > 0 &&
+                      `Dominée par ${enumeration(details.palette.slice(0, 3).map((c) => c.nom.toLowerCase()))}.`,
+                    details.indispensables > 0 &&
+                      `${details.indispensables} ${details.indispensables > 1 ? "indispensables faciles" : "indispensable facile"} à associer${details.signatures > 0 ? `, ${details.signatures} ${details.signatures > 1 ? "pièces signature" : "pièce signature"} pour le caractère` : ""}.`,
+                    !details.indispensables && details.signatures > 0 && `${details.signatures} ${details.signatures > 1 ? "pièces signature" : "pièce signature"} pour le caractère.`,
+                    (exploredStyleLabel || userStyleLabel) && `Pensée pour ${exploredStyleLabel ? "le style" : nbStylesProfil > 1 ? "tes styles" : "ton style"} ${exploredStyleLabel ?? userStyleLabel}.`,
+                  ]
+                    .filter((t): t is string => Boolean(t))
+                    .map((t) => (
+                      <li key={t} className="flex items-start gap-[10px] text-[13px] text-ink leading-[1.45]">
+                        <span aria-hidden="true" className="text-terracotta text-[11px] mt-[2px]">✦</span>
+                        {t}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {toast && (
         <div
           className="absolute inset-x-0 z-30 px-6"
-          style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 80px)" }}
+          style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px)" }}
           role="status"
         >
           <div className="bg-ink rounded-full py-[12px] px-4 text-[12px] text-cream text-center shadow-lg">{toast}</div>
         </div>
       )}
+
+      {/* Les feuilles de l'écran : saison, « Pourquoi cette tenue ? » et filtres d'Explorer. Une seule ouverte à la fois. */}
+      <BottomSheet
+        title={
+          feuille === "saison"
+            ? "Choisir la saison"
+            : feuille === "pourquoi"
+              ? "Pourquoi cette tenue ?"
+              : feuille === "categorie"
+                ? "Pièces à afficher"
+                : feuille === "couleur"
+                  ? "Couleur"
+                  : "Trier"
+        }
+        open={feuille !== null}
+        onClose={() => setFeuille(null)}
+      >
+        {feuille === "saison" && (
+          <div className="flex flex-col gap-[8px]">
+            {CAPSULE_SEASONS.map((s) => {
+              const n = piecesParSaison?.[s] ?? 0;
+              return (
+                <OptionRow
+                  key={s}
+                  label={s}
+                  description={n > 0 ? pieces(n) : "Aucune pièce pour cette saison"}
+                  on={s === capsuleSeason}
+                  accent
+                  onClick={() => {
+                    if (n === 0 && s !== capsuleSeason) return;
+                    actions.setCapsuleSeason(s);
+                    setFeuille(null);
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
+        {feuille === "pourquoi" && (
+          <ul className="flex flex-col gap-[10px]">
+            {raisonsTenue.map((r) => (
+              <li key={r} className="flex items-start gap-[10px] text-[13px] text-ink leading-[1.45]">
+                <span aria-hidden="true" className="text-terracotta text-[11px] mt-[2px]">✦</span>
+                {r}
+              </li>
+            ))}
+          </ul>
+        )}
+        {feuille === "categorie" && (
+          <div className="flex flex-col gap-[8px]">
+            {[
+              { cle: "toutes" as const, label: "Toutes les pièces", n: entrees.length },
+              { cle: "favoris" as const, label: "Mes favoris", n: entrees.filter((e) => favorisSet.has(cleEntree(e))).length },
+              ...categories.map((c) => ({ cle: c.cat, label: c.libelle, n: c.n })),
+            ].map((o) => (
+              <OptionRow
+                key={o.cle}
+                label={o.label}
+                description={pieces(o.n)}
+                on={filtresValides.categorie === o.cle}
+                accent
+                onClick={() => {
+                  setFiltres({ ...filtresValides, categorie: o.cle });
+                  setFeuille(null);
+                }}
+              />
+            ))}
+          </div>
+        )}
+        {feuille === "couleur" && (
+          <div className="flex flex-col gap-[8px]">
+            <OptionRow
+              label="Toutes les couleurs"
+              on={!filtresValides.couleur}
+              accent
+              onClick={() => {
+                setFiltres({ ...filtresValides, couleur: null });
+                setFeuille(null);
+              }}
+            />
+            {couleurs.map((c) => (
+              <OptionRow
+                key={c.nom}
+                label={c.nom}
+                description={pieces(c.n)}
+                pastilles={[c.hex]}
+                on={filtresValides.couleur?.toLowerCase() === c.nom.toLowerCase()}
+                accent
+                onClick={() => {
+                  setFiltres({ ...filtresValides, couleur: c.nom });
+                  setFeuille(null);
+                }}
+              />
+            ))}
+          </div>
+        )}
+        {feuille === "tri" && (
+          <div className="flex flex-col gap-[8px]">
+            {(Object.keys(LIBELLES_TRI) as TriExplorer[]).map((t) => (
+              <OptionRow
+                key={t}
+                label={LIBELLES_TRI[t]}
+                on={filtresValides.tri === t}
+                accent
+                onClick={() => {
+                  setFiltres({ ...filtresValides, tri: t });
+                  setFeuille(null);
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </BottomSheet>
 
       <BottomSheet
         title={fiche?.vue === "remplacer" ? "Remplacer cette pièce" : "Suggestion"}
@@ -728,9 +1211,7 @@ export default function CapsuleScreen() {
         {pieceFiche && fiche?.vue === "detail" && (
           <>
             {/* Hiérarchie du polish (25/09/2026) : la pièce d'abord, puis ce
-                qu'elle est, pourquoi elle est là, et une seule action
-                dominante. Les écarts verticaux séparent ces temps plutôt que
-                de tout rapprocher. */}
+                qu'elle est, pourquoi elle est là, puis les actions. */}
             <div className="w-[148px] mx-auto">
               <Vignette item={pieceFiche} arrondi={18} marge={0.08} />
             </div>
@@ -739,8 +1220,6 @@ export default function CapsuleScreen() {
                 <Statut possedee={false} />
               </div>
               <div className="t-titre-section text-ink mt-[8px]">{pieceFiche.name}</div>
-              {/* Pas de phrase d'occasions ici : elle redirait mot pour mot la
-                  raison « Se porte… » juste en dessous (vu en rendu). */}
               {syntheseFiche && <div className="text-[12px] text-muted mt-[6px]">{syntheseFiche}</div>}
             </div>
 
@@ -760,35 +1239,59 @@ export default function CapsuleScreen() {
               </div>
             )}
 
-            {/* 1. Seule action dominante : le bouton principal de Capsela,
-                terracotta, comme « Découvrir mes tenues » (le noir rompait la
-                hiérarchie de l'écran). */}
-            <Button variante="principal" className="mt-[30px]"
+            {/*
+              « Découvrir la pièce » (brief, 7.1) : seulement quand un lien marchand est configuré (`lien_affiliation`, mappé sur
+              affLink). Aucun ne l'est au 01/11/2026 : le bouton ne s'affiche donc pas encore. Le clic est mesuré, jamais compté
+              comme un achat, et la mention de transparence l'accompagne.
+            */}
+            {pieceFiche.affLink && (
+              <>
+                <a
+                  href={pieceFiche.affLink}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  onClick={() => suivreEvenement("clic_lien_affilie", mesure(pieceFiche.id))}
+                  className="mt-[30px] block w-full text-center rounded-full py-[15px] t-bouton bg-terracotta-deep text-cream cursor-pointer"
+                >
+                  Découvrir la pièce
+                </a>
+                <div className="text-[11px] text-muted text-center mt-[6px]">Lien partenaire : Capsela peut percevoir une commission, sans surcoût pour toi.</div>
+              </>
+            )}
+            {pieceFicheComposable && (
+              <Button
+                variante={pieceFiche.affLink ? "contour" : "principal"}
+                className={pieceFiche.affLink ? "mt-[12px]" : "mt-[30px]"}
+                onClick={() => composerAvec(pieceFiche, false)}
+              >
+                Composer avec cette pièce
+              </Button>
+            )}
+            <button
+              onClick={() => {
+                suivreEvenement("piece_deja_possedee", mesure(pieceFiche.id));
+                setFiche(null);
+                actions.startReplace(pieceFiche, "capsule");
+              }}
+              className={(pieceFicheComposable || pieceFiche.affLink ? "mt-[12px]" : "mt-[30px]") + " w-full border border-border text-terracotta text-center rounded-full py-[13px] text-[13px] cursor-pointer"}
+            >
+              Je possède déjà cette pièce
+            </button>
+            <button
               onClick={() => {
                 setFiche(null);
                 actions.openItemOutfits(pieceFiche.id);
               }}
+              className="mt-[6px] w-full text-center text-[13px] text-terracotta py-[11px] cursor-pointer"
             >
               Voir des tenues avec cette pièce
-            </Button>
-            {/* 2. Secondaire important : contour, sans fond. */}
-            <button
-              onClick={() => {
-                setFiche(null);
-                actions.startReplace(pieceFiche, "capsule");
-              }}
-              className="mt-[12px] w-full border border-border text-terracotta text-center rounded-full py-[13px] text-[13px] cursor-pointer"
-            >
-              Je possède déjà cette pièce
             </button>
-            {/* 3. Secondaire : simple lien. */}
             <button
               onClick={() => setFiche({ id: pieceFiche.id, vue: "remplacer" })}
-              className="mt-[6px] w-full text-center text-[13px] text-terracotta py-[11px] cursor-pointer"
+              className="w-full text-center text-[13px] text-terracotta py-[11px] cursor-pointer"
             >
               Remplacer cette pièce
             </button>
-            {/* 4. Tertiaire, discret. */}
             <button onClick={() => pasInteressee(pieceFiche)} className="w-full text-center text-[12px] text-muted py-[9px] cursor-pointer">
               {profile.gender === "homme" ? "Je ne suis pas intéressé" : "Je ne suis pas intéressée"}
             </button>
