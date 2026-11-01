@@ -7,6 +7,7 @@ import BottomSheet from "@/components/BottomSheet";
 import OptionRow from "@/components/OptionRow";
 import SegmentedControl, { type Segment } from "@/components/SegmentedControl";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import GlyphePiece from "@/components/GlyphePiece";
 import { CATLABEL } from "@/lib/data";
 import {
   CAPSULE_SEASONS,
@@ -311,31 +312,6 @@ const LIBELLES_TRI: Record<TriExplorer, string> = {
   suggestions: "Suggestions d'abord",
   nom: "Par nom",
 };
-
-/** Glyphes des tuiles de Composer : au trait, `currentColor`, même grammaire que GlyphesOccasion.tsx (viewBox 24, trait 1,5). */
-const GLYPHES: Record<CleEmplacement, React.ReactNode> = {
-  haut: <path d="M8 4l-4 3 2 4 2-1v10h8V10l2 1 2-4-4-3c-.5 1.5-2 2.5-4 2.5S8.5 5.5 8 4z" />,
-  bas: <path d="M7 3h10l1 18h-4l-2-11-2 11H6L7 3zM7 6h10" />,
-  robe: <path d="M9 3h6l-1 5 4 13H6l4-13-1-5z" />,
-  maille: <path d="M8 4l-4 3 1 11h3v3h8v-3h3l1-11-4-3c-.5 1.5-2 2.5-4 2.5S8.5 5.5 8 4zM9 17h6" />,
-  dessus: <path d="M8 3l-4 3v15h5v-9M16 3l4 3v15h-5v-9M8 3l4 8 4-8M12 11v10" />,
-  chaussures: <path d="M3 17c0-4 1-8 2-10 2 3 4 6 9 7l5 1c1.5.3 2 1.5 2 3H3zM5 17v3" />,
-  sac: <path d="M5 9h14l-1 11H6L5 9zM9 9V7a3 3 0 016 0v2" />,
-  accessoire: (
-    <>
-      <circle cx="12" cy="14" r="5" />
-      <path d="M10 6l2-3 2 3-2 3z" />
-    </>
-  ),
-};
-
-function Glyphe({ cle }: { cle: CleEmplacement }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {GLYPHES[cle]}
-    </svg>
-  );
-}
 
 function Fleche({ sens }: { sens: "gauche" | "droite" }) {
   return (
@@ -751,7 +727,7 @@ export default function CapsuleScreen() {
                     }
                     style={on ? { background: "var(--color-chip-soft-bg)" } : undefined}
                   >
-                    <Glyphe cle={e.cle} />
+                    <GlyphePiece cle={e.cle} />
                     <span className="text-[11px] leading-[14px]">{e.libelle}</span>
                     <span className={"text-[10px] leading-[12px] " + (on ? "text-terracotta" : "text-muted")}>{p < 0 ? `Sans · ${n}` : `${p + 1} / ${n}`}</span>
                   </button>
