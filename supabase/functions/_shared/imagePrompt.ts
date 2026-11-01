@@ -279,6 +279,13 @@ const SUBTYPE_EN: Record<string, string> = {
   "manteau long": "long coat falling below the knee",
   // Le flat lay du 1002 sortait tressé deux fois sur deux : « lisse, un seul bandeau ».
   "bracelet minimaliste": "minimalist smooth single-band bracelet",
+  // VOCABULAIRE SPORT (01/11/2026, signalé : « Brassière technique imprimée » dessinée en blouse à basque, « Veste de training » en
+  // blazer). Sans entrée, « Brassière » et « Haut technique » retombaient sur « top » : la génération choisissait un haut habillé.
+  // « Top » reste dans le sujet : la validation de cohérence de la catégorie haut l'exige.
+  "brassière": "athletic sports bra crop top",
+  "brassière de sport": "athletic sports bra crop top",
+  "haut technique": "athletic performance top",
+  "t-shirt technique": "athletic performance t-shirt",
 };
 
 /** Mots-clés de coupe/style repérés DANS sous_type (jamais dans name) — ajoutés comme modificateurs, ne changent jamais le type de produit. */
@@ -503,6 +510,12 @@ const MATIERE_EN: Record<string, string> = {
   "cuir / alternative": "faux leather",
   denim: "denim",
   "synthétique": "synthetic fabric",
+  // Matières de sport (01/11/2026) : sans elles, rien ne disait au générateur qu'une pièce « Matière technique » est une pièce de sport.
+  "matière technique": "technical performance fabric",
+  "matière technique stretch": "technical stretch performance fabric",
+  "polyester technique": "technical performance polyester",
+  "nylon technique": "technical performance nylon",
+  "polyester respirant": "breathable performance polyester",
 };
 
 /** Composition spécifique par catégorie — empêche structurellement une confusion de type de vêtement (ex. veste générée pour un pantalon). */
