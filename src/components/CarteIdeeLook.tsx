@@ -106,21 +106,33 @@ export function CarteIdeeLook({
  * largeur, sans défilement. « Suggestion » marque une pièce absente du dressing (sourcePiece) ; `pivotId` cerne d'un trait plein la pièce
  * à partir de laquelle le look est construit, et la nomme « Ta pièce » — elle se reconnaît dans chaque proposition.
  */
+/** Le nombre de colonnes des miniatures pour n pièces : au moins 4, deux rangées au-delà de 6. */
+export const colonnesMiniatures = (n: number) => (n > 6 ? Math.ceil(n / 2) : Math.max(n, 4));
+
 export function MiniaturesLook({
   pieces,
   dressing,
   pivotId,
   marquerSuggestions = true,
+  alignerLibelles = false,
+  colonnes: colonnesImposees,
   className = "",
 }: {
   pieces: Item[];
   dressing: Item[];
   pivotId?: number;
+  /**
+   * Réserve la hauteur des libellés (deux lignes de nom, une ligne de mention) même quand ils sont plus courts : des cartes posées côte à
+   * côte (le carrousel) gardent leurs miniatures et leur bouton à la même hauteur (01/11/2026, demandé).
+   */
+  alignerLibelles?: boolean;
   /** Faux quand toutes les pièces viennent de la capsule : « Suggestion » sous chacune ne dirait plus rien. */
   marquerSuggestions?: boolean;
+  /** Un nombre de colonnes commun à plusieurs cartes : des miniatures de même taille d'une carte à l'autre. */
+  colonnes?: number;
   className?: string;
 }) {
-  const colonnes = pieces.length > 6 ? Math.ceil(pieces.length / 2) : Math.max(pieces.length, 4);
+  const colonnes = colonnesImposees ?? colonnesMiniatures(pieces.length);
   return (
     <div className={`grid gap-[8px] ${className}`} style={{ gridTemplateColumns: `repeat(${colonnes}, minmax(0, 1fr))` }}>
       {pieces.map((it) => {
@@ -153,11 +165,15 @@ export function MiniaturesLook({
                 />
               )}
             </div>
-            <div className="text-[10px] text-ink leading-[1.25] mt-[5px] line-clamp-2 hyphens-auto">{nomCourtPiece(it.name)}</div>
+            <div className="text-[10px] text-ink leading-[1.25] mt-[5px] line-clamp-2 hyphens-auto" style={alignerLibelles ? { minHeight: "2.5em" } : undefined}>
+              {nomCourtPiece(it.name)}
+            </div>
             {pivot ? (
               <div className="text-[9px] text-terracotta leading-[1.2] mt-[2px] whitespace-nowrap">Ta pièce</div>
+            ) : catalogue ? (
+              <div className="text-[9px] text-terracotta leading-[1.2] mt-[2px] whitespace-nowrap">Suggestion</div>
             ) : (
-              catalogue && <div className="text-[9px] text-terracotta leading-[1.2] mt-[2px] whitespace-nowrap">Suggestion</div>
+              alignerLibelles && <div className="text-[9px] leading-[1.2] mt-[2px]" aria-hidden="true">&nbsp;</div>
             )}
           </div>
         );
@@ -187,6 +203,7 @@ export function SlideIdeeLook({
   enregistre,
   onOpen,
   onCoeur,
+  colonnes,
 }: {
   look: LookNumerote;
   /** La place du look dans la série affichée (1…total) : « Look 02 / 05 ». */
@@ -200,6 +217,8 @@ export function SlideIdeeLook({
   enregistre: boolean;
   onOpen: () => void;
   onCoeur: () => void;
+  /** Le nombre de colonnes de miniatures commun aux slides du carrousel (colonnesMiniatures du look le plus fourni). */
+  colonnes?: number;
 }) {
   const deux = (n: number) => String(n).padStart(2, "0");
   const occasion = look.variation.occasion !== "all" ? occasionShortLabel(look.variation.occasion) : null;
@@ -239,11 +258,16 @@ export function SlideIdeeLook({
         </div>
         {insight && (
           <>
-            <h3 className="t-titre-section text-ink mt-[5px]">{insight.title}</h3>
-            <p className="text-[13px] text-ink-soft leading-[1.45] mt-[5px] line-clamp-3">{insight.sentence}</p>
+            {/* Hauteurs réservées (01/11/2026, demandé : « bien aligner les cards entre elles ») : deux lignes de titre, trois de phrase. */}
+            <h3 className="t-titre-section text-ink mt-[5px] line-clamp-2" style={{ minHeight: "2.36em" }}>
+              {insight.title}
+            </h3>
+            <p className="text-[13px] text-ink-soft leading-[1.45] mt-[5px] line-clamp-3" style={{ minHeight: "4.35em" }}>
+              {insight.sentence}
+            </p>
           </>
         )}
-        <MiniaturesLook pieces={pieces} dressing={dressing} pivotId={pivotId} marquerSuggestions={marquerSuggestions} className="mt-[12px]" />
+        <MiniaturesLook pieces={pieces} dressing={dressing} pivotId={pivotId} marquerSuggestions={marquerSuggestions} alignerLibelles colonnes={colonnes} className="mt-[12px]" />
         <button
           type="button"
           onClick={onOpen}

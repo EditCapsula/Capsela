@@ -235,6 +235,9 @@ export default function ItemOutfitsScreen() {
   const infos = [CATLABEL[isBag(pivot) ? "sac" : pivot.cat], pivot.color, pivot.matiere].filter(Boolean).join(" · ");
   const libelleCapsule = `Capsule ${capsuleSeason}${exploredStyleId ? " · " + styleLabel(exploredStyleId, profile.gender) : ""}`;
   const nombre = `${filtres.length} look${filtres.length > 1 ? "s" : ""}`;
+  // Des miniatures de même taille sur toutes les slides : autant de colonnes que le look le plus fourni, entre 4 et 5 — à 6 colonnes,
+  // une vignette tombait à 40 px. Un look de 6 pièces ou plus passe alors sur deux rangées, lui seul.
+  const colonnesCarrousel = Math.max(4, Math.min(5, Math.max(0, ...filtres.map((l) => piecesDe(l.variation.ids).length))));
   const titre = titreCommentPorter(pivot, alreadyOwned);
   const DEBUT = "Comment porter ";
 
@@ -348,6 +351,7 @@ export default function ItemOutfitsScreen() {
               enregistre={enregistre(look.variation.ids)}
               onOpen={() => ouvrir(look, i + 1)}
               onCoeur={() => actions.basculerIdeeLook(look.variation.ids, look.variation.occasion)}
+              colonnes={colonnesCarrousel}
             />
           ))}
         />
