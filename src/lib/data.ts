@@ -372,6 +372,12 @@ export interface Weather {
    * Absentes : toutes les pièces sont jugées sur `seasons`, comme avant.
    */
   saisons?: CapsuleSeason[];
+  /**
+   * La température la plus basse de la SOIRÉE (18 h – 24 h, prévision horaire du jour consulté, 01/11/2026). Lue par le conseil
+   * « il va faire frais ce soir » (R-S14) : sans elle, le conseil ne peut pas parler du soir et le dit autrement. Absente : pas de
+   * prévision pour la soirée (mode démo, échec réseau, jour au-delà de l'horizon).
+   */
+  tempSoir?: number;
 }
 
 /**

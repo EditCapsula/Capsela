@@ -1094,13 +1094,20 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     const m = previsionPour(previsionJour.prevision, cle, "Toute la journée");
     return m ? { min: Math.round(m.tempMin), max: Math.round(m.tempMax) } : null;
   }, [state.jourDecalage, previsionJour, villeMeteo, dateConsultee]);
-  const meteoDuJour: Weather = useMemo(
-    () =>
+  // LA SOIRÉE DU JOUR CONSULTÉ (01/11/2026, demandé : « il faut vérifier la température de fin de journée pour être pertinent ») :
+  // la minimale des créneaux 18 h – 24 h, pour le conseil « il va faire frais ce soir ». Sans prévision, rien.
+  const tempSoir = useMemo(() => {
+    if (previsionJour?.ville !== villeMeteo || !previsionJour.prevision) return undefined;
+    const soir = previsionPour(previsionJour.prevision, jourLocal(dateConsultee), "Soirée");
+    return soir ? Math.round(soir.tempMin) : undefined;
+  }, [previsionJour, villeMeteo, dateConsultee]);
+  const meteoDuJour: Weather = useMemo(() => {
+    const base =
       state.jourDecalage === 0
         ? weather
-        : weatherForDay(meteoPrevue ? meteoPrevue.temp : geoCity.temp, meteoPrevue ? meteoPrevue.label : geoCity.label, saisonCalendairePour(dateConsultee), CHALEUR_HORS_SAISON),
-    [state.jourDecalage, weather, meteoPrevue, geoCity, dateConsultee]
-  );
+        : weatherForDay(meteoPrevue ? meteoPrevue.temp : geoCity.temp, meteoPrevue ? meteoPrevue.label : geoCity.label, saisonCalendairePour(dateConsultee), CHALEUR_HORS_SAISON);
+    return tempSoir === undefined ? base : { ...base, tempSoir };
+  }, [state.jourDecalage, weather, meteoPrevue, geoCity, dateConsultee, tempSoir]);
 
   // Vestiaire universel (Supabase) : remplace le catalogue statique dès qu'il
   // est disponible. En mode démo, si la requête échoue, ou si la table/les

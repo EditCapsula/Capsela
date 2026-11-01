@@ -18,8 +18,11 @@ import { ecrireRetourDuCompte, envoyerRetoursAuCompte, lireRetoursDuCompte } fro
 import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, isCompleteOutfit, outfitMoodPhrase, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
+import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, outfitMoodPhrase, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee } from "@/lib/attributes";
+
+/** Première lettre en capitale : « il va faire frais ce soir » en tête de phrase. */
+const majuscule = (texte: string) => texte.charAt(0).toUpperCase() + texte.slice(1);
 import { manquesActuels, piecesStructurellesManquantes, statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
 import BottomSheet from "@/components/BottomSheet";
 import { piecesDAutresStyles, styleAffiche } from "@/lib/suggestionsAutresStyles";
@@ -894,14 +897,14 @@ export default function TenuesScreen() {
                 montre qu'un. */}
             {conseilVeste && (
               <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
-                Il va faire frais ce soir : appuie sur + pour ajouter {conseilVeste.piece.name.toLowerCase()}.
+                {majuscule(fraicheurDuSoir(meteoDuJour))} : appuie sur + pour ajouter {conseilVeste.piece.name.toLowerCase()}.
               </div>
             )}
             {vesteAAjouter && (
               <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
                 {coucheAAjouter === "manteau"
                   ? "Il va faire froid : appuie sur + pour ajouter un manteau à ton dressing."
-                  : "Il va faire frais ce soir : appuie sur + pour ajouter une veste à ton dressing."}
+                  : `${majuscule(fraicheurDuSoir(meteoDuJour))} : appuie sur + pour ajouter une veste à ton dressing.`}
               </div>
             )}
             {chaussuresManquantes && (

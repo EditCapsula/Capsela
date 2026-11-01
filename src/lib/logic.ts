@@ -425,6 +425,14 @@ export interface LeviersMesure {
   sansManteauParLeFroid?: boolean;
 }
 
+/**
+ * Ce que le conseil de la veste peut affirmer (01/11/2026) : « il va faire frais ce soir » quand la température du SOIR est connue
+ * (Weather.tempSoir), « il fait frais aujourd'hui » sinon — jamais une affirmation sur le soir sans prévision du soir.
+ */
+export function fraicheurDuSoir(weather: Pick<Weather, "tempSoir">): string {
+  return weather.tempSoir != null ? "il va faire frais ce soir" : "il fait frais aujourd'hui";
+}
+
 /** Sous cette température, une tenue sans couche de dessus est à compléter d'une veste (R-S14) — le seuil de la suggestion, désormais aussi celui de la veste intégrée. */
 export const SEUIL_SOIREE_FRAICHE = 21;
 
@@ -2626,7 +2634,11 @@ export function computeLookScore(
   // zippé recevait « ajoute une veste ») : maille ouverte (gilet, cardigan, zippé — fermetureMaille) ou sweat à capuche, toutes
   // occasions. Un pull simple, enfilé sous rien, ne compte pas : c'est le haut, pas une couche en plus.
   const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau" || estCoucheDuSoir(i));
-  if (!chezSoi && weather.temp <= SEUIL_SOIREE_FRAICHE && !hasOuterwear && !dismissed.has("veste_soir")) {
+  // LA TEMPÉRATURE DU SOIR (01/11/2026, demandé : « si le conseil s'affiche parce que la température a été vérifiée pour le soir on est
+  // ok, sinon il faut vérifier la température de fin de journée ») : la minimale de la soirée quand la prévision la donne
+  // (Weather.tempSoir), sinon la température du jour — et le texte ne parle alors plus du soir (fraicheurDuSoir).
+  const tempReference = weather.tempSoir ?? weather.temp;
+  if (!chezSoi && tempReference <= SEUIL_SOIREE_FRAICHE && !hasOuterwear && !dismissed.has("veste_soir")) {
     // Occasion sport (recette 25/08/2026, signalé : blazer structuré
     // suggéré sur une tenue baskets + short cycliste) — préférence molle
     // pour une veste décontractée (formalityOf <= 1, ex. coupe-vent/
@@ -2639,7 +2651,7 @@ export function computeLookScore(
       .sort(dressingDAbord);
     const decontracte = occasion === "sport" ? vesteManteauCandidates.filter((i) => formalityOf(i) <= 1) : [];
     // Sous SEUIL_MANTEAU (19/10/2026), un manteau passe devant une veste : par grand froid, une veste ne suffit pas.
-    const parLeFroid = weather.temp < SEUIL_MANTEAU ? vesteManteauCandidates.filter((i) => i.cat === "manteau") : [];
+    const parLeFroid = tempReference < SEUIL_MANTEAU ? vesteManteauCandidates.filter((i) => i.cat === "manteau") : [];
     // En Sport, le hoodie d'abord (17/10/2026, signalé : « on avait convenu d'afficher directement un hoodie s'il y en a un dans la
     // capsule » — la tenue Sport montrait une silhouette de blazer à ajouter). Une maille qui se porte par-dessus (estCoucheDuSoir :
     // sweat à capuche, zippé, gilet), du dressing ou de la capsule, passe devant toute veste ; sans elle, la règle d'avant.
@@ -2651,7 +2663,7 @@ export function computeLookScore(
         : [];
     proactives.push({
       key: "veste_soir",
-      text: "N'hésite pas à compléter cette tenue avec une veste, il va faire frais ce soir.",
+      text: `N'hésite pas à compléter cette tenue avec une veste, ${fraicheurDuSoir(weather)}.`,
       suggestedId: (coucheSport.length ? coucheSport : decontracte.length ? decontracte : parLeFroid.length ? parLeFroid : vesteManteauCandidates)[0]?.id,
     });
   }
