@@ -41,7 +41,7 @@ Les deux réponses neutres (« Aucune préférence particulière », « Cela dé
 
 ## Profil homme (31/10/2026)
 
-Pas de mise en valeur pour un homme (arbitrage du 31/10/2026) : seules les 5 coupes ont besoin de visuels homme. Fichiers : `public/onboarding/coupes/homme/<option>.webp`.
+Pas de mise en valeur pour un homme (arbitrage du 31/10/2026) : seules les 5 coupes ont besoin de visuels homme. **Reçus et intégrés le 01/11/2026** (portrait 3:4, 600 × 800). Fichiers : `public/onboarding/coupes/homme/<option>.webp`.
 
 ### Coupes préférées — homme (5)
 

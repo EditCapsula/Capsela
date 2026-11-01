@@ -93,14 +93,14 @@ export function miseEnValeurDuGenre(valeurs: MiseEnValeur[] | null, gender: stri
 }
 
 /**
- * Visuels (31/10/2026) : détails de vêtements femme, sans mannequin, en 3:4. Côté homme, les visuels sont à produire
- * (docs/onboarding-evolution/prompts-visuels.md) : `null`, la carte s'affiche alors sans image — jamais un visuel femme.
+ * Visuels, sans mannequin, en 3:4 : pièces femme (31/10/2026) ; coupes homme (reçues le 01/11/2026, `coupes/homme/`). Un profil
+ * homme ne voit jamais un visuel femme, et réciproquement.
  */
 export function visuelMiseEnValeur(v: MiseEnValeur): string {
   return `/onboarding/mise-en-valeur/${v}.webp`;
 }
-export function visuelCoupe(c: CoupePreferee, gender: string | null): string | null {
-  return gender === "homme" ? null : `/onboarding/coupes/${c}.webp`;
+export function visuelCoupe(c: CoupePreferee, gender: string | null): string {
+  return gender === "homme" ? `/onboarding/coupes/homme/${c}.webp` : `/onboarding/coupes/${c}.webp`;
 }
 /** La vignette des deux réponses neutres : celle du « Je ne sais pas » de la colorimétrie. */
 export const VISUEL_NEUTRE = "/onboarding/colorimetrie/neutre-lin.webp";
