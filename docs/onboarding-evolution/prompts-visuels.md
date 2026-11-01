@@ -58,3 +58,10 @@ Pas de mise en valeur pour un homme (arbitrage du 31/10/2026) : seules les 5 cou
 > [Base commune], mais en planche de N cases séparées par une fine marge ivoire, chaque case au format portrait 3:4, une pièce ou un ensemble par case, dans cet ordre : … Même fond, même lumière, même cadrage dans toutes les cases. Image finale la plus grande possible.
 
 Préférer la génération une par une : en planche, chaque case ne fait qu'environ 300 px de large.
+
+## Silhouettes femme (01/11/2026)
+
+Reçues en planche de 5 (contour au trait terracotta, aucun visage ni détail), découpées en 3:4 (450 × 600) dans
+`public/onboarding/silhouettes/<sablier|poire|pomme|rectangle|triangle-inverse>.webp`. Le fond des cases n'était pas uniforme : le trait
+est conservé (lissage compris) et redessiné sur un fond uni #F7EEE3. Pas de visuels de silhouette côté homme (arbitrage du
+01/11/2026 ; l'étape n'existe d'ailleurs pas pour un homme).
