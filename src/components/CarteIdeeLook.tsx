@@ -1,6 +1,8 @@
 "use client";
 
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import { IconeCoeur } from "@/components/CarrouselHero";
+import Badge from "@/components/Badge";
 import { occasionShortLabel } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { sourcePiece, texteProvenance, type LookNumerote } from "@/lib/ideesLooks";
@@ -45,7 +47,6 @@ export function CarteIdeeLook({
   rang?: "premier" | "suivant" | "defaut";
 }) {
   const { provenance } = look;
-  const colonnes = pieces.length > 6 ? Math.ceil(pieces.length / 2) : Math.max(pieces.length, 4);
   return (
     <button
       type="button"
@@ -92,41 +93,165 @@ export function CarteIdeeLook({
           )}
         </div>
 
-        <div className="grid gap-[8px] mt-[10px]" style={{ gridTemplateColumns: `repeat(${colonnes}, minmax(0, 1fr))` }}>
-          {pieces.map((it) => {
-            const img = resolveItemImage(it);
-            const catalogue = sourcePiece(it.id, dressing) === "catalog";
-            return (
-              <div key={it.id} className="min-w-0">
-                <div
-                  className="w-full rounded-champ overflow-hidden"
-                  // Une suggestion se reconnaît d'un trait pointillé terracotta, discret : le dressing est à plat.
-                  style={{
-                    ...(img.url
-                      ? { aspectRatio: "1", background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 4 }
-                      : { aspectRatio: "1", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }),
-                    ...(catalogue ? { outline: "1px dashed var(--color-terracotta)", outlineOffset: -1 } : {}),
-                  }}
-                >
-                  {img.url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      loading="lazy"
-                      src={img.url}
-                      alt=""
-                      style={{ width: "100%", height: "100%", objectFit: img.kind === "photo" ? "cover" : "contain" }}
-                    />
-                  )}
-                </div>
-                <div className="text-[10px] text-ink leading-[1.25] mt-[5px] line-clamp-2 hyphens-auto">{nomCourtPiece(it.name)}</div>
-                {catalogue && <div className="text-[9px] text-terracotta leading-[1.2] mt-[2px] whitespace-nowrap">Suggestion</div>}
-              </div>
-            );
-          })}
-        </div>
+        <MiniaturesLook pieces={pieces} dressing={dressing} className="mt-[10px]" />
 
         <span className="mt-[14px] mb-[2px] inline-block t-cta text-terracotta">Voir le look →</span>
       </div>
     </button>
+  );
+}
+
+/**
+ * LES MINIATURES D'UN LOOK (sorties de CarteIdeeLook le 01/11/2026, pour la slide des « Idées de looks ») : les pièces réparties sur la
+ * largeur, sans défilement. « Suggestion » marque une pièce absente du dressing (sourcePiece) ; `pivotId` cerne d'un trait plein la pièce
+ * à partir de laquelle le look est construit, et la nomme « Ta pièce » — elle se reconnaît dans chaque proposition.
+ */
+export function MiniaturesLook({
+  pieces,
+  dressing,
+  pivotId,
+  marquerSuggestions = true,
+  className = "",
+}: {
+  pieces: Item[];
+  dressing: Item[];
+  pivotId?: number;
+  /** Faux quand toutes les pièces viennent de la capsule : « Suggestion » sous chacune ne dirait plus rien. */
+  marquerSuggestions?: boolean;
+  className?: string;
+}) {
+  const colonnes = pieces.length > 6 ? Math.ceil(pieces.length / 2) : Math.max(pieces.length, 4);
+  return (
+    <div className={`grid gap-[8px] ${className}`} style={{ gridTemplateColumns: `repeat(${colonnes}, minmax(0, 1fr))` }}>
+      {pieces.map((it) => {
+        const img = resolveItemImage(it);
+        const catalogue = marquerSuggestions && sourcePiece(it.id, dressing) === "catalog";
+        const pivot = it.id === pivotId;
+        return (
+          <div key={it.id} className="min-w-0">
+            <div
+              className="w-full rounded-champ overflow-hidden"
+              // Une suggestion se reconnaît d'un trait pointillé terracotta, discret : le dressing est à plat. La pièce choisie : un trait plein.
+              style={{
+                ...(img.url
+                  ? { aspectRatio: "1", background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 4 }
+                  : { aspectRatio: "1", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }),
+                ...(pivot
+                  ? { outline: "1.5px solid var(--color-terracotta)", outlineOffset: -1.5 }
+                  : catalogue
+                    ? { outline: "1px dashed var(--color-terracotta)", outlineOffset: -1 }
+                    : {}),
+              }}
+            >
+              {img.url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  loading="lazy"
+                  src={img.url}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: img.kind === "photo" ? "cover" : "contain" }}
+                />
+              )}
+            </div>
+            <div className="text-[10px] text-ink leading-[1.25] mt-[5px] line-clamp-2 hyphens-auto">{nomCourtPiece(it.name)}</div>
+            {pivot ? (
+              <div className="text-[9px] text-terracotta leading-[1.2] mt-[2px] whitespace-nowrap">Ta pièce</div>
+            ) : (
+              catalogue && <div className="text-[9px] text-terracotta leading-[1.2] mt-[2px] whitespace-nowrap">Suggestion</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * UNE SLIDE DU CARROUSEL « IDÉES DE LOOKS » (01/11/2026, refonte de la page) — la même idée que CarteIdeeLook, mise en scène comme une
+ * page de magazine : la composition domine, l'occasion posée dessus, le numéro du look dans la série affichée, le titre et la phrase de
+ * decrireLooks, les miniatures où la pièce choisie se reconnaît, puis les deux actions.
+ *
+ * Pourquoi un second composant plutôt qu'une variante de CarteIdeeLook : cette carte-là est un seul bouton (rien d'imbriqué), alors
+ * qu'ici le cœur et le CTA sont deux actions distinctes. La composition, le titre, la phrase et les miniatures sont les mêmes
+ * (FlatLayCapsela, decrireLooks, MiniaturesLook).
+ */
+export function SlideIdeeLook({
+  look,
+  position,
+  total,
+  pieces,
+  insight,
+  dressing,
+  pivotId,
+  marquerSuggestions,
+  enregistre,
+  onOpen,
+  onCoeur,
+}: {
+  look: LookNumerote;
+  /** La place du look dans la série affichée (1…total) : « Look 02 / 05 ». */
+  position: number;
+  total: number;
+  pieces: Item[];
+  insight: OutfitStyleInsight | undefined;
+  dressing: Item[];
+  pivotId: number;
+  marquerSuggestions: boolean;
+  enregistre: boolean;
+  onOpen: () => void;
+  onCoeur: () => void;
+}) {
+  const deux = (n: number) => String(n).padStart(2, "0");
+  const occasion = look.variation.occasion !== "all" ? occasionShortLabel(look.variation.occasion) : null;
+  return (
+    <article className="flex-1 flex flex-col bg-card border border-border rounded-carte p-[12px]">
+      <div className="relative">
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`Voir le look ${position} en détail${insight ? " : " + insight.title : ""}`}
+          className="block w-full relative rounded-bloc bg-warm-bg overflow-hidden cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
+          style={{ height: "clamp(270px, 82vw, 360px)" }}
+        >
+          <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id)).join(",")} />
+        </button>
+        {occasion && (
+          <Badge tone="carte" taille="s" className="absolute top-[10px] left-[10px] pointer-events-none">
+            {occasion}
+          </Badge>
+        )}
+        <button
+          type="button"
+          onClick={onCoeur}
+          aria-pressed={enregistre}
+          aria-label={enregistre ? "Retirer ce look de mes looks" : "Enregistrer ce look dans mes looks"}
+          className="absolute top-[4px] right-[4px] w-[44px] h-[44px] flex items-center justify-center cursor-pointer motion-safe:transition-transform motion-safe:active:scale-[.94]"
+        >
+          <span className="w-[34px] h-[34px] rounded-full bg-card border border-border flex items-center justify-center text-terracotta-deep">
+            <IconeCoeur plein={enregistre} />
+          </span>
+        </button>
+      </div>
+
+      <div className="px-[4px] flex-1 flex flex-col">
+        <div className="t-label text-terracotta mt-[14px]">
+          Look {deux(position)} <span className="text-muted">/ {deux(total)}</span>
+        </div>
+        {insight && (
+          <>
+            <h3 className="t-titre-section text-ink mt-[5px]">{insight.title}</h3>
+            <p className="text-[13px] text-ink-soft leading-[1.45] mt-[5px] line-clamp-3">{insight.sentence}</p>
+          </>
+        )}
+        <MiniaturesLook pieces={pieces} dressing={dressing} pivotId={pivotId} marquerSuggestions={marquerSuggestions} className="mt-[12px]" />
+        <button
+          type="button"
+          onClick={onOpen}
+          className="mt-auto pt-[14px] pb-[2px] self-start min-h-[44px] t-cta text-terracotta cursor-pointer"
+        >
+          Voir le look en détail →
+        </button>
+      </div>
+    </article>
   );
 }

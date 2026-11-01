@@ -431,6 +431,8 @@ export interface Actions {
   openIdeeLook: (pivotId: number, variations: ItemOutfitVariation[], famille: FamilleLook | null, look: { ids: number[]; occasion: OccasionKey; numero: number }) => void;
   closeIdeeLook: () => void;
   enregistrerIdeeLook: (ids: number[], occasion: OccasionKey) => void;
+  /** Le cœur d'une idée de look (01/11/2026) : l'enregistre dans « Mes looks », ou retire le look qui rassemble déjà exactement ces pièces. */
+  basculerIdeeLook: (ids: number[], occasion: OccasionKey) => void;
   removeActive: () => void;
   /**
    * Enregistre le choix de l'utilisatrice face à une suggestion de revente
@@ -2128,6 +2130,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // « Enregistrer dans mes looks » : la même écriture que « J'adore cette
     // tenue », sans doublon ni suppression (enregistrerTenueSiAbsente).
     enregistrerIdeeLook: (ids, occasion) => enregistrerTenueSiAbsente(ids, occasion),
+    basculerIdeeLook: (ids, occasion) => {
+      const cle = clePieces(ids).join(",");
+      const existant = stateRef.current.savedLooks.find((l) => clePieces(l.pieceIds).join(",") === cle);
+      if (!existant) return enregistrerTenueSiAbsente(ids, occasion);
+      setState((st) => ({ ...st, savedLooks: st.savedLooks.filter((l) => l.id !== existant.id) }));
+      if (isSupabaseConfigured && userId) deleteSavedLook(existant.id).catch((err) => reportDressingError("deleteSavedLook", err));
+    },
     consulterTenue: (ids, occasion, planId) =>
       setState((s) => ({
         ...s,
