@@ -1,6 +1,6 @@
 # Lot 5 — compléter la colonne `coupe` du catalogue
 
-31/10/2026. **Les 76 propositions sont VALIDÉES par la propriétaire le 31/10/2026.** SQL à exécuter à la main (CLAUDE.md) : exécution non encore confirmée.
+31/10/2026. **Les 76 propositions sont VALIDÉES par la propriétaire le 31/10/2026.** `sql/01-completer-coupes.sql` EXÉCUTÉ le 01/11/2026 par la propriétaire : 76 lignes renvoyées, identifiants et valeurs conformes.
 
 - Source : export `vestiaire_universel` du 31/10/2026 après-midi (845 articles, Créatif compris, identifiants réels).
 - `coupes-catalogue-a-valider.xlsx` : les 500 vêtements sans coupe, dont **76 propositions (27 Ajusté, 49 Ample)** avec leur motif.
