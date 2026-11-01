@@ -24,7 +24,9 @@ export const LIMITE_DRESSING_GRATUIT = 50;
  * écrit le chiffre sur l'écran Premium ; le Gate de TenuesScreen annonce la
  * limite que la base a renvoyée (bonus compris), pas celle-ci.
  */
-export const GENERATIONS_GRATUITES_PAR_JOUR = 2;
+// PHASE DE TEST (01/11/2026, demandé : « montre le nombre à 5 et non pas deux », « c'est juste pour les tests ») : 5, comme la limite de
+// la base (migration 0055). Au lancement : 2 ici, et la migration 0056 à écrire sur le modèle de 0055 avec v_base = 2.
+export const GENERATIONS_GRATUITES_PAR_JOUR = 5;
 
 /**
  * Trois états, et non deux. La distinction porte tout le comportement.

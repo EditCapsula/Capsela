@@ -7,7 +7,7 @@ import { aUnMotif, MOTIFS } from "@/lib/motifs";
 import { confierPhoto, confierTicket } from "@/lib/importTenue";
 import { etatAjout } from "@/lib/etatAjout";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { decisionAcces, premiumRequis } from "@/lib/autorisations";
+import { decisionAcces } from "@/lib/autorisations";
 import { lireTicket } from "@/lib/lectureTicket";
 import BadgePremium from "@/components/BadgePremium";
 import { useEffect, useRef, useState } from "react";
@@ -644,7 +644,8 @@ export default function AddScreen() {
             ) : (
               <>
                 Ajouter depuis un ticket de caisse
-                {premiumRequis("LIRE_TICKET") && <BadgePremium />}
+                {/* Le badge reste pendant la phase de test (01/11/2026) : la fonctionnalité sera Premium au lancement, cf. autorisations.ts. */}
+                <BadgePremium />
               </>
             )}
           </button>
@@ -1073,10 +1074,15 @@ export default function AddScreen() {
           Terminé
         </Button>
       </BottomSheet>
-      {/* Le ticket de caisse est Premium (30/10/2026) : la feuille le dit, sans rien lire. */}
-      <BottomSheet title="Ajouter depuis un ticket de caisse" open={gateTicket} onClose={() => setGateTicket(false)}>
+      {/* Le ticket de caisse est Premium (30/10/2026) : la feuille le dit, sans rien lire. Texte fourni par la propriétaire le 01/11/2026. */}
+      <BottomSheet title="Et si ton ticket remplissait ton dressing ?" open={gateTicket} onClose={() => setGateTicket(false)}>
         <div className="text-[13px] text-muted-3 leading-[1.5]">
-          Avec Premium, photographie ton ticket : Capsela prépare une fiche par vêtement acheté, avec le magasin en marque. Tu vérifies chaque pièce avant de l&apos;ajouter.
+          <p>Photographie ton ticket de caisse et laisse Capsela faire le reste.</p>
+          <p className="mt-[10px]">
+            Chaque pièce achetée est identifiée et transformée en une fiche prête à rejoindre ton dressing. Tu vérifies, tu valides… et tes
+            nouvelles pièces sont ajoutées !
+          </p>
+          <p className="mt-[10px] text-ink">Une fonctionnalité exclusive avec Capsela Premium.</p>
         </div>
         <Button
           className="mt-5"
