@@ -113,6 +113,13 @@ describe("piecesCles — les quatre règles du 01/11/2026", () => {
     expect(piecesCles([a, b], 3, "Été").map((i) => i.id)).toEqual([1]);
   });
 
+  it("en hiver, un manteau passe devant toute veste", () => {
+    const veste = piece(1, { cat: "veste", ...automne, meteoMaxTemp: 5 });
+    const manteau = piece(2, { cat: "manteau", ...automne, meteoMaxTemp: 12 });
+    expect(piecesCles([veste, manteau], 3, "Hiver").map((i) => i.id)).toEqual([2]);
+    expect(piecesCles([veste, manteau], 3, "Automne").map((i) => i.id)).toEqual([1]);
+  });
+
   it("4. à égalité, la pièce qui couvre le plus d'occasions, avant l'indispensable", () => {
     const indispensable = piece(1, { cat: "chaussures", estBasiqueCapsule: true, occasion: ["travail_formel"], ...automne });
     const polyvalente = piece(2, { cat: "chaussures", occasion: ["travail_formel", "quotidien", "soiree"], ...automne });

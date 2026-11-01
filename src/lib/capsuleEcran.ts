@@ -126,6 +126,7 @@ function nombreDeSaisons(it: Item): number {
  *   3. plus de repli : une famille sans pièce propre à la saison laisse sa place à la suivante ;
  *   4. à égalité, la pièce qui couvre le plus d'occasions, puis l'indispensable, puis l'ordre de la capsule.
  * En Automne ou Hiver, la famille « maille ou haut » ne retient toujours que des pulls et des hauts à manches longues (01/10/2026).
+ * Famille « manteau ou veste » (01/11/2026) : en hiver, un manteau avant toute veste.
  * Sans saison : la règle d'origine (l'indispensable, sinon la première de la famille).
  */
 export function piecesCles(capsule: Item[], max = 3, saison?: CapsuleSeason): Item[] {
@@ -141,6 +142,12 @@ export function piecesCles(capsule: Item[], max = 3, saison?: CapsuleSeason): It
     }
     candidates = candidates.filter((it) => !estPieceDInterieur(it) && proprePourSaison(it, saison));
     if (froid && famille.includes("haut")) candidates = candidates.filter((it) => it.cat === "pull" || it.manches === "longues");
+    // En hiver, un manteau passe devant toute veste (01/11/2026, validé par la propriétaire, signalé : une « Veste matelassée légère »
+    // pièce clé d'une capsule d'hiver). Le rôle « calque » ne sert pas à les distinguer : le catalogue le donne à toutes ses vestes et
+    // à tous ses manteaux (99 sur 99, mesuré le même jour).
+    if (saison === "Hiver" && famille.includes("manteau") && candidates.some((it) => it.cat === "manteau")) {
+      candidates = candidates.filter((it) => it.cat === "manteau");
+    }
     if (!candidates.length) continue;
     const rang = (it: Item) => capsule.indexOf(it);
     const cle = (it: Item): number[] => [

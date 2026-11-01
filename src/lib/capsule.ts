@@ -1,5 +1,5 @@
 import { CATALOG, type CatalogItem } from "./catalog";
-import { fermetureMaille, formalityOf, intensiteOf, isStatement, suggestOccasions, tonsOf } from "./attributes";
+import { chaussureHabillee, fermetureMaille, formalityOf, intensiteOf, isStatement, suggestOccasions, tonsOf } from "./attributes";
 import { isSunny, necessiteLeSoleil, type Weather } from "./data";
 import { effetMorphologique } from "./garmentEffect";
 import { accordCoupe } from "./coupesPieces";
@@ -518,6 +518,12 @@ export type SelectionStrategy = {
    * + « Mes épaules »), cet axe de `valeurDirection` est neutralisé. L'autre axe reste.
    */
   miseEnValeurPrime?: boolean;
+  /**
+   * UNE PAIRE HABILLÉE DANS CHAQUE CAPSULE FEMME (01/11/2026, validé par la propriétaire après mesure : 34 capsules femme sur 36 n'en
+   * avaient aucune, et R-S25 laisse alors toute tenue de soirée sans chaussures). Hors quota, comme les chaussures d'intérieur et les
+   * collants. Absent : comportement d'avant.
+   */
+  paireHabillee?: "garantie";
 };
 /**
  * Depuis le 29/08/2026, la production ne consulte plus `morphoFit` au rang 3.
@@ -539,6 +545,16 @@ export const STRATEGIE_PRODUCTION: SelectionStrategy = {
   // Lot 4 (31/10/2026), validé par la propriétaire après mesure (docs/onboarding-evolution/audit-lot4-moteur.md) : la coupe
   // préférée départage après « basique », avant la direction morphologique ; la mise en valeur neutralise l'axe qui la contredit.
   // Sans préférence, rien ne change (garde-fou mesuré : 0 capsule différente).
+  coupesPreferees: "apres_basique",
+  miseEnValeurPrime: true,
+  paireHabillee: "garantie",
+};
+
+/** La production juste avant la paire habillée garantie (01/11/2026) — pour l'audit avant / après. */
+export const STRATEGIE_AVANT_PAIRE_HABILLEE: SelectionStrategy = {
+  rang3: "neutre",
+  v2: "A",
+  maillesFermeesEte: "exclues",
   coupesPreferees: "apres_basique",
   miseEnValeurPrime: true,
 };
@@ -1136,6 +1152,32 @@ export function computeDefaultCapsule(
       const pick = tier.filter((it) => tempDistance(it) === closest);
       out = [...out, pickBestMarginal(pick, covered, profile.morphology, strategy, out, profile.preferencesSilhouette ?? null) || pick[0]];
     }
+  }
+
+  // Une paire habillée (chaussureHabillee) dans chaque capsule femme (01/11/2026, cf. SelectionStrategy.paireHabillee) : sans elle, une
+  // soirée n'a pas de chaussures (R-S25). DE LA SAISON, toujours : une sandale à talons ne vient pas en hiver ; le style d'abord, puis
+  // n'importe quel style ; sans paire de saison au catalogue, rien n'est ajouté.
+  if (strategy.paireHabillee === "garantie" && profile.gender === "femme" && !out.some(chaussureHabillee)) {
+    const deSaison = (it: CatalogItem) =>
+      it.capsuleSeasons?.length && seasonKey ? it.capsuleSeasons.includes(seasonKey) : it.season === bucket || it.season === "Toutes saisons";
+    const tempOk = (it: CatalogItem) =>
+      (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) && (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp);
+    // Une paire d'été (sandales, espadrilles) n'est pas proposée sous 15° (R-B22, logic.ts) : la garantir ici ne servirait aucune soirée.
+    const eteSousLeSeuil = (it: CatalogItem) => capsuleTemp < 15 && /sandale|espadrille|tropézienne/i.test(`${it.shoeType ?? ""} ${it.name}`);
+    const pourLaSoiree = (it: CatalogItem) => !it.occasion?.length || it.occasion.includes("soiree");
+    const paires = sourcePool.filter(
+      (it) =>
+        chaussureHabillee(it) &&
+        !excluded.has(it.id) &&
+        it.genre !== oppositeGenre &&
+        deSaison(it) &&
+        tempOk(it) &&
+        !eteSousLeSeuil(it) &&
+        pourLaSoiree(it)
+    );
+    const styleOk = (it: CatalogItem) => !styles.length || styles.some((st) => styleFit(it, st));
+    const palier = [paires.filter(styleOk), paires].find((t) => t.length);
+    if (palier) out = [...out, pickBestMarginal(palier, covered, profile.morphology, strategy, out, profile.preferencesSilhouette ?? null) || palier[0]];
   }
 
   // Bloc Sport (étape 4) : toutes les pièces Sport du pool (déjà filtrées

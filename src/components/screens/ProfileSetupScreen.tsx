@@ -353,8 +353,9 @@ export default function ProfileSetupScreen() {
   const finish = async () => {
     await saveProfile({ ...draft, completed: true });
     if (state.profileSetupFromEdit) actions.go(state.profileSetupReturn);
-    // Le parcours mène au dressing (07/10/2026) : « Créer mon dressing » ouvre l'ajout d'une pièce.
-    else actions.openAdd();
+    // Le parcours mène au dressing : l'écran Dressing vide (01/11/2026, demandé), qui explique par quoi commencer, garde « Ajouter ma
+    // première pièce » et propose la capsule et des idées de looks. Avant (07/10/2026) : l'ajout d'une pièce s'ouvrait directement.
+    else actions.goWardrobe();
   };
 
   const indexRecap = STEPS.findIndex((s) => s.key === "pal_recap");
@@ -966,8 +967,8 @@ export default function ProfileSetupScreen() {
           libelle: isLast
             ? state.profileSetupFromEdit
               ? "Enregistrer les modifications"
-              : // « Créer mon dressing » (07/10/2026, brief d'optimisation) : ce qui s'ouvre
-                // est l'ajout d'une première pièce, plus l'accueil.
+              : // « Créer mon dressing » (07/10/2026, brief d'optimisation) : ce qui s'ouvre est le dressing (l'écran Dressing vide
+                // depuis le 01/11/2026), plus l'accueil.
                 "Créer mon dressing"
             : "Continuer",
           onClick: next,
