@@ -410,6 +410,14 @@ export function coupeOf(it: Item): "ajusté" | "regular" | "oversize" {
 const MOTS_SPORT =
   /sweat|jogging|molleton|legging|coupe-vent|survêt|running|sport|training|fitness|yoga|trail|brassière|technique/;
 
+/**
+ * UN VÊTEMENT DE SPORT (01/11/2026) : déclaré au niveau sport (0), ou nommé comme tel (MOTS_SPORT : training, coupe-vent, technique…).
+ * Sert à R-B24 : une veste de sport ne se porte pas sur une robe. Même faux positif assumé que formalityOf (« veste sport »).
+ */
+export function vetementDeSport(it: Item): boolean {
+  return it.niveauFormalite === 0 || MOTS_SPORT.test(n(it));
+}
+
 export function formalityOf(it: Item): number {
   if (it.niveauFormalite != null) return it.niveauFormalite;
   const text = n(it);
