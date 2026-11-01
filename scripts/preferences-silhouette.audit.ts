@@ -21,7 +21,7 @@ import { enLigne, lireCsv } from "./catalogueCsv";
 // occasions couvertes ; tenues complètes (8 occasions × 5 tirages) ; direction morphologique (poire, triangle inversé).
 //
 // Usage : CREATIF_CSV=<export.csv> CREATIF_REVUE=docs/capsules/creatif/sql/revue.json \
-//         npx vitest run --config vitest.audit.config.mts scripts/preferences-silhouette.audit.ts
+//         [COUPES_ENRICHIES=<coupes.json>] npx vitest run --config vitest.audit.config.mts scripts/preferences-silhouette.audit.ts
 
 const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
 const OCCASIONS: OccasionKey[] = ["quotidien", "travail_formel", "date", "soiree", "sport", "cocooning", "voyage", "evenement_perso"];
@@ -50,7 +50,11 @@ function poolDeProduction(): CatalogItem[] {
   const crees = (JSON.parse(readFileSync(revue, "utf8")).revue as Record<string, unknown>[]).map(
     (v, i) => ({ ...(v as unknown as VestiaireRow), id: 900000 + i, url_image: null, frozen: false }) as VestiaireRow
   );
-  return versPool([...base, ...crees]);
+  // Lot 5 (simulation, rien n'est écrit) : COUPES_ENRICHIES = un JSON { nom de pièce : "Ajusté" | "Ample" }, appliqué aux seules
+  // pièces sans coupe — la même règle que le SQL proposé, qui n'écrase jamais une valeur existante.
+  const enrichies = process.env.COUPES_ENRICHIES ? (JSON.parse(readFileSync(process.env.COUPES_ENRICHIES, "utf8")) as Record<string, string>) : null;
+  const avecCoupes = (r: VestiaireRow): VestiaireRow => (enrichies && !r.coupe?.trim() && r.name && enrichies[r.name] ? { ...r, coupe: enrichies[r.name] } : r);
+  return versPool([...base, ...crees].map(avecCoupes));
 }
 
 interface Mesure {
