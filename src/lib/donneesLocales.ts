@@ -23,6 +23,8 @@ export function clesLocalesDuCompte(userId: string | null): string[] {
     `capsela.accords.${compte}`,
     // Les pièces de capsule écartées (« J'ai déjà », piecesEcartees.ts).
     `capsela.piecesEcartees.${compte}`,
+    // Les pièces favorites de la capsule (favorisPieces.ts).
+    `capsela.favorisPieces.${compte}`,
     // Les villes cherchées récemment (lieux.ts) — ajoutées le 15/10/2026 (repasse légale) : une destination dit où l'on va. La
     // clé n'est pas rangée par compte : elle part avec n'importe quel compte supprimé sur l'appareil.
     "capsela.villesRecentes",
