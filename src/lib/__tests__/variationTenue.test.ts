@@ -40,8 +40,14 @@ describe("varieSubstantiellement — variation réelle, pas cosmétique", () => 
   it("de la robe à haut + pantalon : nouvelle silhouette", () => {
     expect(varieSubstantiellement([1, 30], [10, 20, 30], POOL)).toBe(true);
   });
-  it("même socle, mais chaussures ET veste changent : nouvelle tenue", () => {
-    expect(varieSubstantiellement([1, 30], [1, 31, 40], POOL)).toBe(true);
+  it("même socle, chaussures ET veste changent : pas une nouvelle tenue (01/11/2026)", () => {
+    expect(varieSubstantiellement([1, 30], [1, 31, 40], POOL)).toBe(false);
+  });
+  it("la même tenue avec une veste en plus : pas une nouvelle tenue", () => {
+    expect(varieSubstantiellement([10, 20, 30], [10, 20, 30, 40], POOL)).toBe(false);
+  });
+  it("même pantalon, autre haut : le socle change, nouvelle tenue", () => {
+    expect(varieSubstantiellement([10, 20, 30], [11, 20, 30], POOL)).toBe(true);
   });
   it("une tenue vide n'est jamais une variation", () => {
     expect(varieSubstantiellement([1, 30], [], POOL)).toBe(false);

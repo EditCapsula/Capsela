@@ -18,7 +18,8 @@ import { ecrireRetourDuCompte, envoyerRetoursAuCompte, lireRetoursDuCompte } fro
 import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { candidatsDeRemplacement, categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
+import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, isCompleteOutfit, outfitMoodPhrase, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
+import { chaussureHabillee } from "@/lib/attributes";
 import { manquesActuels, piecesStructurellesManquantes, statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
 import BottomSheet from "@/components/BottomSheet";
 import { piecesDAutresStyles, styleAffiche } from "@/lib/suggestionsAutresStyles";
@@ -447,6 +448,9 @@ export default function TenuesScreen() {
   // DES CHAUSSURES QUI MANQUENT (14/10/2026, demandé) : elles ne font plus l'objet d'une carte « À compléter » sous le hero ; le hero les
   // montre en silhouette, comme l'écran de chargement, avec la phrase « Il te manque une paire de chaussures pour ce look ». Les autres
   // manques (haut, bas, chaud…) gardent leur carte. `missingText` reste complet : le statut de la tenue (« à compléter ») en dépend.
+  // R-S25 (01/11/2026) : en soirée, une femme ne se voit proposer que des paires habillées pour compléter la tenue — la même règle
+  // que le tirage, qui laisse la paire manquante plutôt que d'en mettre une autre.
+  const pairePourLaSoiree = (it: Item) => !(profile.gender === "femme" && state.occasion === "soiree") || chaussureHabillee(it);
   const chaussuresManquantes = categoriesAbsentes.includes("chaussures") && outfitPieces.length > 0 && !state.outfitNoCompleteOutfit;
   const missingTextCarte = missingSuggestionText(categoriesAbsentes.filter((k) => k !== "chaussures"));
   // LES CHAUSSURES QUI POURRAIENT COMPLÉTER LA TENUE (14/10/2026, brief « Tenue incomplète ») : les candidates d'ajout du moteur —
@@ -454,7 +458,9 @@ export default function TenuesScreen() {
   // formalité, baskets en tenue habillée, pluie, chaussures d'été…), le dressing d'abord, puis l'accord avec le reste de la tenue
   // (harmonize). Aucune règle ni aucun score nouveaux ; vide si rien ne passe.
   const chaussuresDuStyle = chaussuresManquantes
-    ? candidatsDeRemplacement(outfitPieces, displayPool, -1, "chaussures", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour)
+    ? candidatsDeRemplacement(outfitPieces, displayPool, -1, "chaussures", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour).filter(
+        pairePourLaSoiree
+      )
     : [];
   // PUIS D'AUTRES STYLES (14/10/2026, demandé) : les paires du catalogue que la capsule ne propose pas, du genre de l'utilisatrice, de
   // saison, jamais écartées (suggestionsAutresStyles.ts) — passées par les MÊMES règles de tenue. Après celles du dressing et de la
@@ -474,7 +480,9 @@ export default function TenuesScreen() {
         state.workMode,
         state.dateContext,
         meteoDuJour
-      ).slice(0, 6)
+      )
+        .filter(pairePourLaSoiree)
+        .slice(0, 6)
     : [];
   const chaussuresPossibles = [...chaussuresDuStyle, ...chaussuresAutresStyles];
   const idsAutresStyles = new Set(chaussuresAutresStyles.map((i) => i.id));
@@ -507,6 +515,8 @@ export default function TenuesScreen() {
   // l'utilisatrice elle-même qui a été élargie. Jamais les deux dans la même
   // phrase. Le libellé vient d'OCCASIONS, jamais réécrit ici.
   const occasionElargie = state.outfitOccasionRelachee;
+  const autreTenueIndisponible =
+    state.autreTenueIndisponible !== null && state.autreTenueIndisponible === clePrincipale(state.outfit, resolveFallback);
   const occasionLabelCourant = (OCCASIONS.find(([k]) => k === state.occasion)?.[1] ?? "").toLowerCase();
   const noCompleteOutfit = state.outfitNoCompleteOutfit;
   // Sans objet en Cocooning (R-B12) : veste/manteau déjà exclus du pool de génération.
@@ -1417,6 +1427,22 @@ export default function TenuesScreen() {
                 achat ; « compléter » décrit le geste réel sans le sous-entendre. */}
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
               Compléter mon dressing →
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* PAS D'AUTRE TENUE (01/11/2026) : « Autre tenue » n'a trouvé aucune tenue au socle différent ; la tenue est gardée plutôt que
+          reproposée avec une veste ou un accessoire de plus. Tombe d'elle-même dès que la tenue affichée change. */}
+      {autreTenueIndisponible && !noCompleteOutfit && (
+        <Card rayon="bloc" className="mt-4 flex items-start gap-[11px] px-4 py-[14px]">
+          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
+          <div className="flex-1">
+            <div className="text-[12px] text-ink-soft leading-[1.45]">
+              Avec les pièces disponibles, Capsela n&apos;a pas d&apos;autre tenue vraiment différente pour cette occasion.
+            </div>
+            <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
+              Ajouter une pièce pour cette occasion →
             </button>
           </div>
         </Card>

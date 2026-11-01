@@ -60,6 +60,7 @@ import { appliquerChoix, type ChoixReconnaissance, type VetementReconnu } from "
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import {
   choisirVariation,
+  varieSubstantiellement,
   clePrincipale,
   isCompleteOutfit,
   tenueAUnSocle,
@@ -253,6 +254,7 @@ function buildInitialState(): AppState {
     history: [],
     outfitFeedbackDuJour: [],
     tenuesVues: [],
+    autreTenueIndisponible: null,
     avisSource: null,
     planARouvrir: null,
     planAAdapter: null,
@@ -1316,7 +1318,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // composeWardrobePool.
     const poolGeneration =
       s.occasion && !secours
-        ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion, saison: w, exclureHorsOccasion: true, pieceAdaptee: true })
+        ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion, saison: w, exclureHorsOccasion: true, pieceAdaptee: true, genre: profile.gender })
         : pool;
     // DIVERSIFICATION SUR CINQ JOURS (01/10/2026, diversite.ts). La date du jour
     // consulté recalcule la météo (w), l'occasion (s.occasion) ET la fenêtre des
@@ -2898,7 +2900,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             essais
           );
           if (secours.substantielle) choix = secours.choix;
-          else if (valiseRef.current) {
+          else if (!valiseRef.current) {
+            // UNE VRAIE AUTRE TENUE OU RIEN (01/11/2026, demandé). Une tenue au socle différent déjà vue vaut mieux que la même tenue
+            // avec une veste ou un accessoire de plus ; à défaut, la tenue reste et l'écran dit qu'il n'y en a pas d'autre.
+            const autre = [premier.choix, secours.choix].find((st) => varieSubstantiellement(s.outfit, st.outfit, resolution));
+            if (autre) choix = autre;
+            else return { ...s, autreTenueIndisponible: quittee || null };
+          } else {
             // Pendant un séjour : une tenue jamais vue, même proche de l'actuelle, plutôt qu'un look déjà montré ; à défaut seulement, on
             // revient aux looks de la valise.
             const cleDe = (st: AppState) => clePrincipale(st.outfit, resolution);
