@@ -7,7 +7,7 @@ import { aUnMotif, MOTIFS } from "@/lib/motifs";
 import { confierPhoto, confierTicket } from "@/lib/importTenue";
 import { etatAjout } from "@/lib/etatAjout";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { decisionAcces, premiumRequis } from "@/lib/autorisations";
+import { decisionAcces } from "@/lib/autorisations";
 import { lireTicket } from "@/lib/lectureTicket";
 import BadgePremium from "@/components/BadgePremium";
 import { useEffect, useRef, useState } from "react";
@@ -644,7 +644,8 @@ export default function AddScreen() {
             ) : (
               <>
                 Ajouter depuis un ticket de caisse
-                {premiumRequis("LIRE_TICKET") && <BadgePremium />}
+                {/* Le badge reste pendant la phase de test (01/11/2026) : la fonctionnalité sera Premium au lancement, cf. autorisations.ts. */}
+                <BadgePremium />
               </>
             )}
           </button>
