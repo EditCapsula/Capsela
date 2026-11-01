@@ -28,6 +28,7 @@ import { estPlanValise } from "@/lib/valiseDuJour";
 import { complementTenue, momentMessage, quandPhrase } from "@/lib/jourConsulte";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
+import { occasionVoisine, sensDuGlissement } from "@/lib/glissementOccasion";
 import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
 import { paletteHexes, styleConfigFor, VISUELS_ETAPE_STYLE_FEMME, type Gender, type StyleId } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
@@ -632,8 +633,29 @@ export default function TenuesScreen() {
   // cette tenue"/"Demander un avis à un proche" restent toujours
   // entièrement visibles au-dessus de TabBar, quel que soit l'écran/
   // l'encoche/la barre de gestes.
+  // UN GLISSEMENT CHANGE D'OCCASION (01/11/2026, demandé), n'importe où sur l'écran SAUF sur ce qui défile déjà à l'horizontale (onglets
+  // d'occasion, rangée des pièces…), un champ, ou une feuille ouverte par-dessus : là, le doigt garde son rôle. Décision : glissementOccasion.ts.
+  const debutGlissement = useRef<{ x: number; y: number; t: number } | null>(null);
+  const surDebutGlissement = (e: React.TouchEvent) => {
+    const cible = e.target as HTMLElement;
+    const exclu = cible.closest('.overflow-x-auto, input, textarea, select, [role="dialog"], [data-sans-glissement]');
+    debutGlissement.current = exclu || e.touches.length !== 1 ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+  };
+  const surFinGlissement = (e: React.TouchEvent) => {
+    const d = debutGlissement.current;
+    debutGlissement.current = null;
+    if (!d) return;
+    const t = e.changedTouches[0];
+    const sens = sensDuGlissement(t.clientX - d.x, t.clientY - d.y, Date.now() - d.t);
+    if (sens) actions.setOccasion(occasionVoisine(OCCASIONS.map(([k]) => k), state.occasion, sens));
+  };
+
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
+    <div
+      className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav"
+      onTouchStart={surDebutGlissement}
+      onTouchEnd={surFinGlissement}
+    >
       <AppHeader onBack={actions.goHome} backLabel="Revenir à l'accueil" />
 
       <div className="mt-[10px]">
