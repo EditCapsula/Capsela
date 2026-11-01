@@ -12,6 +12,7 @@ import {
   formalityOf,
   huesHarmonious,
   chaussureHabillee,
+  vetementDeSport,
   estDenim,
   fermetureMaille,
   matiereDeVoyage,
@@ -396,6 +397,8 @@ export interface LeviersMesure {
   sansTalonsEnSoiree?: boolean;
   /** Reproduit le comportement d'AVANT le 01/11/2026 : en soirée, une femme peut recevoir des chaussures non habillées (R-S25). */
   sansChaussuresHabilleesEnSoiree?: boolean;
+  /** Reproduit le comportement d'AVANT le 01/11/2026 : une veste ou un manteau de sport peut se poser sur une robe (R-B24). */
+  vesteDeSportSurRobe?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
@@ -1211,8 +1214,13 @@ export function generateOutfit(
   };
 
   const chosen: Item[] = [];
+  // R-B24 (01/11/2026, signalé en capture : « la veste de training n'est pas à associer avec une robe ») — sur une robe ou une
+  // combinaison, jamais une veste ni un manteau de sport (vetementDeSport). Dure : sans autre pièce de dessus, la tenue n'en a pas.
+  // Renseigné dès que la pièce unique est décidée (plus bas) : pick() ne le lit qu'après.
+  let socleRobe = false;
   const pick = (cats: CategoryKey[], essential = true, extra?: (i: Item) => boolean) => {
     let base = poolFor(cats, essential).filter((i) => cats.includes(i.cat));
+    if (socleRobe && !leviers?.vesteDeSportSurRobe) base = base.filter((i) => !OUTERWEAR_CATS.includes(i.cat) || !vetementDeSport(i));
     // Priorité au réel sur un groupe de catégories fusionnées pour un même
     // tirage (correctif 22/08/2026, signalé : un jean réel ajouté au
     // dressing n'apparaissait presque jamais, noyé parmi les 20+ pantalons/
@@ -1374,6 +1382,7 @@ export function generateOutfit(
   const piecesUniques = Math.random() < 0.4 && robeAutorisee ? poolFor(ONEPIECE_CATS, true) : [];
   const combinaisonEvitee = eviterCombinaison && hautBasSansRelachement && piecesUniques.every((i) => i.cat === "combinaison");
   const useRobe = piecesUniques.length > 0 && !combinaisonEvitee;
+  socleRobe = useRobe;
   if (useRobe) {
     // R-S17 (25/08/2026, signalé) — même principe que pour le haut ci-dessous :
     // pas de robe chemise en soirée habillée, préférence molle.
@@ -2063,6 +2072,10 @@ export function candidatsDeRemplacement(
   // R-B21 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (weather && isRainy(weather)) {
     candidates = candidates.filter((i) => i.cat !== "chaussures" || !i.shoeType || !CHAUSSURES_OUVERTES.includes(i.shoeType));
+  }
+  // R-B24 — symétrique du tirage : sur une robe ou une combinaison restée dans la tenue, jamais une veste ni un manteau de sport.
+  if (OUTERWEAR_CATS.includes(cat) && outfitItems.some((i) => i.id !== pieceId && (i.cat === "robe" || i.cat === "combinaison"))) {
+    candidates = candidates.filter((i) => !vetementDeSport(i));
   }
   // R-B22 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (weather && weather.temp < SEUIL_CHAUSSURES_D_ETE) {
@@ -2822,6 +2835,8 @@ function porterParDessus(ids: number[], pivot: Item, pool: Item[], occasion: Occ
   if (pivot.meteoMaxTemp != null && weather.temp > pivot.meteoMaxTemp) return null;
   if (!applySportCocooningFilter([pivot], occasion).length) return null;
   const pieces = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
+  // R-B24 : une veste de sport ne se pose pas sur une robe ni sur une combinaison.
+  if (vetementDeSport(pivot) && pieces.some((p) => p.cat === "robe" || p.cat === "combinaison")) return null;
   const dejaCouvert =
     pivot.cat === "manteau"
       ? pieces.some((p) => p.cat === "manteau")
