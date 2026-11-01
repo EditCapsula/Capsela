@@ -219,6 +219,15 @@ function PaletteDots({
  * seule la couleur change, anneau de 1 px et coche terracotta à la sélection, visuel 3:4 sans rognage. Sans visuel (côté homme,
  * visuels à produire), la carte garde son libellé seul — jamais une image d'un autre genre.
  */
+/** Visuels de l'étape Silhouette (femme) — fichiers dans public/onboarding/silhouettes/. */
+const VISUELS_SILHOUETTE: Record<string, string> = {
+  f_sablier: "/onboarding/silhouettes/sablier.webp",
+  f_poire: "/onboarding/silhouettes/poire.webp",
+  f_pomme: "/onboarding/silhouettes/pomme.webp",
+  f_rectangle: "/onboarding/silhouettes/rectangle.webp",
+  f_triangle_inverse: "/onboarding/silhouettes/triangle-inverse.webp",
+};
+
 function CarteChoix({ libelle, visuel, on, onClick }: { libelle: string; visuel: string | null; on: boolean; onClick: () => void }) {
   return (
     <button
@@ -828,11 +837,14 @@ export default function ProfileSetupScreen() {
 
       {meta.key === "morpho" && (
         <>
-          <div className="flex flex-col gap-[10px] mt-[26px]">
+          {/* SILHOUETTES ILLUSTRÉES (01/11/2026, choix de la propriétaire : contour au trait, aucun visage ni détail). Les cinq ont la même
+              hauteur, la même posture et le même trait : aucune ne paraît plus ou moins flatteuse qu'une autre (règle du projet). */}
+          <div className="grid grid-cols-2 gap-[11px] mt-[22px]">
             {MORPHOLOGIES.map((m) => (
-              <OptionRow
+              <CarteChoix
                 key={m}
-                label={MORPHOLOGY_LABELS[m]}
+                libelle={MORPHOLOGY_LABELS[m]}
+                visuel={VISUELS_SILHOUETTE[m] ?? null}
                 on={draft.morphology === m}
                 onClick={() => patch({ morphology: m })}
               />
