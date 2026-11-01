@@ -530,6 +530,8 @@ export interface Actions {
   swapPiece: (id: number, cat: CategoryKey) => void;
   /** Ajoute une pièce à l'affichage de la tenue du jour (recette 23/08/2026, "Ajouter à la tenue" des suggestions R-S13/R-S14) — aperçu de composition, jamais une acquisition ; sans effet si déjà présente. */
   addPieceToOutfit: (id: number) => void;
+  /** Remplace une pièce de la tenue du jour par une autre, à sa place (01/11/2026, « touche de couleur » : un haut choisi remplace le haut). */
+  remplacerDansTenue: (ancienId: number, nouvelId: number) => void;
   /** Annule un addPieceToOutfit (toast "Annuler", recette 23/08/2026) — retire une pièce de l'affichage de la tenue du jour ; sans effet si absente. */
   removePieceFromOutfit: (id: number) => void;
   /** Déclenche la génération du visuel d'une pièce du catalogue si elle n'en a pas encore (sans effet sinon). */
@@ -2859,6 +2861,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     addPieceToOutfit: (id) =>
       setState((s) => (s.outfit.includes(id) ? s : { ...s, outfit: [...s.outfit, id] })),
+    remplacerDansTenue: (ancienId, nouvelId) =>
+      setState((s) =>
+        s.outfit.includes(nouvelId) || !s.outfit.includes(ancienId) ? s : { ...s, outfit: s.outfit.map((id) => (id === ancienId ? nouvelId : id)) }
+      ),
     removePieceFromOutfit: (id) =>
       setState((s) => ({ ...s, outfit: s.outfit.filter((oid) => oid !== id) })),
     requestCatalogImage,

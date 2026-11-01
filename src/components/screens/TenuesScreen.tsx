@@ -19,7 +19,7 @@ import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, outfitMoodPhrase, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
-import { chaussureHabillee } from "@/lib/attributes";
+import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
 
 /** Première lettre en capitale : « il va faire frais ce soir » en tête de phrase. */
 const majuscule = (texte: string) => texte.charAt(0).toUpperCase() + texte.slice(1);
@@ -596,6 +596,40 @@ export default function TenuesScreen() {
   });
 
   const liveProactiveByKey = new Map(lookScore.proactives.map((p) => [p.key, p]));
+  // UNE TOUCHE DE COULEUR, EN VRAIES PIÈCES (01/11/2026, demandé : « il faudrait faire des propositions de pièces dans le dressing ou
+  // dans la capsule ; si un haut est choisi, l'utilisateur voit remplacer le haut de la tenue »). Les candidates du moteur
+  // (candidatsDeRemplacement, toutes ses règles), de couleur affirmée (ni neutre ni métal, la règle du conseil R-S13), le dressing
+  // d'abord : des hauts qui remplaceraient celui de la tenue, puis des bijoux, accessoires et sacs qui s'y ajouteraient.
+  const toucheDemandee = liveProactiveByKey.has("color");
+  const hautActuel = outfitPieces.find((i) => i.cat === "haut");
+  const deCouleur = (i: Item) => Boolean(i.color) && !isNeutralColor(i.color) && !isMetallicFinish(i.color);
+  const dressingDAbord = (a: Item, b: Item) => Number(isCatalogId(a.id)) - Number(isCatalogId(b.id));
+  const touchesDeCouleur = toucheDemandee
+    ? [
+        ...(hautActuel
+          ? candidatsDeRemplacement(outfitPieces, displayPool, hautActuel.id, "haut", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour)
+              .filter((i) => i.cat === "haut" && deCouleur(i))
+              .sort(dressingDAbord)
+              .slice(0, 4)
+          : []),
+        ...candidatsDeRemplacement(outfitPieces, displayPool, -1, "accessoire", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour)
+          .filter((i) => ["bijou", "accessoire", "sac"].includes(i.cat) && deCouleur(i) && !outfitPieces.some((o) => o.id === i.id))
+          .sort(dressingDAbord)
+          .slice(0, 4),
+      ]
+    : [];
+  const choisirTouche = (it: Item) => {
+    if (it.cat !== "haut" || !hautActuel) return ajouterALaTenue(it);
+    const ancien = hautActuel;
+    actions.remplacerDansTenue(ancien.id, it.id);
+    setRecentlyAddedId(it.id);
+    setTimeout(() => setRecentlyAddedId((current) => (current === it.id ? null : current)), 1500);
+    document.getElementById("tenue-du-jour")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    showToast(`✓ Haut remplacé : ${it.name}`, () => {
+      actions.remplacerDansTenue(it.id, ancien.id);
+      setToast(null);
+    });
+  };
 
   /**
    * OÙ EN EST LA TENUE (27/09/2026, parcours « Compléter la tenue ») — lu sur
@@ -1164,7 +1198,15 @@ export default function TenuesScreen() {
                         Ignorer
                       </button>
                     </div>
-                    {suggested && image && (
+                    {key === "color" && touchesDeCouleur.length > 0 && (
+                      // Des vraies pièces à choisir (01/11/2026) : un haut remplace celui de la tenue, le reste s'y ajoute.
+                      <div className="scrollarea flex gap-[10px] overflow-x-auto -mx-4 px-4 mt-[14px]" style={{ overscrollBehaviorX: "contain" }}>
+                        {touchesDeCouleur.map((it) => (
+                          <VignetteChoix key={it.id} it={it} onVoir={() => ouvrirPiece(it)} onChoisir={() => choisirTouche(it)} />
+                        ))}
+                      </div>
+                    )}
+                    {suggested && image && !(key === "color" && touchesDeCouleur.length > 0) && (
                       <div className="flex items-center gap-[14px] mt-[14px]">
                         {/* Grande vignette : la pièce proposée est le sujet de
                             la carte. Une pièce du dressing se montre telle
