@@ -84,7 +84,7 @@ export function poolPourIdees(dressing: Item[], capsule: Item[], saison: Capsule
 }
 
 export default function ItemOutfitsScreen() {
-  const { state, wardrobePool, vestiairePool, defaultCapsule, actions } = useCapsela();
+  const { state, weather, wardrobePool, vestiairePool, defaultCapsule, actions } = useCapsela();
   const { profile } = useAuth();
   const pretes = state.ideesTenuesPretes;
   // La pastille choisie survit à l'aller-retour vers le détail d'un look
@@ -108,12 +108,25 @@ export default function ItemOutfitsScreen() {
   // tes pièces d'abord, la capsule de cette saison pour compléter.
   const capsuleSeason = pivot ? saisonPourIdees(pivot, saisonCourante) : saisonCourante;
   const autreSaison = capsuleSeason !== saisonCourante;
+  // LA CAPSULE DU STYLE EXPLORÉ (01/11/2026, signalé : « Pantalon imprimé » de la capsule Créatif explorée, aucune idée). Les idées
+  // étaient tirées dans la capsule du style du PROFIL : la pièce n'y avait aucune pièce de son style pour l'accompagner (mesuré : 0 idée
+  // avec les capsules Minimaliste, Casual chic et Classique chic ; 3 avec la sienne). Même profil que l'écran Capsule.
+  const exploredStyleId = state.exploredStyleId;
   const poolSaison = useMemo(() => {
-    const capsule = autreSaison
-      ? computeDefaultCapsule(profile, representativeWeatherFor(capsuleSeason), state.suggestedExcluded, capsuleSeason, vestiairePool)
-      : defaultCapsule;
+    const profilCapsule = exploredStyleId ? { ...profile, styles: [exploredStyleId] } : profile;
+    const capsule =
+      autreSaison || exploredStyleId
+        ? computeDefaultCapsule(
+            profilCapsule,
+            // La saison de la pièce : sa météo représentative ; la saison affichée : la météo de l'écran Capsule, pour la même capsule.
+            autreSaison ? representativeWeatherFor(capsuleSeason) : weather,
+            state.suggestedExcluded,
+            capsuleSeason,
+            vestiairePool
+          )
+        : defaultCapsule;
     return poolPourIdees(state.items, capsule, capsuleSeason);
-  }, [autreSaison, defaultCapsule, profile, capsuleSeason, state.suggestedExcluded, vestiairePool, state.items]);
+  }, [autreSaison, exploredStyleId, defaultCapsule, profile, weather, capsuleSeason, state.suggestedExcluded, vestiairePool, state.items]);
 
   const pool = useMemo(
     () => (!pivot ? [] : poolSaison.some((i) => i.id === pivot.id) ? poolSaison : [...poolSaison, pivot]),
