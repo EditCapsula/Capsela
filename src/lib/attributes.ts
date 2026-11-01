@@ -420,6 +420,22 @@ export function formalityOf(it: Item): number {
 }
 
 /**
+ * DES CHAUSSURES HABILLÉES POUR UNE SOIRÉE (R-S25, 01/11/2026, demandé : « pour une sortie en soirée propose des chaussures habillées
+ * pour les femmes ; s'il n'y en a aucune, indique qu'une paire est manquante »). Une paire à talons (escarpins, sandales à talons,
+ * slingbacks, ou un talon écrit dans le nom : bottines à talon, escarpins talon moyen…), ou une paire déclarée habillée (niveau 4).
+ * Ni des mocassins ni des derbies, même « à petit talon » : business casual, pas habillés.
+ */
+export function chaussureHabillee(it: Item): boolean {
+  if (it.cat !== "chaussures") return false;
+  if (it.shoeType && ["Escarpins", "Sandales à talons", "Slingbacks"].includes(it.shoeType)) return true;
+  if (it.niveauFormalite != null && it.niveauFormalite >= 4) return true;
+  // « Mocassins à petit talon » : un talon dans le nom ne rend pas habillée une chaussure de jour (mesuré le 01/11/2026 : déclarés
+  // Quotidien et Travail, ils entraient dans six capsules comme paire de soirée sans jamais servir une soirée).
+  if (it.shoeType && ["Mocassins", "Derbies", "Baskets", "Ballerines"].includes(it.shoeType)) return false;
+  return /talon|escarpin/i.test(`${it.name} ${it.subtype ?? ""}`);
+}
+
+/**
  * Finitions métalliques — dorées, argentées, cuivrées et leurs variantes
  * patinées. Neutres par nature : une chaîne dorée n'attire pas l'œil comme
  * une pièce colorée, c'est une finition. Extrait ici (correctif 26/08/2026)

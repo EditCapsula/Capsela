@@ -86,6 +86,29 @@ describe("buildImagePrompt — les sous-types relevés à l'audit", () => {
   });
 });
 
+describe("buildImagePrompt — les pièces de sport (01/11/2026)", () => {
+  // Signalé : « Brassière technique imprimée » dessinée en blouse à basque, « Veste de training » en blazer.
+  const ligne1 = (over: Partial<VestiaireRow>) => sujet(over).prompt.split("\n")[0].toLowerCase();
+
+  it("une brassière est une brassière de sport, acceptée par la catégorie haut", () => {
+    const b = sujet({ category: "hauts", sous_type: "Brassière", name: "Brassière technique imprimée", matiere: "Matière technique" });
+    expect(b.ok).toBe(true);
+    expect(b.prompt.split("\n")[0].toLowerCase()).toContain("sports bra");
+    expect(b.prompt.split("\n")[0].toLowerCase()).toContain("technical performance fabric");
+  });
+
+  it("une veste de training est une veste de survêtement zippée, sans changer son sujet", () => {
+    const b = sujet({ category: "vestes_blazers", sous_type: "Veste", name: "Veste de training", matiere: "Matière technique" });
+    expect(b.noun).toBe("jacket");
+    expect(ligne1({ category: "vestes_blazers", sous_type: "Veste", name: "Veste de training" })).toContain("zip-up athletic track");
+  });
+
+  it("les empiècements se voient ; « contrasté » seul ne dit pas d'empiècement (doublure, semelle, ceinture)", () => {
+    expect(ligne1({ category: "pantalons", sous_type: "Legging", name: "Legging à empiècements" })).toContain("contrasting panels");
+    expect(ligne1({ category: "vestes_blazers", sous_type: "Blazer", name: "Blazer à doublure contrastée" })).not.toContain("panels");
+  });
+});
+
 describe("buildImagePrompt — le sujet dans sa forme finale (seconde passe du 15/10/2026)", () => {
   const ligne1 = (over: Partial<VestiaireRow>) => sujet(over).prompt.split("\n")[0];
   it("aucun mot déjà dit par le sujet n'est répété", () => {

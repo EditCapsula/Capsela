@@ -99,24 +99,35 @@ export function proprePourSaison(it: Item, saison: CapsuleSeason): boolean {
   return Boolean(it.capsuleSeasons?.length && it.capsuleSeasons.length < 4 && it.capsuleSeasons.includes(saison));
 }
 
+/** Une pièce d'intérieur : chaussures d'intérieur, ou pièce déclarée pour le seul Cocooning. Jamais une pièce clé (01/11/2026). */
+export function estPieceDInterieur(it: Item): boolean {
+  if (it.shoeType === "Chaussures d'intérieur") return true;
+  const occ = occasionsOf(it);
+  return occ.length === 1 && occ[0] === "cocooning";
+}
+
+/** Nombre de saisons que la pièce déclare (mêmes lectures que proprePourSaison) ; 4 sans donnée. Moins = plus typique de sa saison. */
+function nombreDeSaisons(it: Item): number {
+  if (it.saisons?.length) return it.saisons.length;
+  if (it.capsuleSeasons?.length) return it.capsuleSeasons.length;
+  if (it.season && it.season !== "Toutes saisons") return 2;
+  return 4;
+}
+
 /**
- * Jusqu'à 3 pièces clés, choisies PARMI les suggestions de la capsule.
+ * Jusqu'à 3 pièces clés, choisies PARMI les suggestions de la capsule. Une pièce par famille (FAMILLES_CLES) ; la 4ᵉ famille ne sert
+ * que si l'une des trois premières est vide.
  *
- * Il n'existait aucun mécanisme de « pièce clé » : règle simple et
- * déterministe, sans score nouveau. Une pièce par famille (FAMILLES_CLES),
- * la première marquée indispensable (`estBasiqueCapsule`, donnée catalogue
- * que la sélection privilégie déjà), sinon la première de la famille dans
- * l'ordre de la capsule. La 4ᵉ famille ne sert que si l'une des trois
- * premières est vide.
- *
- * `saison` (01/10/2026) : la capsule affichée. Dans chaque famille, les
- * pièces propres à cette saison (proprePourSaison) passent avant les autres ;
- * et en Automne ou Hiver, la famille « maille ou haut » ne retient que des
- * pulls — un haut léger, même « toutes saisons », ne donne pas le ton d'une
- * capsule d'hiver, SAUF un haut dont les manches sont renseignées « longues »
- * (Item.manches, migration 0042) ; une famille sans pull ni haut à manches
- * longues laisse sa place à la suivante (ARBITRAGE ÉDITORIAL). Omise, la
- * règle d'origine.
+ * Avec la saison de la capsule — RÈGLES VALIDÉES PAR LA PROPRIÉTAIRE LE 01/11/2026 (signalé : des chaussures d'intérieur et une
+ * maille ajourée parmi les pièces clés d'une capsule d'automne) :
+ *   1. jamais une pièce d'intérieur (estPieceDInterieur) ;
+ *   2. les pièces les plus TYPIQUES de la saison d'abord : propres à la saison (proprePourSaison), puis celles qui déclarent le
+ *      moins de saisons ; en Automne et Hiver, à égalité, la plus chaude (température maximale la plus basse) ;
+ *   3. plus de repli : une famille sans pièce propre à la saison laisse sa place à la suivante ;
+ *   4. à égalité, la pièce qui couvre le plus d'occasions, puis l'indispensable, puis l'ordre de la capsule.
+ * En Automne ou Hiver, la famille « maille ou haut » ne retient toujours que des pulls et des hauts à manches longues (01/10/2026).
+ * Famille « manteau ou veste » (01/11/2026) : en hiver, un manteau avant toute veste.
+ * Sans saison : la règle d'origine (l'indispensable, sinon la première de la famille).
  */
 export function piecesCles(capsule: Item[], max = 3, saison?: CapsuleSeason): Item[] {
   const retenues: Item[] = [];
@@ -124,13 +135,35 @@ export function piecesCles(capsule: Item[], max = 3, saison?: CapsuleSeason): It
   for (const famille of FAMILLES_CLES) {
     if (retenues.length >= max) break;
     let candidates = capsule.filter((it) => famille.includes(it.cat));
-    if (saison) {
-      if (froid && famille.includes("haut")) candidates = candidates.filter((it) => it.cat === "pull" || it.manches === "longues");
-      const propres = candidates.filter((it) => proprePourSaison(it, saison));
-      if (propres.length) candidates = propres;
+    if (!saison) {
+      const choix = candidates.find((it) => it.estBasiqueCapsule) ?? candidates[0];
+      if (choix) retenues.push(choix);
+      continue;
     }
-    const choix = candidates.find((it) => it.estBasiqueCapsule) ?? candidates[0];
-    if (choix) retenues.push(choix);
+    candidates = candidates.filter((it) => !estPieceDInterieur(it) && proprePourSaison(it, saison));
+    if (froid && famille.includes("haut")) candidates = candidates.filter((it) => it.cat === "pull" || it.manches === "longues");
+    // En hiver, un manteau passe devant toute veste (01/11/2026, validé par la propriétaire, signalé : une « Veste matelassée légère »
+    // pièce clé d'une capsule d'hiver). Le rôle « calque » ne sert pas à les distinguer : le catalogue le donne à toutes ses vestes et
+    // à tous ses manteaux (99 sur 99, mesuré le même jour).
+    if (saison === "Hiver" && famille.includes("manteau") && candidates.some((it) => it.cat === "manteau")) {
+      candidates = candidates.filter((it) => it.cat === "manteau");
+    }
+    if (!candidates.length) continue;
+    const rang = (it: Item) => capsule.indexOf(it);
+    const cle = (it: Item): number[] => [
+      nombreDeSaisons(it),
+      froid ? (it.meteoMaxTemp ?? 99) : 0,
+      -occasionsOf(it).length,
+      it.estBasiqueCapsule ? 0 : 1,
+      rang(it),
+    ];
+    const meilleure = candidates.reduce((a, b) => {
+      const ka = cle(a);
+      const kb = cle(b);
+      for (let k = 0; k < ka.length; k++) if (ka[k] !== kb[k]) return kb[k] < ka[k] ? b : a;
+      return a;
+    });
+    retenues.push(meilleure);
   }
   return retenues;
 }

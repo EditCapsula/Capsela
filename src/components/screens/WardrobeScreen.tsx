@@ -220,7 +220,7 @@ export default function WardrobeScreen() {
     const vide = items.length === 0;
     const pool = vide
       ? defaultCapsule
-      : composeWardrobePool(items, defaultCapsule, CATS.map(([k]) => k), { completerPourOccasion: occasion, saison: weather, exclureHorsOccasion: true, pieceAdaptee: true });
+      : composeWardrobePool(items, defaultCapsule, CATS.map(([k]) => k), { completerPourOccasion: occasion, saison: weather, exclureHorsOccasion: true, pieceAdaptee: true, genre: profile.gender });
     if (pool.length === 0) return null;
     // Tirage stable (12/10/2026) : même dressing, mêmes tenues d'inspiration à chaque rechargement (graine = occasion + pool).
     const r = avecTirageDeterministe(graineIdees(occasion.length, occasion, pool), () =>

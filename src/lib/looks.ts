@@ -30,11 +30,11 @@ const CAT_KEYS = CATS.map(([k]) => k) as CategoryKey[];
  * Idempotent sur un dressing vide : `pool` vaut alors la capsule, et il n'y a
  * rien à compléter.
  */
-function poolPourOccasion(pool: Item[], capsule: Item[], occasion: OccasionKey, weather: Weather, saison: CapsuleSeason | null): Item[] {
+function poolPourOccasion(pool: Item[], capsule: Item[], occasion: OccasionKey, weather: Weather, saison: CapsuleSeason | null, genre: string | null = null): Item[] {
   // Même référentiel saisonnier que le moteur pour ce décompte : la capsule
   // quand sa saison est connue, sinon la météo (28/09/2026).
   const contexte = saison ? contexteCapsule(saison) : weather;
-  return composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: occasion, saison: contexte, exclureHorsOccasion: true, pieceAdaptee: true });
+  return composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: occasion, saison: contexte, exclureHorsOccasion: true, pieceAdaptee: true, genre });
 }
 
 /**
@@ -123,7 +123,7 @@ export function tenuesDistinctes(
   const vues = new Set<string>();
   avecTirageDeterministe(graine(pool), () => {
     for (const occ of OCCS) {
-      const p = poolPourOccasion(pool, capsule, occ, weather, saison);
+      const p = poolPourOccasion(pool, capsule, occ, weather, saison, gender);
       for (let k = 0; k < budget; k++) {
         const { ids } = generateOutfitWithFallback(p, weather, occ, "Présentiel", "Verre", [], gender, saison);
         if (ids.length) vues.add([...ids].sort((a, b) => a - b).join(","));
@@ -149,7 +149,7 @@ export function occasionsCouvertes(
 ): number {
   return avecTirageDeterministe(graine(pool), () =>
     OCCS.filter((occ) =>
-      generateOutfitWithFallback(poolPourOccasion(pool, capsule, occ, weather, saison), weather, occ, "Présentiel", "Verre", [], gender, saison)
+      generateOutfitWithFallback(poolPourOccasion(pool, capsule, occ, weather, saison, gender), weather, occ, "Présentiel", "Verre", [], gender, saison)
         .ids.length > 0
     ).length
   );

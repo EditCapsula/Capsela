@@ -84,7 +84,8 @@ describe("haut à manches longues préféré par temps frais", () => {
 });
 
 describe("pièces clés — un haut à manches longues compte en automne-hiver", () => {
-  const piece = (id: number, over: Partial<Item>): Item => p(id, "haut", "Pièce " + id, over);
+  // Des pièces propres à la saison testée : depuis le 01/11/2026, une pièce sans saison déclarée n'est jamais pièce clé.
+  const piece = (id: number, over: Partial<Item>): Item => p(id, "haut", "Pièce " + id, { capsuleSeasons: ["Automne", "Hiver"], ...over });
   it("retenu parmi les pièces clés d'une capsule d'hiver, pas un haut sans manches", () => {
     const capsule = [piece(1, { manches: "sans", estBasiqueCapsule: true }), piece(2, { manches: "longues" })];
     expect(piecesCles(capsule, 3, "Hiver").map((i) => i.id)).toEqual([2]);
@@ -93,6 +94,6 @@ describe("pièces clés — un haut à manches longues compte en automne-hiver",
     expect(piecesCles([piece(1, {})], 3, "Hiver")).toEqual([]);
   });
   it("en été, les manches ne comptent pas", () => {
-    expect(piecesCles([piece(1, { manches: "sans" })], 3, "Été").map((i) => i.id)).toEqual([1]);
+    expect(piecesCles([piece(1, { manches: "sans", capsuleSeasons: ["Été"] })], 3, "Été").map((i) => i.id)).toEqual([1]);
   });
 });

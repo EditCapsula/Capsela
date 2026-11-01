@@ -10,7 +10,7 @@ import { estPlanValise } from "@/lib/valiseDuJour";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
-import { computeLookScore, estContexteMaison, qualificatifLook, sousTitreLookDuJour, tenueAUnSocle, titreDuQualificatif } from "@/lib/logic";
+import { clePrincipale, computeLookScore, estContexteMaison, qualificatifLook, sousTitreLookDuJour, tenueAUnSocle, titreDuQualificatif } from "@/lib/logic";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { libelleStyles, paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
@@ -523,6 +523,14 @@ export default function HomeScreen() {
             />
           </div>
         )}
+        {/* « Autre tenue » sans tenue au socle différent (01/11/2026) : la tenue est gardée, et on le dit. */}
+        {hasOutfit &&
+          state.autreTenueIndisponible !== null &&
+          state.autreTenueIndisponible === clePrincipale(state.outfit, [...state.items, ...vestiairePool]) && (
+            <p className="mt-3 text-center text-[12px] text-muted leading-[1.45]">
+              Pas d&apos;autre tenue vraiment différente avec les pièces disponibles pour cette occasion.
+            </p>
+          )}
 
         {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu. Le lien « Voir une autre proposition » n'est plus là
             (08/10/2026, demandé : « on a déjà "Sauvegarder" et "Autre tenue" ») ; la page Tenue garde « Autre tenue ». */}

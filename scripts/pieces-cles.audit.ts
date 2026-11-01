@@ -1,59 +1,57 @@
 import { describe, it } from "vitest";
-import { createClient } from "@supabase/supabase-js";
-import { CATALOG, type CatalogItem } from "../src/lib/catalog";
-import { CAPSULE_SEASONS, computeDefaultCapsule, contexteCapsule, estDeSaison, representativeWeatherFor } from "../src/lib/capsule";
+import { readFileSync } from "fs";
+import { rowToCatalogItem } from "../src/lib/vestiaire";
+import { computeDefaultCapsule, representativeWeatherFor } from "../src/lib/capsule";
 import { piecesCles, proprePourSaison } from "../src/lib/capsuleEcran";
-import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
-import { STYLES_FEMME, profilAudit } from "./harnaisAudit";
+import type { CatalogItem } from "../src/lib/catalog";
+import type { CapsuleSeason, CategoryKey, Item } from "../src/lib/types";
+import { exposedStyleIds } from "../src/lib/profile";
+import { profilAudit } from "./harnaisAudit";
+import { enLigne, lireCsv } from "./catalogueCsv";
 
-// PIÈCES CLÉS ET SAISON — AVANT / APRÈS, LECTURE SEULE. Signalé le 01/10/2026 : « il faut
-// qu'elles soient cohérentes avec la saison » (un t-shirt à manches courtes
-// parmi les trois pièces clés d'une capsule d'hiver). Mesure la règle en
-// production (piecesCles sans saison) : combien de pièces clés ne sont pas de
-// la saison de la capsule (estDeSaison) ou sortent de leurs bornes de
-// température à la température représentative de la saison.
+// PIÈCES CLÉS (01/11/2026) : la règle d'avant et les quatre règles validées, sur les mêmes capsules, dans la même exécution.
+// Usage : CATALOGUE_CSV=<export.csv> npx vitest run --config vitest.audit.config.mts scripts/pieces-cles.audit.ts
 
-for (const APRES of [false, true]) {
-describe(`pièces clés et saison — ${APRES ? "après (saison transmise)" : "avant (règle d'origine)"}`, () => {
-  it("mesure", async () => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-    const cle = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    let catalogue: CatalogItem[] = CATALOG;
-    let source = "catalogue de REPLI";
-    if (url && cle) {
-      const { data, error } = await createClient(url, cle).from("vestiaire_universel").select("*").order("id").returns<VestiaireRow[]>();
-      if (!error && data?.length) {
-        catalogue = data.filter((r) => (r as VestiaireRow & { frozen?: boolean }).frozen !== true).map(rowToCatalogItem).filter((it): it is CatalogItem => Boolean(it));
-        source = "catalogue RÉEL (vestiaire_universel)";
-      }
-    }
-    console.log(`CONFIGURATION GELÉE : ${source}, ${catalogue.length} pièces, ${STYLES_FEMME.length} styles femme, capsule bâtie comme à l'écran (météo représentative de la saison).`);
-    for (const saison of CAPSULE_SEASONS) {
-      const w = representativeWeatherFor(saison);
-      const ctx = contexteCapsule(saison);
-      let total = 0, horsSaison = 0, horsBornes = 0, propres = 0, hauts = 0, cellulesVides = 0;
-      const vus = new Map<string, number>();
-      const rep = new Map<string, number>();
-      for (const style of STYLES_FEMME) {
-        const capsule = computeDefaultCapsule(profilAudit({ gender: "femme", styles: [style] }), w, [], saison, catalogue);
-        if (piecesCles(capsule, 3, APRES ? saison : undefined).length < 3) cellulesVides++;
-        for (const it of piecesCles(capsule, 3, APRES ? saison : undefined)) {
-          total++;
-          if (proprePourSaison(it, saison)) propres++;
-          if (it.cat === "haut") hauts++;
-          const clef = `${it.name} | ${it.season} | saisons ${it.saisons?.join("/") ?? "-"} | capsuleSeasons ${(it as CatalogItem).capsuleSeasons?.join("/") ?? "-"}`;
-          rep.set(clef, (rep.get(clef) ?? 0) + 1);
-          const hs = !estDeSaison(it, ctx);
-          const hb = (it.meteoMinTemp != null && w.temp < it.meteoMinTemp) || (it.meteoMaxTemp != null && w.temp > it.meteoMaxTemp);
-          if (hs) horsSaison++;
-          if (hb) horsBornes++;
-          if (hs || hb) vus.set(`${it.name} [${it.season}${it.saisons ? " " + it.saisons.join("/") : ""}; min ${it.meteoMinTemp ?? "-"} max ${it.meteoMaxTemp ?? "-"}]`, (vus.get(`${it.name}`) ?? 0) + 1);
-        }
-      }
-      console.log(`\n── ${saison} (${w.temp}°) : ${total} pièces clés, hors saison ${horsSaison}, hors bornes ${horsBornes}, propres à la saison ${propres}, « haut » ${hauts}, styles à moins de 3 pièces clés ${cellulesVides}`);
-      console.log(`   répartition : ${[...rep].map(([k, n]) => `${k} ×${n}`).join(" · ")}`);
-      for (const [k] of [...vus].slice(0, 8)) console.log(`     ${k}`);
-    }
-  }, 600_000);
-});
+const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
+const FAMILLES: CategoryKey[][] = [["manteau", "veste"], ["pull", "haut"], ["chaussures"], ["pantalon", "jean", "jupe", "robe"]];
+
+/** La règle du 01/10/2026, reproduite telle quelle pour la comparaison. */
+function avant(capsule: Item[], saison: CapsuleSeason): Item[] {
+  const out: Item[] = [];
+  const froid = saison === "Automne" || saison === "Hiver";
+  for (const f of FAMILLES) {
+    if (out.length >= 3) break;
+    let c = capsule.filter((it) => f.includes(it.cat));
+    if (froid && f.includes("haut")) c = c.filter((it) => it.cat === "pull" || it.manches === "longues");
+    const p = c.filter((it) => proprePourSaison(it, saison));
+    if (p.length) c = p;
+    const choix = c.find((it) => it.estBasiqueCapsule) ?? c[0];
+    if (choix) out.push(choix);
+  }
+  return out;
 }
+
+describe("pièces clés", () => {
+  it("avant / après, tous styles, quatre saisons, deux genres", () => {
+    const csv = process.env.CATALOGUE_CSV;
+    if (!csv) throw new Error("CATALOGUE_CSV requis.");
+    const pool = lireCsv(readFileSync(csv, "utf8")).map(enLigne).map(rowToCatalogItem).filter((x): x is CatalogItem => x !== null);
+    let changees = 0, total = 0, moinsDeTrois = 0, moinsDeTroisAvant = 0;
+    for (const g of ["femme", "homme"] as const)
+      for (const s of SAISONS) {
+        const lignes: string[] = [];
+        for (const st of exposedStyleIds(g)) {
+          const capsule = computeDefaultCapsule(profilAudit({ gender: g, styles: [st] }), representativeWeatherFor(s), [], s, pool);
+          const a = avant(capsule, s).map((x) => x.name);
+          const b = piecesCles(capsule, 3, s).map((x) => x.name);
+          total++;
+          if (a.join() !== b.join()) changees++;
+          if (b.length < 3) moinsDeTrois++;
+          if (a.length < 3) moinsDeTroisAvant++;
+          lignes.push(`   ${st.padEnd(14)} avant : ${a.join(" · ")}\n${" ".repeat(18)}après : ${b.join(" · ")}`);
+        }
+        console.log(`\n${g} — ${s}\n${lignes.join("\n")}`);
+      }
+    console.log(`\nCapsules ${total} · pièces clés modifiées ${changees} · moins de 3 pièces clés : avant ${moinsDeTroisAvant}, après ${moinsDeTrois}`);
+  });
+});

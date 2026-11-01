@@ -71,16 +71,59 @@ describe("piecesCles — cohérentes avec la saison (01/10/2026)", () => {
     expect(piecesCles(capsule, 3, "Hiver").map((i) => i.id)).toEqual([2, 4]);
   });
 
-  it("en automne, un haut sans pull dans la capsule laisse sa place à la famille suivante", () => {
-    expect(piecesCles([tshirt, baskets, piece(6, { cat: "pantalon" })], 3, "Automne").map((i) => i.id)).toEqual([3, 6]);
+  it("en automne, une capsule sans pièce propre à la saison n'a aucune pièce clé (pas de repli, 01/11/2026)", () => {
+    expect(piecesCles([tshirt, baskets, piece(6, { cat: "pantalon" })], 3, "Automne")).toEqual([]);
   });
 
-  it("en été : les sandales, et le haut reste admis", () => {
-    expect(piecesCles(capsule, 3, "Été").map((i) => i.id)).toEqual([1, 5]);
+  it("en été : les sandales ; le t-shirt des quatre saisons n'est pas typique de l'été", () => {
+    expect(piecesCles(capsule, 3, "Été").map((i) => i.id)).toEqual([5]);
   });
 
-  it("une famille sans pièce propre garde ses pièces neutres", () => {
-    expect(piecesCles([baskets], 3, "Hiver").map((i) => i.id)).toEqual([3]);
+  it("une famille sans pièce propre à la saison laisse sa place, sans repli sur les pièces neutres (01/11/2026)", () => {
+    expect(piecesCles([baskets], 3, "Hiver")).toEqual([]);
+  });
+});
+
+describe("piecesCles — les quatre règles du 01/11/2026", () => {
+  const automne = { season: "Automne / Hiver" as Season, capsuleSeasons: ["Automne", "Hiver"] as Item["capsuleSeasons"] };
+
+  it("1. jamais une pièce d'intérieur : chaussures d'intérieur, ni pièce du seul Cocooning", () => {
+    const chaussons = piece(1, { cat: "chaussures", shoeType: "Chaussures d'intérieur", ...automne });
+    const pullCocooning = piece(2, { cat: "pull", occasion: ["cocooning"], ...automne });
+    const bottines = piece(3, { cat: "chaussures", ...automne });
+    expect(piecesCles([chaussons, pullCocooning, bottines], 3, "Automne").map((i) => i.id)).toEqual([3]);
+  });
+
+  it("2. la pièce qui déclare le moins de saisons passe devant", () => {
+    const troisSaisons = piece(1, { cat: "manteau", capsuleSeasons: ["Printemps", "Automne", "Hiver"] });
+    const automneSeul = piece(2, { cat: "manteau", capsuleSeasons: ["Automne"] });
+    expect(piecesCles([troisSaisons, automneSeul], 3, "Automne").map((i) => i.id)).toEqual([2]);
+  });
+
+  it("2. en hiver, à saisons égales, la plus chaude (température maximale la plus basse)", () => {
+    const leger = piece(1, { cat: "manteau", meteoMaxTemp: 15, ...automne });
+    const chaud = piece(2, { cat: "manteau", meteoMaxTemp: 8, ...automne });
+    expect(piecesCles([leger, chaud], 3, "Hiver").map((i) => i.id)).toEqual([2]);
+  });
+
+  it("2. en été, la température ne départage pas : l'ordre de la capsule", () => {
+    const ete = { capsuleSeasons: ["Été"] as Item["capsuleSeasons"] };
+    const a = piece(1, { cat: "chaussures", meteoMaxTemp: 35, ...ete });
+    const b = piece(2, { cat: "chaussures", meteoMaxTemp: 25, ...ete });
+    expect(piecesCles([a, b], 3, "Été").map((i) => i.id)).toEqual([1]);
+  });
+
+  it("en hiver, un manteau passe devant toute veste", () => {
+    const veste = piece(1, { cat: "veste", ...automne, meteoMaxTemp: 5 });
+    const manteau = piece(2, { cat: "manteau", ...automne, meteoMaxTemp: 12 });
+    expect(piecesCles([veste, manteau], 3, "Hiver").map((i) => i.id)).toEqual([2]);
+    expect(piecesCles([veste, manteau], 3, "Automne").map((i) => i.id)).toEqual([1]);
+  });
+
+  it("4. à égalité, la pièce qui couvre le plus d'occasions, avant l'indispensable", () => {
+    const indispensable = piece(1, { cat: "chaussures", estBasiqueCapsule: true, occasion: ["travail_formel"], ...automne });
+    const polyvalente = piece(2, { cat: "chaussures", occasion: ["travail_formel", "quotidien", "soiree"], ...automne });
+    expect(piecesCles([indispensable, polyvalente], 3, "Automne").map((i) => i.id)).toEqual([2]);
   });
 });
 

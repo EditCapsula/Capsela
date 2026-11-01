@@ -11,6 +11,7 @@ import {
   coupeOf,
   formalityOf,
   huesHarmonious,
+  chaussureHabillee,
   estDenim,
   fermetureMaille,
   matiereDeVoyage,
@@ -393,6 +394,8 @@ export interface LeviersMesure {
   deuxSansManches?: boolean;
   /** Reproduit le comportement d'AVANT le 30/10/2026 : en soirée et en cérémonie, les talons ne sont pas privilégiés pour une femme (R-S24). */
   sansTalonsEnSoiree?: boolean;
+  /** Reproduit le comportement d'AVANT le 01/11/2026 : en soirée, une femme peut recevoir des chaussures non habillées (R-S25). */
+  sansChaussuresHabilleesEnSoiree?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
@@ -1658,6 +1661,8 @@ export function generateOutfit(
       else missingWarmth = true;
     }
   }
+  // R-S25 : aucune paire habillée pour une soirée, alors que le pool a des chaussures — signalé comme un manque, plus bas.
+  let paireHabilleeManquante = false;
   const sh = (() => {
     // Les baskets sont déjà exclues en amont si l'occasion est habillée (R-B6, hardCategoryFilter).
     let shoePool = poolFor(["chaussures"], true).filter((i) => i.cat === "chaussures");
@@ -1678,6 +1683,12 @@ export function generateOutfit(
     if (gender === "femme" && (occasion === "soiree" || occasion === "evenement_perso") && !leviers?.sansTalonsEnSoiree) {
       const talons = shoePool.filter((i) => i.shoeType && CHAUSSURES_A_TALONS.includes(i.shoeType));
       if (talons.length) shoePool = talons;
+    }
+    // R-S25 (01/11/2026, demandé) — en soirée, une femme reçoit des chaussures HABILLÉES (chaussureHabillee), sinon aucune : la tenue
+    // signale alors la paire manquante (missingCats « chaussures »), plutôt que des baskets ou des mocassins. Dure, contrairement à R-S24.
+    if (gender === "femme" && occasion === "soiree" && !leviers?.sansChaussuresHabilleesEnSoiree) {
+      shoePool = shoePool.filter(chaussureHabillee);
+      paireHabilleeManquante = shoePool.length === 0;
     }
     // R-S19 — en Voyage, les baskets d'abord (« même en chaussures, comme des baskets »), puis la liste confort ci-dessus. Molle.
     if (occasion === "voyage" && !leviers?.sansConfortVoyage) {
@@ -1757,7 +1768,7 @@ export function generateOutfit(
     if (!hasCat(["haut"])) missingCats.push("haut");
     if (!hasCat(BOTTOMS)) missingCats.push("bas");
   }
-  if (!hasCat(["chaussures"])) missingCats.push("chaussures");
+  if (!hasCat(["chaussures"]) || paireHabilleeManquante) missingCats.push("chaussures");
   if (missingWarmth) missingCats.push("chaud");
 
   return { ids: Array.from(new Set(ids)), missingCats, occasionRelachee };
@@ -3298,11 +3309,9 @@ export function describeOutfitVariation(
  * (getOutfitsForItem, `structuralCats`) : sac, bijou et accessoire n'en font
  * pas partie.
  *
- * Pas de règle fixe du type « toujours deux pièces » : la variation est
- * substantielle si le SOCLE change (haut, maille, bas, jupe, robe,
- * combinaison — ce qui fait la silhouette), ou si au moins deux pièces
- * principales changent (chaussures + veste, par exemple). Changer seulement
- * les chaussures d'une même robe n'est pas une nouvelle tenue.
+ * La variation est substantielle si le SOCLE change (haut, maille, bas, jupe, robe, combinaison — ce qui fait la silhouette). Depuis
+ * le 01/11/2026, changer la veste et les chaussures d'une même robe n'en est plus une (avant : deux pièces principales changées
+ * suffisaient). Changer seulement les chaussures, ou ajouter une veste ou un accessoire, n'est pas une nouvelle tenue.
  *
  * Ces fonctions ne composent rien : elles jugent des tenues produites par le
  * moteur, dont toutes les règles (morphologie et style via la capsule, météo,
@@ -3350,7 +3359,11 @@ export function varieSubstantiellement(avant: number[], apres: number[], pool: I
   if (!piecesPrincipales(avant, pool).length) return true;
   const socleAvant = piecesPrincipales(avant, pool, CATEGORIES_SOCLE).join(",");
   const socleApres = piecesPrincipales(apres, pool, CATEGORIES_SOCLE).join(",");
-  return socleAvant !== socleApres || ecartPrincipal(avant, apres, pool) >= 2;
+  // LE SOCLE DOIT CHANGER (01/11/2026, demandé : « tu ne peux pas considérer qu'une autre tenue est la même tenue que précédemment mais
+  // avec une veste ou un accessoire en plus »). Avant, deux pièces principales changées suffisaient (veste + chaussures sur la même
+  // robe) : une tenue sans socle seulement garde cette règle.
+  if (socleAvant) return socleAvant !== socleApres;
+  return ecartPrincipal(avant, apres, pool) >= 2;
 }
 
 /**

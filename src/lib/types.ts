@@ -500,6 +500,11 @@ export interface AppState {
    */
   tenuesVues: string[];
   /**
+   * « Autre tenue » sans autre tenue (01/11/2026) : la clé principale de la tenue gardée quand aucune tenue au SOCLE différent n'a pu
+   * être composée. L'écran l'annonce tant que la tenue affichée a cette clé ; toute autre tenue fait tomber l'annonce d'elle-même.
+   */
+  autreTenueIndisponible: string | null;
+  /**
    * « Demander l'avis d'un proche » depuis une tenue PLANIFIÉE (recette du
    * 26/09/2026) : ce que l'écran de partage décrit à la place de la tenue du
    * jour, et le plan à rouvrir au retour. null : la tenue du jour, comme avant.

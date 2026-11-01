@@ -124,16 +124,44 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
  * LE CARROUSEL (14/10/2026) : une piste à défilement horizontal calé sur chaque slide (scroll-snap), des repères de pagination dessous.
  * Aucune bibliothèque : la position se lit sur le défilement, les repères y reconduisent. Une seule slide domine ; la piste ne
  * déborde pas de la page (le défilement reste dans le composant).
+ *
+ * ENRICHI LE 01/11/2026 (« Idées de looks ») sans rien changer pour l'accueil, qui garde les valeurs par défaut :
+ *   · `largeurSlide` : une slide plus étroite que la piste laisse voir le bord de la suivante — on comprend qu'il y en a d'autres sans
+ *     découvrir le geste par hasard ; la position se lit alors sur les slides elles-mêmes, plus sur la largeur de la piste ;
+ *   · `label` : le nom du carrousel pour un lecteur d'écran ;
+ *   · `onActif` : la slide affichée, pour l'appelant (compteur, actions liées) ;
+ *   · `versSlide` : demande d'aller à une slide (un filtre qui change, un raccourci) ;
+ *   · `retrait` et `ecart` : la gouttière de la page reprise dans la piste, et l'espace entre les slides ;
+ *   · les flèches gauche et droite du clavier, la piste ayant le focus.
  */
 export function CarrouselHero({
   slides,
   libelles,
   onAvantDerniere,
+  label = "Tes tenues du jour",
+  largeurSlide = "100%",
+  classeSlide = "px-4",
+  onActif,
+  versSlide,
+  className = "mt-3",
+  retrait = 0,
+  ecart = 0,
 }: {
   slides: React.ReactNode[];
   libelles: string[];
   /** Appelé quand l'avant-dernière slide (ou la dernière) est affichée : le carrousel tire alors la suivante (17/10/2026). */
   onAvantDerniere?: () => void;
+  label?: string;
+  largeurSlide?: string;
+  classeSlide?: string;
+  onActif?: (index: number) => void;
+  /** Une demande de position : `cle` change à chaque demande, même vers la même slide. */
+  versSlide?: { index: number; cle: number };
+  className?: string;
+  /** Marge intérieure de la piste, en px (le gouttière de la page) : chaque slide se cale à ce retrait, la suivante dépasse à droite. */
+  retrait?: number;
+  /** L'espace entre deux slides, en px. */
+  ecart?: number;
 }) {
   const piste = useRef<HTMLDivElement>(null);
   const [actif, setActif] = useState(0);
@@ -145,37 +173,69 @@ export function CarrouselHero({
     // Une fois par arrivée sur l'avant-dernière (ou par slide ajoutée) : pas à chaque rendu, la fonction change à chaque rendu.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [surAvantDerniere, n]);
+  useEffect(() => {
+    onActif?.(indexActif);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indexActif]);
+
+  /** Le décalage de la slide i dans la piste : sa position, moins celle de la première (le retrait de la piste n'en fait pas partie). */
+  const decalage = (i: number) => {
+    const el = piste.current;
+    const enfants = el?.children;
+    if (!el || !enfants?.length) return 0;
+    const cible = enfants[Math.max(0, Math.min(i, enfants.length - 1))] as HTMLElement;
+    return cible.offsetLeft - (enfants[0] as HTMLElement).offsetLeft;
+  };
 
   // Une slide qui disparaît (plus de proposition) ramène à une position valide ; une piste qui rétrécit se recale.
   useEffect(() => {
     const el = piste.current;
-    if (el && actif > n - 1) el.scrollTo({ left: Math.max(0, n - 1) * el.clientWidth });
+    if (el && actif > n - 1) el.scrollTo({ left: decalage(Math.max(0, n - 1)) });
   }, [n, actif]);
 
   const surDefilement = () => {
     const el = piste.current;
-    if (!el || el.clientWidth === 0) return;
-    setActif(Math.round(el.scrollLeft / el.clientWidth));
+    const premiere = el?.children[0] as HTMLElement | undefined;
+    if (!el || !premiere || premiere.offsetWidth === 0) return;
+    // Le pas d'une slide à la suivante : sa largeur et l'écart.
+    setActif(Math.min(n - 1, Math.round(el.scrollLeft / (premiere.offsetWidth + ecart))));
   };
   const aller = (i: number) => {
     const el = piste.current;
     if (!el) return;
     const reduit = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    el.scrollTo({ left: i * el.clientWidth, behavior: reduit ? "auto" : "smooth" });
+    el.scrollTo({ left: decalage(i), behavior: reduit ? "auto" : "smooth" });
+  };
+  useEffect(() => {
+    if (versSlide) aller(versSlide.index);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [versSlide?.cle]);
+
+  const auClavier = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight" && indexActif < n - 1) {
+      e.preventDefault();
+      aller(indexActif + 1);
+    } else if (e.key === "ArrowLeft" && indexActif > 0) {
+      e.preventDefault();
+      aller(indexActif - 1);
+    }
   };
 
   return (
-    <div className="mt-3" role="region" aria-roledescription="carrousel" aria-label="Tes tenues du jour">
+    <div className={className} role="region" aria-roledescription="carrousel" aria-label={label}>
       <div
         ref={piste}
         onScroll={surDefilement}
-        className="flex overflow-x-auto snap-x snap-mandatory"
-        style={{ scrollbarWidth: "none", overscrollBehaviorX: "contain" }}
+        onKeyDown={auClavier}
+        tabIndex={n > 1 ? 0 : undefined}
+        className="flex overflow-x-auto snap-x snap-mandatory outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
+        style={{ scrollbarWidth: "none", overscrollBehaviorX: "contain", ...(retrait ? { paddingInline: retrait, scrollPaddingInline: retrait } : null), ...(ecart ? { columnGap: ecart } : null) }}
       >
         {slides.map((slide, i) => (
           <div
             key={i}
-            className="snap-center shrink-0 w-full px-4 flex flex-col"
+            className={`${retrait ? "snap-start" : "snap-center"} shrink-0 flex flex-col ${classeSlide}`}
+            style={{ width: largeurSlide }}
             role="group"
             aria-roledescription="diapositive"
             aria-label={`${libelles[i]} (${i + 1} sur ${n})`}

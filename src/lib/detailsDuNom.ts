@@ -58,6 +58,12 @@ const MOTS: Record<string, string> = {
   "léger": "lightweight",
   "légère": "lightweight",
   basque: "peplum",
+  // Sport (01/11/2026, signalé : « Veste de training » dessinée en blazer, « Legging à empiècements » dessiné uni). « Contrasté »
+  // n'en est pas : il dit une doublure, une semelle ou une ceinture contrastée aussi bien qu'un empiècement.
+  training: "zip-up athletic track",
+  "empiècements": "with contrasting panels",
+  "color-block": "color-block",
+  thermique: "thermal",
   palazzo: "full-length wide-leg palazzo",
   // Longueur et forme
   longue: "long",
