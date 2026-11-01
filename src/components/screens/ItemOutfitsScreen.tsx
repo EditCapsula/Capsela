@@ -61,11 +61,8 @@ import AppHeader from "@/components/AppHeader";
 export function calculerIdeesTenues(
   pivot: Item,
   wardrobePool: Item[],
-  /**
-   * Le dressing réel (state.items) : ses pièces passent d'abord, cf. ideesDressingDAbord (27/09/2026). `null` (01/11/2026) : les idées
-   * d'une pièce de la capsule, tirées dans la seule capsule.
-   */
-  dressing: Item[] | null,
+  /** Le dressing réel (state.items) : ses pièces passent d'abord, cf. ideesDressingDAbord (27/09/2026). */
+  dressing: Item[],
   capsuleSeason: CapsuleSeason,
   preferredHexes: string[],
   gender: "femme" | "homme" | null,
@@ -103,14 +100,6 @@ export default function ItemOutfitsScreen() {
 
   const pivot = wardrobePool.find((i) => i.id === state.activeId) || vestiairePool.find((i) => i.id === state.activeId);
 
-  // Déjà au dressing = pas un id de catalogue (statique 1001+ ou
-  // vestiaire_universel 100000+, cf. isCatalogId), ou déjà remplacée via
-  // "J'ai déjà" (suggestedExcluded, alimenté par startReplace + saveItem).
-  // Plus fiable que l'ancien !wardrobePool.some(...) : wardrobePool contient
-  // aussi les pièces de la capsule par défaut qui comblent une catégorie
-  // vide, où une pièce suggérée non possédée lirait alors à tort comme
-  // "déjà au dressing".
-  const alreadyOwned = pivot ? !isCatalogId(pivot.id) || state.suggestedExcluded.includes(pivot.id) : false;
 
   // La pièce pivot doit toujours être présente, même si sa catégorie est
   // par ailleurs pourvue par une pièce réelle dans wardrobePool (auquel
@@ -131,8 +120,11 @@ export default function ItemOutfitsScreen() {
   // avec les capsules Minimaliste, Casual chic et Classique chic ; 3 avec la sienne). Même profil que l'écran Capsule.
   const exploredStyleId = state.exploredStyleId;
   const profilCapsule = useMemo(() => (exploredStyleId ? { ...profile, styles: [exploredStyleId] } : profile), [profile, exploredStyleId]);
-  const capsule = useMemo(
-    () =>
+  // LE DRESSING D'ABORD, LA CAPSULE POUR COMPLÉTER (ideesDressingDAbord, 27/09/2026), pour toute pièce. Arbitré de nouveau le
+  // 01/11/2026 par la propriétaire : la refonte avait limité une pièce de la capsule à sa seule capsule (règle 2 du brief), puis
+  // « Dressing d'abord, la capsule pour compléter » — voir la pièce suggérée avec ce qu'on possède déjà.
+  const poolSaison = useMemo(() => {
+    const capsule =
       autreSaison || exploredStyleId
         ? computeDefaultCapsule(
             profilCapsule,
@@ -142,16 +134,9 @@ export default function ItemOutfitsScreen() {
             capsuleSeason,
             vestiairePool
           )
-        : defaultCapsule,
-    [autreSaison, exploredStyleId, profilCapsule, weather, capsuleSeason, state.suggestedExcluded, vestiairePool, defaultCapsule]
-  );
-  // UNE PIÈCE DE LA CAPSULE : SES LOOKS DANS LA SEULE CAPSULE (01/11/2026, refonte « Idées de looks ») — les autres pièces viennent de la
-  // même capsule saisonnière, jamais du dressing ni d'une autre capsule. Une pièce du dressing garde son parcours : ses pièces d'abord,
-  // la capsule pour compléter (ideesDressingDAbord, 27/09/2026).
-  const poolSaison = useMemo(
-    () => (alreadyOwned ? poolPourIdees(state.items, capsule, capsuleSeason) : capsule),
-    [alreadyOwned, state.items, capsule, capsuleSeason]
-  );
+        : defaultCapsule;
+    return poolPourIdees(state.items, capsule, capsuleSeason);
+  }, [autreSaison, exploredStyleId, profilCapsule, weather, capsuleSeason, state.suggestedExcluded, vestiairePool, defaultCapsule, state.items]);
 
   const pool = useMemo(
     () => (!pivot ? [] : poolSaison.some((i) => i.id === pivot.id) ? poolSaison : [...poolSaison, pivot]),
@@ -173,8 +158,8 @@ export default function ItemOutfitsScreen() {
         ? []
         : pretes && pretes.pivotId === pivot.id
           ? pretes.variations
-          : calculerIdeesTenues(pivot, poolSaison, alreadyOwned ? state.items : null, capsuleSeason, preferredHexes, profile.gender, colorimetrie),
-    [pivot, pretes, poolSaison, alreadyOwned, state.items, preferredHexes, profile.gender, capsuleSeason, colorimetrie]
+          : calculerIdeesTenues(pivot, poolSaison, state.items, capsuleSeason, preferredHexes, profile.gender, colorimetrie),
+    [pivot, pretes, poolSaison, state.items, preferredHexes, profile.gender, capsuleSeason, colorimetrie]
   );
 
   // Génération à la demande du visuel de la pièce pivot (correctif 23/08/2026,
@@ -198,6 +183,15 @@ export default function ItemOutfitsScreen() {
   const looks = useMemo(() => ordonnerLooks(variations, state.items), [variations, state.items]);
   const insights = useMemo(() => (pivot ? decrireLooks(variations, pool, pivot.id) : new Map()), [variations, pool, pivot]);
   if (!pivot) return null;
+
+  // Déjà au dressing = pas un id de catalogue (statique 1001+ ou
+  // vestiaire_universel 100000+, cf. isCatalogId), ou déjà remplacée via
+  // "J'ai déjà" (suggestedExcluded, alimenté par startReplace + saveItem).
+  // Plus fiable que l'ancien !wardrobePool.some(...) : wardrobePool contient
+  // aussi les pièces de la capsule par défaut qui comblent une catégorie
+  // vide, où une pièce suggérée non possédée lirait alors à tort comme
+  // "déjà au dressing".
+  const alreadyOwned = !isCatalogId(pivot.id) || state.suggestedExcluded.includes(pivot.id);
 
   // Même critère que les idées elles-mêmes : la saison de la météo représentative de la capsule.
   // Une pièce qui porte ses quatre saisons (27/09/2026) est jugée comme le
@@ -321,13 +315,11 @@ export default function ItemOutfitsScreen() {
       </div>
 
       {looks.length === 0 ? (
-        <EmptyState forme="carte" className="mt-[18px]" action={alreadyOwned && !horsSaison ? { libelle: "Compléter mon dressing →", onClick: actions.openAdd } : undefined}>
+        <EmptyState forme="carte" className="mt-[18px]" action={!horsSaison ? { libelle: "Compléter mon dressing →", onClick: actions.openAdd } : undefined}>
           {/* Une pièce hors de la saison de la capsule n'a pas d'idée pour une raison qui n'est pas le dressing (27/09/2026) : le dire. */}
           {horsSaison
             ? `Cette pièce se porte ${enSaisons(saisonsDe(pivot))} : ses idées de tenues viendront avec sa saison.`
-            : alreadyOwned
-              ? "Pas encore assez de pièces compatibles pour créer plusieurs looks avec cet article."
-              : "Ta capsule n'a pas encore de pièces qui s'accordent avec celle-ci pour composer un look."}
+            : "Pas encore assez de pièces compatibles pour créer plusieurs looks avec cet article."}
         </EmptyState>
       ) : (
         // LE CARROUSEL (01/11/2026) : une slide domine, le bord de la suivante dépasse — on voit qu'il y en a d'autres ; points de
@@ -352,7 +344,7 @@ export default function ItemOutfitsScreen() {
               insight={insights.get(cleLook(look.variation.ids))}
               dressing={state.items}
               pivotId={pivot.id}
-              marquerSuggestions={alreadyOwned}
+              marquerSuggestions
               enregistre={enregistre(look.variation.ids)}
               onOpen={() => ouvrir(look, i + 1)}
               onCoeur={() => actions.basculerIdeeLook(look.variation.ids, look.variation.occasion)}
