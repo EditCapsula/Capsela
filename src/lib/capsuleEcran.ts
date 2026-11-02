@@ -311,3 +311,24 @@ export function alternativesDeRemplacement(
   }
   return alternatives;
 }
+
+/**
+ * LA PHRASE DE LA FICHE D'UNE SUGGESTION (02/11/2026, refonte : « une phrase courte expliquant pourquoi Capsela recommande cette pièce »,
+ * ex. « Un essentiel qui complète naturellement ton style minimaliste »). Construite sur raisonsSuggestion — donc seulement sur ce que
+ * la sélection a réellement lu — et sur isStatement (la place réservée aux pièces de caractère) : le rôle de la pièce (indispensable,
+ * signature), puis le style du profil qu'elle sert. Sans aucune raison : null, et la fiche n'affiche pas de phrase.
+ */
+export function phraseSuggestion(it: Item, profile: Profile): string | null {
+  const raisons = raisonsSuggestion(it, profile);
+  const style = raisons.find((r) => r.cle === "style")?.texte.replace(/^Dans ton style /, "") ?? "";
+  const signature = isStatement(it);
+  const indispensable = !signature && raisons.some((r) => r.cle === "indispensable");
+  if (signature && style) return `Une pièce signature qui donne du caractère à ton style ${style}.`;
+  if (indispensable && style) return `Un indispensable qui complète naturellement ton style ${style}.`;
+  if (signature) return "Une pièce signature, pour donner du caractère à tes tenues.";
+  if (indispensable) return "Un indispensable, facile à associer avec le reste de ta capsule.";
+  if (style) return `Choisie pour ton style ${style}.`;
+  if (raisons.some((r) => r.cle === "palette")) return "Choisie dans une couleur de ta palette.";
+  const occasions = raisons.find((r) => r.cle === "occasions");
+  return occasions ? `${occasions.texte}.` : null;
+}

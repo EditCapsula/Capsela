@@ -21,11 +21,26 @@ export default function BottomSheet({
   open,
   onClose,
   children,
+  surtitre = false,
+  entete,
+  bandeau,
+  pied,
 }: {
   title: string;
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  /**
+   * Les emplacements de la fiche d'une suggestion (02/11/2026), facultatifs — sans eux, la feuille est celle d'avant :
+   *   surtitre : le titre en petite étiquette terracotta (« ✦ Suggestion Capsela ») au lieu du titre serif ;
+   *   entete   : des actions posées dans la ligne du titre, avant la croix (compteur, menu) ;
+   *   bandeau  : une ligne sous l'en-tête, hors du défilement (barre de progression) ;
+   *   pied     : un bas de feuille FIXE, hors du défilement, au-dessus de la zone de sécurité (les boutons de vote restent visibles).
+   */
+  surtitre?: boolean;
+  entete?: React.ReactNode;
+  bandeau?: React.ReactNode;
+  pied?: React.ReactNode;
 }) {
   // onClose change à chaque rendu chez la plupart des appelants : lu par référence, il ne relance pas l'effet (et ne vole pas le focus).
   const fermer = useRef(onClose);
@@ -63,7 +78,8 @@ export default function BottomSheet({
             <span className="w-[38px] h-[4px] rounded-full" style={{ background: "var(--color-sand-border)" }} />
           </div>
           <div className="flex items-center justify-between gap-3 pl-6 pr-[14px] pt-[6px] pb-[4px] flex-shrink-0 border-b border-border">
-            <span className="font-serif font-medium text-[20px] leading-[1.2] text-ink">{title}</span>
+            <span className={surtitre ? "t-surtitre text-terracotta flex-1 min-w-0" : "font-serif font-medium text-[20px] leading-[1.2] text-ink"}>{title}</span>
+            {entete}
             <button
               onClick={onClose}
               aria-label="Fermer"
@@ -74,9 +90,15 @@ export default function BottomSheet({
               </svg>
             </button>
           </div>
-          <div className="scrollarea overflow-y-auto px-6 pt-[16px]" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }}>
+          {bandeau}
+          <div className="scrollarea overflow-y-auto px-6 pt-[16px]" style={{ paddingBottom: pied ? 16 : "calc(env(safe-area-inset-bottom) + 24px)" }}>
             {children}
           </div>
+          {pied && (
+            <div className="flex-shrink-0 px-6 pt-[12px] border-t border-border" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 14px)" }}>
+              {pied}
+            </div>
+          )}
         </div>
       </div>
     </div>

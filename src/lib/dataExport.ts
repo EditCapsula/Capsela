@@ -41,6 +41,8 @@ export interface ExportDonnees {
   verdicts_du_jour: Record<string, unknown>[];
   /** Retours sur les accords de couleurs de saison, « J'aime » / « Pas pour moi » (migration 0047) — ajoutés le 15/10/2026 : ils manquaient. */
   retours_accords_couleurs: Record<string, unknown>[];
+  /** Votes sur les suggestions de la capsule : aimée, rejetée, possédée, remplacée (migration 0056, 02/11/2026). */
+  votes_suggestions_capsule: Record<string, unknown>[];
   note: string;
 }
 
@@ -68,7 +70,7 @@ export async function buildDataExport(userId: string, email: string | null): Pro
   }
   const supabase = getSupabase();
 
-  const [profil, dressing, looks, historique, photos, avisStyliste, planifiees, valises, verdicts, accords] = await Promise.all([
+  const [profil, dressing, looks, historique, photos, avisStyliste, planifiees, valises, verdicts, accords, votes] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
     supabase.from("dressing_items").select("*").eq("user_id", userId).order("id"),
     supabase.from("saved_looks").select("*").eq("user_id", userId).order("id"),
@@ -79,6 +81,7 @@ export async function buildDataExport(userId: string, email: string | null): Pro
     supabase.from("valises").select("*").eq("user_id", userId),
     supabase.from("outfit_feedback").select("*").eq("user_id", userId).order("jour"),
     supabase.from("accord_retours").select("*").eq("user_id", userId).order("created_at"),
+    supabase.from("suggestions_capsule").select("*").eq("user_id", userId).order("created_at"),
   ]);
 
   // Une erreur sur n'importe quelle partie rend l'export incomplet, donc
@@ -87,7 +90,7 @@ export async function buildDataExport(userId: string, email: string | null): Pro
   //
   // Seule exception : une table récente ABSENTE (migration pas encore
   // exécutée : avis de styliste 0036, tenues planifiées 0030, valises 0038,
-  // verdicts du jour 0029, retours sur les accords 0047) — il n'y a alors aucune ligne, et l'export est
+  // verdicts du jour 0029, retours sur les accords 0047, votes sur les suggestions 0056) — il n'y a alors aucune ligne, et l'export est
   // complet sans elle. Toute autre erreur sur ces tables fait échouer
   // l'export, comme pour les autres.
   const erreurTolerante = (r: { error: { code?: string; message: string } | null }) =>
@@ -103,7 +106,8 @@ export async function buildDataExport(userId: string, email: string | null): Pro
     erreurTolerante(planifiees) ||
     erreurTolerante(valises) ||
     erreurTolerante(verdicts) ||
-    erreurTolerante(accords);
+    erreurTolerante(accords) ||
+    erreurTolerante(votes);
   if (premiereErreur) {
     throw new Error(`Export interrompu : ${premiereErreur.message}`);
   }
@@ -145,6 +149,7 @@ export async function buildDataExport(userId: string, email: string | null): Pro
     valises: (valises.error ? [] : valises.data ?? []) as Record<string, unknown>[],
     verdicts_du_jour: (verdicts.error ? [] : verdicts.data ?? []) as Record<string, unknown>[],
     retours_accords_couleurs: (accords.error ? [] : accords.data ?? []) as Record<string, unknown>[],
+    votes_suggestions_capsule: (votes.error ? [] : votes.data ?? []) as Record<string, unknown>[],
     avis_styliste: lignesAvis.map((l) => ({
       ...l,
       photo_url: typeof l.photo_path === "string" ? urlsAvis.get(l.photo_path) ?? null : null,

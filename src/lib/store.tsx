@@ -51,6 +51,8 @@ import { aUnMotif } from "./motifs";
 import { genererTenueDiversifiee, recentsDuJour } from "./diversite";
 import { ecrireRecommandation, lireRecommandations, type TableRecommandations } from "./recommandationsRecentes";
 import { ecrirePiecesEcartees, lirePiecesEcartees } from "./piecesEcartees";
+import { ecrireVotes, fusionnerVotes, lireVotes, piecesEcarteesParVotes, voter, type EtatSuggestion, type TableVotes } from "./votesSuggestions";
+import { ecrireVoteDuCompte, envoyerVotesAuCompte, lireVotesDuCompte } from "./votesSuggestionsCompte";
 import { basculerSaison, saisonsDe, seasonDepuisSaisons } from "./saisons";
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
@@ -434,6 +436,12 @@ export interface Actions {
   enregistrerIdeeLook: (ids: number[], occasion: OccasionKey) => void;
   /** Le cœur d'une idée de look (01/11/2026) : l'enregistre dans « Mes looks », ou retire le look qui rassemble déjà exactement ces pièces. */
   basculerIdeeLook: (ids: number[], occasion: OccasionKey) => void;
+  /**
+   * Vote sur une suggestion de la capsule (02/11/2026, votesSuggestions.ts), ou le retire (`etat` null). Gardé sur l'appareil tout de
+   * suite, puis envoyé au compte ; « rejetee », « possedee » et « remplacee » écartent aussi la pièce de la capsule. Résout à false si
+   * le compte n'a pas pu l'enregistrer (le vote reste sur l'appareil et repart à la visite suivante).
+   */
+  voterSuggestion: (pieceId: number, etat: EtatSuggestion | null) => Promise<boolean>;
   removeActive: () => void;
   /**
    * Enregistre le choix de l'utilisatrice face à une suggestion de revente
@@ -680,6 +688,8 @@ interface CapselaContextValue {
   avisEnregistres: AvisEnregistre[] | null;
   /** Avis enregistré ouvert en consultation. */
   avisEnregistreActif: AvisEnregistre | null;
+  /** Les votes sur les suggestions de la capsule (votesSuggestions.ts) : aimée, rejetée, possédée, remplacée. */
+  votesSuggestions: TableVotes;
   actions: Actions;
 }
 
@@ -1321,6 +1331,49 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     if (ecarteesDuCompte !== userId) return;
     ecrirePiecesEcartees(userId, state.suggestedExcluded);
   }, [userId, ecarteesDuCompte, state.suggestedExcluded]);
+
+  // LES VOTES SUR LES SUGGESTIONS (02/11/2026, votesSuggestions.ts) : ceux de l'appareil d'abord, puis ceux du compte, qui l'emportent
+  // (table suggestions_capsule, migration 0056 — absente, la lecture rend null et l'appareil fait foi). Les pièces qu'ils écartent
+  // rejoignent `suggestedExcluded`, APRÈS la lecture des pièces écartées ci-dessus (même rendu, mises à jour dans l'ordre).
+  const [votesSuggestions, setVotesSuggestions] = useState<TableVotes>({});
+  const votesRef = useRef<TableVotes>({});
+  useEffect(() => {
+    let annule = false;
+    const ajouterEcartees = (table: TableVotes) => {
+      const ids = piecesEcarteesParVotes(table);
+      if (ids.length) setState((st) => ({ ...st, suggestedExcluded: [...new Set([...st.suggestedExcluded, ...ids])] }));
+    };
+    const local = lireVotes(userId);
+    votesRef.current = local;
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setVotesSuggestions(local);
+    ajouterEcartees(local);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    if (!isSupabaseConfigured || !userId) return;
+    void lireVotesDuCompte(userId).then((compte) => {
+      if (annule || !compte) return;
+      const { fusion, aEnvoyer } = fusionnerVotes(votesRef.current, compte);
+      votesRef.current = fusion;
+      setVotesSuggestions(fusion);
+      ecrireVotes(userId, fusion);
+      ajouterEcartees(fusion);
+      void envoyerVotesAuCompte(userId, aEnvoyer);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [userId]);
+  const enregistrerVote = async (pieceId: number, etat: EtatSuggestion | null): Promise<boolean> => {
+    const suite = voter(votesRef.current, pieceId, etat);
+    votesRef.current = suite;
+    setVotesSuggestions(suite);
+    ecrireVotes(userId, suite);
+    if (etat === "rejetee" || etat === "possedee" || etat === "remplacee") {
+      setState((st) => (st.suggestedExcluded.includes(pieceId) ? st : { ...st, suggestedExcluded: [...st.suggestedExcluded, pieceId] }));
+    }
+    if (!isSupabaseConfigured || !userId) return true;
+    return ecrireVoteDuCompte(userId, pieceId, etat);
+  };
 
   const regen = (
     s: AppState,
@@ -2160,6 +2213,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // « Enregistrer dans mes looks » : la même écriture que « J'adore cette
     // tenue », sans doublon ni suppression (enregistrerTenueSiAbsente).
     enregistrerIdeeLook: (ids, occasion) => enregistrerTenueSiAbsente(ids, occasion),
+    voterSuggestion: (pieceId, etat) => enregistrerVote(pieceId, etat),
     basculerIdeeLook: (ids, occasion) => {
       const cle = clePieces(ids).join(",");
       const existant = stateRef.current.savedLooks.find((l) => clePieces(l.pieceIds).join(",") === cle);
@@ -2251,6 +2305,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       const s = stateRef.current;
       if (s.activeSuggested) {
         setState((st) => ({ ...st, suggestedExcluded: [...st.suggestedExcluded, st.activeId], screen: st.pieceReturn, ficheEnFeuille: null }));
+        // Retirer une suggestion de la capsule, c'est la rejeter (votesSuggestions.ts, 02/11/2026).
+        void enregistrerVote(s.activeId, "rejetee");
         return;
       }
       const deletedId = s.activeId;
@@ -2656,6 +2712,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // effacerait silencieusement le statut de port.
       const editingId = s.editingId;
       const addReturn = s.addReturn;
+      // La suggestion de la capsule que cette pièce remplace (« Je possède déjà », startReplace), lue avant l'enregistrement.
+      const remplacee = editingId == null ? s.replacingId : null;
       // La saison est obligatoire (09/10/2026) : jamais présélectionnée, jamais
       // déduite en silence. L'écran grise le bouton tant qu'aucune n'est choisie.
       const saisons = s.addSaisons ?? [];
@@ -2784,6 +2842,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             setState((st) => ({ ...st, addSaving: false, addDone: true, items: [{ ...item, saisons, manches: base.manches, motif: base.motif }, ...st.items] }));
             quitterApresAjout();
             annoncerPieceAjoutee(item.name);
+            // « Je possède déjà cette pièce » : la possession n'est enregistrée qu'une fois la pièce du dressing sauvée (02/11/2026).
+            if (remplacee != null) void enregistrerVote(remplacee, "possedee");
             enregistrerSaisons(item.id, saisons);
             if (base.manches) enregistrerManches(item.id, base.manches, undefined);
             if (base.motif) enregistrerMotif(item.id, base.motif, undefined);
@@ -2807,6 +2867,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       });
       quitterApresAjout();
       annoncerPieceAjoutee(base.name);
+      if (remplacee != null) void enregistrerVote(remplacee, "possedee");
     },
     dismissDressingError: () => setState((s) => ({ ...s, dressingError: null })),
     fermerPieceAjoutee: () => setState((s) => ({ ...s, pieceAjoutee: null })),
@@ -3378,6 +3439,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     avisStyliste,
     avisEnregistres,
     avisEnregistreActif,
+    votesSuggestions,
     actions,
   };
 
