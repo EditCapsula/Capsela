@@ -231,8 +231,8 @@ export default function CalendrierScreen() {
     // Les jours du mois voisin complètent la grille, estompés : ils ne se choisissent pas.
     if (horsMois) {
       return (
-        <span aria-hidden="true" className="flex flex-col items-center justify-center gap-[5px] min-h-[48px] py-[6px]">
-          <span className="w-[32px] h-[32px] flex items-center justify-center text-[13px] tabular-nums" style={{ color: "var(--color-placeholder)" }}>{num}</span>
+        <span aria-hidden="true" className="flex flex-col items-center justify-center gap-[3px] min-h-[44px] py-[2px]">
+          <span className="w-[30px] h-[30px] flex items-center justify-center text-[13px] tabular-nums" style={{ color: "var(--color-placeholder)" }}>{num}</span>
           <span className="h-[7px]" />
         </span>
       );
@@ -245,10 +245,11 @@ export default function CalendrierScreen() {
         onClick={() => setSelection(jour)}
         aria-pressed={choisie}
         aria-label={`${libelleLong(jour)}${estAujourdhui ? ", aujourd'hui" : ""}${t ? `, ${NOM_STATUT[t.statut].toLowerCase()}` : ""}`}
-        className="flex flex-col items-center justify-center gap-[5px] min-h-[48px] py-[6px] cursor-pointer"
+        // Plus bas (02/11/2026, demandé : « le planning moins haut ») : 44 px par jour, la cible tactile minimale, au lieu de 56.
+        className="flex flex-col items-center justify-center gap-[3px] min-h-[44px] py-[2px] cursor-pointer"
       >
         <span
-          className="w-[32px] h-[32px] rounded-full flex items-center justify-center text-[13px] tabular-nums"
+          className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[13px] tabular-nums"
           style={{
             border: estAujourdhui && !choisie ? "1.5px solid var(--color-terracotta)" : "1.5px solid transparent",
             background: choisie ? "var(--color-terracotta-deep)" : "transparent",
@@ -274,7 +275,7 @@ export default function CalendrierScreen() {
   );
 
   const navigation = (libelle: string, precedent: () => void, suivant: () => void, nom: string) => (
-    <div className="flex items-center justify-between mt-5 mb-3">
+    <div className="flex items-center justify-between mt-3 mb-1">
       <button onClick={precedent} aria-label={`${nom} précédent`} className="w-[44px] h-[44px] flex items-center justify-center text-ink cursor-pointer">
         <Chevron vers="gauche" />
       </button>
@@ -450,14 +451,14 @@ export default function CalendrierScreen() {
           <>
             {navigation(libelleMois(mois), () => setMois(moisDecale(mois, -1)), () => setMois(moisDecale(mois, 1)), "Mois")}
             {enteteSemaine}
-            <div className="flex flex-col gap-[2px]">
+            <div className="flex flex-col">
               {grilleDuMoisComplete(dateDe(mois).getFullYear(), dateDe(mois).getMonth()).map((sem, i) => (
                 <div key={i} className="grid grid-cols-7">
                   {sem.map((c) => <Case key={c.jour} jour={c.jour} horsMois={c.horsMois} />)}
                 </div>
               ))}
             </div>
-            <div className="flex items-center justify-center gap-5 mt-3 text-[12px] text-muted">
+            <div className="flex items-center justify-center gap-5 mt-2 text-[12px] text-muted">
               <span className="flex items-center gap-[6px]"><Pastille statut="porte" /> Portée</span>
               <span className="flex items-center gap-[6px]"><Pastille statut="planifiee" /> Planifiée</span>
               <span className="flex items-center gap-[6px]"><span aria-hidden="true" className="w-[12px] h-[12px] rounded-full" style={{ border: "1.5px solid var(--color-terracotta)" }} /> Aujourd’hui</span>
