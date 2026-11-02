@@ -8,6 +8,11 @@ import OptionRow from "@/components/OptionRow";
 import SegmentedControl, { type Segment } from "@/components/SegmentedControl";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import GlyphePiece from "@/components/GlyphePiece";
+import Vignette from "@/components/VignettePiece";
+import FicheSuggestion, { type AssociationFiche } from "@/components/FicheSuggestion";
+import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
+import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { CATLABEL } from "@/lib/data";
 import {
   CAPSULE_SEASONS,
@@ -18,10 +23,9 @@ import {
 } from "@/lib/capsule";
 import {
   alternativesDeRemplacement,
-  margeVignette,
   piecesCles,
+  phraseSuggestion,
   piecesDuDressingPourSaison,
-  raisonsSuggestion,
   type AlternativeRemplacement,
 } from "@/lib/capsuleEcran";
 import {
@@ -51,10 +55,9 @@ import { ecrireFavorisPieces, lireFavorisPieces } from "@/lib/favorisPieces";
 import { suivreEvenement } from "@/lib/mesureAudience";
 import { clePieces } from "@/lib/outfitFeedback";
 import { useAuth } from "@/lib/auth";
-import { libelleStyles, silhouetteForme, styleLabel, stylesLabels } from "@/lib/profile";
+import { libelleStyles, paletteHexes, silhouetteForme, styleLabel, stylesLabels } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { resolvePhotoCatalogue } from "@/lib/catalogImages";
-import { analyserImage, placementDansCadre, type Analyse } from "@/lib/cadrageImage";
 import type { DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -164,138 +167,20 @@ function enumeration(parties: string[]): string {
   return parties.slice(0, -1).join(", ") + " et " + parties[parties.length - 1];
 }
 
-/**
- * Mesures déjà faites, par URL, pour toute la session : une image n'est
- * analysée qu'une fois, quel que soit le nombre de vignettes qui la montrent.
- * null = mesure impossible, on garde l'affichage contenu.
- */
-const cadrages = new Map<string, (Analyse & { ratio: number }) | null>();
-
-/**
- * Seules les images servies par Supabase Storage sont mesurées : il envoie
- * `Access-Control-Allow-Origin: *` (vérifié le 25/09/2026), condition pour lire
- * les pixels. Une image d'un autre domaine (affiliée) chargée en CORS sans
- * cet en-tête ne s'afficherait plus du tout : elle reste en affichage contenu.
- */
-function mesurable(url: string): boolean {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  // Publique ou signée (photos du dressing, bucket privé depuis le 30/09/2026) : même en-tête CORS.
-  return Boolean(base) && (url.startsWith(`${base}/storage/v1/object/public/`) || url.startsWith(`${base}/storage/v1/object/sign/`));
-}
-
-/** Ratio largeur / hauteur de toutes les vignettes de l'écran. */
-const RATIO_VIGNETTE = 4 / 5;
-
-/**
- * Vignette d'une pièce, à présence normalisée (polish du 25/09/2026, cf.
- * cadrageImage.ts) : zone image identique partout, et la pièce — pas l'image —
- * remplit la même part de cette zone, sans déformation ni recadrage.
- *
- * Tant que la mesure n'est pas faite, l'image reste invisible (une fraction de
- * seconde, le temps du chargement) : sinon elle apparaîtrait petite puis
- * sauterait à sa taille normalisée. Mesure impossible : affichage contenu,
- * comme avant.
- */
-function Vignette({ item, arrondi = 14, marge = margeVignette(item.cat) }: { item: Item; arrondi?: number; marge?: number }) {
-  // Les photos du catalogue, pas le visuel du flat lay (14/10/2026, demandé).
-  const image = resolvePhotoCatalogue(item);
-  return (
-    <div
-      className="w-full border border-border relative overflow-hidden"
-      style={{
-        aspectRatio: "4/5",
-        borderRadius: arrondi,
-        background: image.url ? "var(--color-photo-bg)" : item.hex,
-        boxShadow: image.url ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
-      }}
-    >
-      {image.url ? (
-        <ImageCadree key={image.url} url={image.url} marge={marge} />
-      ) : (
-        item.imageStatus === "generating" && (
-          <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
-        )
-      )}
-    </div>
-  );
-}
-
-function ImageCadree({ url, marge }: { url: string; marge: number }) {
-  const analysable = mesurable(url);
-  const [cadrage, setCadrage] = useState(() => (cadrages.has(url) ? cadrages.get(url) : undefined));
-  const enAttente = analysable && cadrage === undefined;
-  const place = cadrage ? placementDansCadre(cadrage.boite, cadrage.ratio, RATIO_VIGNETTE, marge) : null;
-  const pad = `${marge * 100}%`;
-  return (
-    <>
-      {/* Fond opaque mesuré : le cadre le prolonge, pour qu'aucun rectangle
-          plus clair ou plus gris ne se découpe autour de la pièce. */}
-      {cadrage?.fond && <span className="absolute inset-0" style={{ background: cadrage.fond }} />}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={url}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        crossOrigin={analysable ? "anonymous" : undefined}
-        onLoad={(e) => {
-          if (!analysable) return;
-          // Une autre vignette de la même image a pu mesurer entre-temps :
-          // reprendre sa mesure, sans quoi celle-ci resterait invisible.
-          const deja = cadrages.get(url);
-          const mesure = deja !== undefined ? deja : analyserImage(e.currentTarget);
-          cadrages.set(url, mesure);
-          setCadrage(mesure);
-        }}
-        onError={() => {
-          cadrages.set(url, null);
-          setCadrage(null);
-        }}
-        className="transition-opacity duration-200"
-        style={
-          place
-            ? { position: "absolute", width: `${place.largeur}%`, height: `${place.hauteur}%`, left: `${place.gauche}%`, top: `${place.haut}%`, maxWidth: "none", opacity: 1 }
-            : {
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                objectPosition: "center",
-                padding: pad,
-                boxSizing: "border-box",
-                opacity: enAttente ? 0 : 1,
-              }
-        }
-      />
-    </>
-  );
-}
-
-/**
- * Statut d'une pièce, identique partout sur l'écran : une ligne de texte sous
- * le nom, pas un badge posé sur l'image. Le glyphe porte la différence autant
- * que la couleur — ✓ pour ce qui est à toi, ✦ terracotta pour ce que Capsela
- * propose — pour rester lisible sans distinguer les couleurs.
- */
-function Statut({ possedee }: { possedee: boolean }) {
-  // Une seule ligne, de hauteur fixe : « Dans ton dressing » passait sur deux
-  // lignes dans une carte de 97 px (360 px d'écran) et rendait les cartes
-  // inégales (mesuré : 195 contre 189 px).
-  return (
-    <span
-      className={
-        "flex items-center gap-[3px] h-[14px] text-[10px] leading-[14px] whitespace-nowrap overflow-hidden " +
-        (possedee ? "text-muted" : "text-terracotta")
-      }
-    >
-      <span aria-hidden="true" className="flex-shrink-0">{possedee ? "✓" : "✦"}</span>
-      <span className="truncate">{possedee ? "Dans ton dressing" : "Suggestion"}</span>
-    </span>
-  );
-}
 
 type Fiche = { id: number; vue: "detail" | "remplacer" };
+type Parcours = { ids: number[]; index: number; rouvrir?: boolean };
+
+/** Ce que l'écran garde du parcours à son départ (relu au démontage par useGarderContexte), posé par les actions qui quittent l'écran. */
+function useParcoursAGarder() {
+  const valeur = useRef<Parcours | null>(null);
+  return {
+    lire: () => valeur.current,
+    poser: (p: Parcours | null) => {
+      valeur.current = p;
+    },
+  };
+}
 type Onglet = "composer" | "explorer" | "cles" | "details";
 type Feuille = "saison" | "pourquoi" | "categorie" | "couleur" | "tri" | null;
 
@@ -343,7 +228,7 @@ function Pastille({ possedee }: { possedee: boolean }) {
 }
 
 export default function CapsuleScreen() {
-  const { state, weather, actions, vestiairePool } = useCapsela();
+  const { state, weather, actions, vestiairePool, votesSuggestions } = useCapsela();
   const { profile, userId } = useAuth();
 
   const capsuleSeason: CapsuleSeason = state.capsuleSeason || currentSeasonKey();
@@ -404,8 +289,12 @@ export default function CapsuleScreen() {
     grille: boolean;
     composition: { cle: string; sel: SelectionComposer; actif: CleEmplacement | null } | null;
     defilement: number;
+    /** Le parcours des suggestions en cours ; `rouvrir` : la fiche se rouvre au retour (après « J'aime », « Je possède déjà »…). */
+    parcours: Parcours | null;
   };
   const repris = useContexteRepris<ContexteCapsule>("capsule");
+  // Ce qui est gardé au départ de l'écran : le parcours, et s'il faut rouvrir la fiche au retour.
+  const parcoursAGarder = useParcoursAGarder();
   const [onglet, setOnglet] = useState<Onglet>(repris?.onglet ?? "composer");
   const [filtres, setFiltres] = useState<FiltresExplorer>(repris?.filtres ?? FILTRES_PAR_DEFAUT);
   const [grille, setGrille] = useState(repris?.grille ?? true);
@@ -433,7 +322,7 @@ export default function CapsuleScreen() {
   const cleTenue = clePieces(piecesTenue.map((it) => it.id)).join(",");
   const tenueEnregistree = state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue);
 
-  useGarderContexte("capsule", (): ContexteCapsule => ({ onglet, filtres, grille, composition, defilement: defilement.position.current }));
+  useGarderContexte("capsule", (): ContexteCapsule => ({ onglet, filtres, grille, composition, defilement: defilement.position.current, parcours: parcoursAGarder.lire() }));
 
   const avancerActif = (pas: 1 | -1) => {
     if (!emplacementActif) return;
@@ -454,12 +343,29 @@ export default function CapsuleScreen() {
   };
 
   // ----- EXPLORER -----
-  const [favoris, setFavoris] = useState<string[]>(() => lireFavorisPieces(userId));
-  const favorisSet = useMemo(() => new Set(favoris), [favoris]);
+  // UN SEUL ÉTAT « AIMÉE » (arbitré le 02/11/2026) : le cœur d'une suggestion EST son vote « J'aime » (votesSuggestions.ts, gardé dans le
+  // compte) ; seules les pièces du dressing gardent leurs cœurs sur l'appareil (favorisPieces.ts). Les cœurs de suggestions posés avant
+  // sur l'appareil deviennent des votes au premier passage.
+  const [favorisDressing, setFavorisDressing] = useState<string[]>(() => lireFavorisPieces(userId).filter((k) => k.startsWith("d")));
+  useEffect(() => {
+    const anciens = lireFavorisPieces(userId).filter((k) => k.startsWith("c"));
+    if (!anciens.length) return;
+    for (const k of anciens) if (!votesSuggestions[k.slice(1)]) void actions.voterSuggestion(Number(k.slice(1)), "aimee");
+    ecrireFavorisPieces(userId, lireFavorisPieces(userId).filter((k) => k.startsWith("d")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+  const favorisSet = useMemo(
+    () => new Set([...favorisDressing, ...Object.entries(votesSuggestions).filter(([, v]) => v === "aimee").map(([id]) => `c${id}`)]),
+    [favorisDressing, votesSuggestions]
+  );
   const basculerFavori = (e: EntreeCapsule) => {
     const cle = cleEntree(e);
-    const suivants = favorisSet.has(cle) ? favoris.filter((k) => k !== cle) : [...favoris, cle];
-    setFavoris(suivants);
+    if (!e.possedee) {
+      void actions.voterSuggestion(e.item.id, favorisSet.has(cle) ? null : "aimee").then(signalerSiNonSynchronise);
+      return;
+    }
+    const suivants = favorisSet.has(cle) ? favorisDressing.filter((k) => k !== cle) : [...favorisDressing, cle];
+    setFavorisDressing(suivants);
     ecrireFavorisPieces(userId, suivants);
   };
   const categories = useMemo(() => categoriesPresentes(entrees), [entrees]);
@@ -500,7 +406,20 @@ export default function CapsuleScreen() {
     ) as Record<CapsuleSeason, number>;
   }, [feuille, capsuleSeason, capsule.length, capsuleProfile, weather, state.suggestedExcluded, vestiairePool, exploredStyleId, state.items]);
 
-  const [fiche, setFiche] = useState<Fiche | null>(null);
+  // LE PARCOURS DES SUGGESTIONS (fiche refondue le 02/11/2026) : la liste est FIGÉE à l'ouverture — l'ordre de l'onglet d'où l'on vient —,
+  // pour que « 3 / 10 » reste vrai pendant que la capsule se recompose (une pièce rejetée en fait entrer une autre). Une pièce sortie de
+  // la capsule entre-temps est sautée. Rouvert au retour d'un écran ouvert depuis la fiche (associations, ajout au dressing).
+  const premiereDisponible = (p: Parcours, depuis: number): number => {
+    for (let i = depuis; i < p.ids.length; i++) if (!state.suggestedExcluded.includes(p.ids[i])) return i;
+    return -1;
+  };
+  const [parcours, setParcours] = useState<Parcours | null>(() => {
+    const p = repris?.parcours;
+    if (!p?.rouvrir) return null;
+    const i = premiereDisponible(p, p.index);
+    return i < 0 ? null : { ids: p.ids, index: i };
+  });
+  const [fiche, setFiche] = useState<Fiche | null>(() => (parcours ? { id: parcours.ids[parcours.index], vue: "detail" } : null));
   // Relue à chaque rendu plutôt que figée à l'ouverture : la génération de son
   // visuel met à jour vestiairePool pendant que la fiche est ouverte.
   const pieceFiche = fiche ? vestiairePool.find((i) => i.id === fiche.id) ?? capsule.find((i) => i.id === fiche.id) ?? null : null;
@@ -517,6 +436,33 @@ export default function CapsuleScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pieceFiche?.id]);
+
+  // COMMENT LE PORTER ? Les idées du moteur pour la pièce (calculerIdeesTenues, celles de l'écran « Comment porter »), sur le même pool
+  // (dressing d'abord, la capsule pour compléter) ; trois au plus, et seulement celles qui posent la pièce. Calculées quand la fiche est
+  // ouverte ; un échec ne bloque jamais la fiche : la section disparaît.
+  const idees = useMemo(() => {
+    if (!pieceFiche || fiche?.vue !== "detail") return { variations: [], cartes: [] as AssociationFiche[] };
+    try {
+      const variations = calculerIdeesTenues(
+        pieceFiche,
+        poolPourIdees(state.items, capsule, capsuleSeason),
+        state.items,
+        capsuleSeason,
+        paletteHexes(profile),
+        profile.gender,
+        colorimetrieMoteur(profile.colorimetrie)
+      );
+      const connues = [...state.items, ...vestiairePool];
+      const cartes = variations
+        .filter((v) => v.ids.includes(pieceFiche.id))
+        .slice(0, 3)
+        .map((v) => ({ ids: v.ids, pieces: v.ids.map((id) => connues.find((i) => i.id === id)).filter((i): i is Item => Boolean(i)) }))
+        .filter((c) => c.pieces.length >= 2);
+      return { variations, cartes };
+    } catch {
+      return { variations: [], cartes: [] as AssociationFiche[] };
+    }
+  }, [pieceFiche, fiche?.vue, state.items, capsule, capsuleSeason, profile, vestiairePool]);
 
   // Calculées seulement quand la vue « Remplacer » est ouverte : jusqu'à
   // trois appels du moteur, à la demande, jamais au rendu de l'écran.
@@ -536,30 +482,100 @@ export default function CapsuleScreen() {
 
   const mesure = (id: number) => ({ piece_id: id, saison: capsuleSeason, provenance: onglet });
 
+  // Un vote que le compte n'a pas pu enregistrer reste sur l'appareil et repart à la visite suivante : on le dit une fois par visite.
+  const syncSignalee = useRef(false);
+  const signalerSiNonSynchronise = (ok: boolean) => {
+    if (ok || syncSignalee.current || !isSupabaseConfigured || !userId) return;
+    syncSignalee.current = true;
+    setToast("Ton choix est gardé sur cet appareil ; il rejoindra ton compte plus tard.");
+  };
+
+  // Les suggestions dans l'ordre de l'onglet d'où l'on ouvre la fiche.
+  const suggestionsDeLOnglet = (): number[] => {
+    const source = onglet === "explorer" ? galerie : onglet === "cles" ? clesFamilles.map((c) => ({ item: c.item, possedee: false })) : entrees;
+    return source.filter((e) => !e.possedee).map((e) => e.item.id);
+  };
+
   const ouvrir = (item: Item, possedee: boolean) => {
     if (possedee) {
       actions.openItem(item.id, false);
       return;
     }
+    const ids = suggestionsDeLOnglet();
+    const liste = ids.includes(item.id) ? ids : [item.id, ...ids];
+    setParcours({ ids: liste, index: liste.indexOf(item.id) });
     setFiche({ id: item.id, vue: "detail" });
     suivreEvenement("fiche_piece_capsule", mesure(item.id));
   };
 
+  const fermerFiche = () => {
+    setFiche(null);
+    setParcours(null);
+    parcoursAGarder.poser(null);
+  };
+
+  /** La suggestion suivante du parcours ; aucune : la fiche se ferme et le dit. */
+  const suivante = (exclue?: number) => {
+    if (!parcours) return fermerFiche();
+    let i = parcours.index + 1;
+    while (i < parcours.ids.length && (state.suggestedExcluded.includes(parcours.ids[i]) || parcours.ids[i] === exclue)) i++;
+    if (i >= parcours.ids.length) {
+      fermerFiche();
+      setToast("Tu as vu toutes les suggestions de ta capsule.");
+      return;
+    }
+    setParcours({ ...parcours, index: i });
+    setFiche({ id: parcours.ids[i], vue: "detail" });
+  };
+
+  /** Quitter l'écran depuis la fiche : elle se rouvrira au retour, sur la suggestion `index`. */
+  const reprendreAuRetour = (index: number) => {
+    if (parcours) parcoursAGarder.poser({ ids: parcours.ids, index, rouvrir: true });
+  };
+
+  // Un vote en cours de transition : pas de second vote (double appui, glissement suivi d'un appui).
+  const [occupe, setOccupe] = useState(false);
+
+  const aimer = (piece: Item) => {
+    if (occupe) return;
+    setOccupe(true);
+    if (votesSuggestions[String(piece.id)] !== "aimee") void actions.voterSuggestion(piece.id, "aimee").then(signalerSiNonSynchronise);
+    // « Découvrir les associations » : l'écran « Comment porter » de la pièce ; au retour, la fiche reprend à la suggestion suivante.
+    setTimeout(() => {
+      setOccupe(false);
+      if (parcours) reprendreAuRetour(parcours.index + 1);
+      setFiche(null);
+      actions.openItemOutfits(piece.id);
+    }, 260);
+  };
+
+  const rejeter = (piece: Item) => {
+    if (occupe) return;
+    setOccupe(true);
+    void actions.voterSuggestion(piece.id, "rejetee").then(signalerSiNonSynchronise);
+    setToast("Retirée de ta capsule");
+    setTimeout(() => {
+      setOccupe(false);
+      suivante(piece.id);
+    }, 260);
+  };
+
+  const possede = (piece: Item) => {
+    if (occupe) return;
+    suivreEvenement("piece_deja_possedee", mesure(piece.id));
+    // La possession n'est enregistrée qu'une fois la pièce du dressing sauvée (store, saveItem) : annuler l'ajout n'écrit rien.
+    if (parcours) reprendreAuRetour(parcours.index + 1);
+    setFiche(null);
+    actions.startReplace(piece, "capsule");
+  };
+
   const choisirAlternative = (a: AlternativeRemplacement) => {
-    a.exclusions.filter((id) => !state.suggestedExcluded.includes(id)).forEach((id) => actions.dismissSuggested(id));
-    setFiche(null);
+    for (const id of a.exclusions) if (!state.suggestedExcluded.includes(id)) void actions.voterSuggestion(id, "remplacee").then(signalerSiNonSynchronise);
     setToast("Ta capsule est mise à jour");
+    suivante(a.exclusions[a.exclusions.length - 1]);
   };
 
-  const pasInteressee = (item: Item) => {
-    actions.dismissSuggested(item.id);
-    setFiche(null);
-    setToast("Pièce retirée de ta capsule");
-  };
-
-  const raisons = pieceFiche ? raisonsSuggestion(pieceFiche, capsuleProfile) : [];
   const syntheseFiche = pieceFiche ? [CATLABEL[pieceFiche.cat], pieceFiche.color, pieceFiche.matiere].filter(Boolean).join(" · ") : "";
-  const pieceFicheComposable = pieceFiche ? emplacementDe(pieceFiche.cat) !== null && groupes[emplacementDe(pieceFiche.cat)!].some((e) => !e.possedee && e.item.id === pieceFiche.id) : false;
 
   return (
     <>
@@ -1179,101 +1195,47 @@ export default function CapsuleScreen() {
         )}
       </BottomSheet>
 
-      <BottomSheet
-        title={fiche?.vue === "remplacer" ? "Remplacer cette pièce" : "Suggestion"}
-        open={Boolean(fiche && pieceFiche)}
-        onClose={() => setFiche(null)}
-      >
-        {pieceFiche && fiche?.vue === "detail" && (
-          <>
-            {/* Hiérarchie du polish (25/09/2026) : la pièce d'abord, puis ce
-                qu'elle est, pourquoi elle est là, puis les actions. */}
-            <div className="w-[148px] mx-auto">
-              <Vignette item={pieceFiche} arrondi={18} marge={0.08} />
-            </div>
-            <div className="text-center mt-[18px]">
-              <div className="flex justify-center">
-                <Statut possedee={false} />
-              </div>
-              <div className="t-titre-section text-ink mt-[8px]">{pieceFiche.name}</div>
-              {syntheseFiche && <div className="text-[12px] text-muted mt-[6px]">{syntheseFiche}</div>}
-            </div>
+      {pieceFiche && fiche?.vue === "detail" && (
+        <FicheSuggestion
+          piece={pieceFiche}
+          position={(parcours?.index ?? 0) + 1}
+          total={parcours?.ids.length ?? 1}
+          etat={votesSuggestions[String(pieceFiche.id)]}
+          phrase={phraseSuggestion(pieceFiche, capsuleProfile)}
+          synthese={syntheseFiche}
+          associations={idees.cartes}
+          occupe={occupe}
+          onFermer={fermerFiche}
+          onAimer={() => aimer(pieceFiche)}
+          onRejeter={() => rejeter(pieceFiche)}
+          onPossede={() => possede(pieceFiche)}
+          onRemplacer={() => setFiche({ id: pieceFiche.id, vue: "remplacer" })}
+          onComposer={
+            emplacementDe(pieceFiche.cat) && groupes[emplacementDe(pieceFiche.cat)!].some((e) => !e.possedee && e.item.id === pieceFiche.id)
+              ? () => {
+                  setParcours(null);
+                  composerAvec(pieceFiche, false);
+                }
+              : undefined
+          }
+          onVoirTenues={() => {
+            if (parcours) reprendreAuRetour(parcours.index);
+            setFiche(null);
+            actions.openItemOutfits(pieceFiche.id);
+          }}
+          onOuvrirAssociation={(i) => {
+            const carte = idees.cartes[i];
+            const v = idees.variations.find((x) => clePieces(x.ids).join(",") === clePieces(carte.ids).join(","));
+            if (!v) return;
+            if (parcours) reprendreAuRetour(parcours.index);
+            setFiche(null);
+            actions.openIdeeLook(pieceFiche.id, idees.variations, null, { ids: v.ids, occasion: v.occasion, numero: i + 1 });
+          }}
+          onClicAffilie={() => suivreEvenement("clic_lien_affilie", mesure(pieceFiche.id))}
+        />
+      )}
 
-            {/* Seulement les raisons que la sélection a réellement lues
-                (raisonsSuggestion) ; aucune, et la section disparaît. */}
-            {raisons.length > 0 && (
-              <div className="mt-[28px]">
-                <div className="t-surtitre text-muted mb-[12px]">Pourquoi Capsela te la propose ?</div>
-                <ul className="flex flex-col gap-[10px]">
-                  {raisons.map((r) => (
-                    <li key={r.cle} className="flex items-start gap-[10px] text-[13px] text-ink leading-[1.45]">
-                      <span aria-hidden="true" className="text-terracotta text-[11px] mt-[2px]">✦</span>
-                      {r.texte}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/*
-              « Découvrir la pièce » (brief, 7.1) : seulement quand un lien marchand est configuré (`lien_affiliation`, mappé sur
-              affLink). Aucun ne l'est au 01/11/2026 : le bouton ne s'affiche donc pas encore. Le clic est mesuré, jamais compté
-              comme un achat, et la mention de transparence l'accompagne.
-            */}
-            {pieceFiche.affLink && (
-              <>
-                <a
-                  href={pieceFiche.affLink}
-                  target="_blank"
-                  rel="noopener noreferrer sponsored"
-                  onClick={() => suivreEvenement("clic_lien_affilie", mesure(pieceFiche.id))}
-                  className="mt-[30px] block w-full text-center rounded-full py-[15px] t-bouton bg-terracotta-deep text-cream cursor-pointer"
-                >
-                  Découvrir la pièce
-                </a>
-                <div className="text-[11px] text-muted text-center mt-[6px]">Lien partenaire : Capsela peut percevoir une commission, sans surcoût pour toi.</div>
-              </>
-            )}
-            {pieceFicheComposable && (
-              <Button
-                variante={pieceFiche.affLink ? "contour" : "principal"}
-                className={pieceFiche.affLink ? "mt-[12px]" : "mt-[30px]"}
-                onClick={() => composerAvec(pieceFiche, false)}
-              >
-                Composer avec cette pièce
-              </Button>
-            )}
-            <button
-              onClick={() => {
-                suivreEvenement("piece_deja_possedee", mesure(pieceFiche.id));
-                setFiche(null);
-                actions.startReplace(pieceFiche, "capsule");
-              }}
-              className={(pieceFicheComposable || pieceFiche.affLink ? "mt-[12px]" : "mt-[30px]") + " w-full border border-border text-terracotta text-center rounded-full py-[13px] text-[13px] cursor-pointer"}
-            >
-              Je possède déjà cette pièce
-            </button>
-            <button
-              onClick={() => {
-                setFiche(null);
-                actions.openItemOutfits(pieceFiche.id);
-              }}
-              className="mt-[6px] w-full text-center text-[13px] text-terracotta py-[11px] cursor-pointer"
-            >
-              Voir des tenues avec cette pièce
-            </button>
-            <button
-              onClick={() => setFiche({ id: pieceFiche.id, vue: "remplacer" })}
-              className="w-full text-center text-[13px] text-terracotta py-[11px] cursor-pointer"
-            >
-              Remplacer cette pièce
-            </button>
-            <button onClick={() => pasInteressee(pieceFiche)} className="w-full text-center text-[12px] text-muted py-[9px] cursor-pointer">
-              {profile.gender === "homme" ? "Je ne suis pas intéressé" : "Je ne suis pas intéressée"}
-            </button>
-          </>
-        )}
-
+      <BottomSheet title="Remplacer cette pièce" open={Boolean(fiche?.vue === "remplacer" && pieceFiche)} onClose={() => setFiche(pieceFiche ? { id: pieceFiche.id, vue: "detail" } : null)}>
         {pieceFiche && fiche?.vue === "remplacer" && (
           <>
             <div className="text-[13px] text-ink leading-[1.5]">

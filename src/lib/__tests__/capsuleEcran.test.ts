@@ -7,6 +7,7 @@ import {
   margeVignette,
   piecesCles,
   proprePourSaison,
+  phraseSuggestion,
   piecesDuDressingPourSaison,
   raisonsSuggestion,
 } from "../capsuleEcran";
@@ -251,5 +252,19 @@ describe("margeVignette — poids visuel par famille (polish V2)", () => {
 
   it("la zone utile reste large : jamais moins de la moitié du cadre", () => {
     for (const [cat] of CATS) expect(1 - 2 * margeVignette(cat)).toBeGreaterThanOrEqual(0.5);
+  });
+});
+
+describe("phraseSuggestion — la phrase de la fiche d'une suggestion (02/11/2026)", () => {
+  it("un indispensable, avec le style du profil quand la pièce le sert", () => {
+    const p = piece(1, { estBasiqueCapsule: true, statement: false });
+    expect(phraseSuggestion(p, profil())).toBe("Un indispensable, facile à associer avec le reste de ta capsule.");
+  });
+  it("une pièce signature passe avant l'indispensable", () => {
+    expect(phraseSuggestion(piece(2, { estBasiqueCapsule: true, statement: true }), profil())).toBe("Une pièce signature, pour donner du caractère à tes tenues.");
+  });
+  it("à défaut, les occasions que la sélection lit pour la pièce", () => {
+    const phrase = phraseSuggestion(piece(3, { statement: false }), profil());
+    expect(phrase).toBe(raisonsSuggestion(piece(3, { statement: false }), profil()).find((r) => r.cle === "occasions")!.texte + ".");
   });
 });

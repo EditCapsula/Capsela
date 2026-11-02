@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Caveat, Manrope } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -16,10 +15,14 @@ const bodoni = localFont({
   ],
 });
 
-const manrope = Manrope({
+/**
+ * Manrope et Caveat servies par l'app elles aussi (02/11/2026) : `next/font/google` les téléchargeait à CHAQUE construction, et une
+ * panne de Google Fonts vue des machines de GitHub faisait échouer la CI (deux fois de suite, PR #281). Fichiers obtenus de Google
+ * Fonts (licence SIL OFL 1.1), réduits au latin et au latin étendu (œ, ’, «  », …) comme avant ; Manrope est variable (200 à 800).
+ */
+const manrope = localFont({
   variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  src: [{ path: "./fonts/Manrope.woff2", weight: "200 800", style: "normal" }],
 });
 
 /**
@@ -29,10 +32,9 @@ const manrope = Manrope({
  * rester une information lisible, pas un ornement. Un seul poids (500) —
  * elle n'a qu'un usage, et chaque graisse est un fichier de plus à charger.
  */
-const caveat = Caveat({
+const caveat = localFont({
   variable: "--font-caveat",
-  subsets: ["latin"],
-  weight: ["500"],
+  src: [{ path: "./fonts/Caveat-Medium.woff2", weight: "500", style: "normal" }],
 });
 
 export const metadata: Metadata = {

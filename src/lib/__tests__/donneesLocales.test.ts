@@ -25,6 +25,7 @@ describe("clesLocalesDuCompte", () => {
       "capsela.accords.u1",
       "capsela.piecesEcartees.u1",
       "capsela.favorisPieces.u1",
+      "capsela.votesSuggestions.u1",
       "capsela.villesRecentes",
     ]);
   });
