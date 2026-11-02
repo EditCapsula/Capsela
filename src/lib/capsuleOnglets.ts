@@ -1,8 +1,9 @@
-import { huesHarmonious, isStatement } from "./attributes";
+import { huesHarmonious, isStatement, rolePieceOf } from "./attributes";
 import { styleFit } from "./capsule";
 import { CATS } from "./data";
 import { paletteHexes, STYLE_ID_TO_CATALOG_LABEL, styleLabel, type Profile, type StyleId } from "./profile";
 import { raisonsSuggestion } from "./capsuleEcran";
+import { isColRoule } from "./logic";
 import type { CapsuleSeason, CategoryKey, Item } from "./types";
 
 /*
@@ -69,10 +70,34 @@ export function piecesParEmplacement(entrees: EntreeCapsule[]): Record<CleEmplac
 /** Position choisie dans chaque emplacement (-1 : « Sans »). */
 export type SelectionComposer = Partial<Record<CleEmplacement, number>>;
 
+/*
+ * LE COL ROULÉ SE PORTE SEUL (02/11/2026, signalé sur la planche d'automne : un cache-cœur posé sous un col roulé). Composer ne
+ * passe pas par le moteur ; il reprend donc ici, telle quelle, la règle arbitrée le 02/10/2026 dans logic.ts (`isColRoule`) : un
+ * col roulé fait le haut, un top dessous ne se verrait pas. Limitée au col roulé comme dans le moteur — les autres pulls restent
+ * superposables.
+ *
+ * Le haut devient facultatif (« Sans ») quand un pull qui fait le haut à lui seul est posé : rôle « base » (`rolePieceOf`, la
+ * règle R-B9 du moteur depuis le 26/08/2026). Un pull « calque » (cardigan, gilet, maille oversize) garde un haut dessous.
+ */
+
+/** Le pull posé sur la planche (aucun si « Sans » ou si une robe remplace le haut et le bas). */
+function maillePosee(groupes: Record<CleEmplacement, EntreeCapsule[]>, sel: SelectionComposer): Item | null {
+  const p = position(sel, "maille", groupes.maille.length);
+  return p >= 0 ? groupes.maille[p].item : null;
+}
+
+/** Vrai si l'emplacement peut rester vide dans cette composition : toujours pour un facultatif, pour le haut sous un pull « base ». */
+export function emplacementFacultatif(cle: CleEmplacement, groupes: Record<CleEmplacement, EntreeCapsule[]>, sel: SelectionComposer): boolean {
+  if (EMPLACEMENTS.find((e) => e.cle === cle)!.facultatif) return true;
+  if (cle !== "haut") return false;
+  const pull = maillePosee(groupes, sel);
+  return pull !== null && rolePieceOf(pull) === "base";
+}
+
 /**
  * La composition d'arrivée. ARBITRAGE ÉDITORIAL (01/11/2026) : la première pièce de chaque emplacement indispensable ; la robe
  * seulement s'il manque un haut ou un bas ; la maille en automne et en hiver ; la veste hors été ; le sac et l'accessoire pour
- * finir la tenue, comme sur la maquette.
+ * finir la tenue, comme sur la maquette. Un col roulé posé d'office arrive sans haut (02/11/2026, ci-dessus).
  */
 export function selectionDeDepart(groupes: Record<CleEmplacement, EntreeCapsule[]>, saison: CapsuleSeason): SelectionComposer {
   const froid = saison === "Automne" || saison === "Hiver";
@@ -86,6 +111,8 @@ export function selectionDeDepart(groupes: Record<CleEmplacement, EntreeCapsule[
     if (e.cle === "dessus") actif = saison !== "Été";
     sel[e.cle] = actif ? 0 : -1;
   }
+  const pull = maillePosee(groupes, sel);
+  if (pull && isColRoule(pull) && (sel.haut ?? -1) >= 0) sel.haut = -1;
   return sel;
 }
 
@@ -96,26 +123,37 @@ export function position(sel: SelectionComposer, cle: CleEmplacement, n: number)
 }
 
 /** Pièce suivante (pas = 1) ou précédente (-1) d'un emplacement, en boucle ; « Sans » fait partie de la boucle s'il est facultatif. */
-export function avancer(sel: SelectionComposer, cle: CleEmplacement, n: number, pas: 1 | -1): SelectionComposer {
+export function avancer(sel: SelectionComposer, cle: CleEmplacement, groupes: Record<CleEmplacement, EntreeCapsule[]>, pas: 1 | -1): SelectionComposer {
+  const n = groupes[cle].length;
   if (n === 0) return sel;
-  const def = EMPLACEMENTS.find((e) => e.cle === cle)!;
-  const min = def.facultatif ? -1 : 0;
+  const min = emplacementFacultatif(cle, groupes, sel) ? -1 : 0;
   const taille = n - min;
-  const actuelle = position(sel, cle, n);
+  const actuelle = Math.max(position(sel, cle, n), min);
   const suivante = ((actuelle - min + pas + taille) % taille) + min;
-  return exclusivite({ ...sel, [cle]: suivante }, cle);
+  return exclusivite({ ...sel, [cle]: suivante }, cle, groupes);
 }
 
 /** Place une pièce précise dans son emplacement (« Composer avec cette pièce »), les autres emplacements gardant la leur. */
-export function choisir(sel: SelectionComposer, cle: CleEmplacement, index: number): SelectionComposer {
-  return exclusivite({ ...sel, [cle]: index }, cle);
+export function choisir(sel: SelectionComposer, cle: CleEmplacement, index: number, groupes: Record<CleEmplacement, EntreeCapsule[]>): SelectionComposer {
+  return exclusivite({ ...sel, [cle]: index }, cle, groupes);
 }
 
-/** La robe et le duo haut + bas s'excluent : on garde ce que l'on vient de toucher. */
-function exclusivite(sel: SelectionComposer, touche: CleEmplacement): SelectionComposer {
-  if (touche === "robe" && (sel.robe ?? -1) >= 0) return sel;
-  if ((touche === "haut" || touche === "bas") && (sel.robe ?? -1) >= 0) return { ...sel, robe: -1 };
-  return sel;
+/**
+ * Ce qui s'exclut, en gardant ce que l'on vient de toucher :
+ *   - la robe et le duo haut + bas ;
+ *   - le col roulé et le haut (02/11/2026) : poser un col roulé retire le haut, poser un haut retire le col roulé ;
+ *   - un haut laissé vide revient dès que plus aucun pull « base » ne le remplace (pull retiré, ou cardigan à sa place).
+ */
+function exclusivite(sel: SelectionComposer, touche: CleEmplacement, groupes: Record<CleEmplacement, EntreeCapsule[]>): SelectionComposer {
+  let out = sel;
+  if (touche === "robe" && (out.robe ?? -1) >= 0) return out;
+  if ((touche === "haut" || touche === "bas") && (out.robe ?? -1) >= 0) out = { ...out, robe: -1 };
+  const pull = maillePosee(groupes, out);
+  const hautPose = (out.haut ?? -1) >= 0;
+  if (touche === "maille" && pull && isColRoule(pull) && hautPose) out = { ...out, haut: -1 };
+  if (touche === "haut" && hautPose && pull && isColRoule(pull)) out = { ...out, maille: -1 };
+  if ((out.haut ?? -1) < 0 && groupes.haut.length > 0 && !emplacementFacultatif("haut", groupes, out)) out = { ...out, haut: 0 };
+  return out;
 }
 
 /** Les pièces posées sur la planche, dans l'ordre des emplacements. Une robe choisie remplace le haut et le bas. */

@@ -244,7 +244,7 @@ export function applySportCocooningFilter(
  * (02/10/2026, signalé sur une tenue de capsule : top en maille + pull col roulé).
  * Arbitrage limité au COL ROULÉ — les autres pulls restent superposables (31/08/2026).
  */
-function isColRoule(it: Item): boolean {
+export function isColRoule(it: Item): boolean {
   return it.cat === "pull" && /col roul/.test(`${it.subtype ?? ""} ${it.name || ""}`.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase());
 }
 

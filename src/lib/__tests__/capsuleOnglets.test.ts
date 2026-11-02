@@ -6,6 +6,7 @@ import {
   cleEntree,
   couleursPresentes,
   detailsCapsule,
+  emplacementFacultatif,
   FILTRES_PAR_DEFAUT,
   filtrerExplorer,
   piecesClesParFamille,
@@ -51,28 +52,67 @@ describe("Composer", () => {
 
   it("une flèche ne change QUE son emplacement, en boucle", () => {
     const depart = selectionDeDepart(groupes, "Automne");
-    const suivant = avancer(depart, "haut", 3, 1);
+    const suivant = avancer(depart, "haut", groupes, 1);
     expect(piecesComposees(groupes, suivant).map((e) => e.item.id)).toEqual([1, 4, 7, 6]);
-    expect(avancer(suivant, "haut", 3, -1)).toEqual(depart);
-    expect(avancer(depart, "haut", 3, -1).haut).toBe(2);
+    expect(avancer(suivant, "haut", groupes, -1)).toEqual(depart);
+    expect(avancer(depart, "haut", groupes, -1).haut).toBe(2);
   });
 
   it("un emplacement facultatif passe par « Sans »", () => {
     const depart = selectionDeDepart(groupes, "Automne");
-    expect(avancer(depart, "dessus", 1, 1).dessus).toBe(-1);
+    expect(avancer(depart, "dessus", groupes, 1).dessus).toBe(-1);
   });
 
   it("une robe choisie remplace le haut et le bas ; toucher au haut retire la robe", () => {
-    const robe = avancer(selectionDeDepart(groupes, "Automne"), "robe", 1, 1);
+    const robe = avancer(selectionDeDepart(groupes, "Automne"), "robe", groupes, 1);
     expect(piecesComposees(groupes, robe).map((e) => e.item.id)).toEqual([5, 7, 6]);
-    const haut = avancer(robe, "haut", 3, 1);
+    const haut = avancer(robe, "haut", groupes, 1);
     expect(haut.robe).toBe(-1);
     expect(piecesComposees(groupes, haut).map((e) => e.item.id)).toEqual([1, 4, 7, 6]);
   });
 
   it("« Composer avec cette pièce » la place sans toucher les autres emplacements", () => {
-    const sel = choisir(selectionDeDepart(groupes, "Automne"), "haut", 2);
+    const sel = choisir(selectionDeDepart(groupes, "Automne"), "haut", 2, groupes);
     expect(piecesComposees(groupes, sel).map((e) => e.item.id)).toEqual([2, 4, 7, 6]);
+  });
+
+  describe("le col roulé se porte seul (règle du moteur, 02/11/2026)", () => {
+    const g = piecesParEmplacement([
+      ...entrees,
+      sugg(piece(10, { cat: "pull", name: "Pull col roulé", subtype: "Pull col roulé" })),
+      sugg(piece(11, { cat: "pull", name: "Pull col rond", subtype: "Pull col rond" })),
+      sugg(piece(12, { cat: "pull", name: "Cardigan", subtype: "Cardigan", rolePiece: "calque" })),
+    ]);
+    const ids = (sel: ReturnType<typeof selectionDeDepart>) => piecesComposees(g, sel).map((e) => e.item.id);
+
+    it("au départ d'automne, un col roulé arrive sans haut ; en été, pas de pull donc le haut reste", () => {
+      expect(ids(selectionDeDepart(g, "Automne"))).toEqual([4, 10, 7, 6]);
+      expect(ids(selectionDeDepart(g, "Été"))).toEqual([3, 4, 6]);
+    });
+
+    it("poser un haut retire le col roulé ; poser un col roulé retire le haut", () => {
+      const depart = selectionDeDepart(g, "Automne");
+      const avecHaut = choisir(depart, "haut", 0, g);
+      expect(ids(avecHaut)).toEqual([3, 4, 7, 6]);
+      expect(ids(choisir(avecHaut, "maille", 0, g))).toEqual([4, 10, 7, 6]);
+    });
+
+    it("un pull col rond peut rester seul ou se poser sur un haut : le haut laissé vide reste au choix", () => {
+      const colRond = avancer(selectionDeDepart(g, "Automne"), "maille", g, 1);
+      expect(ids(colRond)).toEqual([4, 11, 7, 6]);
+      expect(emplacementFacultatif("haut", g, colRond)).toBe(true);
+      expect(ids(avancer(colRond, "haut", g, 1))).toEqual([3, 4, 11, 7, 6]);
+    });
+
+    it("jamais de haut vide sous un cardigan ni sans pull : le haut revient", () => {
+      const colRond = avancer(selectionDeDepart(g, "Automne"), "maille", g, 1);
+      const cardigan = avancer(colRond, "maille", g, 1);
+      expect(emplacementFacultatif("haut", g, cardigan)).toBe(false);
+      expect(ids(cardigan)).toEqual([3, 4, 12, 7, 6]);
+      const sansPull = choisir(colRond, "maille", -1, g);
+      expect(emplacementFacultatif("haut", g, sansPull)).toBe(false);
+      expect(ids(sansPull)).toEqual([3, 4, 7, 6]);
+    });
   });
 
   it("« Pourquoi cette tenue ? » ne dit que ce que les pièces rendent vrai", () => {
