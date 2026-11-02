@@ -215,6 +215,13 @@ interface ConfigContexte {
   /** Gabarit d'un bas héro AVEC une couche (pull + t-shirt à gauche, bas à droite, chaussures dessous, sac contre le bas). */
   refsGroupe?: Partial<Record<RoleFlatLay, Ref>>;
   slotsAccessoires: Ref[];
+  /**
+   * LES ACCESSOIRES À UNE PLACE FIXE (02/11/2026, demandé : « que les accessoires soient au même emplacement » dans tous les hero) : des
+   * emplacements dans la zone FINALE, essayés dans cet ordre ; l'accessoire prend le premier qui ne gêne aucune pièce, et non plus celui
+   * qui le colle au plus près de la composition (mesuré : 9 à 14 places différentes sur 32 planches de la Tenue du jour). `x` en unités de
+   * largeur (0 à 100), `y` en part de la hauteur de la zone (0 à 1). Absents : l'ancienne règle.
+   */
+  placesAccessoires?: { x: number; y: number; l: number }[];
 }
 
 const REF_HOME: Record<RoleFlatLay, Ref> = {
@@ -300,6 +307,14 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
     refsDessus: HOME_DESSUS,
     refsRobe: HOME_ROBE,
     masquerCouche: true,
+    // Accessoire à place fixe (02/11/2026) : à droite au milieu, la place qu'il prenait déjà dans toutes les tenues mesurées ; puis les coins.
+    placesAccessoires: [
+      { x: 90, y: 0.55, l: 15 },
+      { x: 90, y: 0.12, l: 15 },
+      { x: 10, y: 0.9, l: 15 },
+      { x: 10, y: 0.12, l: 15 },
+      { x: 90, y: 0.9, l: 15 },
+    ],
     // Les collants ne sont plus masqués sur l'accueil (14/10/2026, demandé) : ils s'y montrent avec la photo du catalogue (resolveHeroImage),
     // le visuel à plat qui ne se lisait pas (08/10/2026) n'étant plus utilisé pour eux.
     slotsAccessoires: SLOTS_HOME,
@@ -319,6 +334,17 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
     masqueMax: 0.3,
     // 28 px sur les 278 px de large de la planche : la ligne de badges se pose par-dessus la zone, jamais sur une pièce.
     margeHaute: 10,
+    // Accessoires à place fixe (02/11/2026) : à droite au milieu (leur place la plus fréquente avant), puis les coins du haut, puis les
+    // replis — aucun accessoire perdu sur les tenues mesurées.
+    placesAccessoires: [
+      { x: 90, y: 0.62, l: 18 },
+      { x: 89, y: 0.14, l: 18 },
+      { x: 11, y: 0.14, l: 18 },
+      { x: 89, y: 0.88, l: 18 },
+      { x: 11, y: 0.88, l: 18 },
+      { x: 50, y: 0.92, l: 18 },
+      { x: 11, y: 0.6, l: 18 },
+    ],
     // Deux accessoires au plus dans le flat lay principal (calibrage du 08/10/2026).
     maxAccessoires: [2, 2],
     ecartAccessoireMax: 14,
@@ -492,6 +518,8 @@ export interface OptionsFlatLay {
    * contexte. Sans elle, une planche au format 100/126 posée dans un cadre plus large laissait ses bords vides (Tenue : 32 px à 390 px).
    */
   hauteurZone?: number;
+  /** false : les accessoires reprennent la règle d'avant le 02/11/2026 (le levier de l'audit avant / après, scripts/flatlay-ancrages.audit.ts). */
+  accessoiresFixes?: boolean;
 }
 
 /**
@@ -632,7 +660,9 @@ export function composerFlatLay(
   // Chaque accessoire garde le premier emplacement qui le colle à la composition SANS couvrir une pièce importante ; sinon il est
   // écarté : un petit objet isolé ou posé sur le héro ne sert pas la planche (« 08/10/2026 : un accessoire noir seul sous la robe »).
   const structure = () => brut.map(boiteTournee);
-  for (const { piece } of accessoires.filter((r) => gardes.has(r.piece))) {
+  const fixes = options.accessoiresFixes !== false && !!config.placesAccessoires?.length;
+  // Accessoires à place fixe : posés APRÈS l'ajustement à la zone (plus bas), dans ses coordonnées finales.
+  for (const { piece } of fixes ? [] : accessoires.filter((r) => gardes.has(r.piece))) {
     let meilleur: ReturnType<typeof placer> | null = null;
     let meilleurEcart = Infinity;
     // Chaque emplacement est essayé resserré ET tel quel (14/10/2026) : resserré seul, il tombait sur les pièces ; tel quel seul, il
@@ -669,20 +699,59 @@ export function composerFlatLay(
   const cyEns = (y0 + y1) / 2;
   // Le centre de la zone utile : au milieu de la zone quand les deux marges sont égales, plus bas sinon.
   const cyZone = (haut + hauteurZone - config.marge) / 2;
+  const heroMax = config.largeurHeroMax ?? LARGEUR_HERO_MAX;
+  const finales: PlacementFlatLay[] = brut.map((p) => {
+    const l = p.l * k;
+    // La pièce héro reste dominante sans écraser la planche : 58 % de la largeur de la zone au plus (elle rétrécit sur place).
+    const c = p.role === "hero" && l > heroMax ? heroMax / l : 1;
+    return {
+      ...p,
+      x: 50 + (p.x - cxEns) * k,
+      y: cyZone + (p.y - cyEns) * k,
+      l: l * c,
+      h: p.h * k * c,
+    };
+  });
+
+  // LES ACCESSOIRES À UNE PLACE FIXE (cf. ConfigContexte.placesAccessoires) : le premier emplacement libre, dans l'ordre du contexte ; aucun :
+  // l'accessoire est écarté, comme avant. Pas d'écart maximal à la composition : la place est la même d'une tenue à l'autre.
+  if (fixes) {
+    const tolere = config.chevauchementMax ?? CHEVAUCHEMENT_MAX;
+    const masqueMax = config.masqueMax ?? MASQUE_MAX;
+    for (const { piece } of accessoires.filter((r) => gardes.has(r.piece))) {
+      const visualScale = echelleVisuelle("accessoire", piece.cat) * (piece.visualScale && piece.visualScale > 0 ? piece.visualScale : 1);
+      const ratio = piece.ratio > 0 ? piece.ratio : 1;
+      let pose: PlacementFlatLay | null = null;
+      for (const place of config.placesAccessoires!) {
+        let l = place.l * visualScale;
+        // Un accessoire haut (une écharpe pendante) ne dépasse pas 1,4 fois la largeur de sa place.
+        if (l / ratio > place.l * 1.4) l = place.l * 1.4 * ratio;
+        const candidat: PlacementFlatLay = { id: piece.id, cat: piece.cat, role: "accessoire", visualScale, x: place.x, y: place.y * hauteurZone, l, h: l / ratio, angle: 0, z: profondeur("accessoire", piece.cat) };
+        // Dans la zone de sécurité, sans changer sa taille.
+        candidat.x = Math.min(100 - config.marge - l / 2, Math.max(config.marge + l / 2, candidat.x));
+        candidat.y = Math.min(hauteurZone - config.marge - candidat.h / 2, Math.max(haut + candidat.h / 2, candidat.y));
+        const bc = boiteTournee(candidat);
+        // Les règles de desserrer : la part commune rapportée à la plus petite des deux (30 % sur ces contextes : la planche remplit sa
+        // zone, une place tout à fait libre manque souvent), et le masquage CUMULÉ de chaque pièce qu'il recouvre, lui compris.
+        const genant = finales.some((q) => {
+          const bq = boiteTournee(q);
+          const commun = recouvrement(bc, bq);
+          if (commun <= 0) return false;
+          if (commun / Math.min(aire(bc), aire(bq)) > tolere) return true;
+          const dessus = finales.filter((o) => o.z > q.z).reduce((t, o) => t + recouvrement(bq, boiteTournee(o)), 0);
+          return (dessus + commun) / aire(bq) > masqueMax;
+        });
+        if (genant) continue;
+        pose = candidat;
+        break;
+      }
+      if (pose) finales.push(pose);
+      else ecartees.push(piece.id);
+    }
+  }
+
   return {
-    pieces: brut.map((p) => {
-      const l = p.l * k;
-      // La pièce héro reste dominante sans écraser la planche : 58 % de la largeur de la zone au plus (elle rétrécit sur place).
-      const heroMax = config.largeurHeroMax ?? LARGEUR_HERO_MAX;
-      const c = p.role === "hero" && l > heroMax ? heroMax / l : 1;
-      return {
-        ...p,
-        x: 50 + (p.x - cxEns) * k,
-        y: cyZone + (p.y - cyEns) * k,
-        l: l * c,
-        h: p.h * k * c,
-      };
-    }),
+    pieces: finales,
     ecartees,
     masquees,
   };
