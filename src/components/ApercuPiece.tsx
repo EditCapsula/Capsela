@@ -31,16 +31,16 @@ export default function ApercuPiece() {
   const port = suggestion ? null : jamais ? "Jamais " + participePorte(piece) : nb > 0 ? `${participePorteMaj(piece)} ${nb} fois` : wornAgo(jours).replace(/^Porté/, participePorteMaj(piece));
 
   return (
-    // Une suggestion prend son nom pour titre (02/11/2026, demandé) au lieu de « Suggestion » ; la ligne « Une pièce de ta capsule… » dit
-    // toujours d'où elle vient, et le nom n'est plus répété dans la feuille.
-    <BottomSheet title={suggestion ? piece.name : "Ton dressing"} open onClose={actions.fermerApercuPiece}>
+    // La pièce prend son nom pour titre (02/11/2026, demandé, pour une suggestion puis pour une pièce du dressing) au lieu de
+    // « Suggestion » / « Ton dressing » ; d'où elle vient est dit dans la feuille, et le nom n'y est plus répété.
+    <BottomSheet title={piece.name} open onClose={actions.fermerApercuPiece}>
       <div className="flex gap-4 items-start">
         <div className="flex-none" style={{ width: 120 }}>
           <PhotoPiece piece={piece} ratio={0.8} rayon={16} />
         </div>
         <div className="flex-1 min-w-0">
-          {!suggestion && <div className="font-serif text-ink" style={{ fontSize: 20, lineHeight: 1.2 }}>{piece.name}</div>}
-          <div className={"text-[12.5px] text-muted-3 " + (suggestion ? "" : "mt-[6px]")}>{infos}</div>
+          <div className="text-[12.5px] text-muted-3">{infos}</div>
+          {!suggestion && <div className="text-[12.5px] text-muted-3 mt-[6px]">✓ Dans ton dressing</div>}
           {port && <div className="text-[12.5px] text-ink mt-[10px]">{port}</div>}
           {suggestion && <div className="text-[12px] text-muted-3 leading-[1.45] mt-[10px]">Une pièce de ta capsule, pas encore dans ton dressing.</div>}
         </div>
