@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { LONGUEUR_MIN_MOT_DE_PASSE, validerNouveauMotDePasse } from "@/lib/motDePasse";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
-import Input from "@/components/Input";
+import { ChampMotDePasse } from "@/components/Input";
+import LogoCapsela from "@/components/LogoCapsela";
 
 /**
  * « NOUVEAU MOT DE PASSE » — ouvert par le lien de réinitialisation reçu par
@@ -23,7 +24,6 @@ export default function NouveauMotDePasseScreen() {
   const { actions } = useCapsela();
   const [motDePasse, setMotDePasse] = useState("");
   const [confirmation, setConfirmation] = useState("");
-  const [visible, setVisible] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [fait, setFait] = useState(false);
@@ -48,7 +48,11 @@ export default function NouveauMotDePasseScreen() {
 
   if (auth.recuperation === "lien_invalide") {
     return (
-      <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[44px] pb-[30px]">
+      <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[22px] pb-[30px]">
+        {/* Le logo en tête, comme sur l'écran de connexion (02/11/2026, signalé : il manquait). */}
+        <div className="flex justify-center mb-[30px]">
+          <LogoCapsela />
+        </div>
         <div className="t-titre-ecran text-ink">
           Ce lien n&apos;est plus <span className="italic text-terracotta">valide</span>
         </div>
@@ -67,7 +71,11 @@ export default function NouveauMotDePasseScreen() {
 
   if (fait) {
     return (
-      <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[44px] pb-[30px]">
+      <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[22px] pb-[30px]">
+        {/* Le logo en tête, comme sur l'écran de connexion (02/11/2026, signalé : il manquait). */}
+        <div className="flex justify-center mb-[30px]">
+          <LogoCapsela />
+        </div>
         <div className="t-titre-ecran text-ink">
           Ton mot de passe a été <span className="italic text-terracotta">mis à jour</span>
         </div>
@@ -82,7 +90,11 @@ export default function NouveauMotDePasseScreen() {
   }
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[44px] pb-[30px]">
+    <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[22px] pb-[30px]">
+      {/* Le logo en tête, comme sur l'écran de connexion (02/11/2026, signalé : il manquait). */}
+      <div className="flex justify-center mb-[30px]">
+        <LogoCapsela />
+      </div>
       <div className="t-titre-ecran text-ink">
         Nouveau <span className="italic text-terracotta">mot de passe</span>
       </div>
@@ -98,8 +110,7 @@ export default function NouveauMotDePasseScreen() {
       >
         <label className="flex flex-col gap-[6px]">
           <span className="t-label text-muted">Nouveau mot de passe</span>
-          <Input
-            type={visible ? "text" : "password"}
+          <ChampMotDePasse
             autoComplete="new-password"
             value={motDePasse}
             onChange={(e) => setMotDePasse(e.target.value)}
@@ -107,16 +118,12 @@ export default function NouveauMotDePasseScreen() {
         </label>
         <label className="flex flex-col gap-[6px]">
           <span className="t-label text-muted">Confirmer le nouveau mot de passe</span>
-          <Input
-            type={visible ? "text" : "password"}
+          <ChampMotDePasse
             autoComplete="new-password"
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
           />
         </label>
-        <button type="button" onClick={() => setVisible((v) => !v)} className="self-start t-lien text-terracotta cursor-pointer min-h-[44px]">
-          {visible ? "Masquer les mots de passe" : "Afficher les mots de passe"}
-        </button>
         {erreur && (
           <div role="alert" className="text-[12px] text-rust leading-[1.5]">
             {erreur}

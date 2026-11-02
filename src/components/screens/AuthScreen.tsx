@@ -6,7 +6,7 @@ import { markSignupIntent, useAuth } from "@/lib/auth";
 import { messageAge, verifierAge } from "@/lib/ageMinimum";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
-import Input from "@/components/Input";
+import Input, { ChampMotDePasse } from "@/components/Input";
 
 export default function AuthScreen() {
   const { state, actions } = useCapsela();
@@ -88,8 +88,8 @@ export default function AuthScreen() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Adresse e-mail"
         />
-        <Input
-          type="password"
+        <ChampMotDePasse
+          autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Mot de passe"

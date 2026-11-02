@@ -6,7 +6,7 @@ import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 import { emailPlausible } from "@/lib/motDePasse";
 import Button from "@/components/Button";
-import Input from "@/components/Input";
+import Input, { ChampMotDePasse } from "@/components/Input";
 import LogoCapsela from "@/components/LogoCapsela";
 
 export default function LoginScreen() {
@@ -15,7 +15,6 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [pwVisible, setPwVisible] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotBusy, setForgotBusy] = useState(false);
@@ -160,23 +159,12 @@ export default function LoginScreen() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Adresse e-mail"
         />
-        <div className="relative">
-          <Input
-            type={pwVisible ? "text" : "password"}
-            className="pr-[46px]"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Mot de passe"
-          />
-          <button
-            type="button"
-            onClick={() => setPwVisible((v) => !v)}
-            aria-label={pwVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] text-muted cursor-pointer"
-          >
-            {pwVisible ? "⊘" : "◉"}
-          </button>
-        </div>
+        <ChampMotDePasse
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Mot de passe"
+        />
       </div>
 
       <button
