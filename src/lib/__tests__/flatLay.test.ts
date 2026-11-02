@@ -666,3 +666,49 @@ describe("hero — la tenue prend toute la place de sa zone (14/10/2026, « le f
       }
   });
 });
+
+describe("accessoires à une place fixe (02/11/2026, demandé : « que les accessoires soient au même emplacement »)", () => {
+  const q = (id: number, cat: CategoryKey, ratio: number) => ({ id, cat, ratio });
+  const tenues = [
+    [q(1, "haut", 1), q(2, "pantalon", 0.4), q(3, "chaussures", 2), q(4, "accessoire", 1.2)],
+    [q(1, "haut", 1), q(2, "short", 1.1), q(3, "chaussures", 2), q(4, "sac", 0.9), q(5, "accessoire", 1)],
+    [q(1, "manteau", 0.6), q(2, "pull", 1), q(3, "jean", 0.42), q(4, "chaussures", 2), q(5, "accessoire", 1)],
+    [q(1, "robe", 0.5), q(2, "chaussures", 2), q(3, "sac", 0.9), q(4, "bijou", 1)],
+  ];
+  const places = (accessoiresFixes?: boolean) => {
+    const vues = new Map<string, number>();
+    let poses = 0;
+    for (const t of tenues)
+      for (const g of ["a", "b", "c", "d", "e"]) {
+        const r = composerFlatLay(t, g, { contexte: "look-detail", hauteurZone: 118, accessoiresFixes });
+        for (const p of r.pieces.filter((x) => x.role === "accessoire")) {
+          poses++;
+          const cle = `${Math.round(p.x)},${Math.round(p.y)}`;
+          vues.set(cle, (vues.get(cle) ?? 0) + 1);
+        }
+      }
+    return { vues, poses };
+  };
+
+  it("les accessoires se posent sur peu de places, toujours les mêmes, et aucun n'est perdu", () => {
+    const avant = places(false);
+    const apres = places();
+    expect(apres.poses).toBe(avant.poses);
+    expect(apres.vues.size).toBeLessThan(avant.vues.size);
+    // La première place du contexte reçoit la plupart des accessoires.
+    const premiere = CONTEXTES["look-detail"].placesAccessoires![0];
+    const sur = [...apres.vues].filter(([cle]) => Math.abs(+cle.split(",")[0] - premiere.x) < 10).reduce((t, [, n]) => t + n, 0);
+    expect(sur * 2).toBeGreaterThanOrEqual(apres.poses);
+  });
+
+  it("un accessoire posé reste dans la zone et ne recouvre une pièce que dans la limite du contexte", () => {
+    for (const t of tenues)
+      for (const g of ["a", "b", "c"]) {
+        const { pieces } = composerFlatLay(t, g, { contexte: "look-detail", hauteurZone: 118 });
+        for (const a of pieces.filter((x) => x.role === "accessoire")) {
+          expect(a.x - a.l / 2).toBeGreaterThanOrEqual(CONTEXTES["look-detail"].marge - 1e-6);
+          expect(a.y + a.h / 2).toBeLessThanOrEqual(118 - CONTEXTES["look-detail"].marge + 1e-6);
+        }
+      }
+  });
+});
