@@ -1180,7 +1180,8 @@ export default function CapsuleScreen() {
       </BottomSheet>
 
       <BottomSheet
-        title={fiche?.vue === "remplacer" ? "Remplacer cette pièce" : "Suggestion"}
+        // Le nom de la pièce en titre de la fiche (02/11/2026, demandé), et plus deux fois : « Suggestion » en titre, le nom en dessous.
+        title={fiche?.vue === "remplacer" ? "Remplacer cette pièce" : (pieceFiche?.name ?? "")}
         open={Boolean(fiche && pieceFiche)}
         onClose={() => setFiche(null)}
       >
@@ -1195,8 +1196,7 @@ export default function CapsuleScreen() {
               <div className="flex justify-center">
                 <Statut possedee={false} />
               </div>
-              <div className="t-titre-section text-ink mt-[8px]">{pieceFiche.name}</div>
-              {syntheseFiche && <div className="text-[12px] text-muted mt-[6px]">{syntheseFiche}</div>}
+              {syntheseFiche && <div className="text-[12px] text-muted mt-[8px]">{syntheseFiche}</div>}
             </div>
 
             {/* Seulement les raisons que la sélection a réellement lues
