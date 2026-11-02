@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { InputHTMLAttributes, SelectHTMLAttributes } from "react";
 
 /**
@@ -24,5 +27,32 @@ export function Select({ className = "", children, ...props }: SelectHTMLAttribu
     <select {...props} className={CHAMP + largeur(className) + (className ? " " + className : "")}>
       {children}
     </select>
+  );
+}
+
+/**
+ * CHAMP MOT DE PASSE (02/11/2026, demandé : « une icône pour voir le mot de passe dans les champs, pas un lien en dessous »). L'œil est
+ * DANS le champ, à droite, dans une cible de 44 px ; il bascule l'affichage de ce seul champ. Connexion, création de compte et
+ * nouveau mot de passe l'utilisent tous : un seul dessin, un seul comportement.
+ */
+export function ChampMotDePasse({ className = "", ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <Input {...props} type={visible ? "text" : "password"} className={"pr-[48px]" + (className ? " " + className : "")} />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+        aria-pressed={visible}
+        className="absolute right-[2px] top-1/2 -translate-y-1/2 w-[44px] h-[44px] flex items-center justify-center text-muted cursor-pointer"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+          {visible && <path d="M4 4l16 16" />}
+        </svg>
+      </button>
+    </div>
   );
 }
