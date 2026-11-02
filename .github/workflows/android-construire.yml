@@ -47,6 +47,9 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_PUBLISHABLE_KEY }}
+          # Le bloc d'annonces AdMob de la vidéo récompensée (02/11/2026, src/lib/publicite.ts) : variable du dépôt, pas un secret
+          # (il est lisible dans l'app livrée). Absente : bloc de test de Google, publicités de test non rémunérées.
+          NEXT_PUBLIC_ADMOB_RECOMPENSE_ID: ${{ vars.ADMOB_RECOMPENSE_ID }}
         run: |
           if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "::error::Clé publique Supabase absente : sans elle, l'app tournerait en mode démo."
@@ -73,6 +76,8 @@ jobs:
           CAPSELA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           CAPSELA_VERSION_CODE: ${{ github.run_number }}
           CAPSELA_VERSION_NAME: ${{ inputs.version || '0.0-verification' }}
+          # L'identifiant d'application AdMob (variable du dépôt) ; absent, celui de test de Google (android/app/build.gradle).
+          CAPSELA_ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
         # En cas d'échec, l'erreur de Gradle remonte dans les annotations de l'exécution (lisibles sans ouvrir le journal complet).
         run: |
           set -o pipefail

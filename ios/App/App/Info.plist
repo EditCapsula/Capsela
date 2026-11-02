@@ -86,5 +86,9 @@
 	<!-- Seul le chiffrement standard (HTTPS) est utilisé : exemption de la déclaration d'export. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- AdMob (02/11/2026) : le SDK publicitaire, embarqué par le plugin, arrête l'app au lancement sans cette clé. Identifiant de
+	     TEST de Google : la publicité n'est active que sur Android (src/lib/publicite.ts) ; à remplacer avant de l'ouvrir sur iOS. -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
 </dict>
 </plist>

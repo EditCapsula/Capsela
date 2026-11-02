@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { decisionRetour, lirePage } from "@/lib/retourSysteme";
+import { arreterPublicite, demarrerPublicite } from "@/lib/publicite";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CapselaProvider, useCapsela } from "@/lib/store";
@@ -74,9 +75,20 @@ const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth", "login"]);
 const FLOW_SCREENS = new Set(["planifier", "premium", "valise", "add", "importerTenue"]);
 
 function Screens() {
-  const { state, actions } = useCapsela();
+  const { state, actions, etatPremium } = useCapsela();
   const auth = useAuth();
   const showTabbar = !NO_TABBAR_SCREENS.has(state.screen) && !FLOW_SCREENS.has(state.screen);
+
+  // LA VIDÉO RÉCOMPENSÉE (AdMob, 02/11/2026, publicite.ts) : Android seulement, compte connecté au profil complet et
+  // non Premium. Le profil complet évite que le formulaire de consentement de Google coupe le questionnaire
+  // d'inscription ; « gratuit » seulement, parce que « inconnu » n'applique aucune limite et que Premium n'en a pas :
+  // dans les deux cas, la feuille qui propose la vidéo ne s'ouvre jamais.
+  const userIdPub = auth.userId;
+  const profilCompletPub = auth.profile.completed;
+  useEffect(() => {
+    if (!userIdPub) arreterPublicite();
+    else if (profilCompletPub && etatPremium === "gratuit") void demarrerPublicite(userIdPub);
+  }, [userIdPub, profilCompletPub, etatPremium]);
 
   // Session déjà ouverte (connexion, retour OAuth ou rechargement) : saute les écrans
   // d'accueil, direction la Homepage — jamais le questionnaire, même si le profil est

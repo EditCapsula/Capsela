@@ -49,7 +49,7 @@ plus dans l'éditeur du tableau de bord.)
 | `generate-catalog-image` | visuels du catalogue | `OPENAI_API_KEY`, `IMAGE_GENERATION_MODEL`/`_QUALITY`, `MAX_IMAGE_GENERATIONS_PER_DAY`, `MAX_CATALOG_IMAGE_REQUESTS_PER_USER_PER_DAY` (options), clé admin | **oui** (depuis le 01/10) + 300 demandes par compte et par jour ; `force_regenerate` réservé à l'administration | requise si des visuels manquent |
 | `delete-account` | suppression du compte (RGPD) | `SUPABASE_SERVICE_ROLE_KEY` ou `SB_SECRET_KEY` | oui (id lu dans le JWT) | **requise** : sans elle, la suppression et le refus sous 15 ans échouent |
 | `stylist-advice` | avis de styliste | `OPENAI_API_KEY`, `STYLIST_ADVICE_MODEL`, `STYLIST_ADVICE_TIMEOUT_MS` (options), clé admin | oui | requise si l'avis est ouvert |
-| `video-recompense` | bonus après vidéo | — | — | **inutile** : aucun fournisseur, l'app n'affiche jamais la carte vidéo |
+| `video-recompense` | bonus après vidéo (AdMob, 02/11/2026) | clé admin | **non** (`--no-verify-jwt`) : appelée par AdMob, authentifiée par la signature de Google (`_shared/admobSsv.ts`) | requise dès que la vidéo récompensée est ouverte ; exige les migrations 0032 et 0033 |
 | `recompress-legacy-images` | maintenance du stock PNG | `RECOMPRESS_ADMIN_KEY` | clé dédiée | à supprimer une fois le stock épuisé |
 
 **Risque de coût : traité le 01/10/2026** (migration `0043_edge_usage_quota.sql`,
