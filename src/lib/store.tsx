@@ -45,7 +45,7 @@ import {
 } from "./dressing";
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { choisirMeteo, fetchPrevisionByCity, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosition, type SourceMeteo } from "./weather";
-import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
+import { CATS, CITIES, DATE_CONTEXTS, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, WORK_MODES, type Weather } from "./data";
 import { aDesManches } from "./manches";
 import { aUnMotif } from "./motifs";
 import { genererTenueDiversifiee, recentsDuJour } from "./diversite";
@@ -247,10 +247,12 @@ function buildInitialState(): AppState {
     occasion: "all",
     occasionManual: false,
     dismissedSuggestions: [],
-    workMode: "Présentiel",
+    // Sous-occasions par défaut : la PREMIÈRE de chaque liste (arbitrage du 03/11/2026 — « Verre » l'était pour
+    // « Rendez-vous amoureux » alors que la liste s'ouvre sur « Restaurant / date romantique »).
+    workMode: WORK_MODES[0],
     travelMode: "Court trajet",
     travelTipDismissed: false,
-    dateContext: "Verre",
+    dateContext: DATE_CONTEXTS[0][0],
     capsuleSeason: null,
     exploredStyleId: null,
     lookCount: 0,
