@@ -36,4 +36,9 @@ describe("etatAjout", () => {
   it("un nom déjà présent sans photo (remplacer une suggestion) : le formulaire", () => {
     expect(etatAjout({ ...base, nomRempli: true })).toBe("pret");
   });
+  it("« J'ai déjà ça » : la photo de la suggestion et sa fiche déjà remplie ouvrent le formulaire, jamais l'échec de lecture", () => {
+    expect(etatAjout({ ...base, photo: true, nomRempli: true })).toBe("pret");
+    // Pendant l'analyse d'une photo remplacée, le chargement reste dit.
+    expect(etatAjout({ ...base, photo: true, nomRempli: true, analyse: true })).toBe("chargement");
+  });
 });

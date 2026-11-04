@@ -4,7 +4,8 @@ import { weatherForDay } from "../capsule";
 import { generateOutfitWithFallback } from "../logic";
 import type { CategoryKey, DateContext, Item, ShoeType } from "../types";
 
-// R-S28 (04/11/2026, demandé : « pour une activité lors d'un date il faut privilégier une tenue décontractée »). Mesuré dans la MÊME
+// R-S28 (04/11/2026, demandé : « pour une activité lors d'un date il faut privilégier une tenue décontractée », puis « pour Cinéma et
+// balade la tenue doit être décontractée également »). Mesuré dans la MÊME
 // exécution, sur le même dressing : AVANT = levier `sansDecontracteEnActivite`, APRÈS = production. Le dressing a de quoi faire les deux :
 // une robe moulante et des escarpins, un jean, un t-shirt et des baskets. Mesuré le 04/11/2026 : 30 % de tenues décontractées avant,
 // 100 % après (la robe habillée n'est plus le socle quand un haut et un bas décontractés existent).
@@ -39,6 +40,11 @@ describe("R-S28 : une activité en rendez-vous, une tenue décontractée", () =>
     const apres = partDecontractee("Activité", false);
     expect(apres).toBe(1);
     expect(avant).toBeLessThan(0.9);
+  });
+
+  it("Cinéma / balade : décontractée aussi (demandé le même jour)", () => {
+    expect(partDecontractee("Cinéma / balade", false)).toBe(1);
+    expect(partDecontractee("Cinéma / balade", true)).toBeLessThan(0.9);
   });
 
   it("Verre : non concerné, la règle ne s'étend pas sans examen (AGENTS.md, point 7)", () => {
