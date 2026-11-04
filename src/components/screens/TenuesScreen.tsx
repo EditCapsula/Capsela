@@ -20,7 +20,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import PourLExterieur from "@/components/PourLExterieur";
-import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, outfitMoodPhrase, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
+import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
 
 /** Première lettre en capitale : « il va faire frais ce soir » en tête de phrase. */
@@ -596,12 +596,6 @@ export default function TenuesScreen() {
   // Phrase d'explication de la recommandation (recette 19/08/2026) — par
   // template, jamais d'IA ; pas de température affichée tant que la
   // géolocalisation n'a pas résolu la météo réelle du jour.
-  const recommendationText = outfitMoodPhrase(
-    state.occasion || "all",
-    state.workMode,
-    state.dateContext,
-    meteoEnAttente ? null : meteoDuJour.temp
-  );
 
 
   const dismissed = new Set(state.dismissedSuggestions || []);
@@ -675,7 +669,7 @@ export default function TenuesScreen() {
    * pièce précise, complète sinon.
    */
   const ajoutsConseilles = lookScore.proactives.filter(
-    (p) => p.suggestedId != null && displayPool.some((i) => i.id === p.suggestedId)
+    (p) => p.suggestedId != null && displayPool.some((i) => i.id === p.suggestedId) && !(p.key === "veste_soir" && exterieur != null)
   ).length;
   const statut = statutTenue({
     nbPieces: piecesDuLook.length,
@@ -690,9 +684,12 @@ export default function TenuesScreen() {
 
   // LA VESTE CONSEILLÉE PAR TEMPS FRAIS, DANS LE HERO (14/10/2026, demandé) : la pièce proposée par « veste_soir » est posée dans la
   // composition, estompée, avec un « + » qui l'ajoute — la carte « À prévoir » correspondante ne s'affiche plus dessous.
+  // Pas de conseil quand un manteau est déjà proposé « Pour l'extérieur » (04/11/2026, demandé : « pas la peine de suggérer le manteau si on
+  // le met toujours dans la strate extérieure ») : ni pièce estompée, ni silhouette à ajouter, ni carte « À prévoir ».
+  const coucheDejaDehors = exterieur != null;
   const conseilVeste = (() => {
     const p = liveProactiveByKey.get("veste_soir");
-    if (!p || p.suggestedId == null || dismissingEntries["veste_soir"]) return null;
+    if (coucheDejaDehors || !p || p.suggestedId == null || dismissingEntries["veste_soir"]) return null;
     const piece = displayPool.find((i) => i.id === p.suggestedId);
     return piece ? { p, piece } : null;
   })();
@@ -700,11 +697,11 @@ export default function TenuesScreen() {
   // niveau de formalité, donc « veste_soir » n'a pas de pièce. Le conseil passe quand même dans le hero : une silhouette de veste avec
   // un « + » qui ouvre l'ajout d'une veste au dressing — plutôt qu'une carte « À prévoir » sans rien à ajouter.
   const vesteAAjouter =
-    !conseilVeste && !noCompleteOutfit && liveProactiveByKey.has("veste_soir") && !dismissingEntries["veste_soir"];
+    !coucheDejaDehors && !conseilVeste && !noCompleteOutfit && liveProactiveByKey.has("veste_soir") && !dismissingEntries["veste_soir"];
   // Tant qu'une paire manque, « Compléter la tenue » ne montre que ce qui la complète (14/10/2026) : les conseils de style (touche de
   // couleur, layering) reviennent dès que la tenue est complète, avec leur « Ignorer » inchangé.
   const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)])).filter(
-    (k) => !((conseilVeste || vesteAAjouter) && k === "veste_soir") && !chaussuresManquantes
+    (k) => !((conseilVeste || vesteAAjouter || coucheDejaDehors) && k === "veste_soir") && !chaussuresManquantes
   );
   // Par le froid (sous SEUIL_MANTEAU, 19/10/2026), la pièce à ajouter est un manteau, pas une veste.
   const coucheAAjouter = meteoDuJour.temp < SEUIL_MANTEAU ? ("manteau" as const) : ("veste" as const);
@@ -919,25 +916,7 @@ export default function TenuesScreen() {
               provenance. Les unités de conteneur (cqw) portent sur la card. */}
           <div className="flex flex-col flex-1 min-h-0">
           <div className="relative flex-1 min-h-0">
-          {recommendationText && (
-          // La phrase d'ambiance se pose PAR-DESSUS le haut de la zone (calibrage du 08/10/2026) : le flat lay réserve cette bande
-          // (margeHaute), aucune pièce n'y passe. Les badges sont dans l'en-tête de la card depuis le 30/10/2026.
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center flex-wrap gap-x-[10px] gap-y-[5px] pointer-events-none">
-            {/* Phrase d'ambiance — celle de CETTE tenue, jamais un bulletin,
-                et SANS la température : la barre météo la donne déjà à deux
-                cents pixels au-dessus (23/09). Manuscrite, d'où une taille
-                plus grande que le corps de texte — une cursive à 12,5 px ne
-                se lit pas. Elle passe par outfitMoodPhrase et non
-                explainRecommendation : sur l'accueil, cette même phrase est
-                le SEUL endroit qui affiche la température, et l'argument
-                « elle est déjà au-dessus » y est faux. */}
-            {recommendationText && (
-              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "var(--color-sand-text)" }}>
-                {recommendationText}
-              </span>
-            )}
-          </div>
-          )}
+          {/* Plus de phrase d'ambiance manuscrite dans le hero (04/11/2026, demandé : « harmoniser les hero ») : aucun hero n'en a plus. */}
 
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}

@@ -23,7 +23,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { CATS, DATE_CONTEXTS, OCC_SHORT, OCCASIONS, WORK_MODES, occasionShortLabel, type Weather } from "@/lib/data";
 import { sansTenueCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
-import { candidatsDeRemplacement, SEUIL_MANTEAU, titreLookDuJour } from "@/lib/logic";
+import { candidatsDeRemplacement, SEUIL_MANTEAU } from "@/lib/logic";
 import { humeursProposees, libelleHumeur, genererTenueHumeur, type Humeur } from "@/lib/humeur";
 import { soireeHabillee } from "@/lib/occasions";
 import { jourLocal } from "@/lib/outfitFeedback";
@@ -1839,11 +1839,10 @@ export default function PlanifierScreen() {
               </EmptyState>
             ) : (
               <>
-                {/* LE MÊME HERO QUE LE LOOK PLANIFIÉ (04/11/2026, demandé : « harmonise aussi l'affichage sur cette page ») : surtitre, phrase,
-                    flat lay du look, provenance, indicateurs et « Pour l'extérieur » (HeroTenue). Ses actions restent en pied d'écran. */}
+                {/* LE MÊME HERO QUE LE LOOK PLANIFIÉ (04/11/2026, demandé : « harmonise aussi l'affichage sur cette page ») : surtitre,
+                    flat lay du look (sans phrase manuscrite, comme les autres heros : 04/11/2026), provenance, indicateurs et « Pour l'extérieur » (HeroTenue). Ses actions restent en pied d'écran. */}
                 <HeroTenue
                   statut={composition ? (depuisPlan ? "Tenue déjà planifiée" : "Tenue de ta photo") : "Ta tenue proposée"}
-                  phrase={occ ? titreLookDuJour(occ, workMode, dateContext) : undefined}
                   pieces={pieces}
                   temperature={tempResultat}
                   quand="prévus"
@@ -2063,12 +2062,6 @@ export default function PlanifierScreen() {
           const villePlan = villeDuLieu(t.lieu);
           const passee = t.jour < jourLocal(new Date());
           const jourLong = `${DOW_LONG[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;
-          // Le texte éditorial du hero : la même phrase que la carte « Look du
-          // jour » de l'accueil (titreLookDuJour), nourrie du sous-choix
-          // enregistré — « ta journée en télétravail », « ton dîner »…
-          // occasionPhrase ne fait que comparer : un sous-choix d'une autre
-          // occasion (ou absent) retombe sur la phrase générale de l'occasion.
-          const phrase = titreLookDuJour(t.occasion, (t.sousChoix ?? "") as WorkMode, (t.sousChoix ?? "") as DateContext);
           // LA MAQUETTE « LOOK PLANIFIÉ » (04/11/2026) — tout ce qui suit vient des données du plan, jamais d'une déduction :
           const alertePlan = meteoPlanVive ? alerteMeteoPlan(pieces, meteoPlanVive) : null;
           const tempPlan = meteoPlanVive?.temp ?? t.temp ?? null;
@@ -2173,7 +2166,6 @@ export default function PlanifierScreen() {
                   (04/11/2026) ; « Avis d'un proche » reste ici, comme sur Tenue. */}
               <HeroTenue
                 statut={passee ? "Ton look était planifié" : "Ta tenue planifiée"}
-                phrase={phrase}
                 pieces={pieces}
                 temperature={tempPlan}
                 quand={passee ? "ce jour-là" : "prévus"}

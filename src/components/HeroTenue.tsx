@@ -15,7 +15,7 @@ import type { Item } from "@/lib/types";
 /**
  * LE HERO DE LA PAGE TENUE, repris pour le détail d'un look planifié (14/10/2026, demandé : « reprends le hero de la page Tenues »).
  * Mêmes mesures et même construction que la carte de TenuesScreen : fond de la carte du look, hauteur de 564 px minimum, ligne de
- * statut, phrase manuscrite par-dessus le haut de la zone, composition `look-detail`, provenance des pièces sous la composition,
+ * statut, composition `look-detail` (sans phrase manuscrite depuis le 04/11/2026, comme les autres heros), provenance des pièces sous la composition,
  * une zone d'information à la place de « Porter cette tenue », deux actions discrètes côte à côte.
  *
  * Un composant à part, et non un morceau de TenuesScreen extrait : la carte de Tenue est liée à l'état de la tenue du jour (score, badges, quota,
@@ -23,7 +23,6 @@ import type { Item } from "@/lib/types";
  */
 export function HeroTenue({
   statut,
-  phrase,
   pieces: piecesRecues,
   vide,
   info,
@@ -35,8 +34,6 @@ export function HeroTenue({
   badge,
 }: {
   statut: string;
-  /** La phrase d'ambiance, manuscrite, posée par-dessus le haut de la zone. */
-  phrase?: string;
   pieces: Item[];
   /** Dit pourquoi la composition est vide (pièces retirées du dressing). */
   vide?: string;
@@ -81,13 +78,6 @@ export function HeroTenue({
 
       <div className="flex flex-col flex-1 min-h-0">
         <div className="relative flex-1 min-h-0" style={{ minHeight: 350 }}>
-          {phrase && (
-            <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none">
-              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "var(--color-sand-text)" }}>
-                {phrase}
-              </span>
-            </div>
-          )}
           {total > 0 ? (
             <div className="absolute inset-y-0 left-2 right-2">
               <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
