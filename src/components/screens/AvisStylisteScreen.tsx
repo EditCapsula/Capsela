@@ -553,12 +553,7 @@ export default function AvisStylisteScreen() {
                   }}
                   className="mt-3 w-full flex items-center gap-3 text-left bg-card border border-border rounded-tuile px-[14px] py-[13px] cursor-pointer"
                 >
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-[13px] font-medium text-ink">Ajouter ces pièces à mon dressing</span>
-                    <span className="block text-[11px] text-muted leading-[1.45] mt-[2px]">
-                      Capsela découpe chaque pièce de ta photo ; tu choisis celles que tu gardes.
-                    </span>
-                  </span>
+                  <span className="flex-1 min-w-0 text-[13px] font-medium text-ink">Ajouter ces pièces à mon dressing</span>
                   <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
                 </button>
                 <EtMaintenantAvis
