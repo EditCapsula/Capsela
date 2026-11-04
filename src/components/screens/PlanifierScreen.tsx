@@ -14,6 +14,8 @@ import { CalendrierMois, IconeTuile, LigneIcone, ProgressionLibelles, TuileIcone
 import { OCCASIONS_EDITORIALES } from "@/lib/occasionEditoriale";
 import { GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { HeroTenue, RailPiecesTenue } from "@/components/HeroTenue";
+import PourLExterieur from "@/components/PourLExterieur";
+import { separerCoucheExterieure } from "@/lib/coucheExterieure";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import { BarreDuPlan } from "@/components/BarreDuJour";
@@ -839,6 +841,14 @@ export default function PlanifierScreen() {
     return idsAffiches.map((id) => source.find((i) => i.id === id)).filter((i): i is Item => !!i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [composition, tenue, choisie, state.items, vestiairePool, capsuleDeLaDate, dressingSeul]);
+  /*
+   * LA TENUE PROPOSÉE ET SA COUCHE EXTÉRIEURE (04/11/2026, coucheExterieure.ts) : pour une tenue que le moteur vient de composer, le
+   * manteau ajouté par le froid se montre à part, avec la PRÉVISION de l'événement (meteoMoment) — sans prévision, rien n'est séparé.
+   * Une composition reprise (photo d'un avis, plan déjà fait) reste telle qu'elle a été composée. Le plan enregistre toutes les pièces.
+   */
+  const { principal: piecesDuLook, exterieur: exterieurPlan } = composition
+    ? { principal: pieces, exterieur: null }
+    : separerCoucheExterieure(pieces, meteoMoment?.temp ?? null);
   /** Rien à garder : état vide du moteur — une composition imposée en a toujours une. */
   const sansTenue = !composition && (!tenue || tenue.noCompleteOutfit);
   /** Les mots de l'état sans tenue : dressing vide, pièces manquantes, ou pas de combinaison pour l'occasion (emptyStateCopy.ts). */
@@ -863,8 +873,9 @@ export default function PlanifierScreen() {
     t.pieceIds.map((id) => poolStable.find((i) => i.id === id)).filter((i): i is Item => !!i);
 
   const idsDressing = useMemo(() => new Set(state.items.map((i) => i.id)), [state.items]);
-  const nbDressing = pieces.filter((p) => idsDressing.has(p.id)).length;
-  const nbCapsule = pieces.length - nbDressing;
+  // Le décompte porte sur le look affiché, sans le manteau montré à part (04/11/2026).
+  const nbDressing = piecesDuLook.filter((p) => idsDressing.has(p.id)).length;
+  const nbCapsule = piecesDuLook.length - nbDressing;
 
   /**
    * Provenance des pièces, en ne nommant QUE ce qui est réellement là.
@@ -879,7 +890,7 @@ export default function PlanifierScreen() {
       ? "La tenue que tu avais planifiée, reprise telle quelle"
       : "La tenue de ta photo, reconnue dans ton dressing"
     : dressingSeul
-    ? `${pluriel(pieces.length)} de ton dressing, sans complément`
+    ? `${pluriel(piecesDuLook.length)} de ton dressing, sans complément`
     : nbDressing === 0
       ? `${pluriel(nbCapsule)} de ta capsule`
       : nbCapsule === 0
@@ -1806,8 +1817,13 @@ export default function PlanifierScreen() {
                     {composition ? (depuisPlan ? "Tenue déjà planifiée" : "Tenue de ta photo") : dressingSeul || nbCapsule === 0 ? "100% ton dressing" : "Ton dressing + ta capsule"}
                   </span>
                   <div className="relative mt-3" style={{ aspectRatio: "100 / 118" }}>
-                    <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={pieces.map((p) => p.id).join(",")} onPiece={ouvrirPiece} />
+                    <FlatLayCapsela items={piecesDuLook} context="look-detail" layoutSeed={piecesDuLook.map((p) => p.id).join(",")} onPiece={ouvrirPiece} />
                   </div>
+                  {exterieurPlan && meteoMoment && (
+                    <div className="mt-[6px]">
+                      <PourLExterieur piece={exterieurPlan} temperature={meteoMoment.temp} quand="prévus" onClick={() => ouvrirPiece(exterieurPlan)} />
+                    </div>
+                  )}
                 </div>
 
                 {/* UNE TENUE A TOUJOURS SES CHAUSSURES (08/10/2026, demandé) : quand le moteur n'en a trouvé aucune pour la saison de
@@ -1822,7 +1838,7 @@ export default function PlanifierScreen() {
 
                 {/* LES PIÈCES, en vignettes : de quoi la tenue est faite, d'un coup d'œil. */}
                 <div className="flex gap-2 mt-3" aria-label="Les pièces de la tenue" role="list">
-                  {pieces.slice(0, 4).map((p) => {
+                  {piecesDuLook.slice(0, 4).map((p) => {
                     const img = resolveItemImage(p);
                     return (
                       <span key={p.id} role="listitem" aria-label={p.name} className="flex-1 aspect-square rounded-bloc bg-card border border-border overflow-hidden flex items-center justify-center">

@@ -1,5 +1,6 @@
 "use client";
 
+import { separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import AppHeader from "@/components/AppHeader";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
@@ -201,7 +202,7 @@ function ChipTenue({ children }: { children: React.ReactNode }) {
 type Etat = "defaut" | "partage";
 
 export default function OpinionShareScreen() {
-  const { state, geoCity, geoLoading, vestiairePool, actions } = useCapsela();
+  const { state, geoCity, geoLoading, vestiairePool, actions, sourceMeteo } = useCapsela();
   const ouvrirPiece = useOuvrirPiece();
   const { profile } = useAuth();
   const [etat, setEtat] = useState<Etat>("defaut");
@@ -221,13 +222,17 @@ export default function OpinionShareScreen() {
   // son occasion et la PRÉVISION enregistrée à la planification — jamais la
   // météo d'aujourd'hui, qui ne dirait rien du jour J.
   const source = state.avisSource;
-  const pieces = useMemo<Item[]>(() => {
+  const piecesTenue = useMemo<Item[]>(() => {
     const pool = [...state.items, ...vestiairePool];
     const ids = source ? source.pieceIds : state.outfit;
     return ids.map((id) => pool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
   }, [state.items, state.outfit, vestiairePool, source]);
   const occasionPartagee = source ? source.occasion : state.occasion || "all";
   const tempPartagee = source ? source.temp : geoLoading ? null : geoCity.temp;
+  // LE LOOK, SANS LE MANTEAU MONTRÉ À PART (04/11/2026, coucheExterieure.ts) : l'image et le message décrivent la tenue telle que les
+  // hero la montrent. La température doit être réelle : celle du plan, ou celle du jour hors valeurs par défaut.
+  const tempPourExterieur = source ? source.temp : geoLoading ? null : temperatureReelle({ decalage: 0, sourceMeteo, tempDuJour: geoCity.temp, prevue: null });
+  const pieces = useMemo(() => separerCoucheExterieure(piecesTenue, tempPourExterieur).principal, [piecesTenue, tempPourExterieur]);
   const meteoPartagee = source ? source.label : geoLoading ? null : geoCity.label;
 
   const parties = useMemo(
