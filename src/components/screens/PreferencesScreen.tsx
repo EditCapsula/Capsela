@@ -7,6 +7,8 @@ import BottomSheet from "@/components/BottomSheet";
 import { FeuilleVille, I_CALENDRIER, I_CLOCHE, I_GRAPHIQUE, I_REPERE, Surtitre } from "@/components/ProfilUI";
 import { useAuth } from "@/lib/auth";
 import { DEFAULT_PREFS, WORK_DAYS, type ProfilePrefs } from "@/lib/profile";
+import { ajouterPeriode, jourLocal, libellePeriode, periodesAVenir, periodesDe, periodeValide, retirerPeriode } from "@/lib/conges";
+import Input from "@/components/Input";
 import { notificationsDisponiblesIci, synchroniserNotifications, type EtatNotifications } from "@/lib/notifications";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
@@ -69,11 +71,15 @@ export default function PreferencesScreen() {
   // La notification suit le réglage (04/11/2026, notifications.ts) : chaque changement de l'interrupteur ou de l'heure la
   // reprogramme. `etatNotif` dit ce que le téléphone a répondu — autorisation refusée, ou web, où rien n'est envoyé.
   const [etatNotif, setEtatNotif] = useState<EtatNotifications | null>(null);
+  const [debutConges, setDebutConges] = useState("");
+  const [finConges, setFinConges] = useState("");
+  const aujourdhuiIso = jourLocal(new Date());
+  const congesAVenir = periodesAVenir(prefs.conges);
   const setPrefs = (p: Partial<ProfilePrefs>) => {
     setReinitFaite(false);
     const suivantes = { ...prefs, ...p };
     saveProfile({ ...profile, prefs: suivantes });
-    if ("notifEnabled" in p || "notifTime" in p) {
+    if ("notifEnabled" in p || "notifTime" in p || "conges" in p) {
       void synchroniserNotifications(suivantes, true).then(setEtatNotif);
     }
   };
@@ -82,7 +88,11 @@ export default function PreferencesScreen() {
   // sans tenir compte de leur ordre de saisie.
   const parDefaut =
     (Object.keys(DEFAULT_PREFS) as (keyof ProfilePrefs)[]).every((k) =>
-      k === "workDays" ? [...prefs.workDays].sort().join() === [...DEFAULT_PREFS.workDays].sort().join() : prefs[k] === DEFAULT_PREFS[k]
+      k === "workDays"
+        ? [...prefs.workDays].sort().join() === [...DEFAULT_PREFS.workDays].sort().join()
+        : k === "conges"
+          ? periodesDe(prefs.conges).length === 0
+          : prefs[k] === DEFAULT_PREFS[k]
     );
   // La pastille sélectionnée canonique de l'app (terracotta, cf. les filtres
   // du Dressing et des idées de tenues) — elle était ici la seule en encre.
@@ -218,6 +228,55 @@ export default function PreferencesScreen() {
           </div>
           <Toggle on={prefs.onVacation} onClick={() => setPrefs({ onVacation: !prefs.onVacation })} label="Je suis en congés" />
         </Ligne>
+        {/* MES CONGÉS DATÉS (04/11/2026, conges.ts) : chaque jour d'une période compte comme « Je suis en congés », sans avoir à
+            basculer l'interrupteur ; la veille de la reprise, une notification rappelle de préparer sa tenue (application). */}
+        <div className="px-4 py-[14px] border-t border-border">
+          <div className="text-[13px] text-ink">Mes congés</div>
+          <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">
+            Pendant ces dates, plus de tenues de travail.
+            {/* Le rappel n'existe que dans l'application (notifications.ts) : le site ne le promet pas. */}
+            {notificationsDisponiblesIci() && " La veille de ta reprise, Capsela te le rappelle."}
+          </div>
+          {congesAVenir.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-[6px] list-none p-0">
+              {congesAVenir.map((p) => (
+                <li key={p.debut + p.fin} className="flex items-center justify-between gap-3 bg-warm-bg rounded-champ pl-[12px] pr-[4px] min-h-[40px]">
+                  <span className="text-[13px] text-ink">{libellePeriode(p)}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPrefs({ conges: retirerPeriode(prefs.conges, p) })}
+                    aria-label={`Retirer les congés du ${libellePeriode(p)}`}
+                    className="w-[40px] h-[40px] flex items-center justify-center text-muted cursor-pointer"
+                  >
+                    <span aria-hidden="true" className="text-[16px] leading-none">×</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex items-end gap-[8px] mt-3">
+            <label className="flex-1 min-w-0">
+              <span className="block text-[11px] text-muted mb-[4px]">Du</span>
+              <Input type="date" value={debutConges} min={aujourdhuiIso} onChange={(e) => setDebutConges(e.target.value)} style={{ colorScheme: "light" }} />
+            </label>
+            <label className="flex-1 min-w-0">
+              <span className="block text-[11px] text-muted mb-[4px]">Au</span>
+              <Input type="date" value={finConges} min={debutConges || aujourdhuiIso} onChange={(e) => setFinConges(e.target.value)} style={{ colorScheme: "light" }} />
+            </label>
+          </div>
+          <Button
+            variante="contour"
+            className="mt-3"
+            disabled={!periodeValide({ debut: debutConges, fin: finConges })}
+            onClick={() => {
+              setPrefs({ conges: ajouterPeriode(prefs.conges, { debut: debutConges, fin: finConges }) });
+              setDebutConges("");
+              setFinConges("");
+            }}
+          >
+            Ajouter ces congés
+          </Button>
+        </div>
       </Section>
 
       {/* AUTRES. Langue et fuseau sont AFFICHÉS, pas réglables : l'app n'existe

@@ -93,11 +93,10 @@ function Screens() {
 
   // LA NOTIFICATION DE LA TENUE DU JOUR (04/11/2026, notifications.ts) : remise en accord avec les Préférences à chaque lancement,
   // une fois le profil complet — la demande d'autorisation du téléphone ne coupe donc jamais le questionnaire d'inscription.
-  const notifActive = auth.profile.prefs.notifEnabled;
-  const notifHeure = auth.profile.prefs.notifTime;
+  const prefsNotif = auth.profile.prefs;
   useEffect(() => {
     if (!auth.signedIn || !profilCompletPub) return;
-    void synchroniserNotifications({ notifEnabled: notifActive, notifTime: notifHeure }, true);
+    void synchroniserNotifications(prefsNotif, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.signedIn, profilCompletPub]);
 

@@ -1,4 +1,5 @@
 import { DAYS_FR, MONTHS_FR } from "./data";
+import { dansUnePeriode } from "./conges";
 import type { ProfilePrefs } from "./profile";
 import type { OccasionKey } from "./types";
 
@@ -73,10 +74,11 @@ const JOURS_COURTS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
 /**
  * L'occasion par défaut d'une date : la règle existante de « Mon rythme »
- * (13/08/2026), jusque-là réservée au jour même — en congés, cocooning ;
+ * (13/08/2026), jusque-là réservée au jour même — en congés (interrupteur, ou jour d'une période datée), cocooning ;
  * un jour travaillé, travail ; sinon quotidien. Seule la date change.
  */
 export function occasionParDefaut(prefs: ProfilePrefs, d: Date = new Date()): OccasionKey {
-  if (prefs.onVacation) return "cocooning";
+  // Une période de congés datée (04/11/2026, conges.ts) vaut l'interrupteur « Je suis en congés » pour chacun de ses jours.
+  if (prefs.onVacation || dansUnePeriode(prefs.conges, d)) return "cocooning";
   return prefs.workDays.includes(JOURS_COURTS[d.getDay()]) ? "travail_formel" : "quotidien";
 }

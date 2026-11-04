@@ -1,5 +1,6 @@
 import { miseEnValeurDuGenre, miseEnValeurPosee, PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
 import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
+import type { PeriodeConges } from "./conges";
 export { PAL_COULEURS } from "./palCouleurs";
 import { PAL_COULEURS } from "./palCouleurs";
 /** Genre — 2 valeurs (Tâche 3, arbitrages du 20/08/2026 : "Neutre / non-binaire" et "Préfère ne pas dire" retirés). */
@@ -13,6 +14,8 @@ export interface ProfilePrefs {
   unitSystem: "metric" | "imperial";
   workDays: string[];
   onVacation: boolean;
+  /** Périodes de congés datées (04/11/2026, conges.ts) : en base dans `profiles.prefs`, sans migration. */
+  conges: PeriodeConges[];
 }
 
 export type Affinite = "Tons chauds" | "Tons froids" | "Les deux" | "Je ne sais pas";
@@ -56,6 +59,7 @@ export const DEFAULT_PREFS: ProfilePrefs = {
   unitSystem: "metric",
   workDays: ["Lun", "Mar", "Mer", "Jeu", "Ven"],
   onVacation: false,
+  conges: [],
 };
 
 export const EMPTY_PROFILE: Profile = {
