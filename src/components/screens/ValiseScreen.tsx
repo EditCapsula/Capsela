@@ -1828,10 +1828,11 @@ function Resultat({
   const articles = articlesChecklist(pieces, piecesCochees, affaires, affairesCochees);
   /**
    * VÊTEMENTS ET INDISPENSABLES À PART (30/10/2026, brief « Refonte de l'écran Ma valise ») : les vêtements se cochent dans l'onglet
-   * Vêtements, les affaires de voyage dans l'onglet Indispensables. Les suggestions de la capsule n'en font pas partie : elles ne sont pas
-   * encore dans le dressing. Mêmes données qu'avant (cochees, affaires.cochees) : rien de nouveau n'est gardé.
+   * Vêtements, les affaires de voyage dans l'onglet Indispensables. Depuis le 04/11/2026 (demandé : « la checklist doit compter les
+   * suggestions, avec un label Capsule »), les suggestions de la capsule en font partie : elles partent dans la valise comme le reste,
+   * et se cochent de même. Mêmes données qu'avant (cochees, affaires.cochees) : rien de nouveau n'est gardé.
    */
-  const progressionVetements = progressionChecklist(articles.filter((a) => a.piece && !suggestions.has(a.piece.id)));
+  const progressionVetements = progressionChecklist(articles.filter((a) => a.piece));
   const articlesAffaires = articles.filter((a) => a.affaire);
   const progressionAffaires = progressionChecklist(articlesAffaires);
   const [filtreChecklist, setFiltreChecklist] = useState<FiltreChecklist>("tout");
@@ -2535,6 +2536,8 @@ function Resultat({
   /** Les vêtements UNIQUES à emporter (par identifiant) et les suggestions à ajouter, à part (valiseVetements.ts). Les tenues ne bougent pas. */
   const { aEmporter, aAjouter } = vetementsDeLaValise(valise.pieceIds, looks, valise.suggestionIds, pieceDe);
   const familles = vetementsParFamille(aEmporter);
+  /** La checklist des vêtements (onglet Vêtements) : les pièces possédées ET les suggestions de la capsule, chacune dite « Capsule » (04/11/2026). */
+  const famillesChecklist = vetementsParFamille([...aEmporter, ...aAjouter]);
   const apercu = selectionApercu(aEmporter.map((v) => v.item));
   const aOptimiser = nouvelles === 0 && (occasionsAManque.length > 0 || peuDeLooks);
   /**
@@ -3143,7 +3146,8 @@ function Resultat({
       {onglet === "pieces" && (
         <>
           {/* LES VÊTEMENTS (30/10/2026) : chaque pièce une fois, par famille, avec sa provenance, ses tenues et son état — à emporter ou
-              déjà dans la valise. Cocher, c'est le même état qu'avant (cochees). Les suggestions sont dans « À compléter », plus bas. */}
+              déjà dans la valise. Cocher, c'est le même état qu'avant (cochees). Les suggestions de la capsule y sont aussi, dites « Capsule » (04/11/2026),
+              et restent dans « À compléter », plus bas, pour l'ajout au dressing. */}
           {progressionVetements.total > 0 && (
             <div className="mt-5">
               <BarrePreparation titre="Dans ta valise" p={progressionVetements} />
@@ -3178,7 +3182,7 @@ function Resultat({
               </Button>
             </Card>
           )}
-          {familles.map(({ titre, vetements }) => {
+          {famillesChecklist.map(({ titre, vetements }) => {
             const duGroupe = vetements.map((v) => v.item);
             return (
               <section key={titre} className="mt-5">
@@ -3208,7 +3212,11 @@ function Resultat({
                           <Vignette it={p} taille={40} />
                           <span className="flex-1 min-w-0">
                             <span className={"block text-[13px] leading-[1.3] line-clamp-2 " + (dedans ? "text-muted" : "text-ink")}>{p.name}</span>
-                            <span className="block text-[11px] leading-[1.35] text-muted mt-[2px]">Dans ton dressing</span>
+                            {suggestions.has(p.id) ? (
+                              <span className="block text-[11px] leading-[1.35] text-terracotta mt-[2px]">Capsule</span>
+                            ) : (
+                              <span className="block text-[11px] leading-[1.35] text-muted mt-[2px]">Dans ton dressing</span>
+                            )}
                             <span className="block text-[11px] leading-[1.35] mt-[1px]">
                               <span className="text-muted whitespace-nowrap">{n ? `${n} ${n > 1 ? "tenues" : "tenue"}` : "Aucune tenue"} ·</span>{" "}
                               {/* Un bloc insécable : à 320 px, « À emporter » passe entier à la ligne au lieu de se couper (l'espace qui
