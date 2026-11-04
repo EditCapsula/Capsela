@@ -1191,17 +1191,13 @@ export default function PlanifierScreen() {
       // La préférence s'écrit à part (colonne mood_style, migration 0048) : tant que la migration n'est pas passée,
       // la tenue est gardée sans elle et l'échec est dit, jamais tu.
       const humeurGardee = humeur && !composition ? await enregistrerHumeurPlan(ligne.id, humeur) : true;
-      // « PORTER CETTE TENUE » (04/11/2026) : la tenue est associée à sa date ET confirmée (« Je porterai cette tenue », colonne `confirme`,
-      // migration 0057) ; les autres occasions d'une tenue polyvalente s'écrivent aussi à part (migration 0058). Avant ces migrations, la
-      // tenue est gardée sans elles et l'échec est dit.
-      const [confirmeeGardee, secondairesGardees] = await Promise.all([
-        enregistrerConfirmationPlan(ligne.id, true),
-        secondaires.length ? enregistrerOccasionsSecondaires(ligne.id, secondaires) : Promise.resolve(true),
-      ]);
+      // « PORTER CETTE TENUE » (04/11/2026) : la tenue est associée à sa date, « Planifiée » — pas « Confirmée » (arbitré le même jour par la
+      // propriétaire : la confirmation reste « Je porterai cette tenue », sur la page Look planifié). Les autres occasions d'une tenue
+      // polyvalente s'écrivent à part (migration 0058) : avant la migration, la tenue est gardée sans elles et l'échec est dit.
+      const secondairesGardees = secondaires.length ? await enregistrerOccasionsSecondaires(ligne.id, secondaires) : true;
       const gardeeComplete: TenuePlanifiee = {
         ...ligne,
         ...(humeur && !composition && humeurGardee ? { humeur } : null),
-        ...(confirmeeGardee ? { confirme: true } : null),
         ...(secondaires.length && secondairesGardees ? { occasionsSecondaires: secondaires } : null),
       };
       setPlans((l) => [...l.filter((x) => x.id !== ligne.id), gardeeComplete]);
@@ -1220,7 +1216,7 @@ export default function PlanifierScreen() {
       setDepuisPlan(null);
       setOnglet("up");
       // Tout s'est bien passé : l'écran de confirmation. Sinon la liste, où le message d'échec est lisible.
-      if (ancienRetire && humeurGardee && confirmeeGardee && secondairesGardees) {
+      if (ancienRetire && humeurGardee && secondairesGardees) {
         setGardee(gardeeComplete);
         setVue("confirmation");
         return;
@@ -1233,9 +1229,7 @@ export default function PlanifierScreen() {
             ? "Tenue enregistrée. Ta préférence n'a pas pu l'être : elle ne sera pas rappelée à l'ouverture."
             : !secondairesGardees
               ? `Tenue enregistrée pour ${occasionShortLabel(occ)}. Les autres occasions n'ont pas pu l'être : elles ne seront pas rappelées.`
-              : !confirmeeGardee
-                ? "Tenue enregistrée dans ton planning. Elle n'a pas pu être marquée « Confirmée »."
-                : "Tenue enregistrée. Tu la retrouveras dans ton planning le jour venu."
+              : "Tenue enregistrée. Tu la retrouveras dans ton planning le jour venu."
       );
     } catch {
       flash("L'enregistrement a échoué. Réessaie.");
@@ -2449,7 +2443,7 @@ export default function PlanifierScreen() {
         {vue === "resultat" && (
           <>
             {/* LES ACTIONS DU RÉSULTAT (04/11/2026, brief « Évolution du parcours de planification »). « Porter cette tenue » est le
-                principal : la tenue est associée à sa date ET confirmée (garder). « Enregistrer » et « Avis d'un proche » sont dans le
+                principal : la tenue est associée à sa date, « Planifiée » (garder). « Enregistrer » et « Avis d'un proche » sont dans le
                 hero, comme sur la page Tenue. « Autre tenue » remplace la proposition en gardant les critères, sans refaire le parcours
                 ni reproposer une tenue déjà vue (autresIdees). « Modifier cet évènement » rouvre les étapes déjà remplies. Désactivés
                 pendant l'écriture : un double tap ne part pas deux fois. */}
