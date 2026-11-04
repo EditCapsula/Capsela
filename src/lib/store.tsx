@@ -590,7 +590,7 @@ export interface Actions {
   ouvrirPlan: (t: TenuePlanifiee, depuis: "home" | "tenues" | "calendrier") => void;
   /** Ouvre le calendrier des tenues (icône du bandeau d'accueil). */
   goCalendrier: () => void;
-  /** Ouvre Planifier depuis le calendrier avec la date choisie (décalage ≥ 1 : on ne planifie pas aujourd'hui). */
+  /** Ouvre Planifier depuis le calendrier avec la date choisie (décalage ≥ 1 : aujourd'hui, le Calendrier mène à la tenue du jour ; Planifier propose aujourd'hui depuis son propre calendrier, 04/11/2026). */
   planifierPour: (decalage: number) => void;
   /** Quitte la tenue planifiée du jour pour la proposition de Capsela (le plan est écarté ce jour-là). */
   voirAutreProposition: () => void;
