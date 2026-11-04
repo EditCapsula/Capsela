@@ -142,6 +142,34 @@ export const PART_VISUELLE: Record<CategoryKey, number> = {
   bijou: 62.5,
   accessoire: 62.5,
 };
+/**
+ * LES PROPORTIONS ENTRE PIÈCES (04/11/2026, demandé sur une planche de référence : « sur ce hero les proportions des pièces sont bonnes,
+ * inspire-t'en » ; arbitré : les tailles seulement, la mise en page reste). Chaque pièce prend une taille RAPPORTÉE AU BAS — la hauteur
+ * d'un vêtement, le plus grand côté des chaussures, du sac — au lieu d'une largeur réglée rôle par rôle : le jean n'écrase plus le haut,
+ * le sac n'est plus un détail. Mesuré sur la référence (jean = 1) : haut 0,86, veste 1,0, sac 0,75, chaussures 0,47. Avant (même
+ * exécution, mêmes tenues, levier `proportions: false`) : haut 0,46–0,60, veste 0,62, sac 0,34–0,37, chaussures 0,31–0,37.
+ * Les catégories absentes de la référence (manteau, jupe, short, robe) sont posées d'après leur longueur réelle face au jean : ARBITRAGE
+ * ÉDITORIAL, à revoir en rendu. Les accessoires gardent leurs places fixes et leur taille (02/11/2026).
+ */
+export const PROPORTION_PIECE: Partial<Record<CategoryKey, number>> = {
+  haut: 0.86,
+  pull: 0.86,
+  veste: 1,
+  manteau: 1.15,
+  pantalon: 1,
+  jean: 1,
+  jupe: 0.72,
+  short: 0.55,
+  robe: 1.25,
+  combinaison: 1.25,
+  chaussures: 0.47,
+  sac: 0.75,
+};
+/** Les catégories dont la proportion vaut pour le PLUS GRAND CÔTÉ (un objet posé), et non pour la hauteur (un vêtement). */
+const PROPORTION_PAR_COTE: CategoryKey[] = ["chaussures", "sac"];
+/** La hauteur du bas, en part de la hauteur de la zone, avant l'ajustement à la zone : l'unité des proportions. */
+const UNITE_PROPORTIONS = 0.6;
+
 /** La part visuelle de la pièce de référence de chaque rôle (celle sur laquelle les largeurs de REF ont été réglées). */
 const PART_REF: Record<RoleFlatLay, number> = { hero: 82.5, secondaire: 77.5, couche: 77.5, bas: 85, chaussures: 70, sac: 70, accessoire: 62.5 };
 
@@ -361,7 +389,9 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
     refsGroupe: {
       secondaire: { x: 27, y: 31, l: 44, angle: -3 },
       hero: { x: 71, y: 50, l: 46, angle: 3 },
-      chaussures: { x: 25, y: 101, l: 36, angle: -6 },
+      // y 106 au lieu de 101 (04/11/2026) : avec les proportions, le pull grandit et le t-shirt posé dessous descend ; à 101, les boots
+      // remontaient à sa hauteur sur 4 graines sur 40 (« boots sous le groupe »). À 106 : 0 sur 40, avec ou sans les proportions.
+      chaussures: { x: 25, y: 106, l: 36, angle: -6 },
       sac: { x: 75, y: 104, l: 33, angle: 4 },
     },
     // Une robe : centrée, la surcouche derrière à droite, sac et chaussures dessous de part et d'autre.
@@ -520,6 +550,8 @@ export interface OptionsFlatLay {
   hauteurZone?: number;
   /** false : les accessoires reprennent la règle d'avant le 02/11/2026 (le levier de l'audit avant / après, scripts/flatlay-ancrages.audit.ts). */
   accessoiresFixes?: boolean;
+  /** false : les tailles d'avant le 04/11/2026, réglées rôle par rôle (le levier de la mesure avant / après de PROPORTION_PIECE). */
+  proportions?: boolean;
 }
 
 /**
@@ -578,6 +610,7 @@ export function composerFlatLay(
   const roles = config.masquerCouche ? tous.filter((r) => !coucheHaut(r)) : tous;
   if (!roles.length) return { pieces: [], ecartees: [], masquees };
   const alea = generateur(graine);
+  const proportionnee = options.proportions !== false;
   const dans = (min: number, max: number) => min + (max - min) * alea();
   // La veste ou le manteau héros se pose toujours à DROITE (maquette) : pas de miroir. Sinon le sens est tiré par la graine.
   const heroDessus = DESSUS.includes(roles[0].piece.cat);
@@ -602,9 +635,21 @@ export function composerFlatLay(
 
   const placer = (piece: PieceFlatLay, role: RoleFlatLay, ref: Ref) => {
     const visualScale = echelleVisuelle(role, piece.cat) * (piece.visualScale && piece.visualScale > 0 ? piece.visualScale : 1);
-    let l = ref.l * visualScale * dans(0.97, 1.03) * echelleGlobale * (config.echellesCategorie?.[piece.cat] ?? 1);
-    if (nb >= 6 && (role === "secondaire" || role === "accessoire")) l *= 0.88;
     const ratio = piece.ratio > 0 ? piece.ratio : 1;
+    // Les proportions entre pièces (PROPORTION_PIECE) : une taille rapportée au bas, la même échelle pour toute la planche. Ni l'échelle
+    // par catégorie du contexte, ni la réduction des tenues de 6 pièces : elles fausseraient le rapport entre les pièces. La couche et les
+    // accessoires gardent leur règle.
+    const proportion = proportionnee && role !== "accessoire" && role !== "couche" ? PROPORTION_PIECE[piece.cat] : undefined;
+    let l: number;
+    if (proportion) {
+      // `visualScale` n'y entre pas : il corrigeait les largeurs réglées rôle par rôle ; ici la taille d'une pièce, silhouette d'une pièce
+      // manquante comprise, est celle qu'aurait la pièce.
+      const taille = proportion * UNITE_PROPORTIONS * hauteurZone * dans(0.98, 1.02);
+      l = PROPORTION_PAR_COTE.includes(piece.cat) ? (ratio >= 1 ? taille : taille * ratio) : taille * ratio;
+    } else {
+      l = ref.l * visualScale * dans(0.97, 1.03) * echelleGlobale * (config.echellesCategorie?.[piece.cat] ?? 1);
+      if (nb >= 6 && (role === "secondaire" || role === "accessoire")) l *= 0.88;
+    }
     // Une pièce haute ne dépasse pas 78 % de la hauteur de la zone.
     const hMax = hauteurZone * (BAS.includes(piece.cat) && config.hauteurBasMax ? config.hauteurBasMax : 0.78);
     if (l / ratio > hMax) l = hMax * ratio;
@@ -700,10 +745,14 @@ export function composerFlatLay(
   // Le centre de la zone utile : au milieu de la zone quand les deux marges sont égales, plus bas sinon.
   const cyZone = (haut + hauteurZone - config.marge) / 2;
   const heroMax = config.largeurHeroMax ?? LARGEUR_HERO_MAX;
+  // Avec les proportions, une pièce héro trop large fait rétrécir TOUTES les pièces sur place, du même facteur : rétrécie seule, elle
+  // perdrait sa proportion face aux autres.
+  const lHero = (brut.find((p) => p.role === "hero")?.l ?? 0) * k;
+  const cTous = proportionnee && lHero > heroMax ? heroMax / lHero : 1;
   const finales: PlacementFlatLay[] = brut.map((p) => {
     const l = p.l * k;
     // La pièce héro reste dominante sans écraser la planche : 58 % de la largeur de la zone au plus (elle rétrécit sur place).
-    const c = p.role === "hero" && l > heroMax ? heroMax / l : 1;
+    const c = proportionnee ? cTous : p.role === "hero" && l > heroMax ? heroMax / l : 1;
     return {
       ...p,
       x: 50 + (p.x - cxEns) * k,

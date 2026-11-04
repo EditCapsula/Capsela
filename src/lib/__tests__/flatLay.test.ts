@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHEVAUCHEMENT_MAX, CONTEXTES, LARGEUR_ACCESSOIRE_MIN, LARGEUR_HERO_MAX, LIMITE_INCLINAISON, MASQUE_MAX, PART_VISUELLE, attribuerRoles, composerFlatLay, echelleVisuelle, generateur, type PieceFlatLay, type PlacementFlatLay } from "../flatLay";
+import { CHEVAUCHEMENT_MAX, CONTEXTES, LARGEUR_ACCESSOIRE_MIN, LARGEUR_HERO_MAX, LIMITE_INCLINAISON, MASQUE_MAX, PART_VISUELLE, PROPORTION_PIECE, attribuerRoles, composerFlatLay, echelleVisuelle, generateur, type PieceFlatLay, type PlacementFlatLay } from "../flatLay";
 import type { CategoryKey } from "../types";
 
 let n = 0;
@@ -307,11 +307,20 @@ describe("calibrage du 08/10/2026 — chevauchements, héro, accessoires", () =>
 
   it("une pièce manquante ne laisse aucun vide : la composition se recalcule, bornée par la zone", () => {
     const sansSac = [p("veste", 0.94), p("haut", 1), p("pantalon", 0.6), p("chaussures", 1.1)];
+    // Les tailles d'avant le 04/11/2026 : sur cette graine, la tenue occupait toute la hauteur.
+    const { pieces: avant } = composerFlatLay(sansSac, "sansSac", { contexte: "look-detail", proportions: false });
+    expect(avant.length).toBe(4);
+    const c = CONTEXTES["look-detail"];
+    const h = c.hauteur;
+    expect(Math.min(...avant.map((q) => q.y - q.h / 2))).toBeLessThan(h * 0.2);
+    expect(Math.max(...avant.map((q) => q.y + q.h / 2))).toBeGreaterThan(h * 0.8);
+    // Avec les proportions (04/11/2026), le haut et la veste, plus grands, remplissent la LARGEUR : la composition s'ajuste au côté qui la
+    // borne, sans vide de ce côté-là.
     const { pieces } = composerFlatLay(sansSac, "sansSac", { contexte: "look-detail" });
     expect(pieces.length).toBe(4);
-    const h = CONTEXTES["look-detail"].hauteur;
-    expect(Math.min(...pieces.map((q) => q.y - q.h / 2))).toBeLessThan(h * 0.2);
-    expect(Math.max(...pieces.map((q) => q.y + q.h / 2))).toBeGreaterThan(h * 0.8);
+    const largeur = (Math.max(...pieces.map((q) => q.x + q.l / 2)) - Math.min(...pieces.map((q) => q.x - q.l / 2))) / (100 - 2 * c.marge);
+    const hauteur = (Math.max(...pieces.map((q) => q.y + q.h / 2)) - Math.min(...pieces.map((q) => q.y - q.h / 2))) / (h - (c.margeHaute ?? c.marge) - c.marge);
+    expect(Math.max(largeur, hauteur)).toBeGreaterThan(0.97);
   });
 });
 
@@ -611,7 +620,8 @@ describe("accueil (hero-home) — le haut et la veste agrandis de 20 % (10/10/20
     config.echellesCategorie = echelles;
     try {
       const pieces = [p("haut", 1), p("pantalon", 0.55), p("veste", 0.95), p("chaussures", 1.5)];
-      return composerFlatLay(pieces, "x", { contexte: "hero-home" }).pieces;
+      // Les échelles par catégorie ne valent que pour les tailles d'avant le 04/11/2026 : les proportions entre pièces les remplacent.
+      return composerFlatLay(pieces, "x", { contexte: "hero-home", proportions: false }).pieces;
     } finally {
       config.echellesCategorie = sauvegarde;
     }
@@ -639,9 +649,15 @@ describe("hero — la tenue prend toute la place de sa zone (14/10/2026, « le f
     for (const contexte of ["hero-home", "look-detail"] as const) {
       expect(CONTEXTES[contexte].hauteurBasMax).toBe(0.92);
       for (let i = 0; i < 20; i++) {
-        const o = Object.fromEntries(composerFlatLay(hautPantalon(), "b" + i, { contexte }).pieces.map((q) => [q.cat, q]));
+        // Mesuré le 04/11/2026 sur ces tenues (même exécution) : le pantalon fait 95 % (accueil) et 87 % (Tenue) de la hauteur de la zone
+        // avec les tailles d'avant, 73 % et 64 % avec les proportions entre pièces — le haut, à sa vraie taille, prend sa place. Arbitrage
+        // présenté à la propriétaire avec la planche avant / après. Le seuil d'avant vaut pour le levier.
+        const o = Object.fromEntries(composerFlatLay(hautPantalon(), "b" + i, { contexte, proportions: false }).pieces.map((q) => [q.cat, q]));
         const h = CONTEXTES[contexte].hauteur;
         expect(o.pantalon.h / h, `${contexte} graine ${i}`).toBeGreaterThan(0.75);
+        const n = Object.fromEntries(composerFlatLay(hautPantalon(), "b" + i, { contexte }).pieces.map((q) => [q.cat, q]));
+        expect(n.pantalon.h / h, `${contexte} graine ${i}`).toBeGreaterThan(0.6);
+        expect(n.pantalon.h, `${contexte} graine ${i}`).toBeGreaterThan(Math.max(n.haut.h, n.chaussures.h));
         // À côté et non dessous : les chaussures ne sont pas sous l'emprise horizontale du pantalon.
         const bp = boite(o.pantalon);
         const bc = boite(o.chaussures);
@@ -710,5 +726,27 @@ describe("accessoires à une place fixe (02/11/2026, demandé : « que les acces
           expect(a.y + a.h / 2).toBeLessThanOrEqual(118 - CONTEXTES["look-detail"].marge + 1e-6);
         }
       }
+  });
+});
+
+describe("proportions entre pièces (04/11/2026, planche de référence de la propriétaire)", () => {
+  // Formats réels des visuels du catalogue (catalogMarges.ts) : t-shirt, jean droit, baskets, sac à main, blazer.
+  const T = (id: number, cat: CategoryKey, ratio: number) => ({ id, cat, ratio });
+  const tenue = [T(1, "haut", 0.94), T(5, "veste", 0.8), T(2, "jean", 0.41), T(3, "chaussures", 1.36), T(4, "sac", 0.84)];
+  const taille = (p: { cat: CategoryKey; l: number; h: number }) => (p.cat === "chaussures" || p.cat === "sac" ? Math.max(p.l, p.h) : p.h);
+
+  it.each(["hero-home", "look-detail"] as const)("%s : haut, veste, sac et chaussures rapportés au bas", (contexte) => {
+    for (const graine of ["a", "b", "c"]) {
+      const r = composerFlatLay(tenue, graine, { contexte }).pieces;
+      const bas = r.find((p) => p.cat === "jean")!;
+      for (const p of r) expect(taille(p) / bas.h).toBeCloseTo(PROPORTION_PIECE[p.cat]!, 1);
+    }
+  });
+
+  it("le levier `proportions: false` rend les tailles d'avant : le sac y est bien plus petit", () => {
+    const r = composerFlatLay(tenue, "a", { contexte: "hero-home", proportions: false }).pieces;
+    const bas = r.find((p) => p.cat === "jean");
+    const sac = r.find((p) => p.cat === "sac");
+    if (bas && sac) expect(taille(sac) / bas.h).toBeLessThan(0.5);
   });
 });

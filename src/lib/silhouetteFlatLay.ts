@@ -98,7 +98,9 @@ export function composerSilhouette(
     utiles.map((f, id) => ({ id, cat: f.cat, ratio: f.photo ? RATIO_PHOTO : f.dessin.ratio, visualScale: f.dessin.echelle ?? (f.cat === "haut" || f.cat === "pull" ? ECHELLE_HAUT : 1) })),
     // Une graine fixe par ensemble de catégories : la silhouette ne bouge pas d'un rendu à l'autre.
     `silhouette:${utiles.map((f) => f.cat).join(",")}`,
-    { contexte: "hero-home", sansMiroir: true }
+    // Les tailles d'avant les proportions du 04/11/2026 : les dessins de chargement (un haut en carré plein, un pantalon en trait de 0,36)
+    // n'ont pas le format des visuels du catalogue, la règle des proportions n'a pas été examinée sur eux (AGENTS.md, point 7).
+    { contexte: "hero-home", sansMiroir: true, proportions: false }
   );
   return pieces.map((p) => ({ ...p, photo: utiles[p.id].photo, src: utiles[p.id].dessin.src }));
 }
