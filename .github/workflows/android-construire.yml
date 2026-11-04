@@ -47,12 +47,18 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_PUBLISHABLE_KEY }}
-          # Le bloc d'annonces AdMob de la vidéo récompensée (02/11/2026, src/lib/publicite.ts) : variable du dépôt, pas un secret
-          # (il est lisible dans l'app livrée). Absente : bloc de test de Google, publicités de test non rémunérées.
-          NEXT_PUBLIC_ADMOB_RECOMPENSE_ID: ${{ vars.ADMOB_RECOMPENSE_ID }}
+          # Le bloc d'annonces AdMob de la vidéo récompensée (02/11/2026, src/lib/publicite.ts) : une variable du dépôt, ou un secret du
+          # même nom (04/11/2026 : les exports 1.1 et 1.2 sont partis sans, l'identifiant n'étant pas rangé parmi les variables). Absent :
+          # bloc de test de Google, publicités de test non rémunérées — un export pour Google Play est alors refusé, plus bas.
+          NEXT_PUBLIC_ADMOB_RECOMPENSE_ID: ${{ vars.ADMOB_RECOMPENSE_ID || secrets.ADMOB_RECOMPENSE_ID }}
+          CAPSELA_ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID || secrets.ADMOB_APP_ID }}
         run: |
           if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "::error::Clé publique Supabase absente : sans elle, l'app tournerait en mode démo."
+            exit 1
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ -z "$NEXT_PUBLIC_ADMOB_RECOMPENSE_ID" ] || [ -z "$CAPSELA_ADMOB_APP_ID" ]; }; then
+            echo "::error::Identifiants AdMob absents (ADMOB_APP_ID, ADMOB_RECOMPENSE_ID, en variable ou en secret du dépôt) : l'app afficherait les publicités de test de Google."
             exit 1
           fi
           npm run build
@@ -76,8 +82,8 @@ jobs:
           CAPSELA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           CAPSELA_VERSION_CODE: ${{ github.run_number }}
           CAPSELA_VERSION_NAME: ${{ inputs.version || '0.0-verification' }}
-          # L'identifiant d'application AdMob (variable du dépôt) ; absent, celui de test de Google (android/app/build.gradle).
-          CAPSELA_ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+          # L'identifiant d'application AdMob (variable ou secret du dépôt) ; absent, celui de test de Google (android/app/build.gradle).
+          CAPSELA_ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID || secrets.ADMOB_APP_ID }}
         # En cas d'échec, l'erreur de Gradle remonte dans les annotations de l'exécution (lisibles sans ouvrir le journal complet).
         run: |
           set -o pipefail
