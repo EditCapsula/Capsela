@@ -53,18 +53,21 @@ export function usePlanApplique(): { plan: TenuePlanifiee; alerte: AlerteMeteo |
  * ouvertes dans Planifier, où la personne les voit, les garde ou les change. Rien d'adaptable dans le dressing : l'écran du plan, où
  * « Modifier ce look » reprend le parcours complet — le CTA ne reste jamais sans effet. Posée sur le fond terracotta de la carte.
  */
-export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<ReturnType<typeof usePlanApplique>> }) {
-  const { state, vestiairePool, actions } = useCapsela();
+/**
+ * LE CALCUL DE L'ADAPTATION D'UN PLAN À SA MÉTÉO (sorti d'AlerteMeteoLook le 04/11/2026 pour servir aussi au « Look planifié » de
+ * Planifier, demandé : « si la prévision a changé il faut proposer d'actualiser la tenue »). Une seule implémentation : le même pool que
+ * celui qui compose une tenue planifiée, la même fonction (proposerAdaptation, règles du moteur). null quand rien n'est à changer.
+ */
+export function useCalculAdaptation() {
+  const { state, vestiairePool } = useCapsela();
   const { profile } = useAuth();
-  const { alerte, plan, pieces, meteo } = planApplique;
-  if (!alerte || !meteo) return null;
-  const adapter = () => {
+  return (plan: TenuePlanifiee, pieces: Item[], meteo: { temp: number; label: string }) => {
     // Le MÊME pool que celui qui compose une tenue planifiée : le dressing d'abord, complété par la capsule de la saison du plan.
     const saisonDuPlan = saisonCalendairePour(new Date(`${plan.jour}T12:00:00`));
     const meteoMoteur = weatherForDay(meteo.temp, meteo.label, saisonDuPlan, CHALEUR_HORS_SAISON);
     const capsule = plan.dressingSeul ? [] : computeDefaultCapsule(profile, meteoMoteur, state.suggestedExcluded, saisonDuPlan, vestiairePool);
     const pool = poolDePlanification({ items: state.items, capsule, occasion: plan.occasion, dressingSeul: plan.dressingSeul, meteo: meteoMoteur, categories: CATS.map(([k]) => k) as CategoryKey[] });
-    const proposition = proposerAdaptation({
+    return proposerAdaptation({
       pieces,
       pool,
       dressingIds: new Set(state.items.map((i) => i.id)),
@@ -80,6 +83,16 @@ export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<Re
       },
       ctx: { ville: villeDuLieu(plan.lieu) || undefined, moment: plan.moment },
     });
+  };
+}
+
+export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<ReturnType<typeof usePlanApplique>> }) {
+  const { actions } = useCapsela();
+  const calculer = useCalculAdaptation();
+  const { alerte, plan, pieces, meteo } = planApplique;
+  if (!alerte || !meteo) return null;
+  const adapter = () => {
+    const proposition = calculer(plan, pieces, meteo);
     if (!proposition) return actions.ouvrirPlan(plan, "home");
     // Planifier ne place une tenue que dans les jours À VENIR : pour un plan d'aujourd'hui, la date serait perdue (audit du 12/10/2026). Le look
     // adapté s'ouvre alors comme tenue du jour (écran Tenue), sans toucher au plan, qui n'est remplacé que par un enregistrement explicite.

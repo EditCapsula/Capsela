@@ -32,6 +32,7 @@ import { soireeHabillee } from "@/lib/occasions";
 import { jourLocal } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
+import { useCalculAdaptation } from "@/components/PlansDuJour";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
 import { computeDefaultCapsule, saisonCalendairePour, saisonCapsuleDuJour } from "@/lib/capsule";
 import EtapeLieu, { type MeteoEtapeLieu } from "@/components/EtapeLieu";
@@ -1182,6 +1183,10 @@ export default function PlanifierScreen() {
    * Les deux derniers reprennent le mécanisme de la composition imposée
    * (tenue d'un avis de styliste) : pas de nouveau tirage, la tenue est gardée.
    */
+  // « Actualiser la tenue » d'un plan dont la prévision a changé (04/11/2026) : le calcul, et l'identifiant du plan pour lequel il n'a rien
+  // trouvé à changer (le message ne suit pas un autre plan).
+  const calculerAdaptation = useCalculAdaptation();
+  const [tenueToujoursOk, setTenueToujoursOk] = useState<string | null>(null);
   const repartirDuPlan = (t: TenuePlanifiee, mode: "modifier" | "deplacer" | "dupliquer") => {
     setOcc(t.occasion);
     if (t.occasion === "travail_formel" && WORK_MODES.includes(t.sousChoix as WorkMode)) setWorkMode(t.sousChoix as WorkMode);
@@ -2077,6 +2082,32 @@ export default function PlanifierScreen() {
                 {meteoPlanVive && previsionAChange(t, meteoPlanVive) && (
                   <div className="text-[11px] text-terracotta leading-[1.45] mt-[2px]">
                     La prévision a changé depuis la planification{t.temp != null ? ` (${t.temp}°${t.weatherLabel ? `, ${t.weatherLabel.toLowerCase()}` : ""})` : ""}.
+                    {/* ACTUALISER LA TENUE (04/11/2026, demandé) : la même adaptation que l'alerte de l'accueil (useCalculAdaptation) —
+                        les pièces qui ne conviennent plus à la nouvelle prévision sont remplacées selon les règles du moteur, le reste
+                        est gardé. Rien à changer : on le dit. Le plan n'est remplacé que par un enregistrement explicite. */}
+                    {!passee && (
+                      <>
+                        {" "}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const proposition = calculerAdaptation(t, pieces, meteoPlanVive);
+                            if (!proposition) return setTenueToujoursOk(t.id);
+                            if (ecartJoursDuPlan(t.jour) <= 0) {
+                              actions.viewItemOutfit(proposition.ids, t.occasion);
+                              return actions.goTenues();
+                            }
+                            repartirDuPlan(t, "modifier");
+                            setComposition(proposition.ids);
+                            setEtape(3);
+                          }}
+                          className="font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer"
+                        >
+                          Actualiser la tenue
+                        </button>
+                        {tenueToujoursOk === t.id && <span className="block text-ink-soft">Ta tenue convient toujours à cette prévision.</span>}
+                      </>
+                    )}
                   </div>
                 )}
                 {meteoPlanVive && alerteMeteoPlan(pieces, meteoPlanVive) && <div className="text-[11px] text-terracotta leading-[1.45] mt-[2px]">{alerteMeteoPlan(pieces, meteoPlanVive)}</div>}
