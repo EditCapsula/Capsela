@@ -42,3 +42,12 @@ export function autresManteaux(candidats: Item[], tenue: Item[], exterieur: Item
   const vus = new Set<number>();
   return candidats.filter((c) => c.cat === "manteau" && !dans.has(c.id) && !vus.has(c.id) && vus.add(c.id));
 }
+
+/**
+ * La température qui peut justifier « selon la météo » : aujourd'hui, celle du jour si elle n'est pas faite des valeurs par défaut
+ * (choisirMeteo, weather.ts) ; un autre jour, sa prévision. Sinon null : rien n'est séparé, rien n'est dit de la météo.
+ */
+export function temperatureReelle(args: { decalage: number; sourceMeteo: string; tempDuJour: number; prevue: number | null | undefined }): number | null {
+  if (args.decalage === 0) return args.sourceMeteo !== "defaut" ? args.tempDuJour : null;
+  return typeof args.prevue === "number" ? args.prevue : null;
+}

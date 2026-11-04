@@ -1,6 +1,8 @@
 "use client";
 
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import PourLExterieur from "@/components/PourLExterieur";
+import { separerCoucheExterieure } from "@/lib/coucheExterieure";
 import { BoutonDiscret } from "@/components/Button";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
@@ -22,10 +24,12 @@ import type { Item } from "@/lib/types";
 export function HeroTenue({
   statut,
   phrase,
-  pieces,
+  pieces: piecesRecues,
   vide,
   info,
   actions,
+  temperature,
+  quand,
 }: {
   statut: string;
   /** La phrase d'ambiance, manuscrite, posée par-dessus le haut de la zone. */
@@ -36,8 +40,17 @@ export function HeroTenue({
   /** Remplace le bouton principal : un constat, jamais une action qui n'existe pas. */
   info?: string;
   actions: { cle: string; glyphe: string; libelle: string; onClick: () => void }[];
+  /**
+   * La température RÉELLE du jour du look (prévision, ou celle enregistrée à la planification) : sous le seuil du moteur, le manteau
+   * se montre à part, dans « Pour l'extérieur » (04/11/2026, coucheExterieure.ts). Absente : rien n'est séparé.
+   */
+  temperature?: number | null;
+  /** Complète la température : « prévus », « ce jour-là »… */
+  quand?: string;
 }) {
   const ouvrirPiece = useOuvrirPiece();
+  const { principal, exterieur } = separerCoucheExterieure(piecesRecues, temperature);
+  const pieces = principal;
   const total = pieces.length;
   const capsule = pieces.filter((p) => isCatalogId(p.id)).length;
   const dressing = total - capsule;
@@ -86,6 +99,12 @@ export function HeroTenue({
           </div>
         )}
       </div>
+
+      {exterieur && temperature != null && (
+        <div className="mt-[6px] flex-shrink-0">
+          <PourLExterieur piece={exterieur} temperature={temperature} quand={quand ?? "prévus"} onClick={() => ouvrirPiece(exterieur)} />
+        </div>
+      )}
 
       {info && (
         <div className="mt-[8px] flex-shrink-0 flex items-center justify-center rounded-full text-[13px] text-ink text-center px-4" style={{ minHeight: 56, border: "1px dashed rgba(29,26,22,.3)" }}>

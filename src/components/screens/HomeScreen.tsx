@@ -24,6 +24,8 @@ import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item } from "@/lib/types";
 import Button from "@/components/Button";
 import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/components/CarrouselHero";
+import PourLExterieur from "@/components/PourLExterieur";
+import { separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import { composerSlides, cleTenue as cleSlide, typeDeJour, type SlideCarrousel } from "@/lib/carrousel";
 import { titreDeLaTenue } from "@/lib/dressingSections";
 
@@ -111,7 +113,7 @@ const FANTOME_CHAUSSURES: CategoryKey[] = ["chaussures"];
 const AUCUN_FANTOME: CategoryKey[] = [];
 
 export default function HomeScreen() {
-  const { state, geoLoading, vestiairePool, wardrobePool, meteoDuJour, jourConsulte, valiseConsultee, actions } = useCapsela();
+  const { state, geoLoading, vestiairePool, wardrobePool, meteoDuJour, jourConsulte, valiseConsultee, actions, weather, sourceMeteo } = useCapsela();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
@@ -185,7 +187,21 @@ export default function HomeScreen() {
   const hasOutfit = piecesResolues.length > 0 && tenueAUnSocle(piecesResolues);
   const occasionKey =
     state.occasion && state.occasion !== "all" ? state.occasion : occasionParDefaut(profile.prefs, jourConsulte.date);
-  const outfitPieces = hasOutfit ? piecesResolues : [];
+  /*
+   * LE MANTEAU À PART, SUR L'ACCUEIL AUSSI (04/11/2026, demandé : « aligne sur tous les hero » ; coucheExterieure.ts) : la composition
+   * montre le look seul ; le manteau ajouté par le froid se montre dessous, dans « Pour l'extérieur », qui mène à la page Tenue.
+   */
+  const tempReelle = temperatureReelle({ decalage: jourConsulte.decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp });
+  const tenueSeparee = separerCoucheExterieure(hasOutfit ? piecesResolues : [], tempReelle);
+  const outfitPieces = tenueSeparee.principal;
+  const exterieur = tenueSeparee.exterieur;
+  const sansExterieur = exterieur ? [exterieur.id] : undefined;
+  const blocExterieur =
+    exterieur && tempReelle != null ? (
+      <div className="mt-[6px]">
+        <PourLExterieur piece={exterieur} temperature={tempReelle} quand={jourConsulte.decalage === 0 ? "aujourd'hui" : "prévus"} onClick={actions.goTenues} compact />
+      </div>
+    ) : null;
   // LA VESTE CONSEILLÉE PAR TEMPS FRAIS, SUR L'ACCUEIL AUSSI (14/10/2026, demandé) : la même suggestion que la page Tenue (computeLookScore,
   // « veste_soir », mêmes arguments), posée dans la composition de la tenue du jour, estompée, avec un « + » qui l'ajoute.
   const conseilVeste = useMemo(() => {
@@ -286,7 +302,7 @@ export default function HomeScreen() {
     return { a: "Ta tenue", b: "du jour" };
   })();
   const sousTitreHero = texteHero ? texteHero.sousTitre : sousTitreLookDuJour(occasionKey, state.workMode, state.dateContext);
-  const cleTenue = clePieces(state.outfit).join(",");
+  const cleTenue = clePieces(outfitPieces.length ? outfitPieces.map((p) => p.id) : state.outfit).join(",");
   const sauvegardee = jourAVenir
     ? state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue)
     : avisDuJour === "adore";
@@ -348,12 +364,19 @@ export default function HomeScreen() {
         onVoir={() => actions.consulterTenue(slide.ids, slide.occasion, slide.source === "plan" ? (planHero?.id ?? null) : null)}
         sauvegardee={duJour ? sauvegardee : dejaSauvegardee(slide.ids)}
         onSauvegarder={() => {
-          if (duJour) return actions.setOutfitFeedback("adore");
+          if (duJour) return actions.setOutfitFeedback("adore", sansExterieur);
           if (!dejaSauvegardee(slide.ids)) actions.enregistrerIdeeLook(slide.ids, slide.occasion);
         }}
         onAutre={() => (duJour ? pasPourMoi() : quota.demander(() => actions.autreIdeeSlide(slide.id)))}
         autreDesactive={quota.tirageEnCours}
-        pied={duJour && planApplique?.alerte ? <AlerteMeteoLook planApplique={planApplique} /> : undefined}
+        pied={
+          duJour && (planApplique?.alerte || blocExterieur) ? (
+            <>
+              {blocExterieur && <div style={{ gridColumn: "1 / -1" }}>{blocExterieur}</div>}
+              {planApplique?.alerte && <AlerteMeteoLook planApplique={planApplique} />}
+            </>
+          ) : undefined
+        }
         portee={duJour && porteeAujourdhui}
       />
     );
@@ -493,6 +516,7 @@ export default function HomeScreen() {
           )}
         </div>
 
+        {!passee && !aucuneTenuePossible && blocExterieur && <div style={{ gridColumn: "1 / -1" }}>{blocExterieur}</div>}
         {/* LES DEUX ACTIONS : « Sauvegarder » range la tenue dans Mes looks (l'ancien « J'adore », même enregistrement) ; « Autre tenue »
             propose une autre tenue (l'ancien « Pas pour moi » : le refus est enregistré, la suivante l'évite, même quota). */}
         {hasOutfit && !passee && (
@@ -507,7 +531,7 @@ export default function HomeScreen() {
               actif={sauvegardee}
               // Aujourd'hui : l'avis « J'adore » (enregistré, et la tenue rejoint Mes looks). Un autre jour : la tenue seule
               // rejoint Mes looks — l'avis du jour ne porte que sur la tenue d'aujourd'hui.
-              onClick={() => (jourAVenir ? actions.toggleSaveOutfitLook() : actions.setOutfitFeedback("adore"))}
+              onClick={() => (jourAVenir ? actions.toggleSaveOutfitLook(sansExterieur) : actions.setOutfitFeedback("adore", sansExterieur))}
             />
             <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(29,26,22,.2)" }} />
             <ActionRonde

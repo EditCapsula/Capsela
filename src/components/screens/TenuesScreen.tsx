@@ -18,7 +18,8 @@ import { ecrireRetourDuCompte, envoyerRetoursAuCompte, lireRetoursDuCompte } fro
 import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { autresManteaux, separerCoucheExterieure } from "@/lib/coucheExterieure";
+import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
+import PourLExterieur from "@/components/PourLExterieur";
 import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, outfitMoodPhrase, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
 
@@ -337,8 +338,8 @@ export default function TenuesScreen() {
    * La température n'est prise que si elle est RÉELLE : aujourd'hui, hors valeurs par défaut ; un autre jour, sa prévision. Sans
    * elle, rien n'est séparé (le manteau reste dans le look, comme avant) : aucune recommandation « selon la météo » sans météo.
    */
-  const temperatureReelle = decalage === 0 ? (sourceMeteo !== "defaut" ? weather.temp : null) : (jourConsulte.meteoPrevue?.temp ?? null);
-  const { principal: piecesDuLook, exterieur } = separerCoucheExterieure(outfitPieces, temperatureReelle);
+  const tempReelle = temperatureReelle({ decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp });
+  const { principal: piecesDuLook, exterieur } = separerCoucheExterieure(outfitPieces, tempReelle);
   const [exterieurOuvert, setExterieurOuvert] = useState(false);
   // « Je le porte aussi » : le manteau n'est compté comme porté que si on le choisit. Revient à non à chaque nouveau manteau.
   const [porterPour, setPorterPour] = useState<number | null>(null);
@@ -934,31 +935,10 @@ export default function TenuesScreen() {
           <div className="flex-shrink-0">
             {/* POUR L'EXTÉRIEUR (04/11/2026, brief « Séparer la tenue principale du manteau ») : sous le flat lay, entre deux filets,
                 une ligne secondaire — jamais une seconde grande carte. Seulement quand le moteur a ajouté un manteau par le froid. */}
-            {exterieur && temperatureReelle != null && (
-              <button
-                type="button"
-                onClick={() => setExterieurOuvert(true)}
-                className="w-full flex items-center gap-[12px] text-left border-y border-border py-[10px] mb-[6px] cursor-pointer"
-              >
-                <span className="w-[64px] flex-shrink-0">
-                  <PhotoPiece piece={exterieur} ratio={1} rayon={12} />
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="font-serif italic text-[16px] text-ink leading-[1.2]">Pour l&apos;extérieur</span>
-                    <span className="inline-flex items-center gap-[4px] flex-shrink-0 rounded-full px-[8px] py-[3px] text-[11px] text-ink" style={{ background: "var(--color-warm-bg)" }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                        <path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0Z" />
-                      </svg>
-                      {Math.round(temperatureReelle)}°
-                    </span>
-                  </span>
-                  <span className="block text-[12px] text-muted-3 leading-[1.4] mt-[2px]" style={{ textWrap: "pretty" }}>
-                    {exterieur.name}, à ajouter selon la météo ({Math.round(temperatureReelle)}° {decalage === 0 ? "aujourd'hui" : "prévus"}).
-                  </span>
-                </span>
-                <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
-              </button>
+            {exterieur && tempReelle != null && (
+              <div className="mb-[6px]">
+                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} />
+              </div>
             )}
             {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.
                 La maquette les pose en surimpression en bas à gauche du
@@ -1640,9 +1620,9 @@ export default function TenuesScreen() {
               <div className="flex-1 min-w-0">
                 <div className="text-[14px] font-medium text-ink">{exterieur.name}</div>
                 <div className="text-[12px] text-muted mt-[2px]">{isCatalogId(exterieur.id) ? "De ta capsule" : "De ton dressing"}</div>
-                {temperatureReelle != null && (
+                {tempReelle != null && (
                   <div className="text-[12px] text-muted-3 mt-[6px] leading-[1.4]">
-                    À ajouter par-dessus ta tenue : {Math.round(temperatureReelle)}° {decalage === 0 ? "aujourd'hui" : "prévus"}.
+                    À ajouter par-dessus ta tenue : {Math.round(tempReelle)}° {decalage === 0 ? "aujourd'hui" : "prévus"}.
                   </div>
                 )}
               </div>

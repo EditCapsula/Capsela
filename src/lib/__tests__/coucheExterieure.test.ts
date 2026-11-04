@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { autresManteaux, separerCoucheExterieure } from "../coucheExterieure";
+import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "../coucheExterieure";
 import { SEUIL_MANTEAU } from "../logic";
 import type { CategoryKey, Item } from "../types";
 
@@ -68,5 +68,15 @@ describe("autres manteaux proposables", () => {
   it("6. seulement des manteaux, sans doublon avec la tenue ni avec celui proposé", () => {
     const candidats = [manteau, trench, trench, blazer, piece(9, "manteau", "Caban marine")];
     expect(autresManteaux(candidats, [robe, ballerines], manteau).map((p) => p.id)).toEqual([6, 9]);
+  });
+});
+
+
+describe("la température qui peut parler de météo", () => {
+  it("aujourd'hui : jamais les valeurs par défaut ; un autre jour : sa prévision seulement", () => {
+    expect(temperatureReelle({ decalage: 0, sourceMeteo: "ville", tempDuJour: 8, prevue: null })).toBe(8);
+    expect(temperatureReelle({ decalage: 0, sourceMeteo: "defaut", tempDuJour: 8, prevue: null })).toBeNull();
+    expect(temperatureReelle({ decalage: 2, sourceMeteo: "ville", tempDuJour: 8, prevue: 4 })).toBe(4);
+    expect(temperatureReelle({ decalage: 2, sourceMeteo: "ville", tempDuJour: 8, prevue: null })).toBeNull();
   });
 });

@@ -614,7 +614,8 @@ export interface Actions {
   setLookDraftHumeur: (h: Humeur) => void;
   dismissLookDraftSuggestion: (key: string) => void;
   /** Avis rapide sur la tenue du jour — repasser le même verdict le retire. */
-  setOutfitFeedback: (verdict: Verdict) => void;
+  /** `sauf` : le manteau montré à part (« Pour l'extérieur », 04/11/2026) n'entre pas dans le look enregistré par « J'adore ». */
+  setOutfitFeedback: (verdict: Verdict, sauf?: number[]) => void;
   /**
    * Enregistre le look en création. Ne rend « ok » qu'une fois la ligne écrite (15/10/2026 : avant, l'écran revenait au Dressing
    * avant la réponse de la base, et un échec perdait le brouillon) ; « erreur » garde le brouillon intact, « refuse » quand les
@@ -3266,7 +3267,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
      * le bouton répond, rien n'est écrit. Pas de faux message d'erreur pour
      * une session qui n'a pas de compte.
      */
-    setOutfitFeedback: (verdict) => {
+    setOutfitFeedback: (verdict, sauf) => {
       const s = stateRef.current;
       // L'avis du jour porte sur la tenue d'aujourd'hui (outfit_feedback, clé jour).
       if (!s.outfit.length || s.jourDecalage > 0) return;
@@ -3279,7 +3280,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // conséquence n'en était pas un. Idempotent — jamais deux copies —, et
       // retirer l'avis ne supprime pas le look : il vit désormais dans « Mes
       // looks », où elle peut le retirer elle-même.
-      if (verdict === "adore" && !retire) enregistrerTenueSiAbsente(s.outfit, s.occasion);
+      if (verdict === "adore" && !retire) {
+        const exclus = new Set(Array.isArray(sauf) ? sauf : []);
+        enregistrerTenueSiAbsente(s.outfit.filter((id) => !exclus.has(id)), s.occasion);
+      }
       if (!isSupabaseConfigured || !userId) return;
       const occasion = s.occasion && s.occasion !== "all" ? s.occasion : null;
       const ecriture = retire

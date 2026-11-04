@@ -2072,6 +2072,8 @@ export default function PlanifierScreen() {
                 statut={passee ? "Ton look était planifié" : "Ta tenue planifiée"}
                 phrase={phrase}
                 pieces={pieces}
+                temperature={meteoPlanVive?.temp ?? t.temp ?? null}
+                quand={passee ? "ce jour-là" : "prévus"}
                 vide="Les pièces de ce look ne sont plus dans ton dressing."
                 actions={
                   pieces.length > 0
