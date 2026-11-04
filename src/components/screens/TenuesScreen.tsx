@@ -593,11 +593,6 @@ export default function TenuesScreen() {
     onCta: emptyStateBase.ctaLabel ? actions.openAdd : null,
   };
 
-  // Phrase d'explication de la recommandation (recette 19/08/2026) — par
-  // template, jamais d'IA ; pas de température affichée tant que la
-  // géolocalisation n'a pas résolu la météo réelle du jour.
-
-
   const dismissed = new Set(state.dismissedSuggestions || []);
   const lookScore = computeLookScore(
     outfitPieces,
