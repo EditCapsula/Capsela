@@ -24,12 +24,23 @@ export interface TenueSeparee {
   exterieur: Item | null;
 }
 
-export function separerCoucheExterieure(pieces: Item[], temperature: number | null | undefined): TenueSeparee {
+export interface TenueSepareeEtendue extends TenueSeparee {
+  /** Vrai quand le manteau n'est pas dans la tenue : le moteur le PROPOSE en plus (cas « tenue sans manteau, manteau disponible »). */
+  suggere: boolean;
+}
+
+/**
+ * `candidats` (facultatif) : les manteaux que le moteur admet pour ce contexte (candidatsDeRemplacement : saison, bornes de température,
+ * occasion…). Par le froid, une tenue SANS manteau reçoit le premier d'entre eux en « Pour l'extérieur » (04/11/2026, signalé : « sur
+ * cette page il manque la strate extérieure ») ; sans candidat, rien n'est proposé — jamais un manteau inventé.
+ */
+export function separerCoucheExterieure(pieces: Item[], temperature: number | null | undefined, candidats: Item[] = []): TenueSepareeEtendue {
   const froid = typeof temperature === "number" && Number.isFinite(temperature) && temperature < SEUIL_MANTEAU;
-  if (!froid) return { principal: pieces, exterieur: null };
+  if (!froid) return { principal: pieces, exterieur: null, suggere: false };
   const exterieur = pieces.find((p) => p.cat === "manteau") ?? null;
-  if (!exterieur) return { principal: pieces, exterieur: null };
-  return { principal: pieces.filter((p) => p.id !== exterieur.id), exterieur };
+  if (exterieur) return { principal: pieces.filter((p) => p.id !== exterieur.id), exterieur, suggere: false };
+  const propose = autresManteaux(candidats, pieces, null)[0] ?? null;
+  return { principal: pieces, exterieur: propose, suggere: propose !== null };
 }
 
 /**

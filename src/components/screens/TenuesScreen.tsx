@@ -339,15 +339,28 @@ export default function TenuesScreen() {
    * elle, rien n'est séparé (le manteau reste dans le look, comme avant) : aucune recommandation « selon la météo » sans météo.
    */
   const tempReelle = temperatureReelle({ decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp });
-  const { principal: piecesDuLook, exterieur } = separerCoucheExterieure(outfitPieces, tempReelle);
+  // Les manteaux que le moteur admet ici (même appel que « Changer cette pièce ») : seulement par le froid, et pour proposer un manteau
+  // quand la tenue n'en a pas (04/11/2026). « Voir une autre proposition » fait passer un autre de ces candidats devant.
+  const [manteauChoisi, setManteauChoisi] = useState<number | null>(null);
+  const candidatsManteau = useMemo(() => {
+    if (tempReelle == null || tempReelle >= SEUIL_MANTEAU) return [];
+    const c = candidatsDeRemplacement(outfitPieces, displayPool, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour);
+    const choisi = c.find((i) => i.id === manteauChoisi);
+    return choisi ? [choisi, ...c.filter((i) => i.id !== choisi.id)] : c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tempReelle, state.outfit, displayPool, state.occasion, state.workMode, state.dateContext, meteoDuJour, manteauChoisi]);
+  const { principal: piecesDuLook, exterieur, suggere: exterieurSuggere } = separerCoucheExterieure(outfitPieces, tempReelle, candidatsManteau);
   const [exterieurOuvert, setExterieurOuvert] = useState(false);
   // « Je le porte aussi » : le manteau n'est compté comme porté que si on le choisit. Revient à non à chaque nouveau manteau.
   const [porterPour, setPorterPour] = useState<number | null>(null);
   const porterExterieur = exterieur != null && porterPour === exterieur.id;
-  const sauf = exterieur && !porterExterieur ? [exterieur.id] : undefined;
+  // Un manteau seulement PROPOSÉ n'est pas dans la tenue : rien à exclure ; le porter l'y ajoute (« Je le porte aussi »).
+  const sauf = exterieur && !exterieurSuggere && !porterExterieur ? [exterieur.id] : undefined;
   const autresExterieurs = exterieur
     ? autresManteaux(
-        candidatsDeRemplacement(outfitPieces, displayPool, exterieur.id, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour),
+        exterieurSuggere
+          ? candidatsManteau
+          : candidatsDeRemplacement(outfitPieces, displayPool, exterieur.id, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour),
         outfitPieces,
         exterieur
       )
@@ -1630,7 +1643,14 @@ export default function TenuesScreen() {
             {decalage === 0 && !state.outfitValidated && (
               <div className="flex items-center justify-between gap-3 mt-4 py-[10px] border-t border-border">
                 <span className="text-[13px] text-ink">Je le porte aussi aujourd&apos;hui</span>
-                <Toggle on={porterExterieur} onClick={() => setPorterPour(porterExterieur ? null : exterieur.id)} label="Je le porte aussi aujourd'hui" />
+                <Toggle
+                  on={porterExterieur}
+                  onClick={() => {
+                    if (!porterExterieur && exterieurSuggere) actions.addPieceToOutfit(exterieur.id);
+                    setPorterPour(porterExterieur ? null : exterieur.id);
+                  }}
+                  label="Je le porte aussi aujourd'hui"
+                />
               </div>
             )}
             <Button variante="contour" className="mt-3" onClick={() => { setExterieurOuvert(false); ouvrirPiece(exterieur); }}>
@@ -1639,7 +1659,7 @@ export default function TenuesScreen() {
             {autresExterieurs.length > 0 && (
               <button
                 type="button"
-                onClick={() => actions.remplacerDansTenue(exterieur.id, autresExterieurs[0].id)}
+                onClick={() => (exterieurSuggere ? setManteauChoisi(autresExterieurs[0].id) : actions.remplacerDansTenue(exterieur.id, autresExterieurs[0].id))}
                 className="w-full rounded-full text-[12px] text-terracotta-deep cursor-pointer mt-1"
                 style={{ minHeight: 44 }}
               >

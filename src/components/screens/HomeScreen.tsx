@@ -10,7 +10,7 @@ import { estPlanValise } from "@/lib/valiseDuJour";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
-import { clePrincipale, computeLookScore, estContexteMaison, qualificatifLook, sousTitreLookDuJour, tenueAUnSocle, titreDuQualificatif } from "@/lib/logic";
+import { candidatsDeRemplacement, clePrincipale, computeLookScore, SEUIL_MANTEAU, estContexteMaison, qualificatifLook, sousTitreLookDuJour, tenueAUnSocle, titreDuQualificatif } from "@/lib/logic";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { libelleStyles, paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
@@ -21,7 +21,7 @@ import { retourPrecedent, retourSuivant, retoursAvecTenue, tenuePassee } from "@
 import { dateDuJour } from "@/lib/jourConsulte";
 import { AlerteMeteoLook, PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
-import type { CategoryKey, Item } from "@/lib/types";
+import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
 import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/components/CarrouselHero";
 import PourLExterieur from "@/components/PourLExterieur";
@@ -192,10 +192,15 @@ export default function HomeScreen() {
    * montre le look seul ; le manteau ajouté par le froid se montre dessous, dans « Pour l'extérieur », qui mène à la page Tenue.
    */
   const tempReelle = temperatureReelle({ decalage: jourConsulte.decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp });
-  const tenueSeparee = separerCoucheExterieure(hasOutfit ? piecesResolues : [], tempReelle);
+  // Par le froid seulement, les manteaux que le moteur admet pour cette occasion : une tenue sans manteau en reçoit un, à part.
+  const manteauxPour = (pieces: Item[], occasion: OccasionKey) =>
+    tempReelle != null && tempReelle < SEUIL_MANTEAU && pieces.length
+      ? candidatsDeRemplacement(pieces, wardrobePool, -1, "manteau", occasion, state.workMode, state.dateContext, meteoDuJour)
+      : [];
+  const tenueSeparee = separerCoucheExterieure(hasOutfit ? piecesResolues : [], tempReelle, manteauxPour(hasOutfit ? piecesResolues : [], occasionKey));
   const outfitPieces = tenueSeparee.principal;
   const exterieur = tenueSeparee.exterieur;
-  const sansExterieur = exterieur ? [exterieur.id] : undefined;
+  const sansExterieur = exterieur && !tenueSeparee.suggere ? [exterieur.id] : undefined;
   const blocExterieur =
     exterieur && tempReelle != null ? (
       <div className="mt-[6px]">
@@ -344,11 +349,11 @@ export default function HomeScreen() {
     const duJour = slide.source !== "proposition";
     // Chaque slide a sa couche extérieure (04/11/2026, signalé : « quand je swipe je dois voir la strate extérieur pour les occasions
     // concernées ») : la tenue du jour est déjà séparée plus haut ; une proposition d'une autre occasion l'est ici, même règle, même météo.
-    const sepSlide = duJour ? { principal: outfitPieces, exterieur } : separerCoucheExterieure(piecesDe(slide.ids), tempReelle);
+    const sepSlide = duJour ? { principal: outfitPieces, exterieur } : separerCoucheExterieure(piecesDe(slide.ids), tempReelle, manteauxPour(piecesDe(slide.ids), slide.occasion));
     const pieces = sepSlide.principal;
     const exterieurSlide = sepSlide.exterieur;
     // Le look qu'on sauvegarde est celui qu'on voit : sans le manteau montré à part.
-    const idsDuLook = exterieurSlide ? slide.ids.filter((id) => id !== exterieurSlide.id) : slide.ids;
+    const idsDuLook = exterieurSlide ? slide.ids.filter((id) => id !== exterieurSlide.id) : slide.ids; // sans effet pour un manteau seulement proposé
     const blocSlide =
       exterieurSlide && tempReelle != null ? (
         <div className="mt-[6px]">

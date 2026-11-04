@@ -38,6 +38,11 @@ export interface TenuePlanifiee {
    * dans la requête principale — tant que la colonne n'existe pas, les tenues se chargent et s'enregistrent comme avant.
    */
   humeur?: Humeur | null;
+  /**
+   * « Je porterai cette tenue » (04/11/2026, colonne `confirme`, migration 0057) : la personne prévoit de porter ce look. Pas « portée » :
+   * le Journal ne l'enregistre que le jour même. Lue et écrite À PART, comme `mood_style` : avant la migration, rien ne casse.
+   */
+  confirme?: boolean;
 }
 
 interface PlannedOutfitRow {
@@ -88,8 +93,8 @@ export async function fetchTenuesPlanifiees(userId: string): Promise<TenuePlanif
       return [];
     }
     const tenues = (data as PlannedOutfitRow[]).map(rowToTenue);
-    const humeurs = await fetchHumeursPlans(userId);
-    return tenues.map((t) => (humeurs[t.id] ? { ...t, humeur: humeurs[t.id] } : t));
+    const [humeurs, confirmes] = await Promise.all([fetchHumeursPlans(userId), fetchConfirmationsPlans(userId)]);
+    return tenues.map((t) => ({ ...t, ...(humeurs[t.id] ? { humeur: humeurs[t.id] } : null), ...(confirmes.has(t.id) ? { confirme: true } : null) }));
   } catch (err) {
     console.error("[planifier] échec fetchTenuesPlanifiees", err);
     return [];
@@ -110,6 +115,30 @@ async function fetchHumeursPlans(userId: string): Promise<Record<string, Humeur>
     return out;
   } catch {
     return {};
+  }
+}
+
+/** Les tenues confirmées (« Je porterai cette tenue »). Vide si la colonne n'existe pas encore (migration 0057) ou en cas d'échec. */
+async function fetchConfirmationsPlans(userId: string): Promise<Set<string>> {
+  try {
+    const { data, error } = await getSupabase().from("planned_outfits").select("id, confirme").eq("user_id", userId).eq("confirme", true);
+    if (error || !data) return new Set();
+    return new Set((data as { id: number | string }[]).map((r) => String(r.id)));
+  } catch {
+    return new Set();
+  }
+}
+
+/** Écrit la confirmation d'une tenue planifiée. false si la colonne n'existe pas encore (migration 0057) ou en cas d'échec. */
+export async function enregistrerConfirmationPlan(id: string, confirme: boolean): Promise<boolean> {
+  if (!isSupabaseConfigured) return true;
+  try {
+    const { error } = await getSupabase().from("planned_outfits").update({ confirme }).eq("id", id);
+    if (error) console.error("[planifier] échec enregistrerConfirmationPlan", error);
+    return !error;
+  } catch (err) {
+    console.error("[planifier] échec enregistrerConfirmationPlan", err);
+    return false;
   }
 }
 

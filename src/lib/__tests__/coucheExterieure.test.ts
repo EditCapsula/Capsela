@@ -36,9 +36,18 @@ describe("la tenue et sa couche extérieure", () => {
     expect(separerCoucheExterieure([haut, pantalon, ballerines, manteau], -3).exterieur).toBe(manteau);
   });
 
-  it("5. aucun manteau dans la tenue : aucun bloc", () => {
+  it("5. aucun manteau dans la tenue ni de candidat : aucun bloc", () => {
     const t = [haut, pantalon, ballerines];
-    expect(separerCoucheExterieure(t, 5)).toEqual({ principal: t, exterieur: null });
+    expect(separerCoucheExterieure(t, 5)).toEqual({ principal: t, exterieur: null, suggere: false });
+  });
+
+  it("2 bis. tenue sans manteau, manteau disponible par le froid : il est proposé, hors du look", () => {
+    const t = [robe, ballerines, sac];
+    const r = separerCoucheExterieure(t, 10, [blazer, manteau, trench]);
+    expect(r.exterieur).toBe(manteau);
+    expect(r.suggere).toBe(true);
+    expect(r.principal).toEqual(t);
+    expect(separerCoucheExterieure(t, 18, [manteau]).exterieur).toBeNull();
   });
 
   it("8. une veste légère reste dans le look, même par le froid", () => {
