@@ -591,12 +591,17 @@ export default function ProfileSetupScreen() {
         )}
         <div className="w-[38px]" />
       </div>
-      {/* Hauteur réservée même sans fil (Genre et tailles, modification) : le titre tombe au même endroit sur toutes les étapes. */}
-      <div className="text-center text-[11px] text-muted mt-2 h-[16px] leading-[16px]" aria-live="polite">
-        {filDArianne}
-      </div>
+      {/* Hauteur réservée même sans fil (tailles, modification) : le titre tombe au même endroit d'une étape à l'autre.
+          SAUF quand la rangée n'a ni retour ni fil (Genre, première question de l'inscription) : la bande vide se lisait comme une
+          marge de trop au-dessus du titre (retours du test fermé, 04/11/2026). Rien n'y saute : on n'arrive sur Genre que depuis
+          la création du compte, jamais depuis une autre étape. */}
+      {showBack || filDArianne ? (
+        <div className="text-center text-[11px] text-muted mt-2 h-[16px] leading-[16px]" aria-live="polite">
+          {filDArianne}
+        </div>
+      ) : null}
 
-      <div className="mt-[26px]">
+      <div className={showBack || filDArianne ? "mt-[26px]" : "mt-[14px]"}>
         {enTete.kicker && <div className="t-surtitre text-terracotta">{enTete.kicker}</div>}
         <div className="t-titre-ecran text-ink mt-3" style={{ textWrap: "balance" }}>{avecTraitsDUnion(enTete.title)}</div>
         {enTete.subtitle && <div className="t-chapeau text-muted mt-[10px]">{enTete.subtitle}</div>}

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ONBOARDING_SLIDES } from "@/lib/data";
 import AppHeader from "@/components/AppHeader";
+import BoutonRetour from "@/components/BoutonRetour";
 import { useCapsela } from "@/lib/store";
 import { STYLE_CONFIG, VISUELS_ETAPE_STYLE_FEMME, type StyleId } from "@/lib/profile";
 import Button from "@/components/Button";
@@ -252,7 +253,8 @@ function VisuelCompte() {
  * La hauteur que le texte, l'en-tête et le pied retirent à l'écran, par écran : le titre « Tout ce que tu peux porter. » tient
  * sur trois lignes sur un téléphone étroit, il laisse moins de place à son visuel. Mesuré en rendu à 320, 360, 375 et 390 px.
  */
-const RESERVE_VISUEL = [470, 545, 495, 470, 500];
+// +10 le 04/11/2026 : la rangée du haut porte désormais le bouton Retour (44 px au lieu de 34).
+const RESERVE_VISUEL = [480, 555, 505, 480, 510];
 
 export default function OnboardingScreen() {
   const { state, actions } = useCapsela();
@@ -262,6 +264,28 @@ export default function OnboardingScreen() {
   const nbEcrans = ONBOARDING_SLIDES.length;
 
   const visuels = [<VisuelStyle key="s" />, <VisuelDressing key="d" />, <VisuelTenue key="t" />, <VisuelValise key="v" />, <VisuelCompte key="c" />];
+
+  /*
+   * NAVIGUER COMME DANS UN CARROUSEL (retours du test fermé, 04/11/2026 : « visuels non cliquables », « revenir en arrière pas
+   * possible »). Un balayage vers la gauche avance, vers la droite recule ; toucher le visuel avance. Un geste surtout vertical
+   * reste un défilement. Le bouton Retour, en haut à gauche, recule aussi (le dernier écran compris).
+   */
+  const depart = useRef<{ x: number; y: number } | null>(null);
+  const auDebutDuGeste = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    depart.current = { x: t.clientX, y: t.clientY };
+  };
+  const aLaFinDuGeste = (e: React.TouchEvent) => {
+    const d = depart.current;
+    depart.current = null;
+    if (!d) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - d.x;
+    const dy = t.clientY - d.y;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0 && !dernier) actions.onbNext();
+    else if (dx > 0 && indice > 0) actions.onbBack();
+  };
 
   return (
     <div
@@ -275,7 +299,7 @@ export default function OnboardingScreen() {
         <div className="min-h-full flex flex-col px-7 pt-2 pb-5">
           <AppHeader showAvatar={false} />
           <div className="flex justify-between items-center flex-shrink-0">
-            <div className="w-[34px] h-[34px]" />
+            {indice > 0 ? <BoutonRetour onClick={actions.onbBack} label="Revenir à l'écran précédent" /> : <div className="w-11 h-11" />}
             {!dernier && (
               <button onClick={actions.onbPasser} className="text-[13px] text-muted cursor-pointer py-2 pl-4">
                 Passer
@@ -284,8 +308,14 @@ export default function OnboardingScreen() {
           </div>
 
           {/* Une clé par écran : sans elle, l'animation, de même nom, ne se rejouerait pas d'un écran à l'autre. */}
-          <div key={indice} className="flex-1 flex flex-col justify-center">
-            <div className="motion-safe:animate-[capsule-apparition_320ms_ease-out_80ms_both]">{visuels[indice]}</div>
+          <div key={indice} className="flex-1 flex flex-col justify-center" onTouchStart={auDebutDuGeste} onTouchEnd={aLaFinDuGeste}>
+            {/* Toucher le visuel avance, comme « Continuer » ; sur le dernier écran, il ne fait rien (deux choix : créer ou se connecter). */}
+            <div
+              className={"motion-safe:animate-[capsule-apparition_320ms_ease-out_80ms_both]" + (dernier ? "" : " cursor-pointer")}
+              onClick={dernier ? undefined : actions.onbNext}
+            >
+              {visuels[indice]}
+            </div>
             <div className="mt-[clamp(14px,3.2svh,28px)] motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
               <div className="t-surtitre text-terracotta">{slide.kicker}</div>
               <h1

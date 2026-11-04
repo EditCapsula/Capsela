@@ -255,6 +255,34 @@ input.capin::placeholder {
   color: var(--color-placeholder);
 }
 
+/*
+ * L'IPHONE (retours du test fermé, 04/11/2026 : « expérience iPhone à améliorer », « champ date de naissance trop grand »).
+ *
+ * 1. Safari sur iPhone ZOOME toute la page dès qu'on touche un champ écrit sous 16 px, et ne dézoome pas en le quittant : l'écran
+ *    reste agrandi et déborde. Le zoom à deux doigts reste permis (pas de maximum-scale, WCAG 1.4.4, layout.tsx) : seuls les
+ *    champs passent à 16 px, et seulement sur iOS (`-webkit-touch-callout` n'existe que là) — Android et le bureau gardent 14 px.
+ * 2. Le champ date natif d'iOS impose sa propre largeur minimale et centre sa valeur : il dépassait la colonne et ne ressemblait
+ *    pas aux autres champs. Apparence native retirée, largeur libérée, valeur à gauche, hauteur d'un champ vide tenue.
+ */
+@supports (-webkit-touch-callout: none) {
+  input.capin,
+  select.capin,
+  textarea {
+    font-size: 16px;
+  }
+}
+input.capin[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  display: block;
+  min-height: calc(1.25em + 32px);
+}
+input.capin[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+
 /**
  * Icône de chargement (spinner cintre + cœur) — spec 23/08/2026, affinée
  * 26/08/2026 : le cintre reste fixe, seul l'arc tourne dans le sens
