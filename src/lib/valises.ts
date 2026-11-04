@@ -59,6 +59,12 @@ export interface ValiseGardee {
    */
   suggestionIds?: number[];
   /**
+   * « Uniquement mon dressing » (04/11/2026, demandé : « le même principe que [la tenue planifiée] avec uniquement mon dressing ») : la
+   * valise est composée sans compléter avec la capsule (completerAvecCapsule n'est pas appelée). Recomposer et modifier le gardent. Dans
+   * `calcul` (jsonb) : aucune migration. Absent : la capsule complète, comme avant.
+   */
+  uniquementDressing?: boolean;
+  /**
    * Les activités choisies à l'étape 3 (maquette V2, 11/10/2026), pour rouvrir le parcours exactement comme il a été rempli. Dans `calcul`
    * (jsonb) : aucune migration. Absent des valises plus anciennes (on les déduit alors du programme).
    */
@@ -218,7 +224,7 @@ interface ValiseRow {
   sejour: string | null;
   occasions: string[];
   piece_ids: (number | string)[];
-  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "activites" | "choix" | "etapes" | "lieu" | "cochees" | "affaires" | "programme" | "evenements">;
+  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "uniquementDressing" | "activites" | "choix" | "etapes" | "lieu" | "cochees" | "affaires" | "programme" | "evenements">;
 }
 
 const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Number);
@@ -239,6 +245,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     situationsSansLook: r.calcul?.situationsSansLook ?? [],
     ...(r.calcul?.dressingIds ? { dressingIds: r.calcul.dressingIds } : {}),
     ...(r.calcul?.suggestionIds?.length ? { suggestionIds: r.calcul.suggestionIds } : {}),
+    ...(r.calcul?.uniquementDressing ? { uniquementDressing: true } : {}),
     ...(r.calcul?.activites?.length ? { activites: r.calcul.activites } : {}),
     ...(r.calcul?.choix?.length ? { choix: r.calcul.choix } : {}),
     ...(r.calcul?.etapes && r.calcul.etapes.length > 1 ? { etapes: r.calcul.etapes } : {}),
@@ -268,6 +275,7 @@ export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
       situationsSansLook: v.situationsSansLook,
       ...(v.dressingIds ? { dressingIds: v.dressingIds } : {}),
       ...(v.suggestionIds?.length ? { suggestionIds: v.suggestionIds } : {}),
+      ...(v.uniquementDressing ? { uniquementDressing: true } : {}),
       ...(v.activites?.length ? { activites: v.activites } : {}),
       ...(v.choix?.length ? { choix: v.choix } : {}),
       ...(v.etapes && v.etapes.length > 1 ? { etapes: v.etapes } : {}),

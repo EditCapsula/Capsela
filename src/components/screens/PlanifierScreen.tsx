@@ -13,20 +13,21 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { CalendrierMois, IconeTuile, LigneIcone, ProgressionLibelles, TuileIcone, TuileOccasion, type IconePlanifier } from "@/components/PlanifierUI";
 import { OCCASIONS_EDITORIALES } from "@/lib/occasionEditoriale";
 import { GlypheSousChoix } from "@/components/GlyphesOccasion";
-import { CompositionTenue, HeroTenue, ICONES_INDICATEUR, IndicateursTenue, RailPiecesTenue } from "@/components/HeroTenue";
+import { HeroTenue, ICONES_INDICATEUR, IndicateursTenue, RailPiecesTenue } from "@/components/HeroTenue";
 import { separerCoucheExterieure } from "@/lib/coucheExterieure";
+import { basculerOccasion, occasionPrincipale, occasionsSecondaires, OCCASIONS_SEULES, tirerPolyvalente } from "@/lib/tenuePolyvalente";
 import { BarreDuPlan } from "@/components/BarreDuJour";
 import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { CATS, DATE_CONTEXTS, OCC_SHORT, OCCASIONS, WORK_MODES, occasionShortLabel, type Weather } from "@/lib/data";
+import { CATS, DATE_CONTEXTS, OCCASIONS, WORK_MODES, occasionShortLabel, type Weather } from "@/lib/data";
 import { sansTenueCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
-import { candidatsDeRemplacement, SEUIL_MANTEAU, titreLookDuJour } from "@/lib/logic";
+import { candidatsDeRemplacement, SEUIL_MANTEAU } from "@/lib/logic";
 import { humeursProposees, libelleHumeur, genererTenueHumeur, type Humeur } from "@/lib/humeur";
 import { soireeHabillee } from "@/lib/occasions";
-import { jourLocal } from "@/lib/outfitFeedback";
+import { clePieces, jourLocal } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import { useCalculAdaptation } from "@/components/PlansDuJour";
@@ -35,7 +36,7 @@ import { CHALEUR_HORS_SAISON, computeDefaultCapsule, saisonCalendairePour, saiso
 import EtapeLieu, { type MeteoEtapeLieu } from "@/components/EtapeLieu";
 import { meteoPourLaDate } from "@/lib/meteoPlan";
 import { fetchClimat, previsionGardee, type Climat, type VilleSuggeree } from "@/lib/weather";
-import { deleteTenuePlanifiee, fetchTenuesPlanifiees, enregistrerConfirmationPlan, enregistrerHumeurPlan, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
+import { deleteTenuePlanifiee, fetchTenuesPlanifiees, enregistrerConfirmationPlan, enregistrerHumeurPlan, enregistrerOccasionsSecondaires, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
 import { VISUEL_SEJOUR } from "@/lib/valise";
 import { libelleStyles, paletteHexes } from "@/lib/profile";
@@ -199,7 +200,7 @@ const TYPES_LIEU_PAR_OCCASION: Partial<Record<OccasionKey, readonly string[]>> =
 
 const JOURS_PROPOSES = 21;
 /** Les noms sous les points du fil (maquettes du 07/10/2026) ; une tenue imposée n'a pas la dernière. */
-const LIBELLES_ETAPES = ["Occasion", "Où", "Quand", "Préférence"] as const;
+const LIBELLES_ETAPES = ["Occasion", "Où et quand", "Préférences"] as const;
 const ICONE_MOMENT: Record<string, IconePlanifier> = { Matin: "matin", "Après-midi": "apresmidi", Soirée: "soiree", "Toute la journée": "journee" };
 const DOW = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const DOW_LONG = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
@@ -446,22 +447,55 @@ function composerTenuePlan(e: {
   profile: ReturnType<typeof useAuth>["profile"];
   humeur: Humeur | null;
   typeLieu: string | null;
+  /** Les autres occasions cochées (tenue polyvalente, tenuePolyvalente.ts) : `occ` est l'occasion principale. */
+  secondaires: OccasionKey[];
 }) {
   if (!e.occ) return null;
-  const pool = poolDePlanification({ items: e.items, capsule: e.capsule, occasion: e.occ, dressingSeul: e.dressingSeul, meteo: e.meteo, categories: CAT_KEYS });
-  return genererTenueHumeur({
-    pool,
-    weather: e.meteo,
-    occasion: e.occ,
-    workMode: e.workMode,
-    dateContext: e.dateContext,
-    preferredHexes: paletteHexes(e.profile),
-    gender: e.profile.gender,
-    morphology: e.profile.morphology,
-    colorimetrie: colorimetrieMoteur(e.profile.colorimetrie),
-    humeur: e.humeur,
-    soireeHabillee: e.occ === "soiree" && soireeHabillee({ typeLieu: e.typeLieu, humeur: e.humeur }),
-  });
+  const occ = e.occ;
+  const pool = poolDePlanification({ items: e.items, capsule: e.capsule, occasion: occ, dressingSeul: e.dressingSeul, meteo: e.meteo, categories: CAT_KEYS });
+  const tirer = () =>
+    genererTenueHumeur({
+      pool,
+      weather: e.meteo,
+      occasion: occ,
+      workMode: e.workMode,
+      dateContext: e.dateContext,
+      preferredHexes: paletteHexes(e.profile),
+      gender: e.profile.gender,
+      morphology: e.profile.morphology,
+      colorimetrie: colorimetrieMoteur(e.profile.colorimetrie),
+      humeur: e.humeur,
+      soireeHabillee: occ === "soiree" && soireeHabillee({ typeLieu: e.typeLieu, humeur: e.humeur }),
+    });
+  // Plusieurs occasions : le moteur compose pour la principale, puis on retient le tirage qui convient aussi aux autres (04/11/2026).
+  const { tenue, polyvalente } = tirerPolyvalente(
+    tirer,
+    (ids) => ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => !!p),
+    e.secondaires,
+    e.profile.gender
+  );
+  return tenue ? { ...tenue, polyvalente } : null;
+}
+
+/**
+ * LE RÉSULTAT GARDÉ (04/11/2026) : la tenue proposée et les critères qui l'ont produite. « Avis d'un proche » et la fiche d'une pièce
+ * quittent Planifier ; au retour, la même tenue se retrouve, sans refaire le parcours ni retirer le moteur. Un onglet de la barre du
+ * bas l'oublie, comme le reste du contexte (memoireEcrans.ts).
+ */
+interface ResultatGarde {
+  choisies: OccasionKey[];
+  workMode: WorkMode;
+  dateContext: DateContext;
+  jour: number | null;
+  moment: MomentJournee | null;
+  lieu: string;
+  ville: VilleSuggeree | null;
+  typeLieu: string | null;
+  humeur: Humeur | null;
+  dressingSeul: boolean;
+  ids: number[];
+  prevision: Prevision | null;
+  climatBrut: { cle: string; c: Climat | null } | null;
 }
 
 interface ContextePlanifier {
@@ -469,7 +503,12 @@ interface ContextePlanifier {
   hub: "tenue" | "valise";
   onglet: "up" | "past";
   etatAgenda: EtatAgenda;
+  resultat?: ResultatGarde;
 }
+
+/** La clé des critères d'une tenue : une alternative choisie ne vaut que pour eux. */
+const cleDesCriteres = (c: Pick<ResultatGarde, "choisies" | "dressingSeul" | "humeur" | "typeLieu" | "jour" | "moment" | "workMode" | "dateContext">) =>
+  `${c.choisies.join(",")}|${c.dressingSeul}|${c.humeur}|${c.typeLieu}|${c.jour}|${c.moment}|${c.workMode}|${c.dateContext}`;
 
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, vestiairePool, wardrobePool, etatPremium, actions } = useCapsela();
@@ -489,8 +528,9 @@ export default function PlanifierScreen() {
   // AU RETOUR (22/10/2026, memoireEcrans.ts) : une valise ouverte depuis le hub ou la liste ramène au même onglet (Tenue ou Valise),
   // à la même vue (hub ou « Mes planifications ») et au même agenda. Les étapes d'un parcours ne sont pas gardées.
   const repris = useContexteRepris<ContextePlanifier>("planifier", entreeDemandee);
-  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "alternatives" | "liste" | "detail" | "confirmation">(() =>
-    state.planARouvrir ? "detail" : entreeDemandee ? "etape" : (repris?.vue ?? "intro")
+  const instant = repris?.resultat ?? null;
+  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste" | "detail" | "confirmation">(() =>
+    state.planARouvrir ? "detail" : entreeDemandee ? "etape" : instant ? "resultat" : (repris?.vue ?? "intro")
   );
   /**
    * COMPOSITION IMPOSÉE (Avis de styliste V2, 26/09/2026) : les pièces
@@ -543,9 +583,21 @@ export default function PlanifierScreen() {
     if (decisionAcces("AVIS_DE_STYLISTE", etat, true) === "acces") actions.goAvisStyliste();
     else setGateAvisStyliste(true);
   };
-  const [etape, setEtape] = useState(() => (state.planAAdapter ? 3 : 1));
-  const [occ, setOcc] = useState<OccasionKey | null>(() => state.planAAdapter?.plan.occasion ?? null);
+  const [etape, setEtape] = useState(() => (instant ? 3 : state.planAAdapter ? 2 : 1));
+  /**
+   * LES OCCASIONS DU MOMENT (04/11/2026, « une ou plusieurs ») dans l'ordre du choix. `occ` est l'occasion PRINCIPALE, celle pour laquelle
+   * le moteur compose (tenuePolyvalente.ts) ; `setOcc` choisit une seule occasion (reprise d'un plan, retour d'un avis).
+   */
+  const [choisies, setChoisies] = useState<OccasionKey[]>(() => {
+    if (instant) return instant.choisies;
+    const p = state.planAAdapter?.plan;
+    return p ? [p.occasion, ...(p.occasionsSecondaires ?? [])] : [];
+  });
+  const occ = occasionPrincipale(choisies);
+  const secondaires = occasionsSecondaires(choisies);
+  const setOcc = (o: OccasionKey | null) => setChoisies(o ? [o] : []);
   const [workMode, setWorkMode] = useState<WorkMode>(() => {
+    if (instant) return instant.workMode;
     const p = state.planAAdapter?.plan;
     return p?.occasion === "travail_formel" && WORK_MODES.includes(p.sousChoix as WorkMode) ? (p.sousChoix as WorkMode) : "Présentiel";
   });
@@ -563,12 +615,14 @@ export default function PlanifierScreen() {
    * ligne qui n'est plus la première.
    */
   const [dateContext, setDateContext] = useState<DateContext>(() => {
+    if (instant) return instant.dateContext;
     const p = state.planAAdapter?.plan;
     return p?.occasion === "date" && DATE_CONTEXTS.some(([c]) => c === p.sousChoix) ? (p.sousChoix as DateContext) : DATE_CONTEXTS[0][0];
   });
   // « Planifier pour demain » depuis un avis : la date est déjà connue.
   // Depuis Tenue, le jour consulté (planJour, toujours ≥ 1 : Planifier ne propose pas aujourd'hui).
   const [jour, setJour] = useState<number | null>(() => {
+    if (instant) return instant.jour;
     const p = state.planAAdapter?.plan;
     if (p) {
       const midi = new Date();
@@ -578,13 +632,13 @@ export default function PlanifierScreen() {
     }
     return state.planComposition?.demain ? 1 : state.planJour;
   });
-  const [moment, setMoment] = useState<MomentJournee | null>(() => state.planAAdapter?.plan.moment ?? null);
+  const [moment, setMoment] = useState<MomentJournee | null>(() => (instant ? instant.moment : (state.planAAdapter?.plan.moment ?? null)));
   /** Le mois affiché par le calendrier de l'étape « Quand » : celui de la date déjà choisie, sinon le mois courant. */
   const [moisAffiche, setMoisAffiche] = useState<Date>(() => {
     const d = dansNJours(jour ?? 0);
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
-  const [lieu, setLieu] = useState(() => state.planAAdapter?.plan.lieu ?? "");
+  const [lieu, setLieu] = useState(() => (instant ? instant.lieu : (state.planAAdapter?.plan.lieu ?? "")));
   /**
    * VILLE CHOISIE DANS LES SUGGESTIONS, avec ses coordonnées — `null` tant
    * qu'on tape librement. C'est elle qui part chercher la prévision quand
@@ -592,20 +646,20 @@ export default function PlanifierScreen() {
    * reste acceptée (l'autocomplétion peut être indisponible), elle est
    * simplement moins sûre.
    */
-  const [ville, setVille] = useState<VilleSuggeree | null>(null);
-  const [typeLieu, setTypeLieu] = useState<string | null>(() => state.planAAdapter?.plan.typeLieu ?? null);
+  const [ville, setVille] = useState<VilleSuggeree | null>(() => instant?.ville ?? null);
+  const [typeLieu, setTypeLieu] = useState<string | null>(() => (instant ? instant.typeLieu : (state.planAAdapter?.plan.typeLieu ?? null)));
   /**
    * « Une dernière préférence ? » (07/10/2026) : facultative, jamais mémorisée dans le profil. Elle ne fait que départager
    * des tenues déjà compatibles (humeur.ts). Une composition imposée (photo d'un avis) n'a pas cette étape : sa tenue est faite.
    */
-  const [humeur, setHumeur] = useState<Humeur | null>(() => state.planAAdapter?.plan.humeur ?? null);
+  const [humeur, setHumeur] = useState<Humeur | null>(() => (instant ? instant.humeur : (state.planAAdapter?.plan.humeur ?? null)));
   /** L'écran « Capsela compose ta tenue… » : affiché entre la dernière question et le résultat, le temps de la prévision. */
   const [compose, setCompose] = useState(false);
   /** La tenue qui vient d'être gardée — pour l'écran de confirmation. */
   const [gardee, setGardee] = useState<TenuePlanifiee | null>(null);
   const [composeDelaiOk, setComposeDelaiOk] = useState(false);
   const [coche, setCoche] = useState(0);
-  const [dressingSeul, setDressingSeul] = useState(() => state.planAAdapter?.plan.dressingSeul ?? false);
+  const [dressingSeul, setDressingSeul] = useState(() => (instant ? instant.dressingSeul : (state.planAAdapter?.plan.dressingSeul ?? false)));
   /**
    * Prévision du LIEU. Demandée en quittant l'étape 3, c'est-à-dire au moment
    * où le lieu est arrêté — pas à chaque frappe dans le champ. Le temps que
@@ -635,11 +689,11 @@ export default function PlanifierScreen() {
   const [etatAgenda, setEtatAgenda] = useState<EtatAgenda>(() => repris?.etatAgenda ?? { mode: "agenda", jour: jourLocal(), mois: jourLocal() });
   /** Le hub n'affiche qu'une expérience à la fois (08/10/2026) : la tenue par défaut, ou la valise. */
   const [hub, setHub] = useState<"tenue" | "valise">(repris?.hub ?? "tenue");
-  useGarderContexte("planifier", (): ContextePlanifier => ({ vue: vue === "liste" ? "liste" : "intro", hub, onglet, etatAgenda }));
+
   const [toast, setToast] = useState<string | null>(null);
 
-  const [prevision, setPrevision] = useState<Prevision | null>(null);
-  const [previsionEtat, setPrevisionEtat] = useState<"vide" | "encours" | "faite">("vide");
+  const [prevision, setPrevision] = useState<Prevision | null>(() => instant?.prevision ?? null);
+  const [previsionEtat, setPrevisionEtat] = useState<"vide" | "encours" | "faite">(() => (instant ? "faite" : "vide"));
 
   const occLabel = occ && occ !== "all" ? occasionShortLabel(occ) : "";
   const occLong = occ ? (OCCASIONS.find(([k]) => k === occ)?.[1] ?? "") : "";
@@ -650,13 +704,13 @@ export default function PlanifierScreen() {
    * le propose plus : sinon `planned_outfits.type_lieu` recevrait un « Bar /
    * Rooftop » sur un Voyage, choisi puis devenu invisible.
    */
-  const typesLieuProposes = useMemo(() => {
+  const typesLieuProposes = (() => {
     const permis = occ ? TYPES_LIEU_PAR_OCCASION[occ] : undefined;
     if (!permis) return [] as string[];
     // « Autre » ferme la liste (08/10/2026). Il n'est pas écrit en base — la colonne n'accepte que les cinq autres valeurs : il se
     // lit comme « pas de précision » à l'enregistrement (cf. TYPE_LIEU_AUTRE).
     return [...TYPES_LIEU.filter(([t]) => permis.includes(t)).map(([t]) => t), TYPE_LIEU_AUTRE];
-  }, [occ]);
+  })();
   const dateChoisie = jour != null ? dansNJours(jour) : null;
   const dateLongue = dateChoisie
     ? `${DOW_LONG[dateChoisie.getDay()]} ${dateChoisie.getDate()} ${MOIS[dateChoisie.getMonth()]}`
@@ -730,7 +784,7 @@ export default function PlanifierScreen() {
     jour != null &&
     (jour > HORIZON_PREVISION_JOURS || (prevision != null && dateChoisie != null && dernierJourConnu != null && jourLocal(dateChoisie) > dernierJourConnu));
   /** Les températures HABITUELLES du lieu à cette date (moyenne des années passées), demandées seulement au-delà de la prévision. */
-  const [climatBrut, setClimatBrut] = useState<{ cle: string; c: Climat | null } | null>(null);
+  const [climatBrut, setClimatBrut] = useState<{ cle: string; c: Climat | null } | null>(() => instant?.climatBrut ?? null);
   const cleClimat = auDela && ville && dateChoisie ? `${ville.lat},${ville.lon}|${jourLocal(dateChoisie)}` : null;
   useEffect(() => {
     if (!cleClimat || !ville || !dateChoisie) return;
@@ -794,36 +848,46 @@ export default function PlanifierScreen() {
     profile,
     humeur,
     typeLieu,
+    secondaires,
   };
+  const cleOccasions = choisies.join(",");
   const tenue = useMemo(
     () => composerTenuePlan(entreesMoteur),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [occ, dressingSeul, state.items, capsuleDeLaDate, meteoUtilisee, workMode, dateContext, profile, humeur, typeLieu]
+    [cleOccasions, dressingSeul, state.items, capsuleDeLaDate, meteoUtilisee, workMode, dateContext, profile, humeur, typeLieu]
   );
-  /** L'alternative choisie dans « Autres propositions » : valable tant que les paramètres qui l'ont produite ne changent pas. */
-  const cleParams = `${occ}|${dressingSeul}|${humeur}|${typeLieu}|${jour}|${moment}|${workMode}|${dateContext}`;
-  const [choixBrut, setChoixBrut] = useState<{ cle: string; ids: number[] } | null>(null);
+  /** La tenue choisie par « Autre tenue » : valable tant que les critères qui l'ont produite ne changent pas. */
+  const cleParams = cleDesCriteres({ choisies, dressingSeul, humeur, typeLieu, jour, moment, workMode, dateContext });
+  // Au retour d'un résultat gardé, la tenue qui était affichée, et non un nouveau tirage.
+  const [choixBrut, setChoixBrut] = useState<{ cle: string; ids: number[] } | null>(() => (instant ? { cle: cleDesCriteres(instant), ids: instant.ids } : null));
   const choisie = choixBrut?.cle === cleParams ? choixBrut.ids : null;
-  /** La proposition surlignée dans « Autres propositions » (index dans `propositions`), sinon celle qui est affichée. */
-  const [altSel, setAltSel] = useState(0);
-  /** Les idées affichées, toutes celles déjà montrées pour ces informations, et si le dressing n'en a plus (autresIdees, 20/10/2026). */
-  const [altsBrut, setAltsBrut] = useState<{ cle: string; liste: number[][]; vues: number[][]; epuise: boolean } | null>(null);
-  const alternatives = altsBrut?.cle === cleParams ? altsBrut.liste : [];
+  /** Toutes les tenues déjà montrées pour ces critères, et si le dressing n'en a plus d'assez différente (autresIdees, 20/10/2026). */
+  const [altsBrut, setAltsBrut] = useState<{ cle: string; vues: number[][]; epuise: boolean } | null>(null);
   const alternativesEpuisees = altsBrut?.cle === cleParams && altsBrut.epuise;
   const idsAffiches = composition ?? choisie ?? tenue?.ids ?? [];
-  /** Jusqu'à trois tenues différentes de celle affichée, tirées du même moteur avec les mêmes paramètres. */
-  const chercherAlternatives = () => {
-    // Toutes les idées déjà montrées pour ces mêmes informations restent exclues : chaque série en apporte de nouvelles.
+  /**
+   * « AUTRE TENUE » (04/11/2026, brief « Évolution du parcours de planification ») : une nouvelle proposition, à la place de celle-ci, avec
+   * les mêmes critères — le même moteur, les mêmes paramètres — et jamais une tenue déjà montrée pour eux (autresIdees : un autre socle, ou
+   * deux pièces principales changées). Plus d'idée assez différente : on le dit, au lieu de reproposer la même.
+   */
+  const autreTenue = () => {
     const dejaVues = altsBrut?.cle === cleParams ? altsBrut.vues : [idsAffiches];
     const poolJuge = [...state.items, ...capsuleDeLaDate, ...vestiairePool];
     const tirer = () => {
       const t = composerTenuePlan(entreesMoteur);
       return t && !t.noCompleteOutfit && t.ids.length ? t.ids : null;
     };
-    const { idees, epuise } = autresIdees(tirer, dejaVues, poolJuge);
-    setAltsBrut({ cle: cleParams, liste: idees, vues: [...dejaVues, ...idees], epuise });
-    setAltSel(0);
+    const { idees } = autresIdees(tirer, dejaVues, poolJuge, 1, 40);
+    if (!idees.length) {
+      setAltsBrut({ cle: cleParams, vues: dejaVues, epuise: true });
+      return;
+    }
+    setAltsBrut({ cle: cleParams, vues: [...dejaVues, idees[0]], epuise: false });
+    setChoixBrut({ cle: cleParams, ids: idees[0] });
   };
+  const autreIndisponible = alternativesEpuisees;
+  /** La tenue affichée est-elle déjà dans « Mes looks » ? Même comparaison que le cœur des idées de look (mêmes pièces). */
+  const lookEnregistre = idsAffiches.length > 0 && state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === clePieces(idsAffiches).join(","));
 
   const pieces: Item[] = useMemo(() => {
     // Pool stable et non le seul dressing : une tenue planifiée reprise telle
@@ -856,7 +920,19 @@ export default function PlanifierScreen() {
   const sansTenue = !composition && (!tenue || tenue.noCompleteOutfit);
   /** Les mots de l'état sans tenue : dressing vide, pièces manquantes, ou pas de combinaison pour l'occasion (emptyStateCopy.ts). */
   const sansTenueTextes = sansTenue ? sansTenueCopy(state.items.length, dressingSeul, tenue?.reason, dressingSeul ? "ton dressing" : "ton dressing et ta capsule") : null;
-
+  // Le contexte gardé au démontage (useGarderContexte) : le hub, l'agenda, et le résultat affiché (ResultatGarde).
+  useGarderContexte(
+    "planifier",
+    (): ContextePlanifier => ({
+      vue: vue === "liste" ? "liste" : "intro",
+      hub,
+      onglet,
+      etatAgenda,
+      ...(vue === "resultat" && !composition && !depuisPlan && !sansTenue && idsAffiches.length
+        ? { resultat: { choisies, workMode, dateContext, jour, moment, lieu, ville, typeLieu, humeur, dressingSeul, ids: idsAffiches, prevision, climatBrut } }
+        : {}),
+    })
+  );
   /**
    * POOL DE RÉSOLUTION STABLE pour les tenues DÉJÀ PLANIFIÉES — le même que
    * LookDetailScreen et HistoryScreen, et pour la même raison : `wardrobePool`
@@ -884,7 +960,7 @@ export default function PlanifierScreen() {
     ...(!dressingSeul && nbCapsule > 0 && profile.styles.length
       ? [{ cle: "style", icone: ICONES_INDICATEUR.style, texte: libelleStyles(profile.styles, profile.gender) }]
       : []),
-    ...(occ && occ !== "all" ? [{ cle: "occasion", icone: ICONES_INDICATEUR.occasion, texte: OCC_SHORT[occ] }] : []),
+    ...(occ && occ !== "all" ? [{ cle: "occasion", icone: ICONES_INDICATEUR.occasion, texte: [occ, ...secondaires].map((o) => occasionShortLabel(o)).join(" · ") }] : []),
     ...(meteoMoment && !composition && !alerteMeteoPlan(piecesDuLook, meteoMoment)
       ? [{ cle: "meteo", icone: ICONES_INDICATEUR.meteo, texte: `Adaptée à ${Math.round(meteoMoment.temp)}°` }]
       : []),
@@ -1115,7 +1191,16 @@ export default function PlanifierScreen() {
       // La préférence s'écrit à part (colonne mood_style, migration 0048) : tant que la migration n'est pas passée,
       // la tenue est gardée sans elle et l'échec est dit, jamais tu.
       const humeurGardee = humeur && !composition ? await enregistrerHumeurPlan(ligne.id, humeur) : true;
-      setPlans((l) => [...l.filter((x) => x.id !== ligne.id), humeur && !composition && humeurGardee ? { ...ligne, humeur } : ligne]);
+      // « PORTER CETTE TENUE » (04/11/2026) : la tenue est associée à sa date, « Planifiée » — pas « Confirmée » (arbitré le même jour par la
+      // propriétaire : la confirmation reste « Je porterai cette tenue », sur la page Look planifié). Les autres occasions d'une tenue
+      // polyvalente s'écrivent à part (migration 0058) : avant la migration, la tenue est gardée sans elles et l'échec est dit.
+      const secondairesGardees = secondaires.length ? await enregistrerOccasionsSecondaires(ligne.id, secondaires) : true;
+      const gardeeComplete: TenuePlanifiee = {
+        ...ligne,
+        ...(humeur && !composition && humeurGardee ? { humeur } : null),
+        ...(secondaires.length && secondairesGardees ? { occasionsSecondaires: secondaires } : null),
+      };
+      setPlans((l) => [...l.filter((x) => x.id !== ligne.id), gardeeComplete]);
       // Remplacement : l'ancienne ligne n'est retirée qu'une fois la nouvelle
       // confirmée par la base. Même créneau : l'upsert l'a déjà écrasée.
       const ancien = depuisPlan?.remplacer && depuisPlan.plan.id !== ligne.id ? depuisPlan.plan : null;
@@ -1131,8 +1216,8 @@ export default function PlanifierScreen() {
       setDepuisPlan(null);
       setOnglet("up");
       // Tout s'est bien passé : l'écran de confirmation. Sinon la liste, où le message d'échec est lisible.
-      if (ancienRetire && humeurGardee) {
-        setGardee(ligne);
+      if (ancienRetire && humeurGardee && secondairesGardees) {
+        setGardee(gardeeComplete);
         setVue("confirmation");
         return;
       }
@@ -1142,7 +1227,9 @@ export default function PlanifierScreen() {
           ? "La nouvelle date est gardée. L'ancienne n'a pas pu être retirée : supprime-la depuis ta liste."
           : !humeurGardee
             ? "Tenue enregistrée. Ta préférence n'a pas pu l'être : elle ne sera pas rappelée à l'ouverture."
-            : "Tenue enregistrée. Tu la retrouveras dans ton planning le jour venu."
+            : !secondairesGardees
+              ? `Tenue enregistrée pour ${occasionShortLabel(occ)}. Les autres occasions n'ont pas pu l'être : elles ne seront pas rappelées.`
+              : "Tenue enregistrée. Tu la retrouveras dans ton planning le jour venu."
       );
     } catch {
       flash("L'enregistrement a échoué. Réessaie.");
@@ -1199,8 +1286,7 @@ export default function PlanifierScreen() {
   // « Actualiser la tenue » d'un plan dont la prévision a changé (04/11/2026) : le calcul, et l'identifiant du plan pour lequel il n'a rien
   // trouvé à changer (le message ne suit pas un autre plan).
   const calculerAdaptation = useCalculAdaptation();
-  // La page « Look planifié » (04/11/2026) : la feuille des pièces, et la confirmation « Je porterai cette tenue ».
-  const [detailsPlanOuverts, setDetailsPlanOuverts] = useState(false);
+  // La page « Look planifié » (04/11/2026) : la confirmation « Je porterai cette tenue ».
   const [confirmationEchouee, setConfirmationEchouee] = useState<string | null>(null);
   const confirmerPlan = (t: TenuePlanifiee, confirme: boolean) => {
     // Affichée tout de suite (le plan ouvert et la liste) ; écrite à part, comme l'humeur : avant la migration 0057, l'échec est dit.
@@ -1213,7 +1299,7 @@ export default function PlanifierScreen() {
   };
   const [tenueToujoursOk, setTenueToujoursOk] = useState<string | null>(null);
   const repartirDuPlan = (t: TenuePlanifiee, mode: "modifier" | "deplacer" | "dupliquer") => {
-    setOcc(t.occasion);
+    setChoisies([t.occasion, ...(t.occasionsSecondaires ?? [])]);
     if (t.occasion === "travail_formel" && WORK_MODES.includes(t.sousChoix as WorkMode)) setWorkMode(t.sousChoix as WorkMode);
     if (t.occasion === "date" && DATE_CONTEXTS.some(([c]) => c === t.sousChoix)) setDateContext(t.sousChoix as DateContext);
     const aujourdhui = new Date();
@@ -1233,16 +1319,19 @@ export default function PlanifierScreen() {
     setDepuisPlan({ plan: t, remplacer: mode !== "dupliquer" });
     setPlanOuvert(null);
     setVue("etape");
-    setEtape(mode === "modifier" ? 1 : 3);
+    setEtape(mode === "modifier" ? 1 : 2);
   };
 
   /** Le message sous le bouton inactif : lié à l'état qui l'a provoqué, il disparaît dès qu'on change d'étape ou de choix. */
   const [messageBrut, setMessageBrut] = useState<{ txt: string; cle: string } | null>(null);
   const cleMessage = `${etape}|${occ}|${jour}|${moment}`;
   const message = messageBrut?.cle === cleMessage ? messageBrut.txt : null;
-  /** Quatre questions, trois pour une tenue imposée (sa composition est faite, la préférence n'aurait rien à départager). */
-  const derniere = composition ? 3 : 4;
-  const etapeValide = etape === 1 ? !!occ : etape === 3 ? jour != null && !!moment : true;
+  /**
+   * Trois questions (04/11/2026 : « Où » et « Quand » réunies en « Où et quand ? »), deux pour une tenue imposée (sa composition est faite,
+   * la préférence n'aurait rien à départager).
+   */
+  const derniere = composition ? 2 : 3;
+  const etapeValide = etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment : true;
 
   // Écran de composition : la prévision doit être revenue ET un temps minimal écoulé, pour que la transition se lise.
   useEffect(() => {
@@ -1314,14 +1403,13 @@ export default function PlanifierScreen() {
     if (vue === "detail") {
       setPlanOuvert(null);
       setVue(retourDetail);
-    } else if (vue === "etape" && depuisPlan && etape === (composition ? 3 : 1)) {
+    } else if (vue === "etape" && depuisPlan && etape === (composition ? 2 : 1)) {
       // Parcours ouvert depuis le détail d'un plan : le retour y ramène.
       setPlanOuvert(depuisPlan.plan);
       setDepuisPlan(null);
       setComposition(null);
       setVue("detail");
-    } else if (vue === "alternatives") setVue("resultat");
-    else if (vue === "liste" || vue === "confirmation") setVue("intro");
+    } else if (vue === "liste" || vue === "confirmation") setVue("intro");
     else if (vue === "resultat") setVue("etape");
     else if (vue === "etape" && etape > 1) setEtape(etape - 1);
     else if (vue === "etape") setVue("intro");
@@ -1352,13 +1440,12 @@ export default function PlanifierScreen() {
    * étaient devenues fausses, ce qui est pire qu'inutile.
    */
   const ETAPES: Record<number, [string, string, string, string]> = {
-    1: [`Étape 1 sur ${derniere}`, "Quelle est", "l'occasion ?", "Choisis le moment à préparer, Capsela s’occupe du reste."],
-    // Le lieu sert à la prévision météo (et se range avec la tenue planifiée). Le type de lieu précise l'occasion : le
-    // moteur ne le lit pas (cf. TYPES_LIEU_PAR_OCCASION), la phrase ne dit donc pas qu'il « affine la tenue ».
-    2: [`Étape 2 sur ${derniere}`, "Où", "seras-tu ?", "Capsela utilise le lieu pour adapter la météo et le contexte de ta tenue."],
-    3: [`Étape 3 sur ${derniere}`, "Pour", "quand ?", "Capsela adapte la tenue au moment choisi et à la météo."],
+    1: [`Étape 1 sur ${derniere}`, "Quelle est", "l'occasion ?", "Une ou plusieurs : Capsela compose une tenue qui passe de l'une à l'autre."],
+    // « Où » et « Quand » réunies (04/11/2026, brief « Évolution du parcours de planification ») : la date fixe la saison, le lieu la prévision,
+    // le moment le créneau de la prévision. Le type de lieu précise l'occasion ; le moteur le lit pour une soirée (soireeHabillee).
+    2: [`Étape 2 sur ${derniere}`, "Où et", "quand ?", "Capsela adapte la tenue à la date, au lieu et à la météo de ce moment."],
     // Une préférence, pas un style : elle ne départage que des tenues déjà compatibles (humeur.ts).
-    4: [`Étape 4 sur ${derniere}`, "Une dernière", "préférence ?", "Comment veux-tu te sentir dans cette tenue ?"],
+    3: [`Étape 3 sur ${derniere}`, "Une", "préférence ?", "Facultatif : comment veux-tu te sentir dans cette tenue ?"],
   };
 
   return (
@@ -1603,16 +1690,27 @@ export default function PlanifierScreen() {
             <TitreEtape a="Capsela compose" b="ta tenue…" />
             <div className="t-chapeau text-muted mt-[6px]">Je sélectionne les pièces les plus adaptées à ton moment.</div>
             <ul className="mt-8 flex flex-col gap-4 text-left w-full max-w-[300px]">
+              {/* LES TROIS TEMPS DE LA COMPOSITION (04/11/2026, brief « Évolution du parcours de planification ») — chacun dit ce qu'il lit
+                  réellement : le contexte (occasions, lieu et météo, préférence), les pièces (le dressing, la capsule s'il la complète), le
+                  look (le style du profil). Cochés au rythme de l'écran : le moteur, lui, a déjà composé. */}
               {([
-                occ ? ["Ton occasion", occLabel] : null,
-                meteoMoment && villeAffichee
-                  ? ["La météo", `${villeAffichee} · ${meteoMoment.temp}° · ${meteoMoment.label}`]
-                  : villeAffichee || lieu.trim()
-                    ? ["Le lieu", villeAffichee || lieu.trim()]
-                    : null,
-                humeur ? ["Ta préférence", libelleHumeur(humeur, profile.gender)] : null,
-                profile.styles.length ? ["Ton style", libelleStyles(profile.styles, profile.gender)] : null,
-                ["Ton dressing", state.items.length ? `${state.items.length} pièce${state.items.length > 1 ? "s" : ""} disponible${state.items.length > 1 ? "s" : ""}` : "Complété par ta capsule"],
+                [
+                  "Analyse du contexte",
+                  [
+                    choisies.map((o) => occasionShortLabel(o)).join(" et "),
+                    meteoMoment && villeAffichee ? `${villeAffichee} · ${meteoMoment.temp}°` : villeAffichee || lieu.trim() || "",
+                    humeur ? libelleHumeur(humeur, profile.gender) : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
+                ],
+                [
+                  "Sélection des pièces",
+                  state.items.length
+                    ? `${state.items.length} pièce${state.items.length > 1 ? "s" : ""} de ton dressing${dressingSeul ? "" : ", ta capsule en complément"}`
+                    : "Ta capsule, en attendant ton dressing",
+                ],
+                ["Composition du look", profile.styles.length ? `Ton style ${libelleStyles(profile.styles, profile.gender)}` : "Les règles de composition de Capsela"],
               ] as ([string, string] | null)[])
                 .filter((x): x is [string, string] => !!x)
                 .map(([titre, sous], i) => (
@@ -1679,17 +1777,29 @@ export default function PlanifierScreen() {
                       key={key}
                       src={key !== "all" ? OCCASIONS_EDITORIALES[key]?.visuel?.src : undefined}
                       label={label}
-                      actif={occ === key}
+                      actif={choisies.includes(key)}
                       onClick={() => {
-                        setOcc(key);
-                        /* Le type de lieu déjà choisi ne survit pas à un changement d'occasion qui ne le propose plus —
+                        // Une ou plusieurs (04/11/2026) : Sport et Cocooning restent seuls (tenuePolyvalente.ts).
+                        const suivantes = basculerOccasion(choisies, key);
+                        setChoisies(suivantes);
+                        /* Le type de lieu déjà choisi ne survit pas à un changement d'occasion principale qui ne le propose plus —
                            sinon `planned_outfits.type_lieu` recevrait un « Bar / Rooftop » sur un Voyage. */
-                        const permis = TYPES_LIEU_PAR_OCCASION[key];
+                        const principale = occasionPrincipale(suivantes);
+                        const permis = principale ? TYPES_LIEU_PAR_OCCASION[principale] : undefined;
                         if (!permis || (typeLieu !== TYPE_LIEU_AUTRE && !permis.includes(typeLieu ?? ""))) setTypeLieu(null);
                       }}
                     />
                   ))}
                 </div>
+                {/* Plusieurs occasions : laquelle mène la composition, et pourquoi Sport ou Cocooning ne se combinent pas. */}
+                {choisies.length > 1 && occ && (
+                  <div className="mt-4 text-[12px] text-muted-3 leading-[1.45]" role="status">
+                    Une tenue pour {choisies.map((o) => occasionShortLabel(o)).join(" et ")}, composée d&apos;abord pour {occasionShortLabel(occ)}.
+                  </div>
+                )}
+                {choisies.length === 1 && OCCASIONS_SEULES.includes(choisies[0]) && (
+                  <div className="mt-4 text-[12px] text-muted-3 leading-[1.45]">{occasionShortLabel(choisies[0])} se planifie seul : sa tenue ne passe pas pour une autre occasion.</div>
+                )}
                 {occ && sousChoix && (
                   <div className="mt-5 rounded-bloc bg-warm-bg px-4 py-3" style={{ border: "1px solid var(--color-warm-border)" }}>
                     <div className="text-[12px] text-ink">{sousChoix.titre}</div>
@@ -1718,7 +1828,7 @@ export default function PlanifierScreen() {
               </>
             )}
 
-            {etape === 3 && (
+            {etape === 2 && (
               <>
                 {/* LE CALENDRIER MENSUEL (maquette Planifier V3, 07/10/2026), à la place de la bande de 21 jours : on peut
                     préparer une tenue pour dans trois mois, la saison et l'occasion suffisent. Aujourd'hui est cerclé mais pas
@@ -1734,39 +1844,27 @@ export default function PlanifierScreen() {
                     setJour(Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()).getTime()) / 86_400_000));
                   }}
                 />
-                {/* LA CARTE MÉTÉO : dès qu'une date est choisie. Trois états, tous vrais — la prévision du lieu, ou la date
-                    à partir de laquelle elle existera, ou l'invitation à donner un lieu. Jamais une température inventée. */}
-                {jour != null && dateChoisie && (
-                  <Card rayon="bloc" className="mt-4 p-4" aria-live="polite">
-                    {!lieu.trim() ? (
-                      <div className="flex items-center gap-3">
-                        <span className="text-muted-3"><IconeTuile nom="nuage" /></span>
-                        <span className="flex-1 text-[13px] text-muted-3 leading-[1.45]">Ajoute un lieu pour que je tienne compte de la météo.</span>
-                        <button onClick={() => setEtape(2)} className="t-lien text-terracotta-deep cursor-pointer" style={{ minHeight: 44 }}>Ajouter</button>
-                      </div>
-                    ) : previsionEtat === "encours" ? (
-                      <div className="text-[13px] text-muted-3">Je regarde la météo à {villeAffichee || lieu.trim()}…</div>
-                    ) : meteoJour ? (
-                      <div className="flex items-center gap-3">
-                        <span className="text-terracotta-deep"><IconeTuile nom={/soleil|dégagé|ensoleill/i.test(meteoJour.label) ? "apresmidi" : "nuage"} taille={26} /></span>
-                        <span className="flex-1 min-w-0">
-                          <span className="block text-[12px] text-muted">{dateLongue.charAt(0).toUpperCase() + dateLongue.slice(1)} · {villeAffichee || lieu.trim()}</span>
-                          <span className="block t-titre-carte text-ink mt-[2px]">
-                            {meteoJour.tempMin === meteoJour.tempMax ? `${meteoJour.temp}°` : `${meteoJour.tempMin}° / ${meteoJour.tempMax}°`}
-                          </span>
-                          <span className="block text-[12px] text-muted-3 mt-[1px]">{meteoJour.label}</span>
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-start gap-3">
-                        <span className="text-muted-3"><IconeTuile nom="nuage" /></span>
-                        <span className="flex-1 text-[13px] text-muted-3 leading-[1.45]">
-                          La météo sera disponible plus près de la date, à partir du {debutMeteo} Je l’ajouterai à ta tenue.
-                        </span>
-                      </div>
-                    )}
-                  </Card>
-                )}
+                {/* LE LIEU, facultatif, et la météo qu'il donne pour la date choisie (EtapeLieu) : sur la même page que la date depuis le
+                    04/11/2026. La carte météo qui suivait le calendrier n'a plus lieu d'être : EtapeLieu dit déjà la prévision, ou ce qui manque. */}
+                <div className="mt-6">
+                  <Surtitre>Où ? · Facultatif</Surtitre>
+                </div>
+                <div className="mt-2">
+                  <EtapeLieu
+                    lieu={lieu}
+                    onChoisir={(v, libelle) => {
+                      setVille(v);
+                      setLieu(libelle);
+                      // Nouvelle destination : la prévision de l'ancienne ne vaut plus, elle est redemandée (cf. l'effet plus haut).
+                      setPrevision(null);
+                      setPrevisionEtat("vide");
+                    }}
+                    types={typesLieuProposes}
+                    typeLieu={typeLieu}
+                    onType={setTypeLieu}
+                    meteo={meteoEtapeLieu}
+                  />
+                </div>
                 <div className="mt-5">
                   <Surtitre>À quel moment ?</Surtitre>
                 </div>
@@ -1778,24 +1876,7 @@ export default function PlanifierScreen() {
               </>
             )}
 
-            {etape === 2 && (
-              <EtapeLieu
-                lieu={lieu}
-                onChoisir={(v, libelle) => {
-                  setVille(v);
-                  setLieu(libelle);
-                  // Nouvelle destination : la prévision de l'ancienne ne vaut plus, elle est redemandée (cf. l'effet plus haut).
-                  setPrevision(null);
-                  setPrevisionEtat("vide");
-                }}
-                types={typesLieuProposes}
-                typeLieu={typeLieu}
-                onType={setTypeLieu}
-                meteo={meteoEtapeLieu}
-              />
-            )}
-
-            {etape === 4 && (
+            {etape === 3 && (
               <div className="flex flex-col gap-[7px] mt-4" role="radiogroup" aria-label="Préférence pour cet événement">
                 {humeursProposees(profile.gender).map((h) => (
                   <LigneIcone key={h.key} icone={h.key} label={h.label} actif={humeur === h.key} onClick={() => setHumeur(humeur === h.key ? null : h.key)} />
@@ -1821,7 +1902,7 @@ export default function PlanifierScreen() {
             <Surtitre>{sansTenueTextes ? "À préparer" : "Tenue planifiée"}</Surtitre>
             {sansTenueTextes ? <TitreEtape a={sansTenueTextes.titreA} b={sansTenueTextes.titreB} /> : <TitreEtape a="Ta tenue est" b="prête" />}
             <div className="text-[13px] text-ink mt-[8px]">
-              {occLabel} · {dateLongue}
+              {choisies.map((o) => occasionShortLabel(o)).join(" · ") || occLabel} · {dateLongue}
               {moment ? ` · ${moment}` : ""}
             </div>
             <div className="text-[12px] text-muted mt-[2px]">
@@ -1839,18 +1920,44 @@ export default function PlanifierScreen() {
               </EmptyState>
             ) : (
               <>
-                {/* LE MÊME HERO QUE LE LOOK PLANIFIÉ (04/11/2026, demandé : « harmonise aussi l'affichage sur cette page ») : surtitre, phrase,
-                    flat lay du look, provenance, indicateurs et « Pour l'extérieur » (HeroTenue). Ses actions restent en pied d'écran. */}
+                {/* LE MÊME HERO QUE LE LOOK PLANIFIÉ (04/11/2026, demandé : « harmonise aussi l'affichage sur cette page ») : surtitre,
+                    flat lay du look (sans phrase manuscrite, comme les autres heros : 04/11/2026), provenance, indicateurs et « Pour l'extérieur » (HeroTenue). Ses actions restent en pied d'écran. */}
                 <HeroTenue
                   statut={composition ? (depuisPlan ? "Tenue déjà planifiée" : "Tenue de ta photo") : "Ta tenue proposée"}
-                  phrase={occ ? titreLookDuJour(occ, workMode, dateContext) : undefined}
                   pieces={pieces}
                   temperature={tempResultat}
                   quand="prévus"
                   candidatsExterieur={candidatsResultat}
                   indicateurs={<IndicateursTenue items={indicateursResultat} />}
                   vide="Aucune pièce à montrer pour l'instant."
-                  actions={[]}
+                  actions={
+                    composition || !occ || !idsAffiches.length
+                      ? []
+                      : [
+                          // « Enregistrer » : dans « Mes looks », selon la logique existante (basculerIdeeLook : le cœur des idées de look).
+                          {
+                            cle: "enregistrer",
+                            glyphe: lookEnregistre ? "♥" : "♡",
+                            libelle: lookEnregistre ? "Enregistrée" : "Enregistrer",
+                            onClick: () => actions.basculerIdeeLook(idsAffiches, occ),
+                          },
+                          // « Avis d'un proche » : le partage existant ; au retour, ce même résultat (ResultatGarde).
+                          {
+                            cle: "avis",
+                            glyphe: "✦",
+                            libelle: "Avis d'un proche",
+                            onClick: () =>
+                              actions.openOpinionShare({
+                                pieceIds: idsAffiches,
+                                occasion: occ,
+                                temp: meteoMoment?.temp ?? null,
+                                label: meteoMoment?.label ?? null,
+                                moment: `pour ${dateLongue}`,
+                                retour: "planifier",
+                              }),
+                          },
+                        ]
+                  }
                 />
 
                 {/* UNE TENUE A TOUJOURS SES CHAUSSURES (08/10/2026, demandé) : quand le moteur n'en a trouvé aucune pour la saison de
@@ -1863,13 +1970,10 @@ export default function PlanifierScreen() {
                   </div>
                 )}
 
-                {/* LA COMPOSITION, comme sur le Look planifié : le nombre de pièces du look, leurs vignettes, « Voir les détails ». */}
-                <CompositionTenue pieces={piecesDuLook} onDetails={() => setDetailsPlanOuverts(true)} />
-                <BottomSheet title="Composition de ta tenue" open={detailsPlanOuverts && vue === "resultat"} onClose={() => setDetailsPlanOuverts(false)}>
-                  <div className="-mt-[26px]">
-                    <RailPiecesTenue pieces={piecesDuLook} />
-                  </div>
-                </BottomSheet>
+                {/* LES PIÈCES DU LOOK (04/11/2026, brief « Évolution du parcours de planification ») : le composant de la page Tenue
+                    (RailPiecesTenue) — visuel, nom, catégorie, « Ton dressing » ou « Capsule », la fiche au toucher. Sans l'échange ⇄ : la
+                    tenue se change en entier (« Autre tenue ») ou par ses critères. Le manteau montré à part n'y est pas. */}
+                <RailPiecesTenue pieces={piecesDuLook} />
 
                 {/* « POURQUOI CE LOOK ? » : une liste, sans carte (non cliquable). Seuls les critères réellement utilisés par le
                     moteur y figurent — le type de lieu n'y est pas, il n'entre pas dans le calcul. */}
@@ -1877,7 +1981,14 @@ export default function PlanifierScreen() {
                   <div className="t-titre-carte text-ink">Pourquoi ce look ?</div>
                   <ul className="mt-2">
                     {([
-                      ["journee", "Ton occasion", `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${sansBarre(dateContext)}` : ""}`],
+                      ["journee", secondaires.length ? "Tes occasions" : "Ton occasion", `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${sansBarre(dateContext)}` : ""}${
+                        // Tenue polyvalente (04/11/2026) : elle convient aussi aux autres occasions, ou le moteur n'en a pas trouvé qui le fasse.
+                        !secondaires.length || composition
+                          ? ""
+                          : tenue?.polyvalente
+                            ? `, et elle convient aussi pour ${secondaires.map((o) => occasionShortLabel(o)).join(" et ")}.`
+                            : `, d'abord : aucune tenue de tes pièces ne convient aussi pour ${secondaires.map((o) => occasionShortLabel(o)).join(" et ")}.`
+                      }`],
                       ...(meteoMoment ? [["nuage", "La météo", phraseMeteo] as [IconePlanifier, string, string]] : []),
                       ...(!composition && !dressingSeul && nbCapsule > 0 && profile.styles.length
                         ? [["elegant", "Ton style", `Une base de ta capsule ${libelleStyles(profile.styles, profile.gender)}.`] as [IconePlanifier, string, string]]
@@ -1930,73 +2041,6 @@ export default function PlanifierScreen() {
             )}
           </>
         )}
-
-        {vue === "alternatives" && (() => {
-          // La tenue affichée d'abord, puis les alternatives : on peut toujours revenir à celle d'avant.
-          const propositions: { ids: number[]; titre: string }[] = [
-            { ids: idsAffiches, titre: "Proposition actuelle" },
-            ...alternatives.map((ids, i) => ({ ids, titre: `Proposition ${i + 2}` })),
-          ];
-          const source = dressingSeul ? state.items : [...state.items, ...capsuleDeLaDate];
-          return (
-            <>
-              <Surtitre>Tenue planifiée</Surtitre>
-              <TitreEtape a="Autres tenues" b="pour ce moment" />
-              <div className="t-chapeau text-muted mt-[6px]">Mêmes infos, nouvelles idées. Choisis celle qui te parle.</div>
-              {alternatives.length === 0 && (
-                <div className="text-[13px] text-muted-3 mt-4 leading-[1.5]">
-                  Pas d’autre tenue vraiment différente avec ces mêmes informations. Tu peux modifier l’événement pour élargir la recherche.
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3 mt-4" role="radiogroup" aria-label="Propositions de tenue">
-                {propositions.map((pr, i) => {
-                  const ps = pr.ids.map((id) => source.find((x) => x.id === id) ?? poolStable.find((x) => x.id === id)).filter((x): x is Item => !!x);
-                  const on = altSel === i;
-                  return (
-                    <button
-                      key={`${i}-${pr.ids.join("-")}`}
-                      role="radio"
-                      aria-checked={on}
-                      onClick={() => setAltSel(i)}
-                      className="text-left rounded-carte bg-card p-3 cursor-pointer"
-                      style={{ border: `1.5px solid ${on ? "var(--color-terracotta-deep)" : "var(--color-border)"}` }}
-                    >
-                      <span className="grid grid-cols-2 gap-[4px] aspect-square">
-                        {ps.slice(0, 4).map((p) => {
-                          const img = resolveItemImage(p);
-                          return (
-                            <span key={p.id} className="rounded-champ bg-warm-bg overflow-hidden flex items-center justify-center">
-                              {img.url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
-                              ) : (
-                                <span className="block w-full h-full" style={{ background: p.hex }} />
-                              )}
-                            </span>
-                          );
-                        })}
-                      </span>
-                      <span className={"block text-[12px] mt-2 font-semibold " + (on ? "text-terracotta-deep" : "text-ink")}>{pr.titre}</span>
-                      <span className="block text-[11px] text-muted mt-[1px] truncate">{ps.slice(0, 2).map((p) => p.name).join(" · ")}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {/* Plus d'idée assez différente : le bouton disparaît au lieu de promettre ce qu'il ne trouvera pas (20/10/2026, demandé). */}
-              {alternativesEpuisees ? (
-                alternatives.length > 0 && <div className="text-[12px] text-muted-3 text-center mt-4">Ce sont toutes les idées vraiment différentes pour ce moment.</div>
-              ) : (
-                <button
-                  onClick={chercherAlternatives}
-                  className="w-full text-[13px] text-muted cursor-pointer underline mt-3"
-                  style={{ minHeight: 44 }}
-                >
-                  Voir d’autres idées
-                </button>
-              )}
-            </>
-          );
-        })()}
 
         {vue === "confirmation" && gardee && (() => {
           const d = new Date(`${gardee.jour}T12:00:00`);
@@ -2063,12 +2107,6 @@ export default function PlanifierScreen() {
           const villePlan = villeDuLieu(t.lieu);
           const passee = t.jour < jourLocal(new Date());
           const jourLong = `${DOW_LONG[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;
-          // Le texte éditorial du hero : la même phrase que la carte « Look du
-          // jour » de l'accueil (titreLookDuJour), nourrie du sous-choix
-          // enregistré — « ta journée en télétravail », « ton dîner »…
-          // occasionPhrase ne fait que comparer : un sous-choix d'une autre
-          // occasion (ou absent) retombe sur la phrase générale de l'occasion.
-          const phrase = titreLookDuJour(t.occasion, (t.sousChoix ?? "") as WorkMode, (t.sousChoix ?? "") as DateContext);
           // LA MAQUETTE « LOOK PLANIFIÉ » (04/11/2026) — tout ce qui suit vient des données du plan, jamais d'une déduction :
           const alertePlan = meteoPlanVive ? alerteMeteoPlan(pieces, meteoPlanVive) : null;
           const tempPlan = meteoPlanVive?.temp ?? t.temp ?? null;
@@ -2084,7 +2122,8 @@ export default function PlanifierScreen() {
             ...(sepPlan.principal.some((p) => isCatalogId(p.id)) && profile.styles.length
               ? [{ cle: "style", icone: ICONES_INDICATEUR.style, texte: libelleStyles(profile.styles, profile.gender) }]
               : []),
-            { cle: "occasion", icone: ICONES_INDICATEUR.occasion, texte: t.occasion === "all" ? "Toutes occasions" : OCC_SHORT[t.occasion] },
+            // Une tenue polyvalente (04/11/2026) dit toutes ses occasions, la principale d'abord.
+            { cle: "occasion", icone: ICONES_INDICATEUR.occasion, texte: t.occasion === "all" ? "Toutes occasions" : [t.occasion, ...(t.occasionsSecondaires ?? [])].map((o) => occasionShortLabel(o)).join(" · ") },
             // La météo : seulement avec une température, et seulement si le moteur ne signale rien (alerteMeteoPlan).
             ...(tempPlan != null && !alertePlan ? [{ cle: "meteo", icone: ICONES_INDICATEUR.meteo, texte: `Adaptée à ${Math.round(tempPlan)}°` }] : []),
             // La palette : seulement avec une colorimétrie, et si la tenue s'y accorde près du visage (accordVisage, R-S18).
@@ -2159,7 +2198,7 @@ export default function PlanifierScreen() {
                         }
                         repartirDuPlan(t, "modifier");
                         setComposition(proposition.ids);
-                        setEtape(3);
+                        setEtape(2);
                       }}
                       className="flex-shrink-0 inline-flex items-center gap-[5px] text-[12.5px] font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[32px]"
                     >
@@ -2173,7 +2212,6 @@ export default function PlanifierScreen() {
                   (04/11/2026) ; « Avis d'un proche » reste ici, comme sur Tenue. */}
               <HeroTenue
                 statut={passee ? "Ton look était planifié" : "Ta tenue planifiée"}
-                phrase={phrase}
                 pieces={pieces}
                 temperature={tempPlan}
                 quand={passee ? "ce jour-là" : "prévus"}
@@ -2212,14 +2250,9 @@ export default function PlanifierScreen() {
                 </div>
               )}
 
-              {/* LA COMPOSITION (04/11/2026, maquette) : le nombre de pièces du look affiché (le manteau à part n'y est pas), leurs
-                  vignettes réelles, et « Voir les détails », qui ouvre le rail des pièces dans une feuille. */}
-              <CompositionTenue pieces={sepPlan.principal} onDetails={() => setDetailsPlanOuverts(true)} />
-              <BottomSheet title="Composition de ta tenue" open={detailsPlanOuverts && vue === "detail"} onClose={() => setDetailsPlanOuverts(false)}>
-                <div className="-mt-[26px]">
-                  <RailPiecesTenue pieces={sepPlan.principal} />
-                </div>
-              </BottomSheet>
+              {/* LES PIÈCES DU LOOK : le composant de la page Tenue, comme au résultat (04/11/2026 : une seule source pour les pièces d'un
+                  look). Le manteau montré à part n'y est pas. */}
+              <RailPiecesTenue pieces={sepPlan.principal} />
 
               {/* LES DEUX ACTIONS (04/11/2026, maquette). « Je porterai cette tenue » CONFIRME le plan (colonne `confirme`, 0057) —
                   ce n'est pas « portée » : le Journal ne l'enregistre que le jour même, depuis la tenue du jour. « Modifier ma tenue »
@@ -2366,11 +2399,11 @@ export default function PlanifierScreen() {
               aria-disabled={!etapeValide}
               className={!etapeValide ? "opacity-50" : ""}
             >
-              {etape === derniere ? (etape === 4 ? "Composer ma tenue" : "Voir ma tenue") : "Continuer"}
+              {etape === derniere ? (etape === 3 ? "Composer ma tenue" : "Voir ma tenue") : "Continuer"}
             </Button>
           </>
         )}
-        {vue === "etape" && !compose && etape === 4 && (
+        {vue === "etape" && !compose && etape === 3 && (
           <button
             onClick={() => {
               setHumeur(null);
@@ -2389,18 +2422,6 @@ export default function PlanifierScreen() {
             n'existait nulle part ailleurs. */}
         {vue === "liste" && (
           <Button onClick={recommencer}>Planifier un look</Button>
-        )}
-        {vue === "alternatives" && (
-          <Button
-            onClick={() => {
-              const propositions = [idsAffiches, ...alternatives];
-              const ids = propositions[altSel] ?? idsAffiches;
-              if (ids !== idsAffiches) setChoixBrut({ cle: cleParams, ids });
-              setVue("resultat");
-            }}
-          >
-            Choisir cette tenue
-          </Button>
         )}
         {vue === "confirmation" && (
           <>
@@ -2421,26 +2442,23 @@ export default function PlanifierScreen() {
         )}
         {vue === "resultat" && (
           <>
-            {/* « Garder cette tenue » existe désormais vraiment (lot 3). Elle
-                est désactivée quand il n'y a pas de tenue à garder — un état
-                vide ne se planifie pas — et pendant l'écriture, pour qu'un
-                double tap ne parte pas deux fois. */}
+            {/* LES ACTIONS DU RÉSULTAT (04/11/2026, brief « Évolution du parcours de planification »). « Porter cette tenue » est le
+                principal : la tenue est associée à sa date, « Planifiée » (garder). « Enregistrer » et « Avis d'un proche » sont dans le
+                hero, comme sur la page Tenue. « Autre tenue » remplace la proposition en gardant les critères, sans refaire le parcours
+                ni reproposer une tenue déjà vue (autresIdees). « Modifier cet évènement » rouvre les étapes déjà remplies. Désactivés
+                pendant l'écriture : un double tap ne part pas deux fois. */}
             {sansTenueTextes ? (
               sansTenueTextes.peutAjouter && <Button onClick={actions.openAddEtRevenir}>Ajouter des pièces</Button>
             ) : (
               <Button onClick={garder} disabled={enregistrement}>
-                {enregistrement ? "Un instant…" : "Garder cette tenue"}
+                {enregistrement ? "Un instant…" : "Porter cette tenue"}
               </Button>
             )}
-            {/* MODIFIER À GAUCHE, PRINCIPAL À DROITE (recette 24/09/2026).
-                « Modifier » seul laissait croire qu'on retouchait la tenue ;
-                on retouche les réponses qui l'ont produite, d'où « cet
-                évènement ». Les deux gardent le contexte : l'une rouvre les
-                étapes déjà remplies, l'autre retire au même endroit. Aucune
-                des deux ne repart de zéro — ça, c'est le bouton de la liste.
-
-                Le principal de l'écran reste « Garder cette tenue » au-dessus :
-                c'est la seule des trois actions qui laisse une trace. */}
+            {autreIndisponible && (
+              <div role="status" className="text-center text-[12px] text-muted-3">
+                Pas d&apos;autre tenue vraiment différente avec ces critères. Modifie l&apos;évènement pour élargir la recherche.
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -2450,17 +2468,14 @@ export default function PlanifierScreen() {
                 className="flex-1 rounded-full bg-card border border-border text-[12px] text-muted-3 cursor-pointer"
                 style={{ minHeight: 44 }}
               >
-                {sansTenueTextes ? "Modifier cet événement" : "Modifier cet évènement"}
+                Modifier cet évènement
               </button>
-              {/* Une composition imposée est LA tenue de la photo : pas de
-                  nouveau tirage. Sans tenue, rien à régénérer. */}
+              {/* Une composition imposée est LA tenue de la photo : pas de nouveau tirage. Sans tenue, rien à régénérer. */}
               {!composition && !sansTenueTextes && (
                 <button
-                  onClick={() => {
-                    chercherAlternatives();
-                    setVue("alternatives");
-                  }}
-                  className="flex-1 rounded-full bg-card border border-terracotta text-[12px] font-medium text-terracotta cursor-pointer"
+                  onClick={autreTenue}
+                  disabled={autreIndisponible}
+                  className={"flex-1 rounded-full bg-card border border-terracotta text-[12px] font-medium text-terracotta cursor-pointer " + (autreIndisponible ? "opacity-50" : "")}
                   style={{ minHeight: 44 }}
                 >
                   Autre tenue

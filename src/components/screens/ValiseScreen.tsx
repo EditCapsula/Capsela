@@ -1074,6 +1074,8 @@ export default function ValiseScreen() {
     choix?: ActiviteChoisie[];
     /** Les événements datés du séjour (étape 4), déjà restreints à ses dates. */
     evenements?: EvenementValise[];
+    /** « Uniquement mon dressing » : sans compléter avec la capsule. Absent : le réglage de la valise modifiée, sinon non. */
+    uniquementDressing?: boolean;
   };
   /** Une préparation à la fois (22/10/2026) : un double toucher sur « Générer ma valise » ne lance pas deux calculs. */
   const preparationEnCours = useRef(false);
@@ -1133,7 +1135,9 @@ export default function ValiseScreen() {
     await pause(300);
     if (!actif.current) return;
     // Le dressing ne couvre pas toutes les occasions : la capsule complète la valise, ses pièces marquées « à ajouter » (completerAvecCapsule).
-    const r = completerAvecCapsule(dressing, capsuleDe(situations), situations, r0, capaciteDe(rep.bagage), generer);
+    // Sauf « Uniquement mon dressing » (04/11/2026) : la valise reste faite des seules pièces possédées.
+    const seulDressing = rep.uniquementDressing ?? (idCible ? state.valises.find((v) => v.id === idCible)?.uniquementDressing === true : false);
+    const r = seulDressing ? { ...r0, suggestionIds: [] } : completerAvecCapsule(dressing, capsuleDe(situations), situations, r0, capaciteDe(rep.bagage), generer);
     setFaites(3);
     await pause(300);
     if (!actif.current) return;
@@ -1164,6 +1168,8 @@ export default function ValiseScreen() {
       meteos,
       situations,
       ...r,
+      ...(r.suggestionIds.length ? {} : { suggestionIds: undefined }),
+      ...(seulDressing ? { uniquementDressing: true } : {}),
       // Les pièces du dressing au moment du calcul : une pièce ajoutée
       // ensuite se reconnaît, et l'écran propose de recomposer.
       dressingIds: dressing.map((i) => i.id),
@@ -1197,11 +1203,25 @@ export default function ValiseScreen() {
    * LIEU (31/10/2026, signalé sur Toubab Dialaw : la recomposition repartait sans coordonnées, donc sans les températures habituelles
    * de ses dates — la météo d'aujourd'hui chez soi écartait les pièces d'été d'un séjour au Sénégal).
    */
-  const recomposer = async () => {
+  const recomposer = async (uniquementDressing?: boolean) => {
     if (!valise) return;
     const ville = valise.etapes?.length ? null : await villeDeLaValise(valise);
     void lancer(
-      { destination: valise.destination, ville, ...(valise.etapes ? { etapes: valise.etapes } : {}), depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme, activites: valise.activites, choix: valise.choix, evenements: valise.evenements },
+      {
+        destination: valise.destination,
+        ville,
+        ...(valise.etapes ? { etapes: valise.etapes } : {}),
+        depart: valise.depart,
+        retour: valise.retour,
+        bagage: valise.bagage,
+        sejour: valise.sejour,
+        occasions: valise.occasions,
+        programme: valise.programme,
+        activites: valise.activites,
+        choix: valise.choix,
+        evenements: valise.evenements,
+        uniquementDressing: uniquementDressing ?? valise.uniquementDressing === true,
+      },
       valise.id
     );
   };
@@ -1714,7 +1734,7 @@ function Resultat({
   ajouterAuDressing: () => void;
   ajouterCategorie: (c: CategoryKey) => void;
   capsule: Item[];
-  recomposer: () => void;
+  recomposer: (uniquementDressing?: boolean) => void;
   modifier: () => void;
   recommencer: () => void;
   supprimer: () => void;
@@ -1828,10 +1848,11 @@ function Resultat({
   const articles = articlesChecklist(pieces, piecesCochees, affaires, affairesCochees);
   /**
    * VÊTEMENTS ET INDISPENSABLES À PART (30/10/2026, brief « Refonte de l'écran Ma valise ») : les vêtements se cochent dans l'onglet
-   * Vêtements, les affaires de voyage dans l'onglet Indispensables. Les suggestions de la capsule n'en font pas partie : elles ne sont pas
-   * encore dans le dressing. Mêmes données qu'avant (cochees, affaires.cochees) : rien de nouveau n'est gardé.
+   * Vêtements, les affaires de voyage dans l'onglet Indispensables. Depuis le 04/11/2026 (demandé : « la checklist doit compter les
+   * suggestions, avec un label Capsule »), les suggestions de la capsule en font partie : elles partent dans la valise comme le reste,
+   * et se cochent de même. Mêmes données qu'avant (cochees, affaires.cochees) : rien de nouveau n'est gardé.
    */
-  const progressionVetements = progressionChecklist(articles.filter((a) => a.piece && !suggestions.has(a.piece.id)));
+  const progressionVetements = progressionChecklist(articles.filter((a) => a.piece));
   const articlesAffaires = articles.filter((a) => a.affaire);
   const progressionAffaires = progressionChecklist(articlesAffaires);
   const [filtreChecklist, setFiltreChecklist] = useState<FiltreChecklist>("tout");
@@ -2535,6 +2556,8 @@ function Resultat({
   /** Les vêtements UNIQUES à emporter (par identifiant) et les suggestions à ajouter, à part (valiseVetements.ts). Les tenues ne bougent pas. */
   const { aEmporter, aAjouter } = vetementsDeLaValise(valise.pieceIds, looks, valise.suggestionIds, pieceDe);
   const familles = vetementsParFamille(aEmporter);
+  /** La checklist des vêtements (onglet Vêtements) : les pièces possédées ET les suggestions de la capsule, chacune dite « Capsule » (04/11/2026). */
+  const famillesChecklist = vetementsParFamille([...aEmporter, ...aAjouter]);
   const apercu = selectionApercu(aEmporter.map((v) => v.item));
   const aOptimiser = nouvelles === 0 && (occasionsAManque.length > 0 || peuDeLooks);
   /**
@@ -2565,6 +2588,36 @@ function Resultat({
    * avec la tenue qui les demande ; puis ce que le moteur a repéré pour une occasion sans tenue ou élargie (l'ancien « Optimise ta
    * valise »). Jamais affiché vide, jamais ajouté sans toi : chaque pièce s'ajoute au dressing d'un geste.
    */
+  /**
+   * « UNIQUEMENT MON DRESSING » (04/11/2026, demandé : « le même principe que [la tenue planifiée] avec uniquement mon dressing »). Le
+   * même réglage que le résultat de Planifier, avec un effet immédiat : la valise est recomposée sans la capsule, ou de nouveau avec elle.
+   * Il n'est montré que s'il change quelque chose : une valise qui porte des suggestions, ou une valise déjà composée sans la capsule.
+   */
+  const seulDressing = valise.uniquementDressing === true;
+  const reglageDressingSeul =
+    seulDressing || (valise.suggestionIds?.length ?? 0) > 0 ? (
+      <button
+        type="button"
+        onClick={() => recomposer(!seulDressing)}
+        aria-pressed={seulDressing}
+        className="w-full flex gap-3 items-center mt-5 bg-card border border-border rounded-carte p-[14px] cursor-pointer text-left"
+      >
+        <span className="flex-1 min-w-0">
+          <span className="block text-[13px] font-medium text-ink">Uniquement mon dressing</span>
+          <span className="block text-[11px] text-muted leading-[1.45] mt-[3px]">Sans compléter avec des pièces de ta capsule.</span>
+        </span>
+        <span
+          aria-hidden="true"
+          className="w-11 h-[26px] flex-shrink-0 rounded-full p-[3px] flex transition-colors"
+          style={{
+            background: seulDressing ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
+            justifyContent: seulDressing ? "flex-end" : "flex-start",
+          }}
+        >
+          <span className="w-5 h-5 rounded-full bg-card" />
+        </span>
+      </button>
+    ) : null;
   const blocACompleter =
     aAjouter.length > 0 || aOptimiser ? (
       <section className="mt-7" aria-labelledby="titre-a-completer">
@@ -2953,6 +3006,7 @@ function Resultat({
       </section>
 
       {blocACompleter}
+      {reglageDressingSeul}
 
       {progressionAffaires.total > 0 && (
         <section className="mt-7" aria-labelledby="titre-indispensables">
@@ -2972,7 +3026,7 @@ function Resultat({
             {nouvelles > 1 ? `${nouvelles} nouvelles pièces dans ton dressing` : "Une nouvelle pièce dans ton dressing"}
           </div>
           <div className="text-[12px] text-muted-3 leading-[1.5] mt-[5px]">Recompose ta valise pour que Capsela en tienne compte.</div>
-          <Button variante="principal" className="mt-3" onClick={recomposer}>
+          <Button variante="principal" className="mt-3" onClick={() => recomposer()}>
             Recomposer ma valise
           </Button>
         </Card>
@@ -3143,7 +3197,8 @@ function Resultat({
       {onglet === "pieces" && (
         <>
           {/* LES VÊTEMENTS (30/10/2026) : chaque pièce une fois, par famille, avec sa provenance, ses tenues et son état — à emporter ou
-              déjà dans la valise. Cocher, c'est le même état qu'avant (cochees). Les suggestions sont dans « À compléter », plus bas. */}
+              déjà dans la valise. Cocher, c'est le même état qu'avant (cochees). Les suggestions de la capsule y sont aussi, dites « Capsule » (04/11/2026),
+              et restent dans « À compléter », plus bas, pour l'ajout au dressing. */}
           {progressionVetements.total > 0 && (
             <div className="mt-5">
               <BarrePreparation titre="Dans ta valise" p={progressionVetements} />
@@ -3178,7 +3233,7 @@ function Resultat({
               </Button>
             </Card>
           )}
-          {familles.map(({ titre, vetements }) => {
+          {famillesChecklist.map(({ titre, vetements }) => {
             const duGroupe = vetements.map((v) => v.item);
             return (
               <section key={titre} className="mt-5">
@@ -3208,7 +3263,11 @@ function Resultat({
                           <Vignette it={p} taille={40} />
                           <span className="flex-1 min-w-0">
                             <span className={"block text-[13px] leading-[1.3] line-clamp-2 " + (dedans ? "text-muted" : "text-ink")}>{p.name}</span>
-                            <span className="block text-[11px] leading-[1.35] text-muted mt-[2px]">Dans ton dressing</span>
+                            {suggestions.has(p.id) ? (
+                              <span className="block text-[11px] leading-[1.35] text-terracotta mt-[2px]">Capsule</span>
+                            ) : (
+                              <span className="block text-[11px] leading-[1.35] text-muted mt-[2px]">Dans ton dressing</span>
+                            )}
                             <span className="block text-[11px] leading-[1.35] mt-[1px]">
                               <span className="text-muted whitespace-nowrap">{n ? `${n} ${n > 1 ? "tenues" : "tenue"}` : "Aucune tenue"} ·</span>{" "}
                               {/* Un bloc insécable : à 320 px, « À emporter » passe entier à la ligne au lieu de se couper (l'espace qui
@@ -3247,6 +3306,7 @@ function Resultat({
             </button>
           </div>
           {blocACompleter}
+          {reglageDressingSeul}
         </>
       )}
 

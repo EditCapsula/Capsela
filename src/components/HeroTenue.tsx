@@ -15,7 +15,7 @@ import type { Item } from "@/lib/types";
 /**
  * LE HERO DE LA PAGE TENUE, repris pour le détail d'un look planifié (14/10/2026, demandé : « reprends le hero de la page Tenues »).
  * Mêmes mesures et même construction que la carte de TenuesScreen : fond de la carte du look, hauteur de 564 px minimum, ligne de
- * statut, phrase manuscrite par-dessus le haut de la zone, composition `look-detail`, provenance des pièces sous la composition,
+ * statut, composition `look-detail` (sans phrase manuscrite depuis le 04/11/2026, comme les autres heros), provenance des pièces sous la composition,
  * une zone d'information à la place de « Porter cette tenue », deux actions discrètes côte à côte.
  *
  * Un composant à part, et non un morceau de TenuesScreen extrait : la carte de Tenue est liée à l'état de la tenue du jour (score, badges, quota,
@@ -23,7 +23,6 @@ import type { Item } from "@/lib/types";
  */
 export function HeroTenue({
   statut,
-  phrase,
   pieces: piecesRecues,
   vide,
   info,
@@ -35,8 +34,6 @@ export function HeroTenue({
   badge,
 }: {
   statut: string;
-  /** La phrase d'ambiance, manuscrite, posée par-dessus le haut de la zone. */
-  phrase?: string;
   pieces: Item[];
   /** Dit pourquoi la composition est vide (pièces retirées du dressing). */
   vide?: string;
@@ -81,13 +78,6 @@ export function HeroTenue({
 
       <div className="flex flex-col flex-1 min-h-0">
         <div className="relative flex-1 min-h-0" style={{ minHeight: 350 }}>
-          {phrase && (
-            <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none">
-              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "var(--color-sand-text)" }}>
-                {phrase}
-              </span>
-            </div>
-          )}
           {total > 0 ? (
             <div className="absolute inset-y-0 left-2 right-2">
               <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
@@ -175,49 +165,43 @@ export const ICONES_INDICATEUR = {
   ),
 };
 
-/**
- * LA COMPOSITION DE LA TENUE (04/11/2026, maquette « Look planifié ») : le nombre de pièces, une vignette par pièce réelle (son image,
- * jamais une image refaite), et « Voir les détails », qui ouvre le rail des pièces dans une feuille. Compacte : une rangée.
- */
-export function CompositionTenue({ pieces, onDetails }: { pieces: Item[]; onDetails: () => void }) {
-  if (!pieces.length) return null;
-  const visibles = pieces.slice(0, 5);
-  return (
-    <div className="mt-[14px] bg-card border border-border rounded-carte px-[14px] py-[12px]">
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="text-[14px] font-semibold text-ink">Composition de ta tenue</div>
-        <div className="text-[12px] text-muted-3">{pieces.length} {pieces.length > 1 ? "pièces" : "pièce"}</div>
-      </div>
-      <div className="flex items-center gap-[8px] mt-[10px]">
-        <div className="flex gap-[6px] min-w-0 flex-1">
-          {visibles.map((p) => {
-            const img = resolveItemImage(p);
-            return (
-              <span key={p.id} aria-label={p.name} role="img" className="flex-1 min-w-0 max-w-[56px] aspect-square rounded-bloc border border-border overflow-hidden flex items-center justify-center" style={{ background: "var(--color-warm-bg)" }}>
-                {img.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
-                ) : (
-                  <span className="block w-full h-full" style={{ background: p.hex }} />
-                )}
-              </span>
-            );
-          })}
-        </div>
-        <button type="button" onClick={onDetails} className="flex-shrink-0 text-[12.5px] text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[44px] pl-1">
-          Voir les détails →
-        </button>
-      </div>
-    </div>
-  );
-}
 
 /**
- * LE RAIL DES PIÈCES de la page Tenue (« Les pièces de ta tenue · N »), sans l'échange ⇄ : une tenue planifiée est gardée telle quelle.
- * Le tap ouvre la même fiche qu'ailleurs (la pièce du dressing, ou « comment porter » pour une suggestion).
+ * LES PIÈCES D'UNE TENUE (« Les pièces de ta tenue · N ») — LE SEUL composant qui les affiche (04/11/2026, brief « Évolution du parcours de
+ * planification » : « une seule source de vérité pour l'affichage des pièces d'un look »). La page Tenue l'avait écrit chez elle et
+ * Planifier en gardait une copie allégée ; les deux passent désormais par ici.
+ *
+ * Chaque pièce : son visuel, son nom, sa catégorie, sa provenance (« Ton dressing » ou « Capsule »). Le tap ouvre la même fiche qu'ailleurs
+ * (la pièce du dressing, ou « comment porter » pour une suggestion). Selon l'écran :
+ *   · `onRemplacer` pose le bouton ⇄ sur la vignette (la tenue du jour) ; sans lui, la tenue est montrée telle quelle (une tenue planifiée) ;
+ *   · `misEnAvant` entoure de terracotta une pièce tout juste ajoutée (R-S13/R-S14, page Tenue) ;
+ *   · `chargement` montre trois vignettes en attente, sans titre (météo en attente sur la page Tenue).
  */
-export function RailPiecesTenue({ pieces }: { pieces: Item[] }) {
+export function RailPiecesTenue({
+  pieces,
+  onRemplacer,
+  misEnAvant = null,
+  chargement = false,
+}: {
+  pieces: Item[];
+  onRemplacer?: (piece: Item) => void;
+  misEnAvant?: number | null;
+  chargement?: boolean;
+}) {
   const { actions } = useCapsela();
+  if (chargement) {
+    return (
+      <div className="scrollarea flex gap-[10px] overflow-x-auto pb-[4px]">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex-none w-[112px]">
+            <div className="w-[112px] h-[112px] rounded-bloc animate-pulse" style={{ background: "var(--color-chip-soft-bg)" }} />
+            <div className="h-[10px] w-3/4 rounded-full animate-pulse mt-[8px]" style={{ background: "var(--color-chip-soft-bg)" }} />
+            <div className="h-[10px] w-1/2 rounded-full animate-pulse mt-[5px]" style={{ background: "var(--color-chip-soft-bg)" }} />
+          </div>
+        ))}
+      </div>
+    );
+  }
   if (!pieces.length) return null;
   return (
     <>
@@ -228,29 +212,59 @@ export function RailPiecesTenue({ pieces }: { pieces: Item[] }) {
           const img = resolveItemImage(it);
           return (
             <div key={it.id} className="flex-none w-[112px]" style={{ scrollSnapAlign: "start" }}>
-              <button
-                onClick={() => actions.openItem(it.id, suggested)}
-                aria-label={`${it.name} — ${CATLABEL[isBag(it) ? "sac" : it.cat]}. Voir le détail`}
-                className="relative block w-[112px] h-[112px] rounded-bloc overflow-hidden cursor-pointer"
-                style={{ background: img.url ? "var(--color-photo-bg)" : it.hex }}
-              >
-                {img.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={img.url}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    style={{ width: "100%", height: "100%", objectFit: img.kind === "photo" ? "cover" : "contain", padding: img.kind === "photo" ? 0 : 9, boxSizing: "border-box" }}
-                  />
-                ) : (
-                  <span className="absolute left-[7px] bottom-[6px] text-[9px] tracking-[.05em]" style={{ color: "rgba(243,238,229,.9)", textShadow: "0 1px 2px rgba(0,0,0,.35)" }}>
-                    {CATLABEL[it.cat].toUpperCase()}
-                  </span>
+              <div className="relative">
+                <button
+                  onClick={() => actions.openItem(it.id, suggested)}
+                  aria-label={`${it.name} — ${CATLABEL[isBag(it) ? "sac" : it.cat]}. Voir le détail`}
+                  className="relative block w-[112px] h-[112px] rounded-bloc overflow-hidden cursor-pointer transition-shadow duration-[1200ms] ease-out"
+                  style={{
+                    background: img.url ? "var(--color-photo-bg)" : it.hex,
+                    boxShadow: misEnAvant === it.id ? "0 0 0 1.5px var(--color-terracotta)" : "0 0 0 1.5px rgba(166,105,80,0)",
+                  }}
+                >
+                  {img.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={img.url}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: img.kind === "photo" ? "cover" : "contain",
+                        objectPosition: "center",
+                        padding: img.kind === "photo" ? 0 : 9,
+                        boxSizing: "border-box",
+                        // Même réglage d'éclairage que la composition de la page Tenue.
+                        filter: img.kind === "photo" ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
+                      }}
+                    />
+                  ) : (
+                    <span className="absolute left-[7px] bottom-[6px] text-[9px] tracking-[.05em]" style={{ color: "rgba(243,238,229,.9)", textShadow: "0 1px 2px rgba(0,0,0,.35)" }}>
+                      {CATLABEL[it.cat].toUpperCase()}
+                    </span>
+                  )}
+                  {it.imageStatus === "generating" && <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />}
+                </button>
+                {/* ⇄ posé sur la vignette, 26 px dans une cible de vignette : la tenue du jour seulement. */}
+                {onRemplacer && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemplacer(it);
+                    }}
+                    aria-label={`Remplacer ${it.name}`}
+                    className="absolute top-[5px] right-[5px] w-[26px] h-[26px] rounded-full flex items-center justify-center text-[13px] cursor-pointer"
+                    style={{ background: "rgba(251,248,243,.92)", color: "var(--color-muted)", boxShadow: "0 1px 4px rgba(29,26,22,.14)" }}
+                  >
+                    ⇄
+                  </button>
                 )}
-              </button>
+              </div>
               <div className="text-[11px] text-ink leading-[1.25] mt-[8px]">{it.name}</div>
               <div className="text-[10px] text-muted mt-[2px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
+              {/* Provenance à la pièce — la même séparation que les pastilles du hero, jamais un second calcul. */}
               <div className="text-[10px] mt-[1px]" style={{ color: suggested ? "var(--color-sand-text)" : "var(--color-muted)" }}>
                 {suggested ? "Capsule" : "Ton dressing"}
               </div>

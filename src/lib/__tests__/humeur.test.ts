@@ -13,8 +13,18 @@ describe("humeur d'un événement", () => {
     expect(BONUS_HUMEUR_MAX).toBeLessThan(MARGE_PERTINENCE);
   });
 
-  it("propose cinq humeurs", () => {
-    expect(HUMEURS.map((h) => h.key)).toEqual(["elegant", "feminin", "decontracte", "audacieux", "confortable"]);
+  it("propose les cinq préférences du brief du 04/11/2026, dans leur ordre", () => {
+    expect(humeursProposees(null).map((h) => h.key)).toEqual(["confortable", "elegant", "feminin", "decontracte", "leger"]);
+    // Audacieux n'est plus proposé mais reste lisible pour les plans déjà gardés.
+    expect(HUMEURS.map((h) => h.key)).toContain("audacieux");
+  });
+
+  it("léger et ventilé : matières qui respirent, manches courtes ou sans, short, chaussures ouvertes", () => {
+    expect(affiniteHumeur([piece(1, "haut", { matiere: "Lin" })], "leger")).toBe(1);
+    expect(affiniteHumeur([piece(2, "haut", { manches: "courtes" })], "leger")).toBe(1);
+    expect(affiniteHumeur([piece(3, "short")], "leger")).toBe(1);
+    expect(affiniteHumeur([piece(4, "chaussures", { shoeType: "Sandales" })], "leger")).toBe(1);
+    expect(affiniteHumeur([piece(5, "pull", { matiere: "Laine", manches: "longues" })], "leger")).toBe(0);
   });
 
   it("l'affinité compte la part des pièces principales qui conviennent, accessoires exclus", () => {
@@ -50,15 +60,16 @@ describe("humeur d'un événement", () => {
 });
 
 describe("mots et choix selon le genre du profil", () => {
-  it("profil homme : accords au masculin et pas de « Féminin »", () => {
-    const l = humeursProposees("homme").map((h) => h.label);
-    expect(l).toEqual(["Élégant", "Décontracté", "Audacieux", "Confortable"]);
+  it("profil homme : pas de « Glamour »", () => {
+    expect(humeursProposees("homme").map((h) => h.label)).toEqual(["Confort", "Plus habillé", "Décontracté", "Léger et ventilé"]);
   });
-  it("profil femme : cinq choix accordés au féminin", () => {
-    expect(humeursProposees("femme").map((h) => h.label)).toEqual(["Élégante", "Féminine", "Décontractée", "Audacieuse", "Confortable"]);
+  it("profil femme ou non renseigné : les cinq préférences", () => {
+    const attendu = ["Confort", "Plus habillé", "Glamour", "Décontracté", "Léger et ventilé"];
+    expect(humeursProposees("femme").map((h) => h.label)).toEqual(attendu);
+    expect(humeursProposees(null).map((h) => h.label)).toEqual(attendu);
   });
-  it("genre non renseigné : formes d'origine", () => {
-    expect(humeursProposees(null).map((h) => h.label)).toEqual(HUMEURS.map((h) => h.label));
-    expect(libelleHumeur("elegant", null)).toBe("Élégant(e)");
+  it("un plan ancien « Audacieux » garde son libellé", () => {
+    expect(libelleHumeur("audacieux", "femme")).toBe("Audacieuse");
+    expect(libelleHumeur("elegant", null)).toBe("Plus habillé");
   });
 });

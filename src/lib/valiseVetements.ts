@@ -24,7 +24,10 @@ export interface VetementDeLaValise {
 export interface VetementsDeLaValise {
   /** Les pièces possédées, uniques, dans l'ordre de la valise. */
   aEmporter: VetementDeLaValise[];
-  /** Les suggestions de la capsule portées par des tenues : à ajouter au dressing, jamais comptées comme disponibles. */
+  /**
+   * Les suggestions de la capsule portées par des tenues : à ajouter au dressing, jamais comptées comme possédées. Depuis le 04/11/2026,
+   * la checklist des vêtements les compte et les coche avec les autres, dites « Capsule » (ValiseScreen).
+   */
   aAjouter: VetementDeLaValise[];
 }
 

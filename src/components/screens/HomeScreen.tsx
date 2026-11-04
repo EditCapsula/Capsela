@@ -209,8 +209,11 @@ export default function HomeScreen() {
     ) : null;
   // LA VESTE CONSEILLÉE PAR TEMPS FRAIS, SUR L'ACCUEIL AUSSI (14/10/2026, demandé) : la même suggestion que la page Tenue (computeLookScore,
   // « veste_soir », mêmes arguments), posée dans la composition de la tenue du jour, estompée, avec un « + » qui l'ajoute.
+  // Pas de conseil quand un manteau est déjà proposé « Pour l'extérieur » (04/11/2026, demandé : « pas la peine de suggérer le manteau si on
+  // le met toujours dans la strate extérieure ») : la couche de dessus est déjà là, à côté de la tenue.
+  const exterieurId = exterieur?.id ?? null;
   const conseilVeste = useMemo(() => {
-    if (!hasOutfit) return undefined;
+    if (!hasOutfit || exterieurId != null) return undefined;
     const score = computeLookScore(
       outfitPieces,
       state.occasion || "all",
@@ -228,7 +231,7 @@ export default function HomeScreen() {
     return piece ? [{ item: piece, onAjouter: () => actions.addPieceToOutfit(piece.id) }] : undefined;
     // `actions` change à chaque rendu ; la suggestion ne dépend que de la tenue, de la météo, de l'occasion et du profil.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.outfit, state.occasion, state.workMode, state.dateContext, state.dismissedSuggestions, meteoDuJour, wardrobePool, profile, hasOutfit]);
+  }, [state.outfit, state.occasion, state.workMode, state.dateContext, state.dismissedSuggestions, meteoDuJour, wardrobePool, profile, hasOutfit, exterieurId]);
 
   /*
    * LE HERO DYNAMIQUE (04/10/2026) — trois états qui portent un plan, un qui n'en porte pas :

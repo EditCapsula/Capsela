@@ -9,7 +9,7 @@
 export type IconePlanifier =
   | "restaurant" | "bar" | "culture" | "exterieur" | "maison"
   | "matin" | "apresmidi" | "soiree" | "journee" | "nuage" | "cintre"
-  | "elegant" | "feminin" | "decontracte" | "audacieux" | "confortable" | "aucune"
+  | "elegant" | "feminin" | "decontracte" | "audacieux" | "confortable" | "leger" | "aucune"
   | "printemps" | "ete" | "automne" | "hiver";
 
 const TRAIT = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round" } as const;
@@ -31,6 +31,8 @@ const FORMES: Record<IconePlanifier, React.ReactNode> = {
   decontracte: <path d="M3 15h4l2-3h6l2 3h4v3H3z" />,
   audacieux: <><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /><path d="M19 16v4M17 18h4" /></>,
   confortable: <path d="M12 20s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.5-7 10-7 10z" />,
+  // Léger et ventilé (04/11/2026) : trois lignes d'air, même trait que les autres pictogrammes.
+  leger: <path d="M3 8h11a3 3 0 10-3-3M3 12h15a3 3 0 11-3 3M3 16h8" />,
   aucune: <><circle cx="12" cy="12" r="8" /><path d="M7 17L17 7" /></>,
   // Les quatre saisons (15/10/2026, « Créer un look ») : même trait que les autres pictogrammes, aucune image.
   printemps: <><path d="M12 21v-8" /><path d="M12 13c-3.5 0-5-2.5-5-5.5 3 0 5 1.8 5 5.5zM12 13c3.5 0 5-2.5 5-5.5-3 0-5 1.8-5 5.5z" /><path d="M9 21h6" /></>,

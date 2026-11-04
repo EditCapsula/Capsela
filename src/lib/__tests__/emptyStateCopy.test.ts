@@ -111,7 +111,7 @@ describe("états vides — l'écran consomme le wording partagé sans le contour
     expect(s).toContain("const emptyStateBase = !noCompleteOutfit");
     expect(s).toContain("state.outfitFailureReason");
     // Aucune règle par occasion n'a été introduite dans cette branche.
-    const bloc = s.slice(s.indexOf("const emptyStateBase"), s.indexOf("const recommendationText"));
+    const bloc = s.slice(s.indexOf("const emptyStateBase"), s.indexOf("const dismissed = new Set"));
     expect(bloc).not.toMatch(/state\.occasion/);
   });
 

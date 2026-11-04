@@ -20,7 +20,8 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import PourLExterieur from "@/components/PourLExterieur";
-import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, outfitMoodPhrase, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
+import { RailPiecesTenue } from "@/components/HeroTenue";
+import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
 
 /** Première lettre en capitale : « il va faire frais ce soir » en tête de phrase. */
@@ -593,17 +594,6 @@ export default function TenuesScreen() {
     onCta: emptyStateBase.ctaLabel ? actions.openAdd : null,
   };
 
-  // Phrase d'explication de la recommandation (recette 19/08/2026) — par
-  // template, jamais d'IA ; pas de température affichée tant que la
-  // géolocalisation n'a pas résolu la météo réelle du jour.
-  const recommendationText = outfitMoodPhrase(
-    state.occasion || "all",
-    state.workMode,
-    state.dateContext,
-    meteoEnAttente ? null : meteoDuJour.temp
-  );
-
-
   const dismissed = new Set(state.dismissedSuggestions || []);
   const lookScore = computeLookScore(
     outfitPieces,
@@ -675,7 +665,7 @@ export default function TenuesScreen() {
    * pièce précise, complète sinon.
    */
   const ajoutsConseilles = lookScore.proactives.filter(
-    (p) => p.suggestedId != null && displayPool.some((i) => i.id === p.suggestedId)
+    (p) => p.suggestedId != null && displayPool.some((i) => i.id === p.suggestedId) && !(p.key === "veste_soir" && exterieur != null)
   ).length;
   const statut = statutTenue({
     nbPieces: piecesDuLook.length,
@@ -690,9 +680,12 @@ export default function TenuesScreen() {
 
   // LA VESTE CONSEILLÉE PAR TEMPS FRAIS, DANS LE HERO (14/10/2026, demandé) : la pièce proposée par « veste_soir » est posée dans la
   // composition, estompée, avec un « + » qui l'ajoute — la carte « À prévoir » correspondante ne s'affiche plus dessous.
+  // Pas de conseil quand un manteau est déjà proposé « Pour l'extérieur » (04/11/2026, demandé : « pas la peine de suggérer le manteau si on
+  // le met toujours dans la strate extérieure ») : ni pièce estompée, ni silhouette à ajouter, ni carte « À prévoir ».
+  const coucheDejaDehors = exterieur != null;
   const conseilVeste = (() => {
     const p = liveProactiveByKey.get("veste_soir");
-    if (!p || p.suggestedId == null || dismissingEntries["veste_soir"]) return null;
+    if (coucheDejaDehors || !p || p.suggestedId == null || dismissingEntries["veste_soir"]) return null;
     const piece = displayPool.find((i) => i.id === p.suggestedId);
     return piece ? { p, piece } : null;
   })();
@@ -700,11 +693,11 @@ export default function TenuesScreen() {
   // niveau de formalité, donc « veste_soir » n'a pas de pièce. Le conseil passe quand même dans le hero : une silhouette de veste avec
   // un « + » qui ouvre l'ajout d'une veste au dressing — plutôt qu'une carte « À prévoir » sans rien à ajouter.
   const vesteAAjouter =
-    !conseilVeste && !noCompleteOutfit && liveProactiveByKey.has("veste_soir") && !dismissingEntries["veste_soir"];
+    !coucheDejaDehors && !conseilVeste && !noCompleteOutfit && liveProactiveByKey.has("veste_soir") && !dismissingEntries["veste_soir"];
   // Tant qu'une paire manque, « Compléter la tenue » ne montre que ce qui la complète (14/10/2026) : les conseils de style (touche de
   // couleur, layering) reviennent dès que la tenue est complète, avec leur « Ignorer » inchangé.
   const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)])).filter(
-    (k) => !((conseilVeste || vesteAAjouter) && k === "veste_soir") && !chaussuresManquantes
+    (k) => !((conseilVeste || vesteAAjouter || coucheDejaDehors) && k === "veste_soir") && !chaussuresManquantes
   );
   // Par le froid (sous SEUIL_MANTEAU, 19/10/2026), la pièce à ajouter est un manteau, pas une veste.
   const coucheAAjouter = meteoDuJour.temp < SEUIL_MANTEAU ? ("manteau" as const) : ("veste" as const);
@@ -919,25 +912,7 @@ export default function TenuesScreen() {
               provenance. Les unités de conteneur (cqw) portent sur la card. */}
           <div className="flex flex-col flex-1 min-h-0">
           <div className="relative flex-1 min-h-0">
-          {recommendationText && (
-          // La phrase d'ambiance se pose PAR-DESSUS le haut de la zone (calibrage du 08/10/2026) : le flat lay réserve cette bande
-          // (margeHaute), aucune pièce n'y passe. Les badges sont dans l'en-tête de la card depuis le 30/10/2026.
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center flex-wrap gap-x-[10px] gap-y-[5px] pointer-events-none">
-            {/* Phrase d'ambiance — celle de CETTE tenue, jamais un bulletin,
-                et SANS la température : la barre météo la donne déjà à deux
-                cents pixels au-dessus (23/09). Manuscrite, d'où une taille
-                plus grande que le corps de texte — une cursive à 12,5 px ne
-                se lit pas. Elle passe par outfitMoodPhrase et non
-                explainRecommendation : sur l'accueil, cette même phrase est
-                le SEUL endroit qui affiche la température, et l'argument
-                « elle est déjà au-dessus » y est faux. */}
-            {recommendationText && (
-              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "var(--color-sand-text)" }}>
-                {recommendationText}
-              </span>
-            )}
-          </div>
-          )}
+          {/* Plus de phrase d'ambiance manuscrite dans le hero (04/11/2026, demandé : « harmoniser les hero ») : aucun hero n'en a plus. */}
 
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
@@ -1387,103 +1362,15 @@ export default function TenuesScreen() {
           Il n'avait aucune marge haute — invisible tant que la card se
           terminait par un bouton crème détaché de son bord, criant depuis
           qu'elle descend jusqu'au sien. */}
-      {!meteoEnAttente && outfitPieces.length > 0 && (
-        <div className="t-surtitre text-muted mt-[26px] mb-[10px]">
-          Les pièces de ta tenue · {outfitPieces.length}
-        </div>
-      )}
-
-      {/* RAIL DES PIÈCES — la liste verticale de cartes de 81 px de haut
-          poussait les bannières et l'alternative très bas : quatre pièces
-          occupaient à elles seules un écran entier. Le rail les met sur une
-          ligne, à hauteur constante quel que soit leur nombre.
-
-          Rien ne disparaît : le tap ouvre la même fiche qu'avant (la fiche
-          détail pour une pièce du dressing, « comment porter » pour une
-          suggestion), le bouton ⇄ échange toujours la pièce, et le contour
-          terracotta d'une pièce fraîchement ajoutée (R-S13/R-S14) est
-          conservé. Pas de lien « Voir les détails » : il n'existe pas d'écran
-          de détail de LA tenue, chaque pièce ouvre le sien, et inventer une
-          destination serait pire que de s'en passer. */}
-      <div className="scrollarea flex gap-[10px] overflow-x-auto pb-[4px]" style={{ scrollSnapType: "x mandatory" }}>
-        {meteoEnAttente
-          ? [0, 1, 2].map((i) => (
-              <div key={i} className="flex-none w-[112px]">
-                <div className="w-[112px] h-[112px] rounded-bloc animate-pulse" style={{ background: "var(--color-chip-soft-bg)" }} />
-                <div className="h-[10px] w-3/4 rounded-full animate-pulse mt-[8px]" style={{ background: "var(--color-chip-soft-bg)" }} />
-                <div className="h-[10px] w-1/2 rounded-full animate-pulse mt-[5px]" style={{ background: "var(--color-chip-soft-bg)" }} />
-              </div>
-            ))
-          : outfitPieces.map((it) => {
-              const suggested = isCatalogId(it.id);
-              const resolvedImage = resolveItemImage(it);
-              return (
-                <div key={it.id} className="flex-none w-[112px]" style={{ scrollSnapAlign: "start" }}>
-                  <div className="relative">
-                    <button
-                      onClick={() => actions.openItem(it.id, suggested)}
-                      aria-label={`${it.name} — ${CATLABEL[isBag(it) ? "sac" : it.cat]}. Voir le détail`}
-                      className="block w-[112px] h-[112px] rounded-bloc overflow-hidden cursor-pointer transition-shadow duration-[1200ms] ease-out"
-                      style={{
-                        background: resolvedImage.url ? "var(--color-photo-bg)" : it.hex,
-                        boxShadow: recentlyAddedId === it.id ? "0 0 0 1.5px var(--color-terracotta)" : "0 0 0 1.5px rgba(166,105,80,0)",
-                      }}
-                    >
-                      {resolvedImage.url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={resolvedImage.url}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: resolvedImage.kind === "photo" ? "cover" : "contain",
-                            objectPosition: "center",
-                            padding: resolvedImage.kind === "photo" ? 0 : 9,
-                            boxSizing: "border-box",
-                            // Même réglage d'éclairage que la composition ci-dessus.
-                            filter: resolvedImage.kind === "photo" ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
-                          }}
-                        />
-                      ) : (
-                        <span
-                          className="absolute left-[7px] bottom-[6px] text-[9px] tracking-[.05em]"
-                          style={{ color: "rgba(243,238,229,.9)", textShadow: "0 1px 2px rgba(0,0,0,.35)" }}
-                        >
-                          {CATLABEL[it.cat].toUpperCase()}
-                        </span>
-                      )}
-                      {it.imageStatus === "generating" && (
-                        <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
-                      )}
-                    </button>
-                    {/* ⇄ posé sur la vignette, 34 px : la cible reste
-                        confortable alors que la ligne entière a disparu. */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        actions.swapPiece(it.id, it.cat);
-                      }}
-                      aria-label={`Remplacer ${it.name}`}
-                      className="absolute top-[5px] right-[5px] w-[26px] h-[26px] rounded-full flex items-center justify-center text-[13px] cursor-pointer"
-                      style={{ background: "rgba(251,248,243,.92)", color: "var(--color-muted)", boxShadow: "0 1px 4px rgba(29,26,22,.14)" }}
-                    >
-                      ⇄
-                    </button>
-                  </div>
-                  <div className="text-[11px] text-ink leading-[1.25] mt-[8px]">{it.name}</div>
-                  <div className="text-[10px] text-muted mt-[2px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
-                  {/* Provenance à la pièce — la même séparation que les badges
-                      du héros, jamais un second calcul. */}
-                  <div className="text-[10px] mt-[1px]" style={{ color: suggested ? "var(--color-sand-text)" : "var(--color-muted)" }}>
-                    {suggested ? "Capsule" : "Ton dressing"}
-                  </div>
-                </div>
-              );
-            })}
-      </div>
+      {/* LES PIÈCES DE LA TENUE : le composant partagé avec Planifier (RailPiecesTenue, 04/11/2026), ici avec l'échange ⇄ et le contour
+          d'une pièce tout juste ajoutée (R-S13/R-S14). Rien ne disparaît : même rail, mêmes fiches, mêmes gestes qu'avant. Pas de lien
+          « Voir les détails » : il n'existe pas d'écran de détail de LA tenue, chaque pièce ouvre le sien. */}
+      <RailPiecesTenue
+        pieces={outfitPieces}
+        chargement={meteoEnAttente}
+        misEnAvant={recentlyAddedId}
+        onRemplacer={(it) => actions.swapPiece(it.id, it.cat)}
+      />
 
       {!noCompleteOutfit && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
         <div className="mt-4 bg-warm-bg border border-warm-border rounded-bloc px-4 py-[13px]">
