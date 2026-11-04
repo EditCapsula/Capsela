@@ -14,6 +14,8 @@ import ResultatAvis from "@/components/ResultatAvis";
 import { premiumRequis } from "@/lib/autorisations";
 import { useAuth } from "@/lib/auth";
 import { contexteDepuisProfil, etapesAnalyse, libelleQuota, lireQuotaAvis, niveauQuota, noteQuota, personnalisationAvis, phraseAnalyse, prochainMois, reactionErreur, type QuotaAvis } from "@/lib/avisStylisteClient";
+import { confierPhoto } from "@/lib/importTenue";
+import { peutAjouter } from "@/lib/premium";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
 import { noteDeLAvis } from "@/lib/noteAvis";
 import { compositionReconnue } from "@/lib/reconnaissance";
@@ -388,7 +390,7 @@ export function PhotoHeros({ url, largeur, hauteur, taille = "78%" }: { url: str
 }
 
 export default function AvisStylisteScreen() {
-  const { state, weather, actions, avisStyliste } = useCapsela();
+  const { state, weather, actions, avisStyliste, etatPremium } = useCapsela();
   const { profile } = useAuth();
   const { photo, analyse } = avisStyliste;
   // Le contexte que la styliste reçoit (le même que lancerAvisStyliste) : il
@@ -538,6 +540,27 @@ export default function AvisStylisteScreen() {
                   etatJournal={avisStyliste.reconnaissanceJournal}
                   onReessayerJournal={actions.reessayerReconnaissanceJournal}
                 />
+                {/* DE L'AVIS À L'IMPORT (04/11/2026, retour du test fermé : « que l'application fasse une capture de chaque élément de
+                    la tenue pour recommander de l'ajouter à mon dressing »). La même photo est confiée à « Importer une tenue »
+                    (importTenue.ts, le passage déjà utilisé par « Ajouter une pièce ») : chaque pièce y est repérée, découpée et
+                    détourée, et c'est la personne qui choisit celles qu'elle garde. Rien n'est ajouté sans elle. */}
+                <button
+                  onClick={() => {
+                    // Dressing plein (version gratuite) : l'ouverture mène à Premium ; la photo n'est alors pas confiée, sinon le
+                    // prochain import la relirait sans qu'on l'ait demandé (et le détourage est payant).
+                    if (peutAjouter(etatPremium, state.items.length)) confierPhoto({ fichier: photo.fichier });
+                    actions.openImporterTenue();
+                  }}
+                  className="mt-3 w-full flex items-center gap-3 text-left bg-card border border-border rounded-tuile px-[14px] py-[13px] cursor-pointer"
+                >
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[13px] font-medium text-ink">Ajouter ces pièces à mon dressing</span>
+                    <span className="block text-[11px] text-muted leading-[1.45] mt-[2px]">
+                      Capsela découpe chaque pièce de ta photo ; tu choisis celles que tu gardes.
+                    </span>
+                  </span>
+                  <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
+                </button>
                 <EtMaintenantAvis
                   composition={compositionReconnue(analyse.reconnaissance, state.items)}
                   tenueDuJourPortee={state.outfitValidated}

@@ -7,6 +7,7 @@ import BottomSheet from "@/components/BottomSheet";
 import { FeuilleVille, I_CALENDRIER, I_CLOCHE, I_GRAPHIQUE, I_REPERE, Surtitre } from "@/components/ProfilUI";
 import { useAuth } from "@/lib/auth";
 import { DEFAULT_PREFS, WORK_DAYS, type ProfilePrefs } from "@/lib/profile";
+import { notificationsDisponiblesIci, synchroniserNotifications, type EtatNotifications } from "@/lib/notifications";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -65,9 +66,16 @@ export default function PreferencesScreen() {
   const [confirmerReinit, setConfirmerReinit] = useState(false);
   const [villeOuverte, setVilleOuverte] = useState(false);
   const [reinitFaite, setReinitFaite] = useState(false);
+  // La notification suit le réglage (04/11/2026, notifications.ts) : chaque changement de l'interrupteur ou de l'heure la
+  // reprogramme. `etatNotif` dit ce que le téléphone a répondu — autorisation refusée, ou web, où rien n'est envoyé.
+  const [etatNotif, setEtatNotif] = useState<EtatNotifications | null>(null);
   const setPrefs = (p: Partial<ProfilePrefs>) => {
     setReinitFaite(false);
-    saveProfile({ ...profile, prefs: { ...prefs, ...p } });
+    const suivantes = { ...prefs, ...p };
+    saveProfile({ ...profile, prefs: suivantes });
+    if ("notifEnabled" in p || "notifTime" in p) {
+      void synchroniserNotifications(suivantes, true).then(setEtatNotif);
+    }
   };
   // Signalé le 15/10/2026 : « Réinitialiser ne fait rien ». Elle agissait, mais sur des réglages déjà d'origine, et sans rien dire.
   // La ligne le dit désormais : réglages déjà d'origine (rien à réinitialiser), ou réinitialisation faite. Les jours se comparent
@@ -115,6 +123,18 @@ export default function PreferencesScreen() {
             className="border-none bg-transparent text-[13px] text-ink font-sans outline-none min-h-[32px]"
           />
         </Ligne>
+        {/* Ce que le réglage fait réellement, dit seulement quand il ne peut pas agir. */}
+        {prefs.notifEnabled && !notificationsDisponiblesIci() && (
+          <div className="px-4 py-[12px] text-[11px] text-muted leading-[1.45]">
+            Les notifications arrivent dans l&apos;application Capsela sur Android. Le site n&apos;en envoie pas.
+          </div>
+        )}
+        {prefs.notifEnabled && etatNotif === "refusee" && (
+          <div className="px-4 py-[12px] text-[11px] text-rust leading-[1.45]" role="alert">
+            Ton téléphone bloque les notifications de Capsela. Autorise-les dans ses réglages (Applications, Capsela,
+            Notifications).
+          </div>
+        )}
       </Section>
 
       <Section titre="Localisation & météo" icone={I_REPERE} id="prefs-localisation">
@@ -242,6 +262,7 @@ export default function PreferencesScreen() {
             setConfirmerReinit(false);
             setReinitFaite(true);
             saveProfile({ ...profile, prefs: DEFAULT_PREFS });
+            void synchroniserNotifications(DEFAULT_PREFS, false).then(setEtatNotif);
           }}
         >
           Réinitialiser
