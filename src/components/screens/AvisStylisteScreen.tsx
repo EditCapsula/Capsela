@@ -231,7 +231,7 @@ function ExtraitAvis({ homme }: { homme: boolean }) {
                       <IconeAvis nom={icone} taille={14} />
                       <span className="t-label">{etiquette}</span>
                     </div>
-                    <div className="font-semibold text-[15px] leading-[1.25] text-ink mt-[6px]">{titre}</div>
+                    <div className="t-titre-ligne leading-[1.25] text-ink mt-[6px]">{titre}</div>
                     {texte && <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">{texte}</div>}
                   </div>
                   {etiquette === "Le conseil de Capsela" && (

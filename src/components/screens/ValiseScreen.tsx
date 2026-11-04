@@ -127,6 +127,7 @@ import { ChoixVille } from "@/components/EtapeLieu";
 import { fetchClimat, fetchVilles, previsionGardee, type Climat, type VilleSuggeree } from "@/lib/weather";
 import { villePourLeNom } from "@/lib/lieux";
 import Button from "@/components/Button";
+import LigneInterrupteur from "@/components/LigneInterrupteur";
 import EmptyState from "@/components/EmptyState";
 import Card from "@/components/Card";
 
@@ -860,7 +861,7 @@ function DestinationsDuVoyage({
               <span className="flex-1 min-w-0">
                 {lu ? (
                   <>
-                    <span className="block font-semibold text-[14px] text-ink">{lu.dates}</span>
+                    <span className="block t-titre-vignette text-ink">{lu.dates}</span>
                     <span className="block text-[11px] text-muted mt-[1px]">{lu.nuits}</span>
                   </>
                 ) : (
@@ -1468,7 +1469,7 @@ export default function ValiseScreen() {
                 <span className="flex-shrink-0 text-terracotta mt-[2px]">{G_METEO}</span>
                 <div className="min-w-0">
                   <div className="text-[13px] text-ink">{nomVille}</div>
-                  <div className="font-semibold text-[15px] text-ink mt-[2px]">
+                  <div className="t-titre-ligne text-ink mt-[2px]">
                     {libelleAmplitude(amplitudeEtape1)} prévus
                     {amplitudeEtape1.jours < jours.length && (
                       <span className="text-[12px] text-muted font-sans">
@@ -2220,7 +2221,7 @@ function Resultat({
                   <div key={libelle} className="flex items-baseline justify-between mt-2">
                     <span className="text-[13px] text-ink">{libelle}</span>
                     <span className="text-[13px] text-ink">
-                      {avant} → <span className="font-semibold text-[16px]">{apres}</span>
+                      {avant} → <span className="t-titre-carte">{apres}</span>
                     </span>
                   </div>
                 ))}
@@ -2596,27 +2597,7 @@ function Resultat({
   const seulDressing = valise.uniquementDressing === true;
   const reglageDressingSeul =
     seulDressing || (valise.suggestionIds?.length ?? 0) > 0 ? (
-      <button
-        type="button"
-        onClick={() => recomposer(!seulDressing)}
-        aria-pressed={seulDressing}
-        className="w-full flex gap-3 items-center mt-5 bg-card border border-border rounded-carte p-[14px] cursor-pointer text-left"
-      >
-        <span className="flex-1 min-w-0">
-          <span className="block text-[13px] font-medium text-ink">Uniquement mon dressing</span>
-          <span className="block text-[11px] text-muted leading-[1.45] mt-[3px]">Sans compléter avec des pièces de ta capsule.</span>
-        </span>
-        <span
-          aria-hidden="true"
-          className="w-11 h-[26px] flex-shrink-0 rounded-full p-[3px] flex transition-colors"
-          style={{
-            background: seulDressing ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
-            justifyContent: seulDressing ? "flex-end" : "flex-start",
-          }}
-        >
-          <span className="w-5 h-5 rounded-full bg-card" />
-        </span>
-      </button>
+      <LigneInterrupteur titre="Uniquement mon dressing" texte="Sans compléter avec des pièces de ta capsule." actif={seulDressing} onClick={() => recomposer(!seulDressing)} className="mt-5" />
     ) : null;
   const blocACompleter =
     aAjouter.length > 0 || aOptimiser ? (
@@ -2865,7 +2846,7 @@ function Resultat({
       {/* LA TAILLE ET LA PROVENANCE (maquette V2, 11/10/2026) : « Valise M · 12 pièces », « Changer », et ce qui vient du dressing ou de
           la capsule. Les nombres sont ceux de la sélection enregistrée. */}
       <div className="flex items-center justify-between gap-3 mt-5">
-        <span className="font-semibold text-[15px] text-ink">
+        <span className="t-titre-ligne text-ink">
           Valise {valise.bagage} · {depasse ? "trop pleine" : `remplie à ${tauxRemplissage}\u00a0%`}
         </span>
         <button onClick={() => setTailleOuverte(true)} className="t-lien text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[44px] flex-shrink-0">
@@ -3238,7 +3219,7 @@ function Resultat({
             return (
               <section key={titre} className="mt-5">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-semibold text-[15px] text-ink">{titre}</h3>
+                  <h3 className="t-titre-ligne text-ink">{titre}</h3>
                   <span className="text-[12px] text-muted">{duGroupe.length}</span>
                 </div>
                 <div className="flex flex-col gap-2 mt-2">

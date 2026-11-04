@@ -91,7 +91,7 @@ export function CarteAnalyse() {
       <div className="w-full bg-card border border-border rounded-[20px] px-[12px] py-[10px] flex items-center gap-[12px]">
         <LoadingSpinner size={52} className="flex-shrink-0" />
         <div className="min-w-0">
-          <div className="font-semibold text-[16px] leading-[1.2] text-ink">On prépare ta pièce</div>
+          <div className="t-titre-carte leading-[1.2] text-ink">On prépare ta pièce</div>
           <div className="text-[12px] leading-[1.35] text-[#5C5648] mt-[2px]">
             Capsela analyse ta photo pour identifier les vêtements à ajouter à ton dressing.
           </div>
@@ -151,7 +151,7 @@ export function ChampSelect({
       <span className="text-[10px] tracking-[.16em] uppercase text-[#8B8375] whitespace-nowrap">{label}</span>
       <span
         className={
-          (valeurSerif ? "font-semibold text-[15px] mt-[2px] " : "text-[13.5px] font-medium mt-[3px] whitespace-nowrap overflow-hidden text-ellipsis ") +
+          (valeurSerif ? "t-titre-ligne mt-[2px] " : "text-[13.5px] font-medium mt-[3px] whitespace-nowrap overflow-hidden text-ellipsis ") +
           (vide || attente ? "text-[#8B8375]" : "text-ink")
         }
         aria-hidden="true"
@@ -681,7 +681,7 @@ export default function AddScreen() {
             if (e.key === "Enter") e.currentTarget.blur();
           }}
           placeholder={lectureEnCours ? "Capsela te le propose dans un instant" : "ex. Chemise en lin écrue"}
-          className="mt-2 !h-[52px] font-semibold text-[16px]"
+          className="mt-2 !h-[52px] t-titre-carte"
         />
 
         {/* 3. Catégorie et modèle. Le modèle est exigé pour des chaussures (R-B6) ; ailleurs, c'est le type de pièce,
@@ -713,7 +713,7 @@ export default function AddScreen() {
         {/* 4. La couleur principale : huit pastilles, un anneau et une coche sur la choisie — jamais la seule teinte. */}
         <div className="flex items-baseline justify-between gap-3 mt-6">
           <span className={EYEBROW}>Couleur principale</span>
-          <span className={"font-semibold text-[14px] " + (analyseEnCours ? "text-[#8B8375]" : "text-ink")}>
+          <span className={"t-titre-vignette " + (analyseEnCours ? "text-[#8B8375]" : "text-ink")}>
             {analyseEnCours ? "Analyse…" : state.addColor.name}
           </span>
         </div>

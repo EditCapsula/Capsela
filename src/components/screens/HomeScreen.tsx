@@ -94,7 +94,7 @@ function CarteUnivers({
       <span className="flex flex-col pt-3 pb-10 pl-3 pr-2" style={{ width: "calc(100% - clamp(56px, 38%, 92px))" }}>
         <span className="flex items-center h-[22px] text-terracotta-deep">{glyphe}</span>
         {surtitre && <span className="t-surtitre text-muted-3 mt-[8px] !text-[9px] whitespace-nowrap">{surtitre}</span>}
-        <span className={"block font-semibold text-[14px] leading-[1.15] text-ink " + (surtitre ? "mt-[3px]" : "mt-3")}>
+        <span className={"block t-titre-vignette leading-[1.15] text-ink " + (surtitre ? "mt-[3px]" : "mt-3")}>
           {ligne1}
           <br />
           {ligne2}
