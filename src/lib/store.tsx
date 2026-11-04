@@ -2186,8 +2186,16 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     onbPasser: () => setState((s) => ({ ...s, onbStep: 4 })),
     onbAller: (etape) => setState((s) => ({ ...s, onbStep: Math.max(0, Math.min(4, Math.round(etape))) })),
 
+    // LA FICHE D'UNE PIÈCE EN FEUILLE, DEPUIS TOUTES LES PAGES (04/11/2026, demandé : « depuis toutes les pages, lorsque je clique sur une
+    // pièce, capsule ou dressing, elle s'ouvre dans une bottom sheet sans logo Capsela en en-tête »). Le mécanisme de l'accueil
+    // (FicheEnFeuille, 15/10/2026) devient celui de tous les écrans : la page reste dessous, intacte, et la retrouve à la fermeture.
+    // Seule la fiche plein écran déjà ouverte (screen « piece ») garde la navigation d'avant.
     openItem: (id, suggested = false) =>
-      setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" })),
+      setState((s) =>
+        s.screen === "piece"
+          ? { ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" }
+          : { ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, ficheEnFeuille: { ecran: s.screen } }
+      ),
     openItemOutfits: (id, suggested = true, variations) =>
       setState((s) => ({
         ...s,

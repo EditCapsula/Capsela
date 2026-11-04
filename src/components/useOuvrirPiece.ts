@@ -10,8 +10,8 @@ import type { Item } from "@/lib/types";
  * l'accueil, la fiche s'ouvre dans une feuille (FicheEnFeuille, 15/10/2026).
  */
 export function useOuvrirPiece() {
-  const { state, actions } = useCapsela();
-  // Depuis l'accueil (15/10/2026, demandé) : la même fiche, mais dans une feuille posée sur l'accueil (FicheEnFeuille).
-  if (state.screen === "home") return (it: Item) => actions.ouvrirFicheEnFeuille(it.id, isCatalogId(it.id));
+  const { actions } = useCapsela();
+  // Dans une feuille posée sur l'écran courant (FicheEnFeuille) : depuis l'accueil le 15/10/2026, depuis toutes les pages le 04/11/2026
+  // (openItem, store.tsx).
   return (it: Item) => actions.openItem(it.id, isCatalogId(it.id));
 }
