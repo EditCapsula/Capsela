@@ -55,13 +55,28 @@ describe("composerFlatLay — déterministe, borné, sans grille", () => {
         for (const q of composerFlatLay(look(), "g" + i, { contexte }).pieces) expect(Math.abs(q.angle)).toBeLessThanOrEqual(LIMITE_INCLINAISON[q.role] + 1e-9);
   });
 
-  it("une veste héro est toujours à droite, le haut à gauche, le bas entre les deux", () => {
+  it("une veste héro est toujours à droite, le haut à gauche, le bas entre les deux (tailles d'avant le 04/11/2026)", () => {
     for (let i = 0; i < 40; i++) {
-      const par = Object.fromEntries(composerFlatLay(look(), "d" + i, { contexte: "look-detail" }).pieces.map((q) => [q.role, q]));
+      const par = Object.fromEntries(composerFlatLay(look(), "d" + i, { contexte: "look-detail", proportions: false }).pieces.map((q) => [q.role, q]));
       expect(par.hero.x).toBeGreaterThan(par.bas.x);
       expect(par.bas.x).toBeGreaterThan(par.secondaire.x);
       expect(par.chaussures.x).toBeGreaterThan(par.sac.x);
     }
+  });
+
+  it("avec les proportions (04/11/2026, « le jean rapetisse trop quand il y a un blazer ») : le haut puis le bas à gauche, la veste puis le sac et les chaussures à droite", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      for (let i = 0; i < 40; i++) {
+        const par = Object.fromEntries(composerFlatLay(look(), "d" + i, { contexte }).pieces.map((q) => [q.role, q]));
+        const b = (q: PlacementFlatLay) => boiteDe(q);
+        expect(par.hero.x, `${contexte} ${i}`).toBeGreaterThan(par.secondaire.x);
+        // Le bas sous le haut, dans sa colonne : à gauche de la veste, sous le haut, jamais derrière la veste.
+        expect(par.bas.y).toBeGreaterThan(par.secondaire.y);
+        expect(b(par.bas).x1).toBeLessThanOrEqual(b(par.hero).x0 + 1e-6);
+        // Le bas est la pièce la plus haute de la planche.
+        for (const q of Object.values(par)) expect(par.bas.h + 1e-6).toBeGreaterThanOrEqual(q.h);
+        for (const role of ["sac", "chaussures"]) if (par[role]) expect(par[role].y).toBeGreaterThan(par.hero.y);
+      }
   });
 
   it("tout reste dans la zone, rotation comprise, avec la marge de sécurité, et le héro est la plus grande pièce", () => {
@@ -709,7 +724,8 @@ describe("accessoires à une place fixe (02/11/2026, demandé : « que les acces
   it("les accessoires se posent sur peu de places, toujours les mêmes, et aucun n'est perdu", () => {
     const avant = places(false);
     const apres = places();
-    expect(apres.poses).toBe(avant.poses);
+    // Aucun n'est perdu : autant ou plus d'accessoires posés (un de plus depuis les proportions du 04/11/2026, la colonne de la veste libérant une place).
+    expect(apres.poses).toBeGreaterThanOrEqual(avant.poses);
     expect(apres.vues.size).toBeLessThan(avant.vues.size);
     // La première place du contexte reçoit la plupart des accessoires.
     const premiere = CONTEXTES["look-detail"].placesAccessoires![0];

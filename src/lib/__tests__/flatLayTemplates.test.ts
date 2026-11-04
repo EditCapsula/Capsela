@@ -103,7 +103,9 @@ describe("composerFlatLay avec template — mêmes garanties que le moteur", () 
 
   it("blazer-chic et veste-dominante donnent deux compositions différentes pour les mêmes pièces de base", () => {
     const pieces = [p("veste", 0.9), p("haut", 0.9), p("pantalon", 0.5), p("chaussures", 1.3), p("sac", 1)];
-    const x = (tpl: TemplateFlatLay) => composerFlatLay(pieces, "meme-graine", { contexte: "look-detail", template: tpl }).pieces.map((q) => [q.id, Math.round(q.x), Math.round(q.y)]);
+    // Avec les tailles d'avant le 04/11/2026 : depuis, une tenue veste + bas se pose en colonnes (flatLay.ts, « la veste en colonne »), quel que
+    // soit le template ; les templates restent pour les autres tenues.
+    const x = (tpl: TemplateFlatLay) => composerFlatLay(pieces, "meme-graine", { contexte: "look-detail", template: tpl, proportions: false }).pieces.map((q) => [q.id, Math.round(q.x), Math.round(q.y)]);
     expect(x("blazer-chic")).not.toEqual(x("veste-dominante"));
   });
 

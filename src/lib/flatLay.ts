@@ -154,7 +154,9 @@ export const PART_VISUELLE: Record<CategoryKey, number> = {
 export const PROPORTION_PIECE: Partial<Record<CategoryKey, number>> = {
   haut: 0.86,
   pull: 0.86,
-  veste: 1,
+  // 1,0 sur la référence ; ramené à 0,85 (04/11/2026, vu en rendu réel : « le jean rapetisse trop quand il y a un blazer ») — un blazer
+  // est plus court qu'un jean, à hauteur égale le jean paraissait tassé à côté de lui.
+  veste: 0.85,
   manteau: 1.15,
   pantalon: 1,
   jean: 1,
@@ -163,7 +165,9 @@ export const PROPORTION_PIECE: Partial<Record<CategoryKey, number>> = {
   robe: 1.25,
   combinaison: 1.25,
   chaussures: 0.47,
-  sac: 0.75,
+  // 0,75 sur la référence ; ramené à 0,6 (04/11/2026, vu en rendu réel avec les visuels du catalogue : « le sac est trop massif ») — un
+  // sac à main prenait autant de place que le t-shirt.
+  sac: 0.6,
 };
 /** Les catégories dont la proportion vaut pour le PLUS GRAND CÔTÉ (un objet posé), et non pour la hauteur (un vêtement). */
 const PROPORTION_PAR_COTE: CategoryKey[] = ["chaussures", "sac"];
@@ -625,7 +629,22 @@ export function composerFlatLay(
   const template = options.template && (options.contexte === "look-detail" || options.contexte === "hero-home") ? options.template : null;
   const gabaritTemplate = template ? GABARITS_TEMPLATES[template] : null;
   const sansSac = !roles.some((r) => r.role === "sac");
-  const refDe = (role: RoleFlatLay): Ref => (gabaritTemplate?.[role]) || (sansSac && !heroRobe && !heroDessus && config.refsSansSac?.[role]) || (heroRobe && config.refsRobe?.[role]) || (heroDessus && config.refsDessus?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
+  // LA VESTE EN COLONNE (04/11/2026, vu en rendu réel : « le jean rapetisse trop quand il y a un blazer ») : avec les proportions, le haut et
+  // la veste à leur vraie taille ne laissaient au bas que l'espace entre eux deux — fin, à moitié caché. Comme sur la planche de référence :
+  // le haut puis le bas dans une colonne, la veste puis le sac et les chaussures dans l'autre. Les emplacements sont en unités du bas (U),
+  // l'ajustement à la zone fait le reste ; ils passent avant le template et le gabarit du contexte, pour toute tenue veste + bas.
+  const enColonnes = proportionnee && heroDessus && roles.some((r) => r.role === "bas");
+  const U = UNITE_PROPORTIONS * hauteurZone;
+  const colonnes: Partial<Record<RoleFlatLay, Ref>> = {
+    // Le haut chevauche légèrement la taille du bas, comme rentré dedans ; sac et chaussures côte à côte sous la veste : la colonne de droite
+    // n'est pas plus haute que celle de gauche, la planche garde sa taille.
+    secondaire: { x: 0.45 * U, y: 0.43 * U, l: 0, angle: 0, resserre: false },
+    bas: { x: 0.45 * U, y: 1.3 * U, l: 0, angle: 0, resserre: false },
+    hero: { x: 1.28 * U, y: 0.45 * U, l: 0, angle: 0, resserre: false },
+    sac: { x: 1.06 * U, y: 1.22 * U, l: 0, angle: 0, resserre: false },
+    chaussures: sansSac ? { x: 1.28 * U, y: 1.2 * U, l: 0, angle: 0, resserre: false } : { x: 1.55 * U, y: 1.32 * U, l: 0, angle: 0, resserre: false },
+  };
+  const refDe = (role: RoleFlatLay): Ref => (enColonnes && colonnes[role]) || (gabaritTemplate?.[role]) || (sansSac && !heroRobe && !heroDessus && config.refsSansSac?.[role]) || (heroRobe && config.refsRobe?.[role]) || (heroDessus && config.refsDessus?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
 
   // Les accessoires : on garde les plus utiles, en nombre limité par le contexte et le nombre de pièces.
   const accessoires = roles.filter((r) => r.role === "accessoire").sort((a, b) => rangAccessoire(a.piece.cat) - rangAccessoire(b.piece.cat));
