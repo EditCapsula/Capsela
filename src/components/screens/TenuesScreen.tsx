@@ -18,6 +18,7 @@ import { ecrireRetourDuCompte, envoyerRetoursAuCompte, lireRetoursDuCompte } fro
 import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
+import { autresManteaux, separerCoucheExterieure } from "@/lib/coucheExterieure";
 import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, outfitMoodPhrase, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
 
@@ -25,6 +26,8 @@ import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attri
 const majuscule = (texte: string) => texte.charAt(0).toUpperCase() + texte.slice(1);
 import { manquesActuels, piecesStructurellesManquantes, statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
 import BottomSheet from "@/components/BottomSheet";
+import PhotoPiece from "@/components/PhotoPiece";
+import { Toggle } from "@/components/screens/PreferencesScreen";
 import { piecesDAutresStyles, styleAffiche } from "@/lib/suggestionsAutresStyles";
 import { clePieces } from "@/lib/outfitFeedback";
 import { titreDuPlan } from "@/lib/heroPlan";
@@ -178,7 +181,7 @@ export default function TenuesScreen() {
   // Sous 380 px de large, « Autre tenue » ne garde que son icône (libellé lu par les lecteurs d'écran) : la ligne de provenance tient
   // alors sur une ligne avec les deux pastilles (30/10/2026). L'app n'est rendue que côté client (AppLoader, ssr: false).
   const etroit = typeof window !== "undefined" && window.innerWidth < 380;
-  const { state, weather, meteoDuJour, jourConsulte, geoLoading, wardrobePool, vestiairePool, actions } = useCapsela();
+  const { state, weather, meteoDuJour, jourConsulte, geoLoading, wardrobePool, vestiairePool, actions, sourceMeteo } = useCapsela();
   // En attente tant que la météo du jour consulté n'est pas connue : position,
   // ou prévision d'un jour à venir (navigation par date, 27/09/2026).
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
@@ -328,7 +331,27 @@ export default function TenuesScreen() {
   // Mes looks, mais à la différence de "Créer un look" (dressing réel
   // uniquement), garde la tenue du jour telle quelle : pièces possédées et
   // suggestions capsule peuvent s'y mélanger.
-  const outfitIds = outfitPieces.map((it) => it.id);
+  /*
+   * LA TENUE ET SA COUCHE EXTÉRIEURE (04/11/2026, coucheExterieure.ts) : le manteau ajouté par le froid se montre à part, dans
+   * « Pour l'extérieur » ; le flat lay, le nombre de pièces, la provenance, « Porter » et « Enregistrer » ne portent que sur le look.
+   * La température n'est prise que si elle est RÉELLE : aujourd'hui, hors valeurs par défaut ; un autre jour, sa prévision. Sans
+   * elle, rien n'est séparé (le manteau reste dans le look, comme avant) : aucune recommandation « selon la météo » sans météo.
+   */
+  const temperatureReelle = decalage === 0 ? (sourceMeteo !== "defaut" ? weather.temp : null) : (jourConsulte.meteoPrevue?.temp ?? null);
+  const { principal: piecesDuLook, exterieur } = separerCoucheExterieure(outfitPieces, temperatureReelle);
+  const [exterieurOuvert, setExterieurOuvert] = useState(false);
+  // « Je le porte aussi » : le manteau n'est compté comme porté que si on le choisit. Revient à non à chaque nouveau manteau.
+  const [porterPour, setPorterPour] = useState<number | null>(null);
+  const porterExterieur = exterieur != null && porterPour === exterieur.id;
+  const sauf = exterieur && !porterExterieur ? [exterieur.id] : undefined;
+  const autresExterieurs = exterieur
+    ? autresManteaux(
+        candidatsDeRemplacement(outfitPieces, displayPool, exterieur.id, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour),
+        outfitPieces,
+        exterieur
+      )
+    : [];
+  const outfitIds = piecesDuLook.map((it) => it.id);
   // Les retours sur les accords de saison : l'appareil d'abord (il répond tout de suite), puis le compte
   // (table accord_retours, 0047) pour les retrouver d'un appareil à l'autre. Les accords écartés sont lus
   // à l'entrée de l'écran : « Pas pour moi » laisse la card en place jusqu'à la prochaine visite, elle ne
@@ -393,7 +416,7 @@ export default function TenuesScreen() {
   // plus aucun sens à afficher quand il n'y a rien à décrire : recomputed
   // à null explicitement, et le bloc entier est masqué au rendu (cf. plus
   // bas, section "état vide" du brief design).
-  const suggestedCount = outfitPieces.filter((it) => isCatalogId(it.id)).length;
+  const suggestedCount = piecesDuLook.filter((it) => isCatalogId(it.id)).length;
   /*
    * Le badge de mode (« Tes pièces + suggestions », « 100% ton dressing »,
    * « Capsule <saison> ») est retiré le 22/09/2026 — remplacé, pas oublié.
@@ -417,7 +440,7 @@ export default function TenuesScreen() {
    * Aucune tenue affichée = aucune provenance, jamais un « 0 pièce ».
    */
   const provenance = (() => {
-    const total = outfitPieces.length;
+    const total = piecesDuLook.length;
     if (!total) return null;
     const capsule = suggestedCount;
     const dressing = total - capsule;
@@ -641,7 +664,7 @@ export default function TenuesScreen() {
     (p) => p.suggestedId != null && displayPool.some((i) => i.id === p.suggestedId)
   ).length;
   const statut = statutTenue({
-    nbPieces: outfitPieces.length,
+    nbPieces: piecesDuLook.length,
     piecesManquantes: piecesStructurellesManquantes(categoriesAbsentes),
     complete: !missingText && !vesteWithoutBase && isCompleteOutfit(outfitPieces),
     ajoutsConseilles,
@@ -905,10 +928,38 @@ export default function TenuesScreen() {
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
             <div className="absolute inset-y-0 left-2 right-2">
-              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} fantomes={fantomesHero} onFantome={(cat) => (cat === "chaussures" ? completerChaussures() : actions.openAddForCategory(cat))} onPiece={ouvrirPiece} ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
+              <FlatLayCapsela items={piecesDuLook} context="look-detail" layoutSeed={clePieces(piecesDuLook.map((p) => p.id)).join(",")} fantomes={fantomesHero} onFantome={(cat) => (cat === "chaussures" ? completerChaussures() : actions.openAddForCategory(cat))} onPiece={ouvrirPiece} ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
             </div>
           </div>
           <div className="flex-shrink-0">
+            {/* POUR L'EXTÉRIEUR (04/11/2026, brief « Séparer la tenue principale du manteau ») : sous le flat lay, entre deux filets,
+                une ligne secondaire — jamais une seconde grande carte. Seulement quand le moteur a ajouté un manteau par le froid. */}
+            {exterieur && temperatureReelle != null && (
+              <button
+                type="button"
+                onClick={() => setExterieurOuvert(true)}
+                className="w-full flex items-center gap-[12px] text-left border-y border-border py-[10px] mb-[6px] cursor-pointer"
+              >
+                <span className="w-[64px] flex-shrink-0">
+                  <PhotoPiece piece={exterieur} ratio={1} rayon={12} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="font-serif italic text-[16px] text-ink leading-[1.2]">Pour l&apos;extérieur</span>
+                    <span className="inline-flex items-center gap-[4px] flex-shrink-0 rounded-full px-[8px] py-[3px] text-[11px] text-ink" style={{ background: "var(--color-warm-bg)" }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                        <path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0Z" />
+                      </svg>
+                      {Math.round(temperatureReelle)}°
+                    </span>
+                  </span>
+                  <span className="block text-[12px] text-muted-3 leading-[1.4] mt-[2px]" style={{ textWrap: "pretty" }}>
+                    {exterieur.name}, à ajouter selon la météo ({Math.round(temperatureReelle)}° {decalage === 0 ? "aujourd'hui" : "prévus"}).
+                  </span>
+                </span>
+                <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
+              </button>
+            )}
             {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.
                 La maquette les pose en surimpression en bas à gauche du
                 flat-lay. Essayé, capturé : à 390 px, les ballerines
@@ -1019,7 +1070,7 @@ export default function TenuesScreen() {
           ) : (
             <Button
               variante="principal"
-              onClick={vesteWithoutBase ? undefined : actions.wearOutfitToday}
+              onClick={vesteWithoutBase ? undefined : () => actions.wearOutfitToday(sauf)}
               disabled={vesteWithoutBase}
               title={vesteWithoutBase ? "Ajoute un haut, une robe ou une combinaison sous ta veste." : undefined}
               // LE MÊME BOUTON (Button « claire ») que « Découvrir le look » sur l'accueil
@@ -1052,7 +1103,7 @@ export default function TenuesScreen() {
               déroutante après une régénération). */}
           <div className="flex-shrink-0 grid grid-cols-2 gap-[9px] mt-[8px]">
             <BoutonDiscret style={{ minHeight: 48 }}
-              onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook()}
+              onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook(exterieur ? [exterieur.id] : undefined)}
               disabled={!canSaveOutfit}
               title={canSaveOutfit ? undefined : "Ajoute au moins 2 pièces à cette tenue pour l'enregistrer."}
               aria-pressed={isOutfitSaved}
@@ -1577,6 +1628,47 @@ export default function TenuesScreen() {
 
       {quota.feuille}
 
+      {/* LE MANTEAU À PART, EN DÉTAIL (04/11/2026) : la pièce, sa fiche, une autre proposition s'il y en a (candidatsDeRemplacement :
+          toutes les règles du moteur), et le choix de le compter comme porté — jamais imposé. */}
+      <BottomSheet title="Pour l'extérieur" open={exterieurOuvert && exterieur != null} onClose={() => setExterieurOuvert(false)}>
+        {exterieur && (
+          <div className="flex flex-col">
+            <div className="flex items-center gap-[14px]">
+              <span className="w-[96px] flex-shrink-0">
+                <PhotoPiece piece={exterieur} ratio={1} rayon={14} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-medium text-ink">{exterieur.name}</div>
+                <div className="text-[12px] text-muted mt-[2px]">{isCatalogId(exterieur.id) ? "De ta capsule" : "De ton dressing"}</div>
+                {temperatureReelle != null && (
+                  <div className="text-[12px] text-muted-3 mt-[6px] leading-[1.4]">
+                    À ajouter par-dessus ta tenue : {Math.round(temperatureReelle)}° {decalage === 0 ? "aujourd'hui" : "prévus"}.
+                  </div>
+                )}
+              </div>
+            </div>
+            {decalage === 0 && !state.outfitValidated && (
+              <div className="flex items-center justify-between gap-3 mt-4 py-[10px] border-t border-border">
+                <span className="text-[13px] text-ink">Je le porte aussi aujourd&apos;hui</span>
+                <Toggle on={porterExterieur} onClick={() => setPorterPour(porterExterieur ? null : exterieur.id)} label="Je le porte aussi aujourd'hui" />
+              </div>
+            )}
+            <Button variante="contour" className="mt-3" onClick={() => { setExterieurOuvert(false); ouvrirPiece(exterieur); }}>
+              Voir la pièce
+            </Button>
+            {autresExterieurs.length > 0 && (
+              <button
+                type="button"
+                onClick={() => actions.remplacerDansTenue(exterieur.id, autresExterieurs[0].id)}
+                className="w-full rounded-full text-[12px] text-terracotta-deep cursor-pointer mt-1"
+                style={{ minHeight: 44 }}
+              >
+                Voir une autre proposition
+              </button>
+            )}
+          </div>
+        )}
+      </BottomSheet>
       <BottomSheet title="Choisir des chaussures" open={choixChaussuresOuvert && chaussuresPossibles.length > 0} onClose={() => setChoixChaussuresOuvert(false)}>
         <div className="grid grid-cols-2 gap-x-[12px] gap-y-[16px]">
           {chaussuresPossibles.map((it) => (

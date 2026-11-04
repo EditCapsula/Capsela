@@ -557,7 +557,11 @@ export interface Actions {
   /** « Voir le look » d'une slide : ouvre Tenue sur CETTE tenue, son occasion présélectionnée ; la tenue du jour est rendue en quittant Tenue (AppState.consultation). `planId` : la slide est le plan appliqué. */
   consulterTenue: (ids: number[], occasion: OccasionKey, planId: string | null) => void;
   dismissOutfitSuggestion: (key: string) => void;
-  wearOutfitToday: () => void;
+  /**
+   * Valide la tenue du jour comme portée. `sauf` : des pièces de la tenue à NE PAS compter comme portées — le manteau montré à part
+   * dans « Pour l'extérieur » (04/11/2026, coucheExterieure.ts), facultatif tant qu'on ne choisit pas de le porter.
+   */
+  wearOutfitToday: (sauf?: number[]) => void;
   wearPieceToday: (id: number) => void;
   wearActiveToday: () => void;
   correctPiece: (id: number) => void;
@@ -617,7 +621,8 @@ export interface Actions {
    * règles l'interdisent (moins de 2 pièces, R-B9).
    */
   saveLook: () => Promise<"ok" | "erreur" | "refuse">;
-  toggleSaveOutfitLook: () => void;
+  /** Enregistre (ou retire) la tenue du jour dans Mes looks ; `sauf` comme pour wearOutfitToday : le manteau à part n'y entre pas. */
+  toggleSaveOutfitLook: (sauf?: number[]) => void;
   openLook: (id: string) => void;
   closeLookDetail: () => void;
   deleteActiveLook: () => void;
@@ -3031,11 +3036,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
-    wearOutfitToday: () => {
+    wearOutfitToday: (sauf) => {
       // Correctif 22/08/2026 (même bug que saveItem, cf. son commentaire) :
       // tout est lu depuis stateRef.current avant l'appel à setState, jamais
       // depuis une variable remplie par l'updater lui-même.
-      const s = stateRef.current;
+      // `sauf` n'est une liste que lorsqu'un écran la passe : appelée directement en `onClick`, l'action reçoit l'événement.
+      const exclus = new Set(Array.isArray(sauf) ? sauf : []);
+      const s0 = stateRef.current;
+      const s = exclus.size ? { ...s0, outfit: s0.outfit.filter((id) => !exclus.has(id)) } : s0;
       // Garde anti double-clic (recette 19/08/2026) : une fois déjà
       // validée, un second appel n'enregistre jamais une deuxième entrée.
       if (s.outfitValidated) return;
@@ -3058,7 +3066,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       };
       setState((st) => ({
         ...st,
-        items: st.items.map((it) => (st.outfit.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
+        items: st.items.map((it) => (s.outfit.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
         outfitValidated: true,
         lookCount: st.lookCount + 1,
         history: [entry, ...st.history],
@@ -3331,9 +3339,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // telle quelle qu'on enregistre, pas une sélection filtrée (décision
     // 23/08/2026). Toggle : un second clic sur une tenue déjà enregistrée
     // retire le look correspondant plutôt que d'en créer un doublon.
-    toggleSaveOutfitLook: () => {
+    toggleSaveOutfitLook: (sauf) => {
       const s = stateRef.current;
-      const ids = [...s.outfit];
+      const exclus = new Set(Array.isArray(sauf) ? sauf : []);
+      const ids = s.outfit.filter((id) => !exclus.has(id));
       if (ids.length < 2) return;
       const key = [...ids].sort((a, b) => a - b).join(",");
       const existing = s.savedLooks.find(
