@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { joursCouverts, previsionPour, type Prevision } from "../prevision";
+import { joursCouverts, momentPossible, previsionPour, type Prevision } from "../prevision";
 
 /**
  * Les créneaux sont construits en heure locale AU LIEU puis reconvertis en
@@ -118,5 +118,18 @@ describe("prévision — un autre fuseau que celui du téléphone", () => {
     const p = prevision([creneau("2026-09-29", 9, 24, "Ensoleillé", 32400)], 32400);
     expect(joursCouverts(p)).toEqual(["2026-09-29"]);
     expect(previsionPour(p, "2026-09-29", "Matin")?.temp).toBe(24);
+  });
+});
+
+describe("les moments qu'on peut encore planifier", () => {
+  const a = (h: number) => new Date(2026, 10, 4, h, 30);
+  it("aujourd'hui : seulement ce qui n'est pas passé", () => {
+    expect(["Matin", "Après-midi", "Soirée", "Toute la journée"].map((m) => momentPossible(m as never, 0, a(9)))).toEqual([true, true, true, true]);
+    expect(["Matin", "Après-midi", "Soirée", "Toute la journée"].map((m) => momentPossible(m as never, 0, a(15)))).toEqual([false, true, true, false]);
+    expect(["Matin", "Après-midi", "Soirée", "Toute la journée"].map((m) => momentPossible(m as never, 0, a(19)))).toEqual([false, false, true, false]);
+  });
+  it("un autre jour : tous ; un jour passé : aucun", () => {
+    expect(momentPossible("Matin", 1, a(23))).toBe(true);
+    expect(momentPossible("Soirée", -1, a(9))).toBe(false);
   });
 });

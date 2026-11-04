@@ -31,7 +31,7 @@ import { clePieces, jourLocal } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import { useCalculAdaptation } from "@/components/PlansDuJour";
-import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
+import { HORIZON_PREVISION_JOURS, joursCouverts, momentPossible, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
 import { CHALEUR_HORS_SAISON, computeDefaultCapsule, saisonCalendairePour, saisonCapsuleDuJour, weatherForDay } from "@/lib/capsule";
 import EtapeLieu, { type MeteoEtapeLieu } from "@/components/EtapeLieu";
 import { meteoPourLaDate } from "@/lib/meteoPlan";
@@ -620,7 +620,7 @@ export default function PlanifierScreen() {
     return p?.occasion === "date" && DATE_CONTEXTS.some(([c]) => c === p.sousChoix) ? (p.sousChoix as DateContext) : DATE_CONTEXTS[0][0];
   });
   // « Planifier pour demain » depuis un avis : la date est déjà connue.
-  // Depuis Tenue, le jour consulté (planJour, toujours ≥ 1 : Planifier ne propose pas aujourd'hui).
+  // Depuis Tenue, le jour consulté (planJour, ≥ 1 : depuis Tenue et le Calendrier, aujourd'hui reste la tenue du jour ; Planifier le propose lui-même depuis le 04/11/2026).
   const [jour, setJour] = useState<number | null>(() => {
     if (instant) return instant.jour;
     const p = state.planAAdapter?.plan;
@@ -628,7 +628,7 @@ export default function PlanifierScreen() {
       const midi = new Date();
       midi.setHours(12, 0, 0, 0);
       const ecart = Math.round((new Date(`${p.jour}T12:00:00`).getTime() - midi.getTime()) / 86400000);
-      return ecart >= 1 && ecart <= JOURS_PROPOSES ? ecart : null;
+      return ecart >= 0 && ecart <= JOURS_PROPOSES ? ecart : null;
     }
     return state.planComposition?.demain ? 1 : state.planJour;
   });
@@ -1306,7 +1306,7 @@ export default function PlanifierScreen() {
     aujourdhui.setHours(12, 0, 0, 0);
     const ecart = Math.round((new Date(`${t.jour}T12:00:00`).getTime() - aujourdhui.getTime()) / 86400000);
     // Déplacer ou dupliquer : c'est justement la date qui va changer, on la laisse à choisir.
-    setJour(mode === "modifier" && ecart >= 1 && ecart <= JOURS_PROPOSES ? ecart : null);
+    setJour(mode === "modifier" && ecart >= 0 && ecart <= JOURS_PROPOSES ? ecart : null);
     setMoment(mode === "modifier" ? t.moment : null);
     setLieu(t.lieu);
     setVille(null);
@@ -1331,7 +1331,7 @@ export default function PlanifierScreen() {
    * la préférence n'aurait rien à départager).
    */
   const derniere = composition ? 2 : 3;
-  const etapeValide = etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment : true;
+  const etapeValide = etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment && momentPossible(moment, jour) : true;
 
   // Écran de composition : la prévision doit être revenue ET un temps minimal écoulé, pour que la transition se lise.
   useEffect(() => {
@@ -1831,17 +1831,21 @@ export default function PlanifierScreen() {
             {etape === 2 && (
               <>
                 {/* LE CALENDRIER MENSUEL (maquette Planifier V3, 07/10/2026), à la place de la bande de 21 jours : on peut
-                    préparer une tenue pour dans trois mois, la saison et l'occasion suffisent. Aujourd'hui est cerclé mais pas
-                    proposé — la tenue du jour se prépare depuis l'accueil (règle du 27/09/2026, planJour ≥ 1). */}
+                    préparer une tenue pour dans trois mois, la saison et l'occasion suffisent. Aujourd'hui se planifie depuis le 04/11/2026
+                    (retour des testeurs : « la planification pour ce soir », qui revient sur la règle du 27/09/2026) — pour les seuls
+                    moments pas encore passés (momentPossible). */}
                 <CalendrierMois
                   mois={moisAffiche}
                   onMois={setMoisAffiche}
                   aujourdhui={dansNJours(0)}
-                  premier={dansNJours(1)}
+                  premier={dansNJours(0)}
                   choisi={dateChoisie}
                   onChoisir={(d) => {
                     const t0 = dansNJours(0);
-                    setJour(Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()).getTime()) / 86_400_000));
+                    const e = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()).getTime()) / 86_400_000);
+                    setJour(e);
+                    // Aujourd'hui, un moment déjà passé ne reste pas choisi.
+                    if (moment && !momentPossible(moment, e)) setMoment(null);
                   }}
                 />
                 {/* LE LIEU, facultatif, et la météo qu'il donne pour la date choisie (EtapeLieu) : sur la même page que la date depuis le
@@ -1869,7 +1873,7 @@ export default function PlanifierScreen() {
                   <Surtitre>À quel moment ?</Surtitre>
                 </div>
                 <div className="grid grid-cols-2 gap-[10px] mt-3">
-                  {MOMENTS.map(([m, d]) => (
+                  {MOMENTS.filter(([m]) => momentPossible(m, jour ?? 1)).map(([m, d]) => (
                     <TuileIcone key={m} icone={ICONE_MOMENT[m] ?? "journee"} label={m} sousTitre={d} actif={moment === m} onClick={() => setMoment(m)} hauteur={84} />
                   ))}
                 </div>
@@ -2314,13 +2318,13 @@ export default function PlanifierScreen() {
             onEtat={setEtatAgenda}
             peutPlanifierLe={(j) => {
               const e = ecartDuJour(j);
-              return e >= 1 && e <= JOURS_PROPOSES;
+              return e >= 0 && e <= JOURS_PROPOSES;
             }}
             onPlanifierLe={(j) => {
               // Le parcours existant, la date déjà choisie (comme « Planifier une tenue pour mardi » depuis Tenue).
               recommencer();
               const e = ecartDuJour(j);
-              if (e >= 1 && e <= JOURS_PROPOSES) setJour(e);
+              if (e >= 0 && e <= JOURS_PROPOSES) setJour(e);
             }}
             onglet={onglet}
             onglets={ongletsPlans}

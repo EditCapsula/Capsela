@@ -35,6 +35,18 @@ export interface Prevision {
 export type MomentJournee = "Matin" | "Après-midi" | "Soirée" | "Toute la journée";
 
 /**
+ * LES MOMENTS QU'ON PEUT ENCORE PLANIFIER (04/11/2026, retour des testeurs : « la planification pour ce soir »). Aujourd'hui se planifie
+ * désormais, mais seulement pour ce qui n'est pas passé : le matin jusqu'à midi, l'après-midi jusqu'à 18 h, la soirée jusqu'à minuit ;
+ * « Toute la journée » jusqu'à midi (au-delà, la journée est déjà à moitié faite). Un autre jour : tous les moments.
+ */
+export function momentPossible(m: MomentJournee, ecartJours: number, maintenant: Date = new Date()): boolean {
+  if (ecartJours > 0) return true;
+  if (ecartJours < 0) return false;
+  const h = maintenant.getHours();
+  return m === "Soirée" ? true : m === "Après-midi" ? h < 18 : h < 12;
+}
+
+/**
  * Fenêtres horaires, en heures locales AU LIEU. « Toute la journée » couvre
  * les trois autres d'un bloc plutôt que d'être leur moyenne : un créneau ne
  * doit peser qu'une fois.

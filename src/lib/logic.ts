@@ -410,6 +410,8 @@ export interface LeviersMesure {
   sansSportEnVoyage?: boolean;
   /** Reproduit le comportement d'AVANT le 01/11/2026 : en Télétravail, veste et manteau admis, pas de gilet posé (R-B12 étendue, R-S27). */
   vesteEnTeletravail?: boolean;
+  /** Reproduit le comportement d'AVANT le 04/11/2026 : en Rendez-vous · Activité, les pièces décontractées ne sont pas préférées (R-S28). */
+  sansDecontracteEnActivite?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
@@ -1315,6 +1317,14 @@ export function generateOutfit(
       const matiere = base.filter((i) => matiereDeVoyage(i, weather.season));
       if (matiere.length) base = matiere;
     }
+    // R-S28 (04/11/2026, demandé : « pour une activité lors d'un date il faut privilégier une tenue décontractée ») — en Rendez-vous
+    // amoureux · Activité, les pièces décontractées (formalité ≤ 1) d'abord, si la catégorie en a. La formalité 1 du contexte n'était
+    // qu'un MINIMUM : une robe moulante et des escarpins passaient. Molle, comme R-S19 : jamais une catégorie vidée, le dressing reste
+    // prioritaire sur la capsule. ARBITRAGE ÉDITORIAL instruit sur ce seul contexte (« Verre » et « Cinéma / balade » non concernés).
+    if (decontracteEnActivite) {
+      const decontractees = base.filter((i) => formalityOf(i) <= 1);
+      if (decontractees.length) base = decontractees;
+    }
     // Préférence pour la palette personnelle — n'écarte rien, juste une inclination
     // quand elle laisse assez d'options (R-S10, esprit "préférence molle, jamais exclusive").
     // Un article à FALLBACK_HEX (couleur jamais renseignée) échappe à ce
@@ -1348,6 +1358,8 @@ export function generateOutfit(
   // cohérent avec le palier effectivement utilisé par ce tirage.
   const minFormality = formalityOverride ?? (occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0);
   const dressy = minFormality >= 3;
+  /** R-S28 : en Rendez-vous · Activité, les pièces décontractées d'abord (cf. pick(), le haut et les chaussures). */
+  const decontracteEnActivite = occasion === "date" && dateContext === "Activité" && !leviers?.sansDecontracteEnActivite;
 
   const ids: number[] = [];
   let compensatingVeste: Item | null = null;
@@ -1419,7 +1431,16 @@ export function generateOutfit(
   const sansHautOuSansBas = !hasCat(["haut"]) || !hasCat(BOTTOMS);
   const piecesUniques = (sansHautOuSansBas || Math.random() < 0.4) && robeAutorisee ? poolFor(ONEPIECE_CATS, true) : [];
   const combinaisonEvitee = eviterCombinaison && hautBasSansRelachement && piecesUniques.every((i) => i.cat === "combinaison");
-  const useRobe = piecesUniques.length > 0 && !combinaisonEvitee;
+  // R-S28 : en Rendez-vous · Activité, une pièce unique habillée (formalité > 1) n'est pas le socle quand un haut ET un bas décontractés
+  // existent sans relâcher l'occasion — même principe que R-S21 : évitée, pas interdite (sans haut + bas décontractés, la robe reste).
+  const decontracte = (i: Item) => formalityOf(i) <= 1;
+  const robeHabilleeEvitee =
+    decontracteEnActivite &&
+    piecesUniques.length > 0 &&
+    !piecesUniques.some(decontracte) &&
+    hardBase.some((i) => i.cat === "haut" && decontracte(i)) &&
+    hardBase.some((i) => BOTTOMS.includes(i.cat) && decontracte(i));
+  const useRobe = piecesUniques.length > 0 && !combinaisonEvitee && !robeHabilleeEvitee;
   socleRobe = useRobe;
   if (useRobe) {
     // R-S17 (25/08/2026, signalé) — même principe que pour le haut ci-dessous :
@@ -1497,6 +1518,11 @@ export function generateOutfit(
       if (sansDenim.length) hautPool = sansDenim;
       const matiere = hautPool.filter((i) => matiereDeVoyage(i, weather.season));
       if (matiere.length) hautPool = matiere;
+    }
+    // R-S28 pour le haut, tiré hors de pick() : en Rendez-vous · Activité, un haut décontracté d'abord. Molle.
+    if (decontracteEnActivite && pinnedId == null) {
+      const decontractes = hautPool.filter((i) => formalityOf(i) <= 1);
+      if (decontractes.length) hautPool = decontractes;
     }
     // Même règle que dans pick() ci-dessus (exemption FALLBACK_HEX comprise).
     const h = rand(harmonize(candidatsCouleur(hautPool, preferredHexes, colo), chosen, true));
@@ -1759,6 +1785,11 @@ export function generateOutfit(
     if (occasion === "voyage" && !leviers?.sansConfortVoyage) {
       const baskets = shoePool.filter((i) => i.shoeType === "Baskets" || formalityOf(i) === 0);
       if (baskets.length) shoePool = baskets;
+    }
+    // R-S28 — en Rendez-vous · Activité, des chaussures décontractées d'abord (baskets, ballerines, mocassins…, jamais l'escarpin). Molle.
+    if (decontracteEnActivite) {
+      const decontractees = shoePool.filter((i) => formalityOf(i) <= 1);
+      if (decontractees.length) shoePool = decontractees;
     }
     const picked = rand(harmonize(shoePool, chosen, true));
     if (picked) chosen.push(picked);
@@ -2166,6 +2197,11 @@ export function candidatsDeRemplacement(
       const matiere = candidates.filter((i) => matiereDeVoyage(i, weather.season));
       if (matiere.length) candidates = matiere;
     }
+  }
+  // R-S28 — symétrique du tirage : en Rendez-vous · Activité, les pièces décontractées d'abord. Molle.
+  if (occasion === "date" && dateContext === "Activité") {
+    const decontractees = candidates.filter((i) => formalityOf(i) <= 1);
+    if (decontractees.length) candidates = decontractees;
   }
   // R-S17 — symétrique du filtre appliqué dans generateOutfit : pas de
   // chemise/chemisier (haut) ni de robe chemise en soirée habillée, molle

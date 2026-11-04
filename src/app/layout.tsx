@@ -26,6 +26,21 @@ const manrope = localFont({
 });
 
 /**
+ * LES CHIFFRES EN MANROPE, MÊME DANS LES TITRES (04/11/2026, retour des testeurs : « la typo est mauvaise en terme de lisibilité, des
+ * chiffres ou mêmes au niveau des titres »). Les chiffres d'une didone, filiformes et à boules, se lisent mal à l'écran : la même
+ * Manrope, réduite par `unicode-range` aux chiffres, au degré et au pourcentage, passe AVANT Bodoni dans la pile de la serif
+ * (--font-serif, globals.css). Tout chiffre écrit en serif — date, température, compteur — s'affiche donc en Manrope, partout, sans
+ * toucher aux écrans ; les lettres restent en Bodoni. Même fichier que Manrope : rien de plus à télécharger.
+ */
+const chiffres = localFont({
+  variable: "--font-chiffres",
+  src: [{ path: "./fonts/Manrope.woff2", weight: "200 800", style: "normal" }],
+  declarations: [{ prop: "unicode-range", value: "U+0030-0039, U+00B0, U+0025" }],
+  adjustFontFallback: false,
+  preload: false,
+});
+
+/**
  * Écriture manuscrite — demandée le 23/09/2026 pour la phrase d'ambiance de
  * la card Tenue. Caveat plutôt qu'une anglaise calligraphique : à 16 px sur
  * fond terracotta, une plume fine perd ses jambages, et cette phrase doit
@@ -61,7 +76,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${bodoni.variable} ${manrope.variable} ${caveat.variable}`}>
+    <html lang="fr" className={`${bodoni.variable} ${chiffres.variable} ${manrope.variable} ${caveat.variable}`}>
       <body>{children}</body>
     </html>
   );
