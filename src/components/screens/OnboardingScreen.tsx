@@ -21,8 +21,8 @@ import Card from "@/components/Card";
  * sont du HTML aux jetons de l'app (les images fournies portaient les leurs, coupés à droite sur la valise, non traduisibles,
  * hors du design system). Limite : ces sources font 368 px de large — nettes à 1×, un peu douces sur un écran très dense.
  * Les chiffres montrés (36 pièces, 22°, Rhodes, 24 pièces) sont des EXEMPLES, dits
- * comme tels dans l'écran. Le genre n'est pas connu à ce stade (il se demande après le compte) : les visuels sont ceux du
- * profil femme, comme avant — purement illustratifs.
+ * comme tels dans l'écran. Le genre n'est pas connu à ce stade (il se demande après le compte) : les visuels sont purement
+ * illustratifs — profil femme, sauf l'écran « Ton style », qui mêle les deux univers (04/11/2026).
  *
  * LA HAUTEUR : la zone de contenu défile au-dessus d'un pied fixe (le bouton n'est jamais poussé ni recouvert), mais les
  * visuels se règlent sur la hauteur d'écran (`--h-visuel`) pour que, sur un téléphone courant, rien ne défile. Sur un très
@@ -32,16 +32,30 @@ import Card from "@/components/Card";
  * si le téléphone demande moins d'animations. Pas de balayage : l'onboarding d'avant n'en avait pas.
  */
 
-const STYLES_ONBOARDING: StyleId[] = ["minimaliste", "casual_chic", "boheme", "classique_chic", "streetwear", "glamour"];
+/*
+ * LES SIX UNIVERS DE L'ÉCRAN « TON STYLE » (04/11/2026, brief « Évolution de l'écran de présentation Ton style ») : trois visuels
+ * femme et trois visuels homme, pour montrer d'emblée que Capsela habille les deux. Écran de PRÉSENTATION : aucun choix, aucune
+ * donnée lue ni écrite. « Créatif » remplace « Bohème ». Les visuels sont ceux de l'étape Style du profil, chacun dans son univers.
+ */
+const STYLES_ONBOARDING: { id: StyleId; univers: "femme" | "homme" }[] = [
+  { id: "minimaliste", univers: "femme" },
+  { id: "casual_chic", univers: "homme" },
+  { id: "creatif", univers: "femme" },
+  { id: "classique_chic", univers: "homme" },
+  { id: "streetwear", univers: "homme" },
+  { id: "glamour", univers: "femme" },
+];
 
 /**
  * Le visuel d'un style : le même que l'étape Style du profil, jamais un second jeu d'images — les visuels de l'étape Style
  * (VISUELS_ETAPE_STYLE_FEMME) depuis le 30/10/2026 (demandé : « mets à jour ces visuels avec les derniers visuels de styles »), comme les
  * cartes « Explore un autre univers ». Repli sur l'aplat si le fichier ne charge pas.
  */
-function TuileStyle({ id, decale }: { id: StyleId; decale?: boolean }) {
-  const cfg = STYLE_CONFIG.femme[id];
-  const visuel = VISUELS_ETAPE_STYLE_FEMME[id] ?? cfg.asset;
+function TuileStyle({ id, univers, decale }: { id: StyleId; univers: "femme" | "homme"; decale?: boolean }) {
+  const cfg = STYLE_CONFIG[univers][id];
+  // Côté femme, le visuel de l'étape Style (VISUELS_ETAPE_STYLE_FEMME) ; côté homme, celui de STYLE_CONFIG.homme, le même que l'étape
+  // Style d'un profil homme (public/images/styles/homme/).
+  const visuel = univers === "femme" ? VISUELS_ETAPE_STYLE_FEMME[id] ?? cfg.asset : cfg.asset;
   const [echec, setEchec] = useState(false);
   return (
     <div className={"relative rounded-bloc overflow-hidden bg-border aspect-[4/5] " + (decale ? "translate-y-[12px]" : "")}>
@@ -70,9 +84,13 @@ function Photo({ src, className = "", position = "center" }: { src: string; clas
 
 function VisuelStyle() {
   return (
-    <div role="img" aria-label="Six univers de style : Minimaliste, Casual chic, Bohème, Classique chic, Streetwear et Glamour" className="grid grid-cols-3 gap-[8px] pb-[12px]">
-      {STYLES_ONBOARDING.map((id, i) => (
-        <TuileStyle key={id} id={id} decale={i % 3 === 1} />
+    <div
+      role="img"
+      aria-label="Six univers de style, femme et homme : Minimaliste, Casual chic, Créatif, Classique chic, Streetwear et Glamour"
+      className="grid grid-cols-3 gap-[8px] [@media(max-width:340px)]:gap-[6px] pb-[12px]"
+    >
+      {STYLES_ONBOARDING.map(({ id, univers }, i) => (
+        <TuileStyle key={id} id={id} univers={univers} decale={i % 3 === 1} />
       ))}
     </div>
   );

@@ -502,7 +502,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     kicker: "Ton style",
     title: ["Un dressing", "qui te ressemble."],
-    body: "Indique ce que tu aimes. Capsela s’en sert pour imaginer des pièces, des associations et des tenues qui correspondent vraiment à ton style.",
+    body: "Découvre des styles, des pièces et des associations qui correspondent à ta personnalité. Capsela imagine des tenues adaptées à tes envies.",
   },
   {
     kicker: "Ton dressing",
