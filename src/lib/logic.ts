@@ -298,6 +298,9 @@ function isClosedKnit(it: Item): boolean {
  * avant eux. Aucun appelant de production ne les passe, et un test verrouille
  * que leur absence reproduit le comportement livré.
  */
+/** R-S28 (04/11/2026) : les rendez-vous où la tenue est décontractée d'abord — une activité, un cinéma ou une balade. */
+export const DATES_DECONTRACTEES: readonly DateContext[] = ["Activité", "Cinéma / balade"];
+
 export interface LeviersMesure {
   /**
    * P1 — le tirage du haut principal s'ouvre aux pulls au lieu de la seule
@@ -410,7 +413,7 @@ export interface LeviersMesure {
   sansSportEnVoyage?: boolean;
   /** Reproduit le comportement d'AVANT le 01/11/2026 : en Télétravail, veste et manteau admis, pas de gilet posé (R-B12 étendue, R-S27). */
   vesteEnTeletravail?: boolean;
-  /** Reproduit le comportement d'AVANT le 04/11/2026 : en Rendez-vous · Activité, les pièces décontractées ne sont pas préférées (R-S28). */
+  /** Reproduit le comportement d'AVANT le 04/11/2026 : en Rendez-vous · Activité ou Cinéma / balade, les pièces décontractées ne sont pas préférées (R-S28). */
   sansDecontracteEnActivite?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
@@ -1320,7 +1323,8 @@ export function generateOutfit(
     // R-S28 (04/11/2026, demandé : « pour une activité lors d'un date il faut privilégier une tenue décontractée ») — en Rendez-vous
     // amoureux · Activité, les pièces décontractées (formalité ≤ 1) d'abord, si la catégorie en a. La formalité 1 du contexte n'était
     // qu'un MINIMUM : une robe moulante et des escarpins passaient. Molle, comme R-S19 : jamais une catégorie vidée, le dressing reste
-    // prioritaire sur la capsule. ARBITRAGE ÉDITORIAL instruit sur ce seul contexte (« Verre » et « Cinéma / balade » non concernés).
+    // prioritaire sur la capsule. ARBITRAGE ÉDITORIAL instruit sur ces contextes : Activité, puis Cinéma / balade le même jour (demandé :
+    // « pour Cinéma et balade la tenue doit être décontractée également ») ; « Verre » non concerné.
     if (decontracteEnActivite) {
       const decontractees = base.filter((i) => formalityOf(i) <= 1);
       if (decontractees.length) base = decontractees;
@@ -1358,8 +1362,8 @@ export function generateOutfit(
   // cohérent avec le palier effectivement utilisé par ce tirage.
   const minFormality = formalityOverride ?? (occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0);
   const dressy = minFormality >= 3;
-  /** R-S28 : en Rendez-vous · Activité, les pièces décontractées d'abord (cf. pick(), le haut et les chaussures). */
-  const decontracteEnActivite = occasion === "date" && dateContext === "Activité" && !leviers?.sansDecontracteEnActivite;
+  /** R-S28 : en Rendez-vous · Activité ou Cinéma / balade, les pièces décontractées d'abord (cf. pick(), le haut et les chaussures). */
+  const decontracteEnActivite = occasion === "date" && DATES_DECONTRACTEES.includes(dateContext) && !leviers?.sansDecontracteEnActivite;
 
   const ids: number[] = [];
   let compensatingVeste: Item | null = null;
@@ -2199,7 +2203,7 @@ export function candidatsDeRemplacement(
     }
   }
   // R-S28 — symétrique du tirage : en Rendez-vous · Activité, les pièces décontractées d'abord. Molle.
-  if (occasion === "date" && dateContext === "Activité") {
+  if (occasion === "date" && DATES_DECONTRACTEES.includes(dateContext)) {
     const decontractees = candidates.filter((i) => formalityOf(i) <= 1);
     if (decontractees.length) candidates = decontractees;
   }

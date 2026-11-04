@@ -28,7 +28,9 @@ export function etatAjout(e: EntreeEtatAjout): EtatAjout {
   if (!e.creation || e.saisieManuelle) return "pret";
   if (e.photo) {
     if (e.envoi || e.analyse || e.redirection) return "chargement";
-    return !e.analyseDisponible || e.analysee ? "pret" : "echec";
+    // Une fiche déjà remplie (« J'ai déjà ça » sur une suggestion : sa photo et ses informations, 04/11/2026, signalé : « Capsela n'a pas
+    // pu lire cette photo » alors que tout était là) n'a rien à attendre d'une analyse : le formulaire, jamais le message d'échec.
+    return !e.analyseDisponible || e.analysee || e.nomRempli ? "pret" : "echec";
   }
   return e.nomRempli ? "pret" : "initial";
 }
