@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import PourLExterieur from "@/components/PourLExterieur";
+import { RailPiecesTenue } from "@/components/HeroTenue";
 import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
 
@@ -1361,103 +1362,15 @@ export default function TenuesScreen() {
           Il n'avait aucune marge haute — invisible tant que la card se
           terminait par un bouton crème détaché de son bord, criant depuis
           qu'elle descend jusqu'au sien. */}
-      {!meteoEnAttente && outfitPieces.length > 0 && (
-        <div className="t-surtitre text-muted mt-[26px] mb-[10px]">
-          Les pièces de ta tenue · {outfitPieces.length}
-        </div>
-      )}
-
-      {/* RAIL DES PIÈCES — la liste verticale de cartes de 81 px de haut
-          poussait les bannières et l'alternative très bas : quatre pièces
-          occupaient à elles seules un écran entier. Le rail les met sur une
-          ligne, à hauteur constante quel que soit leur nombre.
-
-          Rien ne disparaît : le tap ouvre la même fiche qu'avant (la fiche
-          détail pour une pièce du dressing, « comment porter » pour une
-          suggestion), le bouton ⇄ échange toujours la pièce, et le contour
-          terracotta d'une pièce fraîchement ajoutée (R-S13/R-S14) est
-          conservé. Pas de lien « Voir les détails » : il n'existe pas d'écran
-          de détail de LA tenue, chaque pièce ouvre le sien, et inventer une
-          destination serait pire que de s'en passer. */}
-      <div className="scrollarea flex gap-[10px] overflow-x-auto pb-[4px]" style={{ scrollSnapType: "x mandatory" }}>
-        {meteoEnAttente
-          ? [0, 1, 2].map((i) => (
-              <div key={i} className="flex-none w-[112px]">
-                <div className="w-[112px] h-[112px] rounded-bloc animate-pulse" style={{ background: "var(--color-chip-soft-bg)" }} />
-                <div className="h-[10px] w-3/4 rounded-full animate-pulse mt-[8px]" style={{ background: "var(--color-chip-soft-bg)" }} />
-                <div className="h-[10px] w-1/2 rounded-full animate-pulse mt-[5px]" style={{ background: "var(--color-chip-soft-bg)" }} />
-              </div>
-            ))
-          : outfitPieces.map((it) => {
-              const suggested = isCatalogId(it.id);
-              const resolvedImage = resolveItemImage(it);
-              return (
-                <div key={it.id} className="flex-none w-[112px]" style={{ scrollSnapAlign: "start" }}>
-                  <div className="relative">
-                    <button
-                      onClick={() => actions.openItem(it.id, suggested)}
-                      aria-label={`${it.name} — ${CATLABEL[isBag(it) ? "sac" : it.cat]}. Voir le détail`}
-                      className="block w-[112px] h-[112px] rounded-bloc overflow-hidden cursor-pointer transition-shadow duration-[1200ms] ease-out"
-                      style={{
-                        background: resolvedImage.url ? "var(--color-photo-bg)" : it.hex,
-                        boxShadow: recentlyAddedId === it.id ? "0 0 0 1.5px var(--color-terracotta)" : "0 0 0 1.5px rgba(166,105,80,0)",
-                      }}
-                    >
-                      {resolvedImage.url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={resolvedImage.url}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: resolvedImage.kind === "photo" ? "cover" : "contain",
-                            objectPosition: "center",
-                            padding: resolvedImage.kind === "photo" ? 0 : 9,
-                            boxSizing: "border-box",
-                            // Même réglage d'éclairage que la composition ci-dessus.
-                            filter: resolvedImage.kind === "photo" ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
-                          }}
-                        />
-                      ) : (
-                        <span
-                          className="absolute left-[7px] bottom-[6px] text-[9px] tracking-[.05em]"
-                          style={{ color: "rgba(243,238,229,.9)", textShadow: "0 1px 2px rgba(0,0,0,.35)" }}
-                        >
-                          {CATLABEL[it.cat].toUpperCase()}
-                        </span>
-                      )}
-                      {it.imageStatus === "generating" && (
-                        <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
-                      )}
-                    </button>
-                    {/* ⇄ posé sur la vignette, 34 px : la cible reste
-                        confortable alors que la ligne entière a disparu. */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        actions.swapPiece(it.id, it.cat);
-                      }}
-                      aria-label={`Remplacer ${it.name}`}
-                      className="absolute top-[5px] right-[5px] w-[26px] h-[26px] rounded-full flex items-center justify-center text-[13px] cursor-pointer"
-                      style={{ background: "rgba(251,248,243,.92)", color: "var(--color-muted)", boxShadow: "0 1px 4px rgba(29,26,22,.14)" }}
-                    >
-                      ⇄
-                    </button>
-                  </div>
-                  <div className="text-[11px] text-ink leading-[1.25] mt-[8px]">{it.name}</div>
-                  <div className="text-[10px] text-muted mt-[2px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
-                  {/* Provenance à la pièce — la même séparation que les badges
-                      du héros, jamais un second calcul. */}
-                  <div className="text-[10px] mt-[1px]" style={{ color: suggested ? "var(--color-sand-text)" : "var(--color-muted)" }}>
-                    {suggested ? "Capsule" : "Ton dressing"}
-                  </div>
-                </div>
-              );
-            })}
-      </div>
+      {/* LES PIÈCES DE LA TENUE : le composant partagé avec Planifier (RailPiecesTenue, 04/11/2026), ici avec l'échange ⇄ et le contour
+          d'une pièce tout juste ajoutée (R-S13/R-S14). Rien ne disparaît : même rail, mêmes fiches, mêmes gestes qu'avant. Pas de lien
+          « Voir les détails » : il n'existe pas d'écran de détail de LA tenue, chaque pièce ouvre le sien. */}
+      <RailPiecesTenue
+        pieces={outfitPieces}
+        chargement={meteoEnAttente}
+        misEnAvant={recentlyAddedId}
+        onRemplacer={(it) => actions.swapPiece(it.id, it.cat)}
+      />
 
       {!noCompleteOutfit && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
         <div className="mt-4 bg-warm-bg border border-warm-border rounded-bloc px-4 py-[13px]">

@@ -43,6 +43,11 @@ export interface TenuePlanifiee {
    * le Journal ne l'enregistre que le jour même. Lue et écrite À PART, comme `mood_style` : avant la migration, rien ne casse.
    */
   confirme?: boolean;
+  /**
+   * Les AUTRES occasions de ce moment (04/11/2026, tenue polyvalente, tenuePolyvalente.ts) : `occasion` reste l'occasion principale, celle
+   * pour laquelle le moteur a composé. Colonne `occasions_secondaires` (migration 0058), lue et écrite À PART : avant la migration, rien ne casse.
+   */
+  occasionsSecondaires?: OccasionKey[];
 }
 
 interface PlannedOutfitRow {
@@ -93,8 +98,13 @@ export async function fetchTenuesPlanifiees(userId: string): Promise<TenuePlanif
       return [];
     }
     const tenues = (data as PlannedOutfitRow[]).map(rowToTenue);
-    const [humeurs, confirmes] = await Promise.all([fetchHumeursPlans(userId), fetchConfirmationsPlans(userId)]);
-    return tenues.map((t) => ({ ...t, ...(humeurs[t.id] ? { humeur: humeurs[t.id] } : null), ...(confirmes.has(t.id) ? { confirme: true } : null) }));
+    const [humeurs, confirmes, secondaires] = await Promise.all([fetchHumeursPlans(userId), fetchConfirmationsPlans(userId), fetchOccasionsSecondaires(userId)]);
+    return tenues.map((t) => ({
+      ...t,
+      ...(humeurs[t.id] ? { humeur: humeurs[t.id] } : null),
+      ...(confirmes.has(t.id) ? { confirme: true } : null),
+      ...(secondaires[t.id]?.length ? { occasionsSecondaires: secondaires[t.id] } : null),
+    }));
   } catch (err) {
     console.error("[planifier] échec fetchTenuesPlanifiees", err);
     return [];
@@ -126,6 +136,38 @@ async function fetchConfirmationsPlans(userId: string): Promise<Set<string>> {
     return new Set((data as { id: number | string }[]).map((r) => String(r.id)));
   } catch {
     return new Set();
+  }
+}
+
+/** Les autres occasions de chaque tenue polyvalente. {} si la colonne n'existe pas encore (migration 0058) ou en cas d'échec. */
+async function fetchOccasionsSecondaires(userId: string): Promise<Record<string, OccasionKey[]>> {
+  try {
+    const { data, error } = await getSupabase().from("planned_outfits").select("id, occasions_secondaires").eq("user_id", userId).not("occasions_secondaires", "is", null);
+    if (error || !data) return {};
+    const out: Record<string, OccasionKey[]> = {};
+    for (const r of data as { id: number | string; occasions_secondaires: string[] | null }[]) {
+      const l = (r.occasions_secondaires ?? []).map((o) => normaliserOccasion(o)).filter((o): o is OccasionKey => !!o);
+      if (l.length) out[String(r.id)] = l;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** Écrit les autres occasions d'une tenue planifiée. false si la colonne n'existe pas encore (migration 0058) ou en cas d'échec. */
+export async function enregistrerOccasionsSecondaires(id: string, occasions: OccasionKey[]): Promise<boolean> {
+  if (!isSupabaseConfigured) return true;
+  try {
+    const { error } = await getSupabase()
+      .from("planned_outfits")
+      .update({ occasions_secondaires: occasions.length ? occasions : null })
+      .eq("id", id);
+    if (error) console.error("[planifier] échec enregistrerOccasionsSecondaires", error);
+    return !error;
+  } catch (err) {
+    console.error("[planifier] échec enregistrerOccasionsSecondaires", err);
+    return false;
   }
 }
 

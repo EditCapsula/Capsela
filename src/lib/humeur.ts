@@ -6,8 +6,8 @@ import { computeLookScore, generateOutfitWithFallback, type GeneratedOutfitWithF
 import type { DateContext, Item, OccasionKey, WorkMode } from "./types";
 
 /*
- * « UNE DERNIÈRE PRÉFÉRENCE ? » (07/10/2026, refonte du parcours Planifier). L'humeur d'un événement — élégante, féminine,
- * décontractée, audacieuse, confortable — n'est PAS un style du profil : elle ne se mémorise pas et ne change rien à
+ * « UNE DERNIÈRE PRÉFÉRENCE ? » (07/10/2026, refonte du parcours Planifier). L'humeur d'un événement — confort, plus habillé,
+ * glamour, décontracté, léger et ventilé (04/11/2026) — n'est PAS un style du profil : elle ne se mémorise pas et ne change rien à
  * ce que le moteur autorise. Elle ne fait que DÉPARTAGER, tout en bas de la hiérarchie, des tenues que le moteur
  * a déjà jugées compatibles (météo, occasion, formalité, règles) et dont le score est proche — le même schéma que la
  * diversité (diversite.ts).
@@ -20,28 +20,37 @@ import type { DateContext, Item, OccasionKey, WorkMode } from "./types";
  * jamais passer devant sur la seule humeur.
  */
 
-export type Humeur = "elegant" | "feminin" | "decontracte" | "audacieux" | "confortable";
+export type Humeur = "elegant" | "feminin" | "decontracte" | "audacieux" | "confortable" | "leger";
 
+/**
+ * TOUTES les préférences connues, pour lire celles déjà enregistrées (planifier.ts) et les nommer. Le 04/11/2026 (brief « Évolution du
+ * parcours de planification ») : « Élégant » est devenu « Plus habillé », « Féminin » « Glamour », « Confortable » « Confort » — mêmes clés,
+ * mêmes règles, les plans déjà gardés restent lisibles ; « Léger et ventilé » est ajouté ; « Audacieux » n'est plus proposé (HUMEURS_PROPOSEES)
+ * mais garde son libellé pour les plans qui l'avaient.
+ */
 export const HUMEURS: { key: Humeur; label: string }[] = [
-  { key: "elegant", label: "Élégant(e)" },
-  { key: "feminin", label: "Féminin(e)" },
-  { key: "decontracte", label: "Décontracté(e)" },
+  { key: "confortable", label: "Confort" },
+  { key: "elegant", label: "Plus habillé" },
+  { key: "feminin", label: "Glamour" },
+  { key: "decontracte", label: "Décontracté" },
+  { key: "leger", label: "Léger et ventilé" },
   { key: "audacieux", label: "Audacieux(se)" },
-  { key: "confortable", label: "Confortable" },
 ];
+
+/** Les préférences proposées à l'étape « Préférences », dans cet ordre (brief du 04/11/2026). */
+const HUMEURS_PROPOSEES: readonly Humeur[] = ["confortable", "elegant", "feminin", "decontracte", "leger"];
 
 export const LIBELLE_HUMEUR: Record<Humeur, string> = Object.fromEntries(HUMEURS.map((h) => [h.key, h.label])) as Record<Humeur, string>;
 
 /**
- * LES CHOIX ET LEURS MOTS SELON LE GENRE DÉCLARÉ DU PROFIL (12/10/2026, signalé : « cette étape ne marche pas pour les hommes »). Le libellé
- * épicène « Élégant(e) » se lit mal et « Féminin(e) » n'a pas de sens pour un dressing d'homme : ses pièces repères (robe, jupe, soie,
- * talons) n'y existent pas, la préférence n'y départagerait jamais rien. Profil homme : trois accords au masculin et pas de « Féminin » ;
- * profil femme : accords au féminin ; genre non renseigné : formes épicènes d'origine. C'est le genre DÉCLARÉ qui choisit les mots — aucune
- * déduction sur la personne.
+ * LES CHOIX ET LEURS MOTS SELON LE GENRE DÉCLARÉ DU PROFIL (12/10/2026, signalé : « cette étape ne marche pas pour les hommes »). « Glamour »
+ * (ex-« Féminin », 04/11/2026, demandé : « ne l'affiche pas pour les hommes ») n'est jamais proposé à un profil homme : ses pièces repères (robe,
+ * jupe, soie, talons) n'y existent pas, la préférence n'y départagerait rien. Les autres libellés sont désormais invariables ; seul
+ * « Audacieux », qui n'est plus proposé, garde ses accords pour les plans anciens. C'est le genre DÉCLARÉ qui décide — aucune déduction.
  */
 const ACCORDS: Record<"homme" | "femme", Partial<Record<Humeur, string>>> = {
-  homme: { elegant: "Élégant", decontracte: "Décontracté", audacieux: "Audacieux" },
-  femme: { elegant: "Élégante", feminin: "Féminine", decontracte: "Décontractée", audacieux: "Audacieuse" },
+  homme: { audacieux: "Audacieux" },
+  femme: { audacieux: "Audacieuse" },
 };
 
 export function libelleHumeur(h: Humeur, gender: "femme" | "homme" | null | undefined): string {
@@ -49,7 +58,7 @@ export function libelleHumeur(h: Humeur, gender: "femme" | "homme" | null | unde
 }
 
 export function humeursProposees(gender: "femme" | "homme" | null | undefined): { key: Humeur; label: string }[] {
-  return HUMEURS.filter((h) => !(gender === "homme" && h.key === "feminin")).map((h) => ({ key: h.key, label: libelleHumeur(h.key, gender) }));
+  return HUMEURS_PROPOSEES.filter((k) => !(gender === "homme" && k === "feminin")).map((key) => ({ key, label: libelleHumeur(key, gender) }));
 }
 
 export const BONUS_HUMEUR_MAX = 6;
@@ -61,6 +70,9 @@ const CHAUSSURES_FEMININES = new Set(["Escarpins", "Sandales à talons", "Slingb
 const CHAUSSURES_CONFORT = new Set(["Baskets", "Ballerines", "Mocassins", "Espadrilles", "Mules", "Sandales"]);
 const MATIERES_FLUIDES = new Set(["Soie", "Viscose"]);
 const MATIERES_DOUCES = new Set(["Coton", "Lin", "Laine", "Cachemire"]);
+/** « Léger et ventilé » (04/11/2026, règle présentée et validée) : matières qui respirent, et chaussures ouvertes. */
+const MATIERES_LEGERES = new Set(["Lin", "Coton", "Viscose", "Soie"]);
+const CHAUSSURES_OUVERTES = new Set(["Sandales", "Espadrilles", "Mules"]);
 
 /** Saturation HSL d'une teinte hex, 0 à 1 — une pièce neutre (gris, noir, blanc, beige) vaut près de 0. */
 function saturation(hex: string): number {
@@ -89,6 +101,14 @@ function convient(p: Item, h: Humeur): boolean {
       return formalityOf(p) <= 1;
     case "audacieux":
       return p.intensiteCouleur === "intense" || p.intensiteCouleur === "lumineuse" || saturation(p.hex) >= 0.55;
+    case "leger":
+      return (
+        (p.matiere != null && MATIERES_LEGERES.has(p.matiere)) ||
+        p.manches === "sans" ||
+        p.manches === "courtes" ||
+        p.cat === "short" ||
+        (p.shoeType != null && CHAUSSURES_OUVERTES.has(p.shoeType))
+      );
     case "confortable":
       return (
         p.coupe === "Ample" ||
