@@ -46,10 +46,12 @@ jobs:
             echo "→ déploiement de $name"
             # video-recompense est appelée par AdMob, qui n'a pas de jeton Supabase : sa signature Google tient lieu
             # d'authentification (02/11/2026, supabase/functions/_shared/admobSsv.ts). Toutes les autres gardent le JWT.
+            # --yes (04/11/2026) : la CLI récente demande une confirmation avant de déployer, et ne peut pas la poser ici (pas de
+            # terminal) — sans ce drapeau, rien n'est déployé et le workflow échoue (« Re-run with --yes to confirm »).
             if [ "$name" = "video-recompense" ]; then
-              supabase functions deploy "$name" --project-ref tkrbzrazejrxavtfspll --no-verify-jwt
+              supabase functions deploy "$name" --project-ref tkrbzrazejrxavtfspll --no-verify-jwt --yes
             else
-              supabase functions deploy "$name" --project-ref tkrbzrazejrxavtfspll
+              supabase functions deploy "$name" --project-ref tkrbzrazejrxavtfspll --yes
             fi
           done
         env:
