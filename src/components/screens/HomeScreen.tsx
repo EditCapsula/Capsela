@@ -342,7 +342,25 @@ export default function HomeScreen() {
 
   const carteSlide = (slide: SlideCarrousel) => {
     const duJour = slide.source !== "proposition";
-    const pieces = duJour ? outfitPieces : piecesDe(slide.ids);
+    // Chaque slide a sa couche extérieure (04/11/2026, signalé : « quand je swipe je dois voir la strate extérieur pour les occasions
+    // concernées ») : la tenue du jour est déjà séparée plus haut ; une proposition d'une autre occasion l'est ici, même règle, même météo.
+    const sepSlide = duJour ? { principal: outfitPieces, exterieur } : separerCoucheExterieure(piecesDe(slide.ids), tempReelle);
+    const pieces = sepSlide.principal;
+    const exterieurSlide = sepSlide.exterieur;
+    // Le look qu'on sauvegarde est celui qu'on voit : sans le manteau montré à part.
+    const idsDuLook = exterieurSlide ? slide.ids.filter((id) => id !== exterieurSlide.id) : slide.ids;
+    const blocSlide =
+      exterieurSlide && tempReelle != null ? (
+        <div className="mt-[6px]">
+          <PourLExterieur
+            piece={exterieurSlide}
+            temperature={tempReelle}
+            quand={jourConsulte.decalage === 0 ? "aujourd'hui" : "prévus"}
+            onClick={() => (duJour ? actions.goTenues() : actions.consulterTenue(slide.ids, slide.occasion, null))}
+            compact
+          />
+        </div>
+      ) : null;
     const titre = slide.source === "plan" && planHero ? { a: titreDuPlan(planHero), b: "" } : titreDe(pieces);
     const sousTitre =
       slide.source === "plan" && texteHero
@@ -362,18 +380,18 @@ export default function HomeScreen() {
         fantomes={sansChaussures(pieces)}
         ajouts={duJour ? conseilVeste : undefined}
         onVoir={() => actions.consulterTenue(slide.ids, slide.occasion, slide.source === "plan" ? (planHero?.id ?? null) : null)}
-        sauvegardee={duJour ? sauvegardee : dejaSauvegardee(slide.ids)}
+        sauvegardee={duJour ? sauvegardee : dejaSauvegardee(idsDuLook)}
         onSauvegarder={() => {
           if (duJour) return actions.setOutfitFeedback("adore", sansExterieur);
-          if (!dejaSauvegardee(slide.ids)) actions.enregistrerIdeeLook(slide.ids, slide.occasion);
+          if (!dejaSauvegardee(idsDuLook)) actions.enregistrerIdeeLook(idsDuLook, slide.occasion);
         }}
         onAutre={() => (duJour ? pasPourMoi() : quota.demander(() => actions.autreIdeeSlide(slide.id)))}
         autreDesactive={quota.tirageEnCours}
         pied={
-          duJour && (planApplique?.alerte || blocExterieur) ? (
+          blocSlide || (duJour && planApplique?.alerte) ? (
             <>
-              {blocExterieur && <div style={{ gridColumn: "1 / -1" }}>{blocExterieur}</div>}
-              {planApplique?.alerte && <AlerteMeteoLook planApplique={planApplique} />}
+              {blocSlide && <div style={{ gridColumn: "1 / -1" }}>{blocSlide}</div>}
+              {duJour && planApplique?.alerte && <AlerteMeteoLook planApplique={planApplique} />}
             </>
           ) : undefined
         }
