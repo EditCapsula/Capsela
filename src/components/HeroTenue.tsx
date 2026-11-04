@@ -1,6 +1,8 @@
 "use client";
 
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import PourLExterieur from "@/components/PourLExterieur";
+import { separerCoucheExterieure } from "@/lib/coucheExterieure";
 import { BoutonDiscret } from "@/components/Button";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
@@ -22,10 +24,15 @@ import type { Item } from "@/lib/types";
 export function HeroTenue({
   statut,
   phrase,
-  pieces,
+  pieces: piecesRecues,
   vide,
   info,
   actions,
+  temperature,
+  quand,
+  candidatsExterieur,
+  indicateurs,
+  badge,
 }: {
   statut: string;
   /** La phrase d'ambiance, manuscrite, posée par-dessus le haut de la zone. */
@@ -36,8 +43,23 @@ export function HeroTenue({
   /** Remplace le bouton principal : un constat, jamais une action qui n'existe pas. */
   info?: string;
   actions: { cle: string; glyphe: string; libelle: string; onClick: () => void }[];
+  /**
+   * La température RÉELLE du jour du look (prévision, ou celle enregistrée à la planification) : sous le seuil du moteur, le manteau
+   * se montre à part, dans « Pour l'extérieur » (04/11/2026, coucheExterieure.ts). Absente : rien n'est séparé.
+   */
+  temperature?: number | null;
+  /** Complète la température : « prévus », « ce jour-là »… */
+  quand?: string;
+  /** Les manteaux que le moteur admet ici : par le froid, une tenue sans manteau en reçoit un, à part (separerCoucheExterieure). */
+  candidatsExterieur?: Item[];
+  /** La ligne d'indicateurs sous le visuel (IndicateursTenue), quand l'écran en a. */
+  indicateurs?: React.ReactNode;
+  /** Une pastille à droite du surtitre (« Ton dressing + ta capsule »…). */
+  badge?: React.ReactNode;
 }) {
   const ouvrirPiece = useOuvrirPiece();
+  const { principal, exterieur } = separerCoucheExterieure(piecesRecues, temperature, candidatsExterieur);
+  const pieces = principal;
   const total = pieces.length;
   const capsule = pieces.filter((p) => isCatalogId(p.id)).length;
   const dressing = total - capsule;
@@ -54,6 +76,7 @@ export function HeroTenue({
           <span aria-hidden="true">✦ </span>
           {statut}
         </span>
+        {badge}
       </div>
 
       <div className="flex flex-col flex-1 min-h-0">
@@ -85,7 +108,14 @@ export function HeroTenue({
             ))}
           </div>
         )}
+        {indicateurs}
       </div>
+
+      {exterieur && temperature != null && (
+        <div className="mt-[6px] flex-shrink-0">
+          <PourLExterieur piece={exterieur} temperature={temperature} quand={quand ?? "prévus"} onClick={() => ouvrirPiece(exterieur)} />
+        </div>
+      )}
 
       {info && (
         <div className="mt-[8px] flex-shrink-0 flex items-center justify-center rounded-full text-[13px] text-ink text-center px-4" style={{ minHeight: 56, border: "1px dashed rgba(29,26,22,.3)" }}>
@@ -93,12 +123,90 @@ export function HeroTenue({
         </div>
       )}
 
-      <div className="flex-shrink-0 grid grid-cols-2 gap-[9px] mt-[8px]">
+      {actions.length > 0 && (
+      <div className={"flex-shrink-0 grid gap-[9px] mt-[8px] " + (actions.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
         {actions.map((a) => (
           <BoutonDiscret key={a.cle} style={{ minHeight: 48 }} onClick={a.onClick}>
             <span aria-hidden="true">{a.glyphe}</span> {a.libelle}
           </BoutonDiscret>
         ))}
+      </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * LES INDICATEURS DE LA TENUE (04/11/2026, maquette « Look planifié ») : de petites pastilles sous le visuel — style, occasion, météo,
+ * palette. Chacune n'apparaît que si l'écran a la donnée ET qu'elle est vraie (l'appelant décide ; rien n'est déduit ici).
+ */
+export function IndicateursTenue({ items }: { items: { cle: string; icone: React.ReactNode; texte: string; coche?: boolean }[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="flex-shrink-0 flex flex-wrap gap-[6px] mt-[8px] px-[2px]" role="list" aria-label="Ce qui caractérise cette tenue">
+      {items.map((i) => (
+        <span key={i.cle} role="listitem" className="inline-flex items-center gap-[6px] rounded-full bg-card border border-border px-[10px] py-[5px] text-[11.5px] leading-[1.2] text-ink">
+          <span aria-hidden="true" className="text-terracotta flex-shrink-0 flex">{i.icone}</span>
+          {i.texte}
+          {i.coche && (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-shrink-0" style={{ color: "var(--color-terracotta-deep)" }}>
+              <path d="M5 12.5l4.5 4.5L19 7.5" />
+            </svg>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Les icônes fines des indicateurs, au trait comme le reste de l'app. */
+export const ICONES_INDICATEUR = {
+  style: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6a2 2 0 1 1 2 2c-1 0-2 .6-2 1.6V10L3 17.5a1.2 1.2 0 0 0 .8 2.1h16.4a1.2 1.2 0 0 0 .8-2.1L12 10" /></svg>
+  ),
+  occasion: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+  ),
+  meteo: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0Z" /></svg>
+  ),
+  palette: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.8 1.8-1.7 0-1.3-1-1.6-1-2.7 0-.9.7-1.6 1.7-1.6H17a3.5 3.5 0 0 0 3.5-3.5c0-4.2-3.8-7.5-8.5-7.5Z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7.5" r="1" /><circle cx="14.5" cy="7.5" r="1" /></svg>
+  ),
+};
+
+/**
+ * LA COMPOSITION DE LA TENUE (04/11/2026, maquette « Look planifié ») : le nombre de pièces, une vignette par pièce réelle (son image,
+ * jamais une image refaite), et « Voir les détails », qui ouvre le rail des pièces dans une feuille. Compacte : une rangée.
+ */
+export function CompositionTenue({ pieces, onDetails }: { pieces: Item[]; onDetails: () => void }) {
+  if (!pieces.length) return null;
+  const visibles = pieces.slice(0, 5);
+  return (
+    <div className="mt-[14px] bg-card border border-border rounded-carte px-[14px] py-[12px]">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-[14px] font-semibold text-ink">Composition de ta tenue</div>
+        <div className="text-[12px] text-muted-3">{pieces.length} {pieces.length > 1 ? "pièces" : "pièce"}</div>
+      </div>
+      <div className="flex items-center gap-[8px] mt-[10px]">
+        <div className="flex gap-[6px] min-w-0 flex-1">
+          {visibles.map((p) => {
+            const img = resolveItemImage(p);
+            return (
+              <span key={p.id} aria-label={p.name} role="img" className="flex-1 min-w-0 max-w-[56px] aspect-square rounded-bloc border border-border overflow-hidden flex items-center justify-center" style={{ background: "var(--color-warm-bg)" }}>
+                {img.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+                ) : (
+                  <span className="block w-full h-full" style={{ background: p.hex }} />
+                )}
+              </span>
+            );
+          })}
+        </div>
+        <button type="button" onClick={onDetails} className="flex-shrink-0 text-[12.5px] text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[44px] pl-1">
+          Voir les détails →
+        </button>
       </div>
     </div>
   );

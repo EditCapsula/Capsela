@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -8,6 +9,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <!-- AdMob (02/11/2026) : obligatoire dès que le SDK publicitaire est présent ; valeur posée par app/build.gradle. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}"/>
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
@@ -47,6 +53,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Notification de la tenue du jour (04/11/2026, src/lib/notifications.ts) : inexacte, elle n'a pas besoin des alarmes exactes,
+         que Google Play réserve aux réveils et aux agendas. Le plugin les déclare ; on les retire. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
     <!-- Capsela (17/10/2026) : la position pour la météo de la ville (Android 12+ veut l'approximative déclarée avec la précise),
          et l'appareil photo pour ajouter une pièce, importer une tenue ou demander un avis de styliste. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />

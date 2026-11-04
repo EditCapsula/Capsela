@@ -7,6 +7,7 @@ import { FeuilleDateNaissance, LigneInfo } from "@/components/ProfilUI";
 import { Toggle } from "@/components/screens/PreferencesScreen";
 import { useAuth } from "@/lib/auth";
 import { readConsent, setConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
+import { choixPublicitairesDisponibles, ouvrirChoixPublicitaires, suivreChoixPublicitaires } from "@/lib/publicite";
 import { VERSION_APP } from "@/lib/versionApp";
 import { buildDataExport, downloadJson, exportFileName } from "@/lib/dataExport";
 import { useCapsela } from "@/lib/store";
@@ -74,6 +75,9 @@ export default function AccountScreen() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const consent = useSyncExternalStore(subscribeConsent, readConsent, () => "unknown" as ConsentState);
+  // Le choix donné dans le formulaire publicitaire de Google se change ici, aussi simplement qu'il s'est donné (RGPD).
+  // La ligne n'existe que là où Google l'exige (Espace économique européen, Royaume-Uni), et seulement sur Android.
+  const choixPub = useSyncExternalStore(suivreChoixPublicitaires, choixPublicitairesDisponibles, () => false);
   const mesureConfiguree = Boolean(process.env.NEXT_PUBLIC_GA_ID);
 
   const handleExport = async () => {
@@ -218,6 +222,20 @@ export default function AccountScreen() {
               label="Autoriser les statistiques d'usage"
             />
           </div>
+        )}
+        {choixPub && (
+          <button
+            onClick={() => void ouvrirChoixPublicitaires()}
+            className="w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer border-b border-border"
+          >
+            <span className="flex-1 min-w-0 pr-2">
+              <span className="block text-[13px] text-ink">Choix publicitaires</span>
+              <span className="block text-[11px] text-muted mt-[2px] leading-[1.35]">
+                Pour les vidéos que tu choisis de regarder contre une tenue de plus.
+              </span>
+            </span>
+            <span aria-hidden="true" className="text-placeholder text-[15px]">›</span>
+          </button>
         )}
         {/* Masqué en mode démo, où rien n'a quitté l'appareil. */}
         {!demoMode ? (

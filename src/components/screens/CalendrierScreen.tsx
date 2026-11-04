@@ -326,7 +326,7 @@ export default function CalendrierScreen() {
               </Button>
             </div>
             {peutPorter && (
-              <button onClick={actions.wearOutfitToday} className="mt-1 w-full min-h-[44px] flex items-center justify-center gap-[6px] text-[13px] text-terracotta-deep cursor-pointer">
+              <button onClick={() => actions.wearOutfitToday()} className="mt-1 w-full min-h-[44px] flex items-center justify-center gap-[6px] text-[13px] text-terracotta-deep cursor-pointer">
                 <span aria-hidden="true">♡</span> Porter cette tenue
               </button>
             )}

@@ -44,7 +44,13 @@ jobs:
               _*) echo "· $name ignoré (dossier partagé, pas une fonction)"; continue ;;
             esac
             echo "→ déploiement de $name"
-            supabase functions deploy "$name" --project-ref tkrbzrazejrxavtfspll
+            # video-recompense est appelée par AdMob, qui n'a pas de jeton Supabase : sa signature Google tient lieu
+            # d'authentification (02/11/2026, supabase/functions/_shared/admobSsv.ts). Toutes les autres gardent le JWT.
+            if [ "$name" = "video-recompense" ]; then
+              supabase functions deploy "$name" --project-ref tkrbzrazejrxavtfspll --no-verify-jwt
+            else
+              supabase functions deploy "$name" --project-ref tkrbzrazejrxavtfspll
+            fi
           done
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

@@ -12,23 +12,29 @@
 // fonction sans regarder quoi que ce soit. L'onglet réseau donne le nom de
 // l'appel dès le premier usage légitime.
 //
-// ÉTAT AU 24/09/2026 : AUCUN FOURNISSEUR N'EST ARBITRÉ. La fonction est donc
-// complète SAUF sa vérification de signature, qui dépend du fournisseur —
-// AdMob signe avec une clé publique qu'on récupère sur un endpoint Google,
-// Unity et AppLovin utilisent un HMAC sur un secret partagé. Les trois ne se
-// vérifient pas de la même façon, et écrire l'un des trois « au cas où »
-// reviendrait à écrire du code qu'on ne pourra pas tester.
+// FOURNISSEUR ARBITRÉ LE 02/11/2026 : GOOGLE ADMOB (src/lib/publicite.ts). AdMob appelle cette fonction en GET,
+// tout dans l'adresse, signée avec une clé publique que Google publie (`_shared/admobSsv.ts`). La fonction :
+//   1. vérifie la signature de Google — sans elle, 403, quoi que dise l'adresse ;
+//   2. refuse un appel de plus d'une heure (adresse rejouée) ;
+//   3. accorde le bonus au compte `user_id`, que l'app a passé à AdMob en chargeant la vidéo.
+// Un rejeu dans l'heure ne rapporte rien : `accorder_bonus_generation` n'accorde qu'un bonus par jour.
 //
-// En attendant, `verifierSignature` REFUSE TOUT. Ce n'est pas un trou laissé
-// ouvert « en attendant » : c'est une porte fermée, et le seul moyen de
-// l'ouvrir est de choisir un fournisseur et d'écrire sa vérification.
+// Déploiement SANS vérification de JWT (`--no-verify-jwt`, .github/workflows/deploy-supabase-function.yml) : AdMob
+// n'a pas de jeton Supabase. C'est la signature de Google qui tient lieu d'authentification.
 //
-// Déploiement : inutile tant qu'aucun fournisseur n'existe. Le fichier est là
-// pour que la mise en place se limite à trois gestes — choisir le
-// fournisseur, écrire `verifierSignature`, poser le secret.
+// Adresse à déclarer dans AdMob (bloc d'annonces → vérification côté serveur) :
+//   https://tkrbzrazejrxavtfspll.supabase.co/functions/v1/video-recompense
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
+import {
+  appelRecent,
+  decouperAppelAdMob,
+  signatureAdMobValide,
+  URL_CLES_ADMOB,
+  userIdValide,
+  type CleAdMob,
+} from "../_shared/admobSsv.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,22 +42,18 @@ const corsHeaders = {
 };
 
 /**
- * Vérifie que la requête vient bien du réseau publicitaire et concerne une
- * vidéo réellement visionnée.
- *
- * REFUSE TANT QU'AUCUN FOURNISSEUR N'EST CHOISI. Le secret n'existe pas, donc
- * il n'y a rien à comparer, donc on refuse — jamais l'inverse.
+ * Les clés publiques de Google, gardées le temps de l'instance : Google les renouvelle rarement, et une clé inconnue
+ * (renouvellement) relance la lecture une fois.
  */
-async function verifierSignature(req: Request, corps: string): Promise<boolean> {
-  const secret = Deno.env.get("VIDEO_SSV_SECRET");
-  if (!secret) return false;
-  // À écrire avec le fournisseur retenu : HMAC sur `corps` pour Unity et
-  // AppLovin, vérification de signature par clé publique pour AdMob. Les deux
-  // paramètres sont là pour que la signature de la fonction n'ait pas à
-  // changer ce jour-là.
-  void req;
-  void corps;
-  return false;
+let clesEnCache: CleAdMob[] | null = null;
+
+async function clesAdMob(forcer = false): Promise<CleAdMob[]> {
+  if (clesEnCache && !forcer) return clesEnCache;
+  const r = await fetch(URL_CLES_ADMOB);
+  if (!r.ok) throw new Error(`clés AdMob : HTTP ${r.status}`);
+  const corps = (await r.json()) as { keys?: CleAdMob[] };
+  clesEnCache = Array.isArray(corps.keys) ? corps.keys : [];
+  return clesEnCache;
 }
 
 Deno.serve(async (req) => {
@@ -63,23 +65,30 @@ Deno.serve(async (req) => {
   const serviceRoleKey = getAdminKey();
   if (!supabaseUrl || !serviceRoleKey) return json({ error: ADMIN_KEY_MISSING }, 500);
 
-  const corps = await req.text();
-
-  if (!(await verifierSignature(req, corps))) {
+  const appel = decouperAppelAdMob(new URL(req.url).search);
+  let verifie = false;
+  if (appel) {
+    try {
+      let cles = await clesAdMob();
+      if (!cles.some((c) => String(c.keyId) === appel.keyId)) cles = await clesAdMob(true);
+      verifie = await signatureAdMobValide(appel, cles);
+    } catch (e) {
+      console.error(JSON.stringify({ etape: "cles", error: String(e) }));
+      return json({ error: "Vérification indisponible." }, 503);
+    }
+  }
+  if (!appel || !verifie) {
     // 403 et non 500 : la requête est comprise, elle n'est simplement pas
     // authentifiée. Le message ne dit pas POURQUOI elle échoue — un appelant
-    // non légitime n'a pas à savoir s'il manque un secret ou si sa signature
-    // est mauvaise.
+    // non légitime n'a pas à savoir ce qui manque.
     return json({ error: "Requête non vérifiée." }, 403);
   }
+  if (!appelRecent(appel.timestamp, Date.now())) return json({ error: "Requête expirée." }, 403);
 
-  let userId: string;
-  try {
-    userId = String(JSON.parse(corps).user_id || "");
-    if (!userId) throw new Error("user_id manquant");
-  } catch {
-    return json({ error: "user_id manquant ou invalide." }, 400);
-  }
+  // L'appel de test qu'AdMob envoie quand on enregistre l'adresse porte une signature valide mais pas de compte
+  // Capsela : 200 sans rien accorder, pour que la console accepte l'adresse.
+  if (!userIdValide(appel.userId)) return json({ accorde: false });
+  const userId = appel.userId;
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const { data, error } = await admin.rpc("accorder_bonus_generation", { p_user_id: userId });

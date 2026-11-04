@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ONBOARDING_SLIDES } from "@/lib/data";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
@@ -21,8 +21,8 @@ import Card from "@/components/Card";
  * sont du HTML aux jetons de l'app (les images fournies portaient les leurs, coupés à droite sur la valise, non traduisibles,
  * hors du design system). Limite : ces sources font 368 px de large — nettes à 1×, un peu douces sur un écran très dense.
  * Les chiffres montrés (36 pièces, 22°, Rhodes, 24 pièces) sont des EXEMPLES, dits
- * comme tels dans l'écran. Le genre n'est pas connu à ce stade (il se demande après le compte) : les visuels sont ceux du
- * profil femme, comme avant — purement illustratifs.
+ * comme tels dans l'écran. Le genre n'est pas connu à ce stade (il se demande après le compte) : les visuels sont purement
+ * illustratifs — profil femme, sauf l'écran « Ton style », qui mêle les deux univers (04/11/2026).
  *
  * LA HAUTEUR : la zone de contenu défile au-dessus d'un pied fixe (le bouton n'est jamais poussé ni recouvert), mais les
  * visuels se règlent sur la hauteur d'écran (`--h-visuel`) pour que, sur un téléphone courant, rien ne défile. Sur un très
@@ -32,16 +32,30 @@ import Card from "@/components/Card";
  * si le téléphone demande moins d'animations. Pas de balayage : l'onboarding d'avant n'en avait pas.
  */
 
-const STYLES_ONBOARDING: StyleId[] = ["minimaliste", "casual_chic", "boheme", "classique_chic", "streetwear", "glamour"];
+/*
+ * LES SIX UNIVERS DE L'ÉCRAN « TON STYLE » (04/11/2026, brief « Évolution de l'écran de présentation Ton style ») : trois visuels
+ * femme et trois visuels homme, pour montrer d'emblée que Capsela habille les deux. Écran de PRÉSENTATION : aucun choix, aucune
+ * donnée lue ni écrite. « Créatif » remplace « Bohème ». Les visuels sont ceux de l'étape Style du profil, chacun dans son univers.
+ */
+const STYLES_ONBOARDING: { id: StyleId; univers: "femme" | "homme" }[] = [
+  { id: "minimaliste", univers: "femme" },
+  { id: "casual_chic", univers: "homme" },
+  { id: "creatif", univers: "femme" },
+  { id: "classique_chic", univers: "homme" },
+  { id: "streetwear", univers: "homme" },
+  { id: "glamour", univers: "femme" },
+];
 
 /**
  * Le visuel d'un style : le même que l'étape Style du profil, jamais un second jeu d'images — les visuels de l'étape Style
  * (VISUELS_ETAPE_STYLE_FEMME) depuis le 30/10/2026 (demandé : « mets à jour ces visuels avec les derniers visuels de styles »), comme les
  * cartes « Explore un autre univers ». Repli sur l'aplat si le fichier ne charge pas.
  */
-function TuileStyle({ id, decale }: { id: StyleId; decale?: boolean }) {
-  const cfg = STYLE_CONFIG.femme[id];
-  const visuel = VISUELS_ETAPE_STYLE_FEMME[id] ?? cfg.asset;
+function TuileStyle({ id, univers, decale }: { id: StyleId; univers: "femme" | "homme"; decale?: boolean }) {
+  const cfg = STYLE_CONFIG[univers][id];
+  // Côté femme, le visuel de l'étape Style (VISUELS_ETAPE_STYLE_FEMME) ; côté homme, celui de STYLE_CONFIG.homme, le même que l'étape
+  // Style d'un profil homme (public/images/styles/homme/).
+  const visuel = univers === "femme" ? VISUELS_ETAPE_STYLE_FEMME[id] ?? cfg.asset : cfg.asset;
   const [echec, setEchec] = useState(false);
   return (
     <div className={"relative rounded-bloc overflow-hidden bg-border aspect-[4/5] " + (decale ? "translate-y-[12px]" : "")}>
@@ -70,9 +84,13 @@ function Photo({ src, className = "", position = "center" }: { src: string; clas
 
 function VisuelStyle() {
   return (
-    <div role="img" aria-label="Six univers de style : Minimaliste, Casual chic, Bohème, Classique chic, Streetwear et Glamour" className="grid grid-cols-3 gap-[8px] pb-[12px]">
-      {STYLES_ONBOARDING.map((id, i) => (
-        <TuileStyle key={id} id={id} decale={i % 3 === 1} />
+    <div
+      role="img"
+      aria-label="Six univers de style, femme et homme : Minimaliste, Casual chic, Créatif, Classique chic, Streetwear et Glamour"
+      className="grid grid-cols-3 gap-[8px] [@media(max-width:340px)]:gap-[6px] pb-[12px]"
+    >
+      {STYLES_ONBOARDING.map(({ id, univers }, i) => (
+        <TuileStyle key={id} id={id} univers={univers} decale={i % 3 === 1} />
       ))}
     </div>
   );
@@ -263,6 +281,29 @@ export default function OnboardingScreen() {
 
   const visuels = [<VisuelStyle key="s" />, <VisuelDressing key="d" />, <VisuelTenue key="t" />, <VisuelValise key="v" />, <VisuelCompte key="c" />];
 
+  /*
+   * NAVIGUER COMME DANS UN CARROUSEL (retours du test fermé, 04/11/2026 : « visuels non cliquables », « revenir en arrière pas
+   * possible »). Un balayage vers la gauche avance, vers la droite recule ; toucher le visuel avance. Un geste surtout vertical
+   * reste un défilement. Les points de progression, en bas, mènent à l'écran touché (comme le carrousel de l'accueil) : c'est
+   * aussi le moyen de revenir en arrière (arbitré le 04/11/2026 : pas de bouton Retour en haut).
+   */
+  const depart = useRef<{ x: number; y: number } | null>(null);
+  const auDebutDuGeste = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    depart.current = { x: t.clientX, y: t.clientY };
+  };
+  const aLaFinDuGeste = (e: React.TouchEvent) => {
+    const d = depart.current;
+    depart.current = null;
+    if (!d) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - d.x;
+    const dy = t.clientY - d.y;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0 && !dernier) actions.onbNext();
+    else if (dx > 0 && indice > 0) actions.onbBack();
+  };
+
   return (
     <div
       className="absolute inset-0 flex flex-col"
@@ -284,8 +325,14 @@ export default function OnboardingScreen() {
           </div>
 
           {/* Une clé par écran : sans elle, l'animation, de même nom, ne se rejouerait pas d'un écran à l'autre. */}
-          <div key={indice} className="flex-1 flex flex-col justify-center">
-            <div className="motion-safe:animate-[capsule-apparition_320ms_ease-out_80ms_both]">{visuels[indice]}</div>
+          <div key={indice} className="flex-1 flex flex-col justify-center" onTouchStart={auDebutDuGeste} onTouchEnd={aLaFinDuGeste}>
+            {/* Toucher le visuel avance, comme « Continuer » ; sur le dernier écran, il ne fait rien (deux choix : créer ou se connecter). */}
+            <div
+              className={"motion-safe:animate-[capsule-apparition_320ms_ease-out_80ms_both]" + (dernier ? "" : " cursor-pointer")}
+              onClick={dernier ? undefined : actions.onbNext}
+            >
+              {visuels[indice]}
+            </div>
             <div className="mt-[clamp(14px,3.2svh,28px)] motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
               <div className="t-surtitre text-terracotta">{slide.kicker}</div>
               <h1
@@ -312,13 +359,23 @@ export default function OnboardingScreen() {
         {/* Les cinq positions de la progression, sur tous les écrans : le dernier est le compte. */}
         {(() => {
           const points = (
-            <div className="flex gap-[7px] items-center" role="img" aria-label={`Écran ${indice + 1} sur ${nbEcrans}`}>
+            // Cliquables (04/11/2026, comme le carrousel de l'accueil) : chaque point ouvre son écran. La zone touchable déborde du
+            // point (pseudo-élément, 22 px de haut) : on le touche sans viser, et l'écart visuel entre les points ne change pas.
+            <div className="flex items-center gap-[7px]" role="group" aria-label={`Écran ${indice + 1} sur ${nbEcrans}`}>
               {Array.from({ length: nbEcrans }, (_, i) => (
-                <span
+                <button
                   key={i}
-                  className="rounded-full inline-block transition-[width,background-color] duration-300"
-                  style={i === indice ? { width: 22, height: 7, background: "var(--color-terracotta)" } : { width: 7, height: 7, background: "var(--color-warm-border)" }}
-                />
+                  type="button"
+                  onClick={() => actions.onbAller(i)}
+                  aria-label={`Écran ${i + 1} sur ${nbEcrans}`}
+                  aria-current={i === indice}
+                  className="relative flex items-center cursor-pointer before:absolute before:content-[''] before:-inset-x-[4px] before:-inset-y-[8px]"
+                >
+                  <span
+                    className="rounded-full inline-block transition-[width,background-color] duration-300"
+                    style={i === indice ? { width: 22, height: 7, background: "var(--color-terracotta)" } : { width: 7, height: 7, background: "var(--color-warm-border)" }}
+                  />
+                </button>
               ))}
             </div>
           );

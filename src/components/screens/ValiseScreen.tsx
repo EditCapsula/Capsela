@@ -1,5 +1,7 @@
 "use client";
 
+import PourLExterieur from "@/components/PourLExterieur";
+import { separerCoucheExterieure } from "@/lib/coucheExterieure";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
@@ -1900,6 +1902,23 @@ function Resultat({
   };
 
   const piecesDuLook = (l: LookValise) => l.ids.map(pieceDe).filter((i): i is Item => !!i);
+  /*
+   * LE LOOK D'UN JOUR ET SA COUCHE EXTÉRIEURE (04/11/2026, arbitrage A ; coucheExterieure.ts). La température est celle des jours que
+   * le look habille : la prévision quand elle les couvre, sinon les températures habituelles du lieu (climatologie de la valise) —
+   * la plus fraîche, puisque le manteau doit couvrir le jour le plus froid. Sous le seuil du moteur, le manteau se montre à part ;
+   * il reste dans la valise (pièces, checklist, poids), seul l'affichage du look change. Sans météo réelle, rien n'est séparé.
+   */
+  const exterieurDuLook = (lk: LookValise) => {
+    const jours = new Set(lk.situations.flatMap((i) => valise.situations[i]?.jours ?? []));
+    const prevue = amplitudePrevue(meteosPrevues.filter((m) => jours.has(m.jour)));
+    const habituelle = prevue ? null : amplitudeHabituelle(valise.meteos.filter((m) => jours.has(m.jour)));
+    const temperature = prevue?.min ?? habituelle?.min ?? null;
+    return {
+      ...separerCoucheExterieure(piecesDuLook(lk), temperature),
+      temperature,
+      quand: prevue ? "prévus" : "habituels à ces dates",
+    };
+  };
   const ouvrirPiece = (id: number) => setVue({ nom: "piece", id, depuis: vue });
 
   const feuilles = (
@@ -2386,7 +2405,8 @@ function Resultat({
   if (vue.nom === "look") {
     const l = looks[vue.index];
     if (!l) return feuilles;
-    const items = piecesDuLook(l);
+    const sep = exterieurDuLook(l);
+    const items = sep.principal;
     const occ = occasionsDuLook(l, valise.situations);
     const cle = l.ids.join(",");
     const enregistre = enregistres.includes(cle);
@@ -2409,6 +2429,11 @@ function Resultat({
         <div className="rounded-feuille px-[16px] py-[20px] mt-4" style={{ background: "var(--color-hero-background)" }}>
           <OutfitComposition items={items} variant="editoriale" label={"Composition du look : " + items.map((p) => p.name).join(", ")} />
         </div>
+        {sep.exterieur && sep.temperature != null && (
+          <div className="mt-3">
+            <PourLExterieur piece={sep.exterieur} temperature={sep.temperature} quand={sep.quand} onClick={() => ouvrirPiece(sep.exterieur!.id)} />
+          </div>
+        )}
         <div className="flex items-center justify-between mt-3">
           <button
             onClick={() => setVue({ nom: "look", index: vue.index - 1 })}
@@ -3007,11 +3032,11 @@ function Resultat({
                 <div className="relative">
                   <button
                     onClick={() => setVue({ nom: "look", index })}
-                    aria-label={`Voir le look ${numero(index)} : ${resumeLook(piecesDuLook(l))}`}
+                    aria-label={`Voir le look ${numero(index)} : ${resumeLook(exterieurDuLook(l).principal)}`}
                     className="block w-full rounded-carte px-[12px] py-[14px] cursor-pointer"
                     style={{ height: "clamp(270px, 80vw, 340px)", background: "var(--color-hero-background)" }}
                   >
-                    <OutfitComposition items={piecesDuLook(l)} variant="hero" ajustee />
+                    <OutfitComposition items={exterieurDuLook(l).principal} variant="hero" ajustee />
                   </button>
                   {looks.length > 1 && (
                     <>
@@ -3039,7 +3064,7 @@ function Resultat({
                   <div className="t-label text-terracotta">
                     Look {index + 1} / {looks.length}
                   </div>
-                  <div className="font-serif text-[20px] text-ink leading-[1.25] mt-[5px]">{resumeLook(piecesDuLook(l))}</div>
+                  <div className="font-serif text-[20px] text-ink leading-[1.25] mt-[5px]">{resumeLook(exterieurDuLook(l).principal)}</div>
 
                   <div className="flex flex-wrap items-center gap-[6px] mt-[10px]">
                     {(() => {
@@ -3057,14 +3082,26 @@ function Resultat({
                   </div>
                   {l.elargie && <div className="text-[11px] text-muted mt-2">Occasion élargie</div>}
 
-                  <div className="text-[13px] text-ink mt-4">{nbPieces(l.ids.length)} de ta valise</div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {piecesDuLook(l).map((p) => (
-                      <button key={p.id} onClick={() => ouvrirPiece(p.id)} aria-label={`Voir la pièce : ${p.name}`} className="rounded-champ cursor-pointer">
-                        <Vignette it={p} taille={52} />
-                      </button>
-                    ))}
-                  </div>
+                  {(() => {
+                    const sep = exterieurDuLook(l);
+                    return (
+                      <>
+                        <div className="text-[13px] text-ink mt-4">{nbPieces(sep.principal.length)} de ta valise</div>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {sep.principal.map((p) => (
+                            <button key={p.id} onClick={() => ouvrirPiece(p.id)} aria-label={`Voir la pièce : ${p.name}`} className="rounded-champ cursor-pointer">
+                              <Vignette it={p} taille={52} />
+                            </button>
+                          ))}
+                        </div>
+                        {sep.exterieur && sep.temperature != null && (
+                          <div className="mt-3">
+                            <PourLExterieur piece={sep.exterieur} temperature={sep.temperature} quand={sep.quand} onClick={() => ouvrirPiece(sep.exterieur!.id)} />
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
 
                   <Button variante="contour" className="mt-4" onClick={() => setVue({ nom: "look", index })}>
                     Voir le look complet →

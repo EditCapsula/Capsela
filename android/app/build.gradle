@@ -11,6 +11,10 @@ android {
         // Affectation explicite : sans « = », Groovy lit « versionCode (…).toInteger() » comme un appel suivi de .toInteger() sur son résultat.
         versionCode = Integer.parseInt(System.getenv("CAPSELA_VERSION_CODE") ?: "1")
         versionName = System.getenv("CAPSELA_VERSION_NAME") ?: "1.0"
+        // L'IDENTIFIANT D'APPLICATION ADMOB (02/11/2026, src/lib/publicite.ts) : fourni par la construction automatique
+        // (variable du dépôt ADMOB_APP_ID). À défaut, l'identifiant de TEST publié par Google : le SDK publicitaire arrête
+        // l'app au lancement si la balise manque, et l'identifiant de test ne sert que des publicités de test.
+        manifestPlaceholders = [admobAppId: System.getenv("CAPSELA_ADMOB_APP_ID") ?: "ca-app-pub-3940256099942544~3347511713"]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

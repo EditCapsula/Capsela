@@ -10,7 +10,9 @@ exercer tes droits.
 
 En résumé :
 
-- tes données servent à faire fonctionner Capsela, jamais à de la publicité ;
+- tes données servent à faire fonctionner Capsela ; la seule publicité est une
+  vidéo que tu choisis de regarder, dans l'application Android, pour obtenir une
+  tenue de plus, et elle n'est personnalisée que si tu l'acceptes ;
 - elles ne sont ni vendues ni louées ;
 - tes photos sont privées : personne d'autre que toi ne peut les voir ;
 - tu peux télécharger tes données et supprimer ton compte depuis l'application,
@@ -123,6 +125,14 @@ ton appareil pour te les reproposer.
 
 - **Mesure d'audience**, seulement si tu l'acceptes : pages vues et usage
   général de l'application (voir « Cookies et traceurs ») ;
+- **Publicité (application Android seulement)** : si tu choisis de regarder
+  une vidéo pour obtenir une tenue de plus, elle est fournie par Google AdMob.
+  Avant toute publicité, Google te demande ton accord pour la personnaliser ;
+  sans cet accord, la publicité n'est pas personnalisée. Google reçoit les
+  données techniques de ton appareil, dont son identifiant publicitaire, et
+  l'identifiant de ton compte Capsela, qui lui sert seulement à nous confirmer
+  que la vidéo a été vue en entier. Il ne reçoit ni ton nom, ni ton e-mail, ni
+  tes photos, ni ton dressing ;
 - **Rapports d'erreur** : quand l'application rencontre un problème, un
   rapport technique est envoyé (type d'erreur, écran, navigateur). Il ne
   contient ni ton nom, ni ton e-mail, ni ton identifiant, ni tes photos.
@@ -146,6 +156,8 @@ n'est pas encore en vente.
 | Analyser une photo que tu envoies (préremplissage d'une pièce, repérage des pièces d'une tenue, lecture d'un ticket de caisse, L'œil de Capsela) | Exécution du contrat, à ta demande |
 | Retirer le fond des photos de tes pièces (détourage) | Exécution du contrat |
 | Gérer ton statut Premium et les limites d'usage (nombre de pièces, « Autre tenue ») | Exécution du contrat |
+| Afficher la vidéo que tu choisis de regarder et t'accorder la tenue de plus (Android) | Exécution du contrat, à ta demande |
+| Personnaliser cette publicité (Android) | Ton consentement, que tu peux retirer à tout moment |
 | Mesurer l'audience | Ton consentement, que tu peux retirer à tout moment |
 | Détecter et résoudre les erreurs, sécuriser le service | Intérêt légitime : faire fonctionner l'application de façon fiable |
 | Répondre à tes demandes | Exécution du contrat, ou obligation légale pour les demandes RGPD |
@@ -170,6 +182,7 @@ compte et selon nos instructions (sous-traitants au sens du RGPD).
 | OpenWeather Ltd | Météo du jour, prévisions de secours et recherche de ville | Ta ville, ou les coordonnées de ta position si tu l'as autorisée | Royaume-Uni |
 | restcountries.com [À VÉRIFIER — éditeur] | Trouver la capitale d'un pays saisi, interrogé directement depuis ton appareil | Le nom de pays saisi et l'adresse IP de ton appareil | [À VÉRIFIER] |
 | Google Ireland Ltd | Connexion avec Google (si tu la choisis) ; mesure d'audience (si tu l'acceptes) | Données de connexion ; données d'usage | Irlande, avec transferts possibles vers les États-Unis |
+| Google Ireland Ltd (AdMob) [À VÉRIFIER — Google agit en responsable de traitement distinct pour la publicité personnalisée] | Vidéos publicitaires que tu choisis de regarder (application Android) | Identifiant publicitaire et données techniques de l'appareil, adresse IP, interactions avec la publicité ; identifiant de ton compte Capsela, pour confirmer la vidéo vue — jamais ton nom ni ton e-mail | Irlande, avec transferts possibles vers les États-Unis |
 | Functional Software Inc. (Sentry) | Rapports d'erreur | Données techniques de l'erreur, sans identifiant | États-Unis |
 
 Les analyses de photos, les lectures de noms d'activités et les idées d'activités sont demandées sans conservation par OpenAI pour
@@ -210,6 +223,9 @@ de la Commission. [À VÉRIFIER — mécanisme retenu pour chaque prestataire.]
   l'import ; seules restent les pièces que tu as ajoutées.
 - **Rapports d'erreur** : [À COMPLÉTER — durée de conservation du plan Sentry].
 - **Mesure d'audience** : [À COMPLÉTER — durée réglée dans Google Analytics, 2 ou 14 mois].
+- **Ton choix sur la publicité personnalisée** : gardé sur ton appareil par
+  Google, jusqu'à ce que tu le changes (« Gérer mon compte → Choix
+  publicitaires ») ou que tu désinstalles l'application.
 - **Session de connexion** : jusqu'à 400 jours sur ton appareil, ou jusqu'à ta
   déconnexion.
 
@@ -226,8 +242,8 @@ Tu peux à tout moment :
   Télécharger mes données » produit un fichier JSON ;
 - **t'opposer** à un traitement fondé sur notre intérêt légitime, ou en
   demander la **limitation** ;
-- **retirer ton consentement** (mesure d'audience, géolocalisation) à tout
-  moment, sans que cela remette en cause ce qui a été fait avant ;
+- **retirer ton consentement** (mesure d'audience, géolocalisation, publicité
+  personnalisée) à tout moment, sans que cela remette en cause ce qui a été fait avant ;
 - définir des **directives** sur le sort de tes données après ton décès.
 
 Pour toute demande : capsela.angela@gmail.com. Nous répondons dans un

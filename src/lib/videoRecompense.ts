@@ -13,6 +13,10 @@
  * constate le visionnage et appelle notre fonction Edge `video-recompense`.
  * L'app déclenche, puis relit son quota.
  *
+ * FOURNISSEUR : Google AdMob depuis le 02/11/2026 (`publicite.ts`), enregistré sur Android seulement, pour un
+ * compte gratuit, après le consentement. Partout ailleurs (web, iOS, Premium, consentement refusé, aucune vidéo
+ * chargée), le registre reste vide et tout ce qui suit s'applique.
+ *
  * TANT QU'AUCUN FOURNISSEUR N'EST ENREGISTRÉ, `fournisseurVideo()` rend null et
  * l'interface n'affiche JAMAIS la carte vidéo. C'est la seule façon honnête de
  * livrer ça : un bouton « Regarder une vidéo » qui n'ouvre aucune vidéo est
@@ -34,11 +38,9 @@ export interface FournisseurVideo {
 }
 
 /**
- * Le registre. Vide, et c'est l'état voulu au 24/09/2026.
- *
- * Le jour où un fournisseur est arbitré, il s'enregistre ici au démarrage de
- * l'app et tout le reste — carte vidéo, trois temps, relecture du quota —
- * s'allume sans qu'une ligne d'interface change.
+ * Le registre. AdMob s'y enregistre au démarrage (`demarrerPublicite`, 02/11/2026) et
+ * tout le reste — carte vidéo, trois temps, relecture du quota — s'allume sans
+ * qu'une ligne d'interface change.
  */
 let fournisseur: FournisseurVideo | null = null;
 

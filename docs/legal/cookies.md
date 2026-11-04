@@ -4,7 +4,8 @@
 
 Un traceur est une information enregistrée sur ton appareil par
 l'application (cookie, stockage local du navigateur). Capsela en utilise
-peu, et un seul type demande ton accord : la mesure d'audience.
+peu, et deux types seulement demandent ton accord : la mesure d'audience et,
+dans l'application Android, la personnalisation de la publicité.
 
 ## Nécessaires au fonctionnement (sans consentement)
 
@@ -40,9 +41,26 @@ qu'après ton accord ; sans lui, rien n'est déposé.
 Refuser est aussi simple qu'accepter, et ton choix se modifie à tout moment
 dans « Gérer mon compte ».
 
+## Publicité (application Android, avec ton consentement)
+
+Dans l'application Android, une vidéo publicitaire peut t'être proposée quand
+tu as utilisé tes tenues gratuites du jour : c'est toi qui choisis de la
+regarder, pour obtenir une tenue de plus. Elle est fournie par Google AdMob.
+
+Avant toute publicité, Google te présente un formulaire pour accepter ou
+refuser sa personnalisation. Refuser est aussi simple qu'accepter ; sans ton
+accord, la publicité n'est pas personnalisée. Ton choix est gardé sur ton
+appareil et se modifie à tout moment dans « Gérer mon compte → Choix
+publicitaires ».
+
+| Traceur | Émetteur | Rôle | Durée |
+| --- | --- | --- | --- |
+| Identifiant publicitaire de l'appareil (Android) | Google | Mesurer et, si tu l'acceptes, personnaliser la publicité | Tant que tu ne le réinitialises pas dans les réglages Android |
+| Choix de consentement (stockage de l'application) | Google | Retenir ton choix sur la personnalisation | Jusqu'à ce que tu le changes ou désinstalles l'application |
+
 ## Ce que nous n'utilisons pas
 
-- aucun cookie publicitaire, aucun traceur de réseau social ;
+- aucun cookie publicitaire sur le site web, aucun traceur de réseau social ;
 - les rapports d'erreur (Sentry) ne déposent aucun cookie ;
 - les polices de caractères sont servies par Capsela elle-même, sans appel à
   un service tiers.

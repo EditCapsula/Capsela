@@ -120,14 +120,12 @@ export function useQuotaTenues() {
             comme la maquette Premium Gates le demande : « un seul composant, la
             bottom sheet déjà utilisée ».
 
-            CE QUI MANQUE VOLONTAIREMENT PAR RAPPORT À LA MAQUETTE : la carte
-            « Regarder une vidéo » pour débloquer un tirage. Aucun SDK
-            publicitaire n'existe dans l'app, aucun fournisseur n'est choisi, et
-            un bouton qui n'ouvre aucune vidéo est exactement le genre de
-            promesse qu'on ne peut pas afficher. La maquette prévoit d'ailleurs
-            elle-même ce cas — « si la vidéo du jour a déjà été utilisée, la carte
-            disparaît : seul Premium reste proposé » : c'est cet état-là qui est
-            rendu, en attendant qu'un fournisseur soit arbitré.
+            LA CARTE « Regarder une vidéo » : AdMob depuis le 02/11/2026
+            (publicite.ts), sur Android seulement. Sans fournisseur (web, iOS,
+            consentement refusé, aucune vidéo chargée), elle n'apparaît pas : un
+            bouton qui n'ouvre aucune vidéo est une promesse qu'on ne peut pas
+            afficher. La maquette prévoit ce cas — « si la vidéo du jour a déjà
+            été utilisée, la carte disparaît : seul Premium reste proposé ».
 
             Le compteur 2/2 est écrit à partir de la constante partagée avec
             l'écran Premium, pas recopié. */}
@@ -148,10 +146,9 @@ export function useQuotaTenues() {
 
             {/* LA CARTE VIDÉO N'EXISTE QUE SI UNE VIDÉO EXISTE.
                 `peutProposerVideo` est faux tant qu'aucun fournisseur n'est
-                enregistré — c'est-à-dire toujours, au 24/09/2026. Elle est donc
-                invisible en production, et le restera jusqu'à ce qu'un SDK soit
-                arbitré. Un bouton « Regarder une vidéo » qui n'ouvre aucune
-                vidéo est exactement la promesse qu'on ne peut pas afficher.
+                enregistré (AdMob, Android seulement, 02/11/2026) ou que sa vidéo
+                n'est pas déjà chargée. Un bouton « Regarder une vidéo » qui n'ouvre
+                aucune vidéo est exactement la promesse qu'on ne peut pas afficher.
 
                 Elle disparaît aussi quand le bonus du jour est déjà pris : c'est
                 ce que la maquette décrit — « seul Premium reste proposé ».

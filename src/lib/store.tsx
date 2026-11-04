@@ -45,7 +45,7 @@ import {
 } from "./dressing";
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { choisirMeteo, fetchPrevisionByCity, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosition, type SourceMeteo } from "./weather";
-import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
+import { CATS, CITIES, DATE_CONTEXTS, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, WORK_MODES, type Weather } from "./data";
 import { aDesManches } from "./manches";
 import { aUnMotif } from "./motifs";
 import { genererTenueDiversifiee, recentsDuJour } from "./diversite";
@@ -247,10 +247,12 @@ function buildInitialState(): AppState {
     occasion: "all",
     occasionManual: false,
     dismissedSuggestions: [],
-    workMode: "Présentiel",
+    // Sous-occasions par défaut : la PREMIÈRE de chaque liste (arbitrage du 03/11/2026 — « Verre » l'était pour
+    // « Rendez-vous amoureux » alors que la liste s'ouvre sur « Restaurant / date romantique »).
+    workMode: WORK_MODES[0],
     travelMode: "Court trajet",
     travelTipDismissed: false,
-    dateContext: "Verre",
+    dateContext: DATE_CONTEXTS[0][0],
     capsuleSeason: null,
     exploredStyleId: null,
     lookCount: 0,
@@ -418,6 +420,8 @@ export interface Actions {
   onbBack: () => void;
   onbNext: () => void;
   onbPasser: () => void;
+  /** Ouvre un écran précis de l'introduction (points de progression cliquables, 04/11/2026). */
+  onbAller: (etape: number) => void;
   openItem: (id: number, suggested?: boolean) => void;
   /**
    * Ouvre le module "Comment porter cette pièce ?" — pour une pièce de la
@@ -553,7 +557,11 @@ export interface Actions {
   /** « Voir le look » d'une slide : ouvre Tenue sur CETTE tenue, son occasion présélectionnée ; la tenue du jour est rendue en quittant Tenue (AppState.consultation). `planId` : la slide est le plan appliqué. */
   consulterTenue: (ids: number[], occasion: OccasionKey, planId: string | null) => void;
   dismissOutfitSuggestion: (key: string) => void;
-  wearOutfitToday: () => void;
+  /**
+   * Valide la tenue du jour comme portée. `sauf` : des pièces de la tenue à NE PAS compter comme portées — le manteau montré à part
+   * dans « Pour l'extérieur » (04/11/2026, coucheExterieure.ts), facultatif tant qu'on ne choisit pas de le porter.
+   */
+  wearOutfitToday: (sauf?: number[]) => void;
   wearPieceToday: (id: number) => void;
   wearActiveToday: () => void;
   correctPiece: (id: number) => void;
@@ -606,14 +614,16 @@ export interface Actions {
   setLookDraftHumeur: (h: Humeur) => void;
   dismissLookDraftSuggestion: (key: string) => void;
   /** Avis rapide sur la tenue du jour — repasser le même verdict le retire. */
-  setOutfitFeedback: (verdict: Verdict) => void;
+  /** `sauf` : le manteau montré à part (« Pour l'extérieur », 04/11/2026) n'entre pas dans le look enregistré par « J'adore ». */
+  setOutfitFeedback: (verdict: Verdict, sauf?: number[]) => void;
   /**
    * Enregistre le look en création. Ne rend « ok » qu'une fois la ligne écrite (15/10/2026 : avant, l'écran revenait au Dressing
    * avant la réponse de la base, et un échec perdait le brouillon) ; « erreur » garde le brouillon intact, « refuse » quand les
    * règles l'interdisent (moins de 2 pièces, R-B9).
    */
   saveLook: () => Promise<"ok" | "erreur" | "refuse">;
-  toggleSaveOutfitLook: () => void;
+  /** Enregistre (ou retire) la tenue du jour dans Mes looks ; `sauf` comme pour wearOutfitToday : le manteau à part n'y entre pas. */
+  toggleSaveOutfitLook: (sauf?: number[]) => void;
   openLook: (id: string) => void;
   closeLookDetail: () => void;
   deleteActiveLook: () => void;
@@ -2174,6 +2184,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => (s.onbStep >= 4 ? { ...s, screen: "auth" } : { ...s, onbStep: s.onbStep + 1 })),
     // « Passer » va à l'écran du compte (le dernier), sans repasser par les explications.
     onbPasser: () => setState((s) => ({ ...s, onbStep: 4 })),
+    onbAller: (etape) => setState((s) => ({ ...s, onbStep: Math.max(0, Math.min(4, Math.round(etape))) })),
 
     openItem: (id, suggested = false) =>
       setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" })),
@@ -3026,11 +3037,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
-    wearOutfitToday: () => {
+    wearOutfitToday: (sauf) => {
       // Correctif 22/08/2026 (même bug que saveItem, cf. son commentaire) :
       // tout est lu depuis stateRef.current avant l'appel à setState, jamais
       // depuis une variable remplie par l'updater lui-même.
-      const s = stateRef.current;
+      // `sauf` n'est une liste que lorsqu'un écran la passe : appelée directement en `onClick`, l'action reçoit l'événement.
+      const exclus = new Set(Array.isArray(sauf) ? sauf : []);
+      const s0 = stateRef.current;
+      const s = exclus.size ? { ...s0, outfit: s0.outfit.filter((id) => !exclus.has(id)) } : s0;
       // Garde anti double-clic (recette 19/08/2026) : une fois déjà
       // validée, un second appel n'enregistre jamais une deuxième entrée.
       if (s.outfitValidated) return;
@@ -3053,7 +3067,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       };
       setState((st) => ({
         ...st,
-        items: st.items.map((it) => (st.outfit.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
+        items: st.items.map((it) => (s.outfit.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
         outfitValidated: true,
         lookCount: st.lookCount + 1,
         history: [entry, ...st.history],
@@ -3253,7 +3267,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
      * le bouton répond, rien n'est écrit. Pas de faux message d'erreur pour
      * une session qui n'a pas de compte.
      */
-    setOutfitFeedback: (verdict) => {
+    setOutfitFeedback: (verdict, sauf) => {
       const s = stateRef.current;
       // L'avis du jour porte sur la tenue d'aujourd'hui (outfit_feedback, clé jour).
       if (!s.outfit.length || s.jourDecalage > 0) return;
@@ -3266,7 +3280,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // conséquence n'en était pas un. Idempotent — jamais deux copies —, et
       // retirer l'avis ne supprime pas le look : il vit désormais dans « Mes
       // looks », où elle peut le retirer elle-même.
-      if (verdict === "adore" && !retire) enregistrerTenueSiAbsente(s.outfit, s.occasion);
+      if (verdict === "adore" && !retire) {
+        const exclus = new Set(Array.isArray(sauf) ? sauf : []);
+        enregistrerTenueSiAbsente(s.outfit.filter((id) => !exclus.has(id)), s.occasion);
+      }
       if (!isSupabaseConfigured || !userId) return;
       const occasion = s.occasion && s.occasion !== "all" ? s.occasion : null;
       const ecriture = retire
@@ -3326,9 +3343,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // telle quelle qu'on enregistre, pas une sélection filtrée (décision
     // 23/08/2026). Toggle : un second clic sur une tenue déjà enregistrée
     // retire le look correspondant plutôt que d'en créer un doublon.
-    toggleSaveOutfitLook: () => {
+    toggleSaveOutfitLook: (sauf) => {
       const s = stateRef.current;
-      const ids = [...s.outfit];
+      const exclus = new Set(Array.isArray(sauf) ? sauf : []);
+      const ids = s.outfit.filter((id) => !exclus.has(id));
       if (ids.length < 2) return;
       const key = [...ids].sort((a, b) => a - b).join(",");
       const existing = s.savedLooks.find(
