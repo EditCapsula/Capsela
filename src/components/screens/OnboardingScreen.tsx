@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import { ONBOARDING_SLIDES } from "@/lib/data";
 import AppHeader from "@/components/AppHeader";
-import BoutonRetour from "@/components/BoutonRetour";
 import { useCapsela } from "@/lib/store";
 import { STYLE_CONFIG, VISUELS_ETAPE_STYLE_FEMME, type StyleId } from "@/lib/profile";
 import Button from "@/components/Button";
@@ -253,8 +252,7 @@ function VisuelCompte() {
  * La hauteur que le texte, l'en-tête et le pied retirent à l'écran, par écran : le titre « Tout ce que tu peux porter. » tient
  * sur trois lignes sur un téléphone étroit, il laisse moins de place à son visuel. Mesuré en rendu à 320, 360, 375 et 390 px.
  */
-// +10 le 04/11/2026 : la rangée du haut porte désormais le bouton Retour (44 px au lieu de 34).
-const RESERVE_VISUEL = [480, 555, 505, 480, 510];
+const RESERVE_VISUEL = [470, 545, 495, 470, 500];
 
 export default function OnboardingScreen() {
   const { state, actions } = useCapsela();
@@ -268,7 +266,8 @@ export default function OnboardingScreen() {
   /*
    * NAVIGUER COMME DANS UN CARROUSEL (retours du test fermé, 04/11/2026 : « visuels non cliquables », « revenir en arrière pas
    * possible »). Un balayage vers la gauche avance, vers la droite recule ; toucher le visuel avance. Un geste surtout vertical
-   * reste un défilement. Le bouton Retour, en haut à gauche, recule aussi (le dernier écran compris).
+   * reste un défilement. Les points de progression, en bas, mènent à l'écran touché (comme le carrousel de l'accueil) : c'est
+   * aussi le moyen de revenir en arrière (arbitré le 04/11/2026 : pas de bouton Retour en haut).
    */
   const depart = useRef<{ x: number; y: number } | null>(null);
   const auDebutDuGeste = (e: React.TouchEvent) => {
@@ -299,7 +298,7 @@ export default function OnboardingScreen() {
         <div className="min-h-full flex flex-col px-7 pt-2 pb-5">
           <AppHeader showAvatar={false} />
           <div className="flex justify-between items-center flex-shrink-0">
-            {indice > 0 ? <BoutonRetour onClick={actions.onbBack} label="Revenir à l'écran précédent" /> : <div className="w-11 h-11" />}
+            <div className="w-[34px] h-[34px]" />
             {!dernier && (
               <button onClick={actions.onbPasser} className="text-[13px] text-muted cursor-pointer py-2 pl-4">
                 Passer
@@ -342,13 +341,23 @@ export default function OnboardingScreen() {
         {/* Les cinq positions de la progression, sur tous les écrans : le dernier est le compte. */}
         {(() => {
           const points = (
-            <div className="flex gap-[7px] items-center" role="img" aria-label={`Écran ${indice + 1} sur ${nbEcrans}`}>
+            // Cliquables (04/11/2026, comme le carrousel de l'accueil) : chaque point ouvre son écran. La zone touchable déborde du
+            // point (pseudo-élément, 22 px de haut) : on le touche sans viser, et l'écart visuel entre les points ne change pas.
+            <div className="flex items-center gap-[7px]" role="group" aria-label={`Écran ${indice + 1} sur ${nbEcrans}`}>
               {Array.from({ length: nbEcrans }, (_, i) => (
-                <span
+                <button
                   key={i}
-                  className="rounded-full inline-block transition-[width,background-color] duration-300"
-                  style={i === indice ? { width: 22, height: 7, background: "var(--color-terracotta)" } : { width: 7, height: 7, background: "var(--color-warm-border)" }}
-                />
+                  type="button"
+                  onClick={() => actions.onbAller(i)}
+                  aria-label={`Écran ${i + 1} sur ${nbEcrans}`}
+                  aria-current={i === indice}
+                  className="relative flex items-center cursor-pointer before:absolute before:content-[''] before:-inset-x-[4px] before:-inset-y-[8px]"
+                >
+                  <span
+                    className="rounded-full inline-block transition-[width,background-color] duration-300"
+                    style={i === indice ? { width: 22, height: 7, background: "var(--color-terracotta)" } : { width: 7, height: 7, background: "var(--color-warm-border)" }}
+                  />
+                </button>
               ))}
             </div>
           );

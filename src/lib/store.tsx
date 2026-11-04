@@ -420,6 +420,8 @@ export interface Actions {
   onbBack: () => void;
   onbNext: () => void;
   onbPasser: () => void;
+  /** Ouvre un écran précis de l'introduction (points de progression cliquables, 04/11/2026). */
+  onbAller: (etape: number) => void;
   openItem: (id: number, suggested?: boolean) => void;
   /**
    * Ouvre le module "Comment porter cette pièce ?" — pour une pièce de la
@@ -2176,6 +2178,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => (s.onbStep >= 4 ? { ...s, screen: "auth" } : { ...s, onbStep: s.onbStep + 1 })),
     // « Passer » va à l'écran du compte (le dernier), sans repasser par les explications.
     onbPasser: () => setState((s) => ({ ...s, onbStep: 4 })),
+    onbAller: (etape) => setState((s) => ({ ...s, onbStep: Math.max(0, Math.min(4, Math.round(etape))) })),
 
     openItem: (id, suggested = false) =>
       setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" })),
