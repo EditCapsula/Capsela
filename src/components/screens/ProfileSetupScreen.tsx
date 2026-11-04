@@ -1,7 +1,7 @@
 "use client";
 
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -369,6 +369,31 @@ export default function ProfileSetupScreen() {
     if (STEPS[step + 1]?.key === "colorimetrie") setColo((p) => ({ ...p, vue: "formulaire" }));
     setStep(sansPresentationDejaFaite(step + 1));
   };
+
+  /*
+   * AVANCER SEUL QUAND LA RÉPONSE EST DONNÉE (04/11/2026, demandé : « si les réponses ont été données il faut par défaut passer aux
+   * étapes suivantes » — arbitré : au choix, sur les questions à choix unique). Pendant l'inscription seulement : en modification
+   * depuis Mon profil, on garde la main sur « Enregistrer ».
+   *   · Silhouette, seule question à réponse unique sur son écran : l'étape suivante s'ouvre, après un court instant pour voir
+   *     la sélection se marquer.
+   *   · Genre : l'écran porte aussi les tailles, qui apparaissent au choix ; il défile jusqu'à elles.
+   *   · Colorimétrie : quatre questions sur un écran ; il défile jusqu'à la suivante sans réponse.
+   * Désélectionner (toucher la réponse déjà choisie) n'avance jamais.
+   */
+  const minuterieAvance = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (minuterieAvance.current) clearTimeout(minuterieAvance.current);
+  }, [step]);
+  const avancerApresChoix = () => {
+    if (state.profileSetupFromEdit) return;
+    if (minuterieAvance.current) clearTimeout(minuterieAvance.current);
+    minuterieAvance.current = setTimeout(next, 280);
+  };
+  const defilerVers = (id: string) => {
+    if (state.profileSetupFromEdit) return;
+    // Après le rendu : la cible (les tailles) n'existe qu'une fois le choix posé.
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  };
   // EN MODIFICATION, LE RETOUR RAMÈNE À L'ÉCRAN D'APPEL (25/09/2026). Avant,
   // ouvrir « Style » depuis le profil puis toucher le chevron remontait les
   // étapes précédentes de l'onboarding (Tailles, Palette…) au lieu de rendre
@@ -639,7 +664,10 @@ export default function ProfileSetupScreen() {
               key={g.key}
               label={g.label}
               on={draft.gender === g.key}
-              onClick={() => patch({ gender: g.key })}
+              onClick={() => {
+                patch({ gender: g.key });
+                defilerVers("tailles-inscription");
+              }}
             />
           ))}
         </div>
@@ -648,7 +676,7 @@ export default function ProfileSetupScreen() {
           de bas. En modification depuis Mon profil, chaque information garde son propre écran. */}
       {meta.key === "genre" && !state.profileSetupFromEdit && draft.gender && (
         <>
-          <div className="t-surtitre text-muted mt-[30px]">Tes tailles habituelles</div>
+          <div id="tailles-inscription" className="t-surtitre text-muted mt-[30px] scroll-mt-4">Tes tailles habituelles</div>
           <div className="text-[12px] text-muted mt-[6px]">Pré-remplies quand tu ajoutes une pièce.</div>
           {blocTailles}
         </>
@@ -696,7 +724,14 @@ export default function ProfileSetupScreen() {
           principales={QUESTIONS_PRINCIPALES}
           pourAffiner={QUESTIONS_POUR_AFFINER}
           reponses={colo.reponses}
-          onChoisir={(q, i) => setColo((p) => choisir(p, q, i))}
+          onChoisir={(q, i) => {
+            const deja = colo.reponses[q] === i;
+            setColo((p) => choisir(p, q, i));
+            if (deja) return;
+            const ordre = [...QUESTIONS_PRINCIPALES, ...QUESTIONS_POUR_AFFINER];
+            const suivante = ordre.slice(ordre.indexOf(q) + 1).find((x) => colo.reponses[x] == null && x !== q);
+            if (suivante !== undefined) defilerVers(`colo-question-${suivante}`);
+          }}
         />
       )}
       {meta.key === "colorimetrie" && colo.vue === "analyse" && <AnalyseColorimetrie onFini={finAnalyse} />}
@@ -852,7 +887,10 @@ export default function ProfileSetupScreen() {
                 libelle={MORPHOLOGY_LABELS[m]}
                 visuel={VISUELS_SILHOUETTE[m] ?? null}
                 on={draft.morphology === m}
-                onClick={() => patch({ morphology: m })}
+                onClick={() => {
+                  patch({ morphology: m });
+                  avancerApresChoix();
+                }}
               />
             ))}
           </div>

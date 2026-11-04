@@ -86,7 +86,7 @@ export function FormulaireColorimetrie({
   const bloc = (i: number) => {
     const q = QUESTIONS_COLORIMETRIE[i];
     return (
-      <div key={q.id} className="mt-[24px]" role="group" aria-label={q.question}>
+      <div key={q.id} id={`colo-question-${i}`} className="mt-[24px] scroll-mt-4" role="group" aria-label={q.question}>
         <div className="text-[14px] font-semibold text-ink leading-[1.35]">{q.question}</div>
         <div className="grid grid-cols-2 gap-[8px] mt-[10px]">
           {q.reponses.map((r, j) => {
