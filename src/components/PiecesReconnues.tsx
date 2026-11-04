@@ -168,7 +168,7 @@ export default function PiecesReconnues({
           <Icone taille={18}>{I_CINTRE}</Icone>
         </span>
         <span className="flex-1 min-w-0">
-          <span className="block font-semibold text-[15px] text-ink leading-[1.3]">Une pièce n&apos;est pas la bonne ?</span>
+          <span className="block t-titre-ligne text-ink leading-[1.3]">Une pièce n&apos;est pas la bonne ?</span>
           <span className="block text-[12px] text-warm-text-2 leading-[1.45] mt-[4px]">
             {principalesAssociees
               ? "Associe la bonne pièce de ton dressing : c'est cette tenue que Capsela portera ou planifiera."

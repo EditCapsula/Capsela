@@ -360,7 +360,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
       <Card className="px-[16px] py-[15px] mt-[30px] flex gap-[12px] items-start">
         <Pictogramme nom="repere" taille={22} />
         <div className="min-w-0">
-          <div className="font-semibold text-[16px] leading-[1.25] text-ink">Ta palette est un repère, pas une règle.</div>
+          <div className="t-titre-carte leading-[1.25] text-ink">Ta palette est un repère, pas une règle.</div>
           <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
             Tu peux porter toutes les couleurs que tu aimes. Capsela utilise simplement cette palette pour privilégier les
             associations qui te mettent naturellement en valeur.

@@ -401,7 +401,7 @@ export default function ImporterTenueScreen() {
           )}
           {phase === "vide" && (
             <>
-              <p className="font-semibold text-[16px] text-ink">Capsela n&apos;a pas repéré de pièces sur cette photo.</p>
+              <p className="t-titre-carte text-ink">Capsela n&apos;a pas repéré de pièces sur cette photo.</p>
               <ul className="mt-2 text-[13px] text-muted-3 list-disc pl-5 space-y-1">
                 <li>Photographie la tenue en pied.</li>
                 <li>Choisis un fond simple.</li>
@@ -452,7 +452,7 @@ export default function ImporterTenueScreen() {
                       onClick={() => setOuverte(ouvert ? null : b.cle)}
                       className="min-w-0 flex items-center gap-[8px] text-left cursor-pointer min-h-[44px]"
                     >
-                      <span className="font-semibold text-[16px] text-ink truncate">{avecTraitsDUnion(b.nom || "Nouvelle pièce")}</span>
+                      <span className="t-titre-carte text-ink truncate">{avecTraitsDUnion(b.nom || "Nouvelle pièce")}</span>
                       <svg viewBox="0 0 24 24" className="w-[15px] h-[15px] flex-shrink-0" fill="none" stroke="#8B8375" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
                       </svg>

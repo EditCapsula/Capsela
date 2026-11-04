@@ -367,7 +367,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
                 {trio.map((t, i) => (
                   <div key={t.label} className={"pt-[12px] pb-[13px] " + (i ? "border-l border-border pl-[14px]" : "")}>
                     <div className="text-[12px] text-placeholder">{t.label}</div>
-                    <div className={"flex items-center gap-[6px] font-semibold text-[15px] mt-[4px] " + (t.vide ? "text-placeholder" : "text-ink")}>
+                    <div className={"flex items-center gap-[6px] t-titre-ligne mt-[4px] " + (t.vide ? "text-placeholder" : "text-ink")}>
                       {t.dot && <span className="w-[12px] h-[12px] rounded-full flex-shrink-0" style={{ background: t.dot, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }} aria-hidden="true" />}
                       {t.value}
                     </div>

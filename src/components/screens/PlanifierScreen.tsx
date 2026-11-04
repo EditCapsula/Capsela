@@ -47,6 +47,7 @@ import { useCapsela } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 import Button from "@/components/Button";
+import LigneInterrupteur from "@/components/LigneInterrupteur";
 import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
 
@@ -1985,13 +1986,13 @@ export default function PlanifierScreen() {
                   <div className="t-titre-carte text-ink">Pourquoi ce look ?</div>
                   <ul className="mt-2">
                     {([
-                      ["journee", secondaires.length ? "Tes occasions" : "Ton occasion", `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${sansBarre(dateContext)}` : ""}${
+                      ["journee", secondaires.length ? "Tes occasions" : "Ton occasion", `${composition ? "Prévue" : "Pensée"}${secondaires.length && !composition && !tenue?.polyvalente ? " d'abord" : ""} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${sansBarre(dateContext)}` : ""}${
                         // Tenue polyvalente (04/11/2026) : elle convient aussi aux autres occasions, ou le moteur n'en a pas trouvé qui le fasse.
                         !secondaires.length || composition
                           ? ""
                           : tenue?.polyvalente
                             ? `, et elle convient aussi pour ${secondaires.map((o) => occasionShortLabel(o)).join(" et ")}.`
-                            : `, d'abord : aucune tenue de tes pièces ne convient aussi pour ${secondaires.map((o) => occasionShortLabel(o)).join(" et ")}.`
+                            : ` : aucune tenue de tes pièces ne convient aussi pour ${secondaires.map((o) => occasionShortLabel(o)).join(" et ")}.`
                       }`],
                       ...(meteoMoment ? [["nuage", "La météo", phraseMeteo] as [IconePlanifier, string, string]] : []),
                       ...(!composition && !dressingSeul && nbCapsule > 0 && profile.styles.length
@@ -2017,30 +2018,8 @@ export default function PlanifierScreen() {
                     génération, il demandait de deviner ce qu'on préférerait
                     sans avoir rien vu. */}
                 {!composition && (
-                <button
-                  onClick={() => setDressingSeul(!dressingSeul)}
-                  aria-pressed={dressingSeul}
-                  className="w-full flex gap-3 items-center mt-[14px] bg-card border border-border rounded-carte p-[14px] cursor-pointer text-left"
-                >
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-[13px] font-medium text-ink">Uniquement mon dressing</span>
-                    <span className="block text-[11px] text-muted leading-[1.45] mt-[3px]">
-                      Sans compléter avec des pièces de ta capsule.
-                    </span>
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="w-11 h-[26px] flex-shrink-0 rounded-full p-[3px] flex transition-colors"
-                    style={{
-                      background: dressingSeul ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
-                      justifyContent: dressingSeul ? "flex-end" : "flex-start",
-                    }}
-                  >
-                    <span className="w-5 h-5 rounded-full bg-card" />
-                  </span>
-                </button>
+                  <LigneInterrupteur titre="Uniquement mon dressing" texte="Sans compléter avec des pièces de ta capsule." actif={dressingSeul} onClick={() => setDressingSeul(!dressingSeul)} className="mt-[14px]" />
                 )}
-
               </>
             )}
           </>
