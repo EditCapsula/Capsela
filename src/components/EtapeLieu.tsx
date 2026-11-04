@@ -162,7 +162,7 @@ export function ChoixVille({
           {titre && <Surtitre>{titre}</Surtitre>}
           <div className={(titre ? "mt-[10px] " : "") + "flex items-center gap-[10px] rounded-bloc border border-border bg-card px-[14px]"} style={{ minHeight: 56 }}>
             <span className="flex-shrink-0 text-terracotta-deep"><Epingle /></span>
-            <span className="flex-1 min-w-0 font-serif text-[17px] text-ink truncate">{lieu}</span>
+            <span className="flex-1 min-w-0 font-semibold text-[16px] text-ink truncate">{lieu}</span>
             <button
               onClick={() => {
                 setEdition(true);

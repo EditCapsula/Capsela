@@ -156,7 +156,7 @@ export default function FicheSuggestion({
       }
       pied={
         <>
-          <div className="text-center font-serif text-[17px] text-ink">
+          <div className="text-center font-semibold text-[16px] text-ink">
             Alors, cette pièce te plaît ?
           </div>
           <div className="grid grid-cols-2 gap-[10px] mt-[10px]">

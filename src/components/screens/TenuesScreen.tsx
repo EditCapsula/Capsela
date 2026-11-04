@@ -172,7 +172,7 @@ function ExploreStyleCard({
         )}
       </div>
       <div className="px-[10px] py-[9px]">
-        <div className="font-serif text-[13px] text-ink leading-[1.2]">{cfg.label}</div>
+        <div className="font-semibold text-[13px] text-ink leading-[1.2]">{cfg.label}</div>
         <div className="text-[10px] text-muted mt-[3px] leading-[1.3]">{cfg.desc}</div>
       </div>
     </button>

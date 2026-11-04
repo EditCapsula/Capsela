@@ -860,7 +860,7 @@ function DestinationsDuVoyage({
               <span className="flex-1 min-w-0">
                 {lu ? (
                   <>
-                    <span className="block font-serif text-[15px] text-ink">{lu.dates}</span>
+                    <span className="block font-semibold text-[14px] text-ink">{lu.dates}</span>
                     <span className="block text-[11px] text-muted mt-[1px]">{lu.nuits}</span>
                   </>
                 ) : (
@@ -1468,7 +1468,7 @@ export default function ValiseScreen() {
                 <span className="flex-shrink-0 text-terracotta mt-[2px]">{G_METEO}</span>
                 <div className="min-w-0">
                   <div className="text-[13px] text-ink">{nomVille}</div>
-                  <div className="font-serif text-[16px] text-ink mt-[2px]">
+                  <div className="font-semibold text-[15px] text-ink mt-[2px]">
                     {libelleAmplitude(amplitudeEtape1)} prévus
                     {amplitudeEtape1.jours < jours.length && (
                       <span className="text-[12px] text-muted font-sans">
@@ -2220,7 +2220,7 @@ function Resultat({
                   <div key={libelle} className="flex items-baseline justify-between mt-2">
                     <span className="text-[13px] text-ink">{libelle}</span>
                     <span className="text-[13px] text-ink">
-                      {avant} → <span className="font-serif text-[18px]">{apres}</span>
+                      {avant} → <span className="font-semibold text-[16px]">{apres}</span>
                     </span>
                   </div>
                 ))}
@@ -2865,7 +2865,7 @@ function Resultat({
       {/* LA TAILLE ET LA PROVENANCE (maquette V2, 11/10/2026) : « Valise M · 12 pièces », « Changer », et ce qui vient du dressing ou de
           la capsule. Les nombres sont ceux de la sélection enregistrée. */}
       <div className="flex items-center justify-between gap-3 mt-5">
-        <span className="font-serif text-[16px] text-ink">
+        <span className="font-semibold text-[15px] text-ink">
           Valise {valise.bagage} · {depasse ? "trop pleine" : `remplie à ${tauxRemplissage}\u00a0%`}
         </span>
         <button onClick={() => setTailleOuverte(true)} className="t-lien text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[44px] flex-shrink-0">
@@ -3238,7 +3238,7 @@ function Resultat({
             return (
               <section key={titre} className="mt-5">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-serif text-[16px] text-ink">{titre}</h3>
+                  <h3 className="font-semibold text-[15px] text-ink">{titre}</h3>
                   <span className="text-[12px] text-muted">{duGroupe.length}</span>
                 </div>
                 <div className="flex flex-col gap-2 mt-2">

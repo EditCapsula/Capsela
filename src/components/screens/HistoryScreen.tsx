@@ -454,7 +454,7 @@ function CompositionDressing({ parts, total, onVoirPieces }: { parts: PartDressi
         {active && detail && (
           <div className="detail-part mt-[14px] pt-[12px] border-t border-border flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <div className="font-serif text-[16px] text-ink leading-[1.25] truncate">{detail.titre}</div>
+              <div className="font-semibold text-[15px] text-ink leading-[1.25] truncate">{detail.titre}</div>
               <div className="text-[11.5px] text-muted mt-[2px]">{detail.sousTitre}</div>
               <button type="button" onClick={() => setChoisie(null)} className="min-h-[32px] -my-[4px] text-[11.5px] text-muted underline underline-offset-2 cursor-pointer">
                 Tout le dressing
