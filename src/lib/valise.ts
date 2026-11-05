@@ -870,11 +870,13 @@ export function categoriesPourCompleter(
   return out;
 }
 
-/**
- * La part maximale de suggestions de capsule par rapport aux pièces possédées de la valise (la moitié, arrondie au-dessus) : la capsule ne
- * doit pas devenir la valise. ARBITRAGE ÉDITORIAL du 11/10/2026, à revoir sur des dressings réels.
+/*
+ * LE PLAFOND DE SUGGESTIONS EST LEVÉ (05/11/2026, demandé : « une valise devrait être entièrement faite si besoin avec les pièces de la
+ * capsule si les pièces du dressing ne couvrent pas en totalité le besoin »). Il limitait les pièces de capsule à la moitié des pièces
+ * possédées de la valise (arbitrage du 11/10/2026) : un dressing de trois pièces ne pouvait recevoir que deux suggestions, et la valise
+ * restait à moitié vide. Le dressing garde la priorité — il compose d'abord seul, puis chaque ajout préfère ses pièces — mais la
+ * capsule complète désormais jusqu'au besoin entier.
  */
-export const PLAFOND_SUGGESTIONS = 0.5;
 
 export interface ValiseCompletee extends ResultatValise {
   /** Les pièces de la CAPSULE entrées dans la valise parce que le dressing ne suffisait pas — jamais des pièces possédées. */
@@ -885,13 +887,17 @@ export interface ValiseCompletee extends ResultatValise {
  * COMPLÉTER LA VALISE AVEC LA CAPSULE QUAND LE DRESSING NE SUFFIT PAS (11/10/2026, demandé : « capsule dans la valise si les pièces du
  * dressing ne permettent pas de compléter une valise »).
  *
- * Le déclencheur est exact : une occasion du séjour qu'AUCUN look du dressing ne couvre. Pour chacune, le moteur compose le look dans le
- * pool habituel de l'app (composeWardrobePool : la capsule complète ce que le dressing n'a pas) ; les pièces de ce look entrent dans la
- * valise si le volume le permet, celles de la capsule étant marquées comme suggestions (`suggestionIds`). Un dressing qui couvre tout :
- * rien n'est ajouté, la valise reste faite de pièces possédées. Si le moteur compose le look avec le dressing seul, c'est la place qui
- * manque, pas une pièce : rien n'est ajouté non plus.
+ * Deux besoins, dans cet ordre (05/11/2026 : « entièrement faite si besoin avec les pièces de la capsule ») :
  *
- * Les suggestions comptent dans le volume (une fois ajoutées au dressing, elles prendront de la place) ; l'écran les dit « à ajouter ».
+ * 1. LES OCCASIONS. Une occasion du séjour qu'AUCUN look du dressing ne couvre, ou que seuls des looks élargis couvrent : le moteur
+ *    compose le look dans le pool habituel de l'app (composeWardrobePool : la capsule complète ce que le dressing n'a pas) ; ses pièces
+ *    entrent si le volume le permet. Si le moteur compose le look avec le dressing seul, c'est la place qui manque : rien n'entre.
+ * 2. LE VOLUME (`cible`, la cible « prête » du bagage, cibleDeVolume). Tant que la valise est sous sa cible, des looks tirés dans le
+ *    dressing et la capsule réunis y entrent, dans la capacité : d'abord ceux qui demandent le moins de pièces de capsule (le dressing
+ *    passe devant), puis le moins de pièces nouvelles, puis ceux qui servent le plus de situations.
+ *
+ * Un dressing qui couvre tout et remplit la valise : rien n'est ajouté. Les pièces de capsule sont marquées suggestions (`suggestionIds`) ;
+ * elles comptent dans le volume (une fois ajoutées au dressing, elles prendront de la place) et l'écran les dit « à ajouter ».
  */
 export function completerAvecCapsule(
   dressing: Item[],
@@ -899,7 +905,9 @@ export function completerAvecCapsule(
   situations: SituationValise[],
   r: ResultatValise,
   capacite: number,
-  generer: Generateur
+  generer: Generateur,
+  /** La cible de volume du bagage (cibleDeVolume). Absente : seules les occasions sont complétées, comme avant le 05/11/2026. */
+  cible?: number
 ): ValiseCompletee {
   const rien: ValiseCompletee = { ...r, suggestionIds: [] };
   // Une occasion « faiblement couverte » : tous ses looks sont ÉLARGIS (le dressing n'a pas de pièce déclarée pour elle). La capsule peut
@@ -911,14 +919,15 @@ export function completerAvecCapsule(
     if (siens.length > 0 && siens.every((l) => l.elargie)) faibles.add(i);
   });
   const aTraiter = [...r.situationsSansLook, ...faibles];
-  if (aTraiter.length === 0 || capsule.length === 0) return rien;
   const idsDressing = new Set(dressing.map((i) => i.id));
   const tous = new Map([...capsule, ...dressing].map((i) => [i.id, i]));
+  const volumeDe_ = (ids: Iterable<number>) => [...ids].reduce((n, id) => n + unitesDe(tous.get(id)?.cat ?? "haut"), 0);
+  const sousLaCible = (ids: Iterable<number>) => cible !== undefined && volumeDe_(ids) < Math.min(cible, capacite);
+  if (capsule.length === 0 || (aTraiter.length === 0 && !sousLaCible(r.pieceIds))) return rien;
   const sac = new Set(r.pieceIds);
   const suggerees = new Set<number>();
   const tirees: { ids: number[]; situations: number[]; elargie: boolean }[] = [];
   const dites = new Set<OccasionKey>();
-  const volumeDe_ = (ids: Iterable<number>) => [...ids].reduce((n, id) => n + unitesDe(tous.get(id)?.cat ?? "haut"), 0);
   for (const i of aTraiter) {
     const s = situations[i];
     if (!s || dites.has(s.occasion)) continue;
@@ -936,18 +945,38 @@ export function completerAvecCapsule(
     // déjà retenues n'ajoute aucune pièce de capsule, mais couvre l'occasion : il entre dans la valise.)
     if (venues.length === 0 && !reuse) continue;
     if (volumeDe_(sac) + volumeDe_(nouveaux) > capacite) continue;
-    // La capsule COMPLÈTE, elle ne remplace pas le dressing : jamais plus de suggestions que la moitié des pièces possédées de la valise.
-    const possedees = [...sac, ...nouveaux].filter((id) => idsDressing.has(id)).length;
-    const dejaSuggerees = suggerees.size + venues.filter((id) => !suggerees.has(id)).length;
-    if (dejaSuggerees > Math.ceil(possedees * PLAFOND_SUGGESTIONS)) continue;
     nouveaux.forEach((id) => sac.add(id));
     venues.forEach((id) => suggerees.add(id));
     const siennes = situations.map((x, k) => (x.occasion === s.occasion ? k : -1)).filter((k) => k >= 0);
     tirees.push({ ids: t.ids, situations: siennes, elargie: t.elargie });
   }
-  if (suggerees.size === 0) return rien;
+  // 2. Le volume : la valise remplie jusqu'à sa cible, le dressing d'abord.
+  let candidats: Candidat[] = [];
+  if (sousLaCible(sac)) {
+    candidats = [...tirer([...tous.values()], situations, generer, TIRAGES_PAR_SITUATION).values()];
+    const deCapsule = (ids: number[]) => ids.filter((id) => !sac.has(id) && !idsDressing.has(id)).length;
+    while (sousLaCible(sac)) {
+      let meilleur: Candidat | null = null;
+      let score: [number, number, number] = [Infinity, Infinity, -1];
+      for (const c of candidats) {
+        const n = nouvelles(c.ids, sac);
+        if (!n || volumeDe_(sac) + volumeDe_(c.ids.filter((id) => !sac.has(id))) > capacite) continue;
+        const k: [number, number, number] = [deCapsule(c.ids), n, c.situations.size];
+        if (k[0] < score[0] || (k[0] === score[0] && (k[1] < score[1] || (k[1] === score[1] && k[2] > score[2])))) {
+          meilleur = c;
+          score = k;
+        }
+      }
+      if (!meilleur) break;
+      for (const id of meilleur.ids) {
+        sac.add(id);
+        if (!idsDressing.has(id)) suggerees.add(id);
+      }
+    }
+  }
+  if (sac.size === r.pieceIds.length) return rien;
   const pool = [...dressing, ...[...suggerees].map((id) => tous.get(id)!)];
-  const refait = looksDeLaValise([...sac], pool, situations, generer, [...r.looks, ...tirees]);
+  const refait = looksDeLaValise([...sac], pool, situations, generer, [...r.looks, ...tirees, ...candidats.filter((c) => contenu(c.ids, sac))]);
   return { ...refait, suggestionIds: [...suggerees].filter((id) => refait.pieceIds.includes(id)) };
 }
 

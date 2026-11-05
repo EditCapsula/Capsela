@@ -1135,10 +1135,10 @@ export default function ValiseScreen() {
     setFaites(2);
     await pause(300);
     if (!actif.current) return;
-    // Le dressing ne couvre pas toutes les occasions : la capsule complète la valise, ses pièces marquées « à ajouter » (completerAvecCapsule).
-    // Sauf « Uniquement mon dressing » (04/11/2026) : la valise reste faite des seules pièces possédées.
+    // Le dressing ne couvre pas tout le besoin — une occasion, ou le volume de la valise (05/11/2026) : la capsule complète la valise, ses
+    // pièces marquées « à ajouter » (completerAvecCapsule). Sauf « Uniquement mon dressing » (04/11/2026) : seules les pièces possédées.
     const seulDressing = rep.uniquementDressing ?? (idCible ? state.valises.find((v) => v.id === idCible)?.uniquementDressing === true : false);
-    const r = seulDressing ? { ...r0, suggestionIds: [] } : completerAvecCapsule(dressing, capsuleDe(situations), situations, r0, capaciteDe(rep.bagage), generer);
+    const r = seulDressing ? { ...r0, suggestionIds: [] } : completerAvecCapsule(dressing, capsuleDe(situations), situations, r0, capaciteDe(rep.bagage), generer, cibleDeVolume(rep.bagage));
     setFaites(3);
     await pause(300);
     if (!actif.current) return;
@@ -1341,12 +1341,14 @@ export default function ValiseScreen() {
 
   /**
    * LE MINIMUM POUR UNE NOUVELLE VALISE (27/09/2026) : de quoi remplir une
-   * valise S. En dessous, les questions ne s'ouvrent pas : l'écran dit ce
-   * qui manque et mène à l'ajout. Une valise existante reste consultable et
-   * modifiable.
+   * valise S. En dessous, les questions ne s'ouvraient pas. Depuis le
+   * 05/11/2026 (« une valise devrait être entièrement faite si besoin avec
+   * les pièces de la capsule »), la capsule complète ce qui manque : l'écran
+   * « Ton dressing d'abord » ne reste que si la capsule est vide elle aussi.
+   * Une valise existante reste consultable et modifiable.
    */
   const pret = pretPourUneValise(dressing);
-  const bloquee = vue.nom === "etape" && !idEnModification && !pret.pret;
+  const bloquee = vue.nom === "etape" && !idEnModification && !pret.pret && defaultCapsule.length === 0;
   const questions = vue.nom === "etape" && !bloquee;
 
   // ── Rendu ──
@@ -1496,14 +1498,14 @@ export default function ValiseScreen() {
           </>
         )}
 
-        {/* Dès la première question : la valise ne puise que dans le dressing
-            (27/09/2026). Le nombre dit, et le chemin pour le compléter. */}
+        {/* Dès la première question : d'où viennent les pièces — le dressing d'abord, la capsule pour ce qui manque (05/11/2026,
+            completerAvecCapsule). Le nombre dit, et le chemin pour compléter le dressing. */}
         {questions && etape === 1 && (
           <div className="mt-5">
             <CarteInfo glyphe={G_CINTRE}>
               {dressing.length
-                ? `Ta valise sera composée avec les ${dressing.length} ${dressing.length > 1 ? "pièces" : "pièce"} de ton dressing : plus il est complet, plus elle aura de looks.`
-                : "Ta valise se compose avec les pièces de ton dressing, encore vide."}{" "}
+                ? `Ta valise sera composée avec les ${dressing.length} ${dressing.length > 1 ? "pièces" : "pièce"} de ton dressing, complétées si besoin par ta capsule.`
+                : "Ton dressing est encore vide : ta valise sera composée avec les pièces de ta capsule."}{" "}
               <button onClick={actions.openAddEtRevenir} className="text-terracotta cursor-pointer">
                 Ajouter des pièces
               </button>
