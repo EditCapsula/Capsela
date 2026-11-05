@@ -54,6 +54,7 @@ import LoadingSpinner from "./LoadingSpinner";
 import ConfirmationAjout from "./ConfirmationAjout";
 import { ecranARestaurer, memoriserEcran } from "@/lib/ecranRestaure";
 import { initialiserLangue } from "@/lib/langue";
+import { FOND_CREME, FOND_ENCRE, poserFondSysteme } from "@/lib/fondSysteme";
 
 // La langue est fixée une fois, avant le premier rendu (docs/traduction.md) : App.tsx n'est chargé que dans le navigateur.
 initialiserLangue();
@@ -140,6 +141,8 @@ function Screens() {
   // Rechargement sur le web : on garde l'écran de premier niveau courant pour le retrouver (cf. ecranRestaure.ts).
   useEffect(() => {
     memoriserEcran(state.screen);
+    // Les barres système d'Android prennent le fond de l'écran (fondSysteme.ts) : encre sur l'accueil, crème ailleurs.
+    poserFondSysteme(state.screen === "welcome" ? FOND_ENCRE : FOND_CREME);
   }, [state.screen]);
   // LE RETOUR ANDROID (22/10/2026, retourSysteme.ts) : il ferme ce qui est ouvert par-dessus, sinon suit le bouton Retour de l'écran,
   // sinon revient à l'accueil depuis un écran de la barre du bas ; l'app ne se ferme plus que depuis l'accueil.
