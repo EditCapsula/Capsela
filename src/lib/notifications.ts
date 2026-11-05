@@ -9,9 +9,16 @@
  * Ce qu'elle dit est vrai quoi qu'il arrive : la tenue du jour est composée à l'ouverture de l'app (`regen`, store), pas à l'heure
  * de la notification, qui ne peut donc ni la montrer ni la décrire. Elle invite à l'ouvrir.
  *
- * INEXACTE, VOLONTAIREMENT. Android peut la décaler de quelques minutes pour économiser la batterie. Une alarme exacte demanderait
- * l'autorisation « Alarmes et rappels », que Google Play réserve aux réveils et aux agendas : le plugin la déclare, le manifeste
- * de l'app la retire (AndroidManifest.xml).
+ * INEXACTE, VOLONTAIREMENT. Une alarme exacte demanderait l'autorisation « Alarmes et rappels », que Google Play réserve aux
+ * réveils et aux agendas : le plugin la déclare, le manifeste de l'app la retire (AndroidManifest.xml). Android peut donc la
+ * décaler pour économiser la batterie — de quelques minutes pour une app ouverte chaque jour, davantage pour une app peu ouverte.
+ *
+ * UNE NOTIFICATION PAR JOUR, PAS UNE RÉPÉTITION (05/11/2026, signalé : « réglée à 8 h, reçue quelques heures après »). La
+ * répétition quotidienne du plugin (`schedule.on`) ne programme proprement que la PREMIÈRE : après chaque envoi, il repose la
+ * suivante avec une alarme qui ne réveille pas le téléphone (`AlarmManager.set(RTC)`, TimedNotificationPublisher.kt) — elle ne part
+ * qu'au prochain déverrouillage, des heures plus tard. Les jours suivants sont donc programmés un à un (`schedule.at`, qui réveille
+ * le téléphone et passe pendant sa veille), sur JOURS_PROGRAMMES jours, reconduits à chaque lancement et à chaque retour dans l'app.
+ * Sans ouverture pendant deux semaines, les rappels s'arrêtent : l'app ne relance pas indéfiniment qui ne l'ouvre plus.
  *
  * SUR LE WEB : pas de notification (il faudrait un serveur d'envoi et l'accord du navigateur). Les Préférences le disent.
  */
@@ -20,8 +27,22 @@ import { Capacitor } from "@capacitor/core";
 import { momentRappelReprise, periodesAVenir } from "./conges";
 import type { ProfilePrefs } from "./profile";
 
-/** L'identifiant de la notification quotidienne : un seul, que chaque reprogrammation remplace. */
+/** Les identifiants des notifications de la tenue du jour : 1 à JOURS_PROGRAMMES, un par jour, remplacés à chaque reprogrammation. */
 export const ID_TENUE_DU_JOUR = 1;
+export const JOURS_PROGRAMMES = 14;
+
+/**
+ * Les moments des prochaines notifications : aujourd'hui à l'heure choisie si elle n'est pas encore passée (une minute de marge),
+ * sinon demain, puis chaque jour suivant — en heure locale, changement d'heure compris.
+ */
+export function prochainsMoments(heure: { hour: number; minute: number }, maintenant: Date, nb = JOURS_PROGRAMMES): Date[] {
+  const premier = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate(), heure.hour, heure.minute);
+  const decalage = premier.getTime() > maintenant.getTime() + 60_000 ? 0 : 1;
+  return Array.from(
+    { length: nb },
+    (_, i) => new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate() + decalage + i, heure.hour, heure.minute)
+  );
+}
 
 export const TITRE_TENUE_DU_JOUR = "Ta tenue du jour t'attend";
 export const TEXTE_TENUE_DU_JOUR = "Ouvre Capsela pour la découvrir, composée avec la météo et ton programme.";
@@ -67,7 +88,7 @@ export async function synchroniserNotifications(
   try {
     const { LocalNotifications } = await import("@capacitor/local-notifications");
     await LocalNotifications.cancel({
-      notifications: [{ id: ID_TENUE_DU_JOUR }, ...Array.from({ length: NB_REPRISES_MAX }, (_, i) => ({ id: ID_REPRISE_PREMIER + i }))],
+      notifications: [...Array.from({ length: JOURS_PROGRAMMES }, (_, i) => ({ id: ID_TENUE_DU_JOUR + i })), ...Array.from({ length: NB_REPRISES_MAX }, (_, i) => ({ id: ID_REPRISE_PREMIER + i }))],
     });
     const heure = prefs.notifEnabled ? heureDeNotification(prefs.notifTime) : null;
     const reprises = periodesAVenir(prefs.conges)
@@ -84,7 +105,13 @@ export async function synchroniserNotifications(
     await LocalNotifications.schedule({
       notifications: [
         ...(heure
-          ? [{ id: ID_TENUE_DU_JOUR, title: TITRE_TENUE_DU_JOUR, body: TEXTE_TENUE_DU_JOUR, schedule: { on: heure, allowWhileIdle: true }, ...commun }]
+          ? prochainsMoments(heure, new Date()).map((at, i) => ({
+              id: ID_TENUE_DU_JOUR + i,
+              title: TITRE_TENUE_DU_JOUR,
+              body: TEXTE_TENUE_DU_JOUR,
+              schedule: { at, allowWhileIdle: true },
+              ...commun,
+            }))
           : []),
         ...reprises.map((at, i) => ({
           id: ID_REPRISE_PREMIER + i,
