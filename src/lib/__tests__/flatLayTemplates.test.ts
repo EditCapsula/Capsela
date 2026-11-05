@@ -131,14 +131,14 @@ describe("composerFlatLay avec template — mêmes garanties que le moteur", () 
   it("les corrections ponctuelles s'appliquent avec un template, jamais sans", () => {
     const pieces = LOOKS.robe();
     const id = pieces[0].id;
-    const avant = composerFlatLay(pieces, "c", { contexte: "look-detail", template: "robe" }).pieces.find((q) => q.id === id)!;
+    const avant = composerFlatLay(pieces, "c", { proportions: false, contexte: "look-detail", template: "robe" }).pieces.find((q) => q.id === id)!;
     CORRECTIONS_PIECES[id] = { echelle: 0.8 };
     try {
-      const apres = composerFlatLay(pieces, "c", { contexte: "look-detail", template: "robe" }).pieces.find((q) => q.id === id)!;
+      const apres = composerFlatLay(pieces, "c", { proportions: false, contexte: "look-detail", template: "robe" }).pieces.find((q) => q.id === id)!;
       expect(apres.l).toBeLessThan(avant.l);
-      const sans1 = composerFlatLay(pieces, "c", { contexte: "look-detail" });
+      const sans1 = composerFlatLay(pieces, "c", { proportions: false, contexte: "look-detail" });
       delete CORRECTIONS_PIECES[id];
-      const sans2 = composerFlatLay(pieces, "c", { contexte: "look-detail" });
+      const sans2 = composerFlatLay(pieces, "c", { proportions: false, contexte: "look-detail" });
       expect(sans1).toEqual(sans2);
     } finally {
       delete CORRECTIONS_PIECES[id];

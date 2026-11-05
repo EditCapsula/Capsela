@@ -152,25 +152,27 @@ export const PART_VISUELLE: Record<CategoryKey, number> = {
  * ÉDITORIAL, à revoir en rendu. Les accessoires gardent leurs places fixes et leur taille (02/11/2026).
  */
 export const PROPORTION_PIECE: Partial<Record<CategoryKey, number>> = {
-  haut: 0.86,
-  pull: 0.86,
-  // 1,0 sur la référence ; ramené à 0,85 (04/11/2026, vu en rendu réel : « le jean rapetisse trop quand il y a un blazer ») — un blazer
-  // est plus court qu'un jean, à hauteur égale le jean paraissait tassé à côté de lui.
-  veste: 0.85,
-  manteau: 1.15,
+  // Révisées le 05/11/2026 sur cinq planches de référence de plus (« inspire-toi de ces proportions ; la robe est trop petite ; améliore les
+  // proportions partout »), mesurées pièce par pièce, pantalon = 1 : haut 0,69–0,87, blazer 0,72, manteau 0,99, sac 0,52–0,75,
+  // chaussures 0,37–0,91 (0,65 en moyenne), montre 0,85. Retenu : le milieu des plages, le sac au bas de la sienne (« trop massif », 04/11).
+  haut: 0.8,
+  pull: 0.8,
+  veste: 0.75,
+  manteau: 1,
   pantalon: 1,
   jean: 1,
-  jupe: 0.72,
-  short: 0.55,
-  robe: 1.25,
-  combinaison: 1.25,
-  chaussures: 0.47,
-  // 0,75 sur la référence ; ramené à 0,6 (04/11/2026, vu en rendu réel avec les visuels du catalogue : « le sac est trop massif ») — un
-  // sac à main prenait autant de place que le t-shirt.
+  jupe: 0.75,
+  short: 0.6,
+  // La robe occupe toute sa colonne, comme le haut et le bas réunis (« la robe dans Capsela est trop petite », 05/11/2026).
+  robe: 1.65,
+  combinaison: 1.65,
+  chaussures: 0.62,
   sac: 0.6,
+  accessoire: 0.5,
+  bijou: 0.45,
 };
 /** Les catégories dont la proportion vaut pour le PLUS GRAND CÔTÉ (un objet posé), et non pour la hauteur (un vêtement). */
-const PROPORTION_PAR_COTE: CategoryKey[] = ["chaussures", "sac"];
+const PROPORTION_PAR_COTE: CategoryKey[] = ["chaussures", "sac", "accessoire", "bijou"];
 /** La hauteur du bas, en part de la hauteur de la zone, avant l'ajustement à la zone : l'unité des proportions. */
 const UNITE_PROPORTIONS = 0.6;
 
@@ -629,22 +631,7 @@ export function composerFlatLay(
   const template = options.template && (options.contexte === "look-detail" || options.contexte === "hero-home") ? options.template : null;
   const gabaritTemplate = template ? GABARITS_TEMPLATES[template] : null;
   const sansSac = !roles.some((r) => r.role === "sac");
-  // LA VESTE EN COLONNE (04/11/2026, vu en rendu réel : « le jean rapetisse trop quand il y a un blazer ») : avec les proportions, le haut et
-  // la veste à leur vraie taille ne laissaient au bas que l'espace entre eux deux — fin, à moitié caché. Comme sur la planche de référence :
-  // le haut puis le bas dans une colonne, la veste puis le sac et les chaussures dans l'autre. Les emplacements sont en unités du bas (U),
-  // l'ajustement à la zone fait le reste ; ils passent avant le template et le gabarit du contexte, pour toute tenue veste + bas.
-  const enColonnes = proportionnee && heroDessus && roles.some((r) => r.role === "bas");
-  const U = UNITE_PROPORTIONS * hauteurZone;
-  const colonnes: Partial<Record<RoleFlatLay, Ref>> = {
-    // Le haut chevauche légèrement la taille du bas, comme rentré dedans ; sac et chaussures côte à côte sous la veste : la colonne de droite
-    // n'est pas plus haute que celle de gauche, la planche garde sa taille.
-    secondaire: { x: 0.45 * U, y: 0.43 * U, l: 0, angle: 0, resserre: false },
-    bas: { x: 0.45 * U, y: 1.3 * U, l: 0, angle: 0, resserre: false },
-    hero: { x: 1.28 * U, y: 0.45 * U, l: 0, angle: 0, resserre: false },
-    sac: { x: 1.06 * U, y: 1.22 * U, l: 0, angle: 0, resserre: false },
-    chaussures: sansSac ? { x: 1.28 * U, y: 1.2 * U, l: 0, angle: 0, resserre: false } : { x: 1.55 * U, y: 1.32 * U, l: 0, angle: 0, resserre: false },
-  };
-  const refDe = (role: RoleFlatLay): Ref => (enColonnes && colonnes[role]) || (gabaritTemplate?.[role]) || (sansSac && !heroRobe && !heroDessus && config.refsSansSac?.[role]) || (heroRobe && config.refsRobe?.[role]) || (heroDessus && config.refsDessus?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
+  const refDe = (role: RoleFlatLay): Ref => (gabaritTemplate?.[role]) || (sansSac && !heroRobe && !heroDessus && config.refsSansSac?.[role]) || (heroRobe && config.refsRobe?.[role]) || (heroDessus && config.refsDessus?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
 
   // Les accessoires : on garde les plus utiles, en nombre limité par le contexte et le nombre de pièces.
   const accessoires = roles.filter((r) => r.role === "accessoire").sort((a, b) => rangAccessoire(a.piece.cat) - rangAccessoire(b.piece.cat));
@@ -693,16 +680,64 @@ export function composerFlatLay(
     return { id: piece.id, cat: piece.cat, role, visualScale, x: cx, y: cy, l, h: l / ratio, angle, z: corr?.z ?? profondeur(role, piece.cat) };
   };
 
-  const brut: PlacementFlatLay[] = roles
-    .filter((r) => r.role !== "accessoire" && r.role !== "couche")
-    .map(({ piece, role }) => placer(piece, role, refDe(role)));
+  /**
+   * LA PLANCHE EN DEUX COLONNES (05/11/2026, six planches de référence de la propriétaire, toutes composées ainsi ; elle avait d'abord
+   * retenu « les tailles seulement », puis demandé d'améliorer les proportions partout sur ces modèles). À gauche le haut puis le bas, ou la
+   * robe seule ; à droite la veste ou le manteau, la couche, le sac, les chaussures, puis l'accessoire. Chaque pièce a la taille
+   * PROPORTION_PIECE, bornée à la largeur d'une colonne ; la colonne la plus courte répartit ses pièces sur la hauteur de l'autre. Aucun
+   * chevauchement, aucune graine : la même tenue donne la même planche. L'ajustement à la zone vient ensuite, comme pour l'autre moteur.
+   */
+  const grille = (): PlacementFlatLay[] => {
+    const U = UNITE_PROPORTIONS * hauteurZone;
+    const largeurMax = 0.95 * U;
+    const ecartV = 0.05 * U;
+    const ecartH = 0.1 * U;
+    const poser = (piece: PieceFlatLay, role: RoleFlatLay): PlacementFlatLay => {
+      const ratio = piece.ratio > 0 ? piece.ratio : 1;
+      const t = (PROPORTION_PIECE[piece.cat] ?? 0.5) * U;
+      let l = PROPORTION_PAR_COTE.includes(piece.cat) ? (ratio >= 1 ? t : t * ratio) : t * ratio;
+      if (l > largeurMax) l = largeurMax;
+      return { id: piece.id, cat: piece.cat, role, visualScale: 1, x: 0, y: 0, l, h: l / ratio, angle: 0, z: profondeur(role, piece.cat) };
+    };
+    const posees = roles.filter((r) => r.role !== "accessoire" || gardes.has(r.piece));
+    const aGauche = (r: { piece: PieceFlatLay; role: RoleFlatLay }) =>
+      ROBES.includes(r.piece.cat) || (BAS.includes(r.piece.cat) && r.role !== "accessoire") || (HAUTS.includes(r.piece.cat) && r.role !== "couche" && r.role !== "accessoire");
+    const rangG = (c: CategoryKey) => (BAS.includes(c) ? 1 : 0);
+    const rangD = (r: { piece: PieceFlatLay; role: RoleFlatLay }) =>
+      DESSUS.includes(r.piece.cat) ? 0 : r.role === "couche" ? 1 : r.role === "sac" ? 2 : r.role === "chaussures" ? 3 : 4;
+    const gauche = posees.filter(aGauche).sort((a, b) => rangG(a.piece.cat) - rangG(b.piece.cat));
+    const droite = posees.filter((r) => !aGauche(r)).sort((a, b) => rangD(a) - rangD(b));
+    if (!gauche.length && droite.length > 1) gauche.push(droite.shift()!);
+    const colonnes = [gauche, droite].filter((c) => c.length).map((c) => c.map(({ piece, role }) => poser(piece, role)));
+    const hauteurDe = (c: PlacementFlatLay[]) => c.reduce((t, q) => t + q.h, 0) + ecartV * (c.length - 1);
+    const H = Math.max(...colonnes.map(hauteurDe));
+    let x = 0;
+    for (const c of colonnes) {
+      const w = Math.max(...c.map((q) => q.l));
+      const reste = H - hauteurDe(c);
+      // La colonne la plus courte : l'espace en plus va entre ses pièces (au plus 0,3 U par intervalle), le reste la centre.
+      const parIntervalle = c.length > 1 ? Math.min(reste / (c.length - 1), 0.3 * U) : 0;
+      let y = (reste - parIntervalle * (c.length - 1)) / 2;
+      for (const q of c) {
+        q.x = x + w / 2;
+        q.y = y + q.h / 2;
+        y += q.h + ecartV + parIntervalle;
+      }
+      x += w + ecartH;
+    }
+    return colonnes.flat();
+  };
 
-  desserrer(brut, config.chevauchementMax, config.masqueMax);
+  const brut: PlacementFlatLay[] = proportionnee
+    ? grille()
+    : roles.filter((r) => r.role !== "accessoire" && r.role !== "couche").map(({ piece, role }) => placer(piece, role, refDe(role)));
+
+  if (!proportionnee) desserrer(brut, config.chevauchementMax, config.masqueMax);
 
   // LA COUCHE (« regroupement stylistique », 08/10/2026) : posée contre la pièce qu'elle double — le haut du second plan, sinon le héro —,
   // juste dessous et légèrement derrière, vers le centre de la planche. Elle recouvre de 14 % de sa hauteur au plus (sous les 18 %) et ne
   // s'éloigne jamais : deux couches d'une même tenue ne sont jamais dans deux coins opposés.
-  const coucheRole = roles.find((r) => r.role === "couche");
+  const coucheRole = proportionnee ? undefined : roles.find((r) => r.role === "couche");
   const ancre = brut.find((q) => q.role === "secondaire") ?? brut.find((q) => q.role === "hero");
   if (coucheRole && ancre) {
     // Une veste en plus se lit plus grande qu'un t-shirt sous un pull : 100 % de son ancre au lieu de 62 %.
@@ -719,14 +754,15 @@ export function composerFlatLay(
     }
     brut.push({ ...c, groupeAvec: ancre.id });
   }
-  desserrer(brut, config.chevauchementMax, config.masqueMax);
+  if (!proportionnee) desserrer(brut, config.chevauchementMax, config.masqueMax);
 
   // Chaque accessoire garde le premier emplacement qui le colle à la composition SANS couvrir une pièce importante ; sinon il est
   // écarté : un petit objet isolé ou posé sur le héro ne sert pas la planche (« 08/10/2026 : un accessoire noir seul sous la robe »).
   const structure = () => brut.map(boiteTournee);
-  const fixes = options.accessoiresFixes !== false && !!config.placesAccessoires?.length;
+  // En deux colonnes, les accessoires sont posés par la grille (en bas de la colonne de droite) : ni place fixe, ni emplacement du gabarit.
+  const fixes = !proportionnee && options.accessoiresFixes !== false && !!config.placesAccessoires?.length;
   // Accessoires à place fixe : posés APRÈS l'ajustement à la zone (plus bas), dans ses coordonnées finales.
-  for (const { piece } of fixes ? [] : accessoires.filter((r) => gardes.has(r.piece))) {
+  for (const { piece } of fixes || proportionnee ? [] : accessoires.filter((r) => gardes.has(r.piece))) {
     let meilleur: ReturnType<typeof placer> | null = null;
     let meilleurEcart = Infinity;
     // Chaque emplacement est essayé resserré ET tel quel (14/10/2026) : resserré seul, il tombait sur les pièces ; tel quel seul, il
