@@ -348,7 +348,8 @@ export default function PreferencesScreen() {
           onClick={() => {
             setConfirmerReinit(false);
             setReinitFaite(true);
-            saveProfile({ ...profile, prefs: DEFAULT_PREFS });
+            // Les visites guidées vues ne sont pas une préférence : la réinitialisation ne les fait pas revenir (05/11/2026).
+            saveProfile({ ...profile, prefs: { ...DEFAULT_PREFS, ...(prefs.visitesVues ? { visitesVues: prefs.visitesVues } : {}) } });
             void synchroniserNotifications(DEFAULT_PREFS, false).then(setEtatNotif);
           }}
         >

@@ -16,6 +16,8 @@ export interface ProfilePrefs {
   onVacation: boolean;
   /** Périodes de congés datées (04/11/2026, conges.ts) : en base dans `profiles.prefs`, sans migration. */
   conges: PeriodeConges[];
+  /** Les visites guidées déjà vues (05/11/2026, memoireVisites.ts) : en base dans `profiles.prefs`, sans migration. Absent : aucune. */
+  visitesVues?: string[];
 }
 
 export type Affinite = "Tons chauds" | "Tons froids" | "Les deux" | "Je ne sais pas";

@@ -200,4 +200,40 @@ export const EN: Record<string, string> = {
   "Nouveau mot de passe": "New password",
   "Confirmer le nouveau mot de passe": "Confirm the new password",
   "Enregistrer mon nouveau mot de passe": "Save my new password",
+
+  // --- Visites guidées (lib/visites.ts, VisiteGuidee.tsx) ---
+  Suivant: "Next",
+  Retour: "Back",
+  "C'est parti": "Let's go",
+  "Passer la visite": "Skip the tour",
+  "Découvrir Aujourd'hui": "Discover Today",
+  "Découvrir ton Dressing": "Discover your Wardrobe",
+  "Découvrir ta Capsule": "Discover your Capsule",
+  "Ta tenue du jour": "Your outfit of the day",
+  "Composée chaque matin avec tes pièces, selon la météo et ton programme. Fais glisser pour voir d'autres idées.":
+    "Put together every morning with your pieces, based on the weather and your plans. Swipe to see more ideas.",
+  "Envie d'autre chose ?": "Fancy something else?",
+  "Demande une autre tenue : elle respecte toujours la météo et ton occasion.":
+    "Ask for another outfit: it always fits the weather and your occasion.",
+  "Prépare les jours suivants": "Plan the days ahead",
+  "Les flèches te montrent la tenue des prochains jours, avec leur météo.": "The arrows show the outfit for the coming days, with their weather.",
+  "Ajoute tes pièces": "Add your pieces",
+  "Une photo suffit : Capsela reconnaît la catégorie, la couleur de la pièce puis la détoure.":
+    "One photo is enough: Capsela recognises the piece's category and colour, then cuts it out.",
+  "Retrouve tout, vite": "Find everything, fast",
+  "Cherche, filtre par catégorie ou trie ton dressing.": "Search, filter by category or sort your wardrobe.",
+  "Ta capsule de saison": "Your seasonal capsule",
+  "Touche la saison pour découvrir la capsule d'une autre saison.": "Tap the season to discover the capsule for another season.",
+  "Quatre façons de la parcourir": "Four ways to browse it",
+  "Compose une tenue, explore les pièces, découvre les pièces clés et les détails de ta capsule.":
+    "Put together an outfit, explore the pieces, discover the key pieces and the details of your capsule.",
+  "Compose ta tenue": "Put together your outfit",
+  "Choisis une catégorie, puis fais défiler ses pièces avec les flèches ou d'un glissement.":
+    "Choose a category, then browse its pieces with the arrows or a swipe.",
+
+  // --- Gérer mon compte : Support ---
+  Aide: "Help",
+  "Revoir les visites guidées de l'application.": "Replay the app's guided tours.",
+  "Nous contacter": "Contact us",
+  "Choisis une visite : son écran s'ouvre et elle recommence.": "Choose a tour: its screen opens and it starts again.",
 };

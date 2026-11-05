@@ -30,6 +30,8 @@ export function clesLocalesDuCompte(userId: string | null): string[] {
     // Les villes cherchées récemment (lieux.ts) — ajoutées le 15/10/2026 (repasse légale) : une destination dit où l'on va. La
     // clé n'est pas rangée par compte : elle part avec n'importe quel compte supprimé sur l'appareil.
     "capsela.villesRecentes",
+    // Les visites guidées déjà vues (memoireVisites.ts, 05/11/2026).
+    `capsela.visites.${compte}`,
   ];
 }
 

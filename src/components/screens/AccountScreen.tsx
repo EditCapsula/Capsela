@@ -13,6 +13,12 @@ import { buildDataExport, downloadJson, exportFileName } from "@/lib/dataExport"
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+import { demanderVisite } from "@/lib/memoireVisites";
+import { VISITES, type Visite } from "@/lib/visites";
+import { t } from "@/lib/langue";
+
+/** L'adresse de « Nous contacter » (05/11/2026, donnée par la propriétaire). */
+const EMAIL_SUPPORT = "capsela.app@gmail.com";
 
 /*
  * MON COMPTE (architecture du profil, 25/09/2026) : le compte et ses données,
@@ -71,6 +77,15 @@ export default function AccountScreen() {
   // L'offre lue par premium.ts ; « inconnu » n'est jamais affiché comme « Gratuit ».
   const offre = etatPremium === "premium" ? "Premium" : etatPremium === "gratuit" ? "Gratuit" : "En cours de vérification";
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [aideOuverte, setAideOuverte] = useState(false);
+  // Revoir une visite : elle est demandée, puis son écran s'ouvre (VisiteGuidee la lance là-bas).
+  const revoir = (v: Visite) => {
+    setAideOuverte(false);
+    demanderVisite(v.id);
+    if (v.ecran === "home") actions.goHome();
+    else if (v.ecran === "wardrobe") actions.goWardrobe();
+    else if (v.ecran === "capsule") actions.goCapsule();
+  };
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -252,6 +267,46 @@ export default function AccountScreen() {
         )}
       </Section>
       {exportError && <div className="mt-[10px] text-[12px] text-rust leading-[1.5]">{exportError}</div>}
+
+      {/*
+        SUPPORT (05/11/2026, demandé). « Aide » rouvre les visites guidées (lib/visites.ts) : la visite choisie est demandée, puis
+        son écran s'ouvre et elle s'y joue, même déjà vue. « Nous contacter » ouvre la messagerie vers l'adresse du support.
+      */}
+      <Section titre="Support">
+        <button
+          onClick={() => setAideOuverte(true)}
+          className="w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer border-b border-border"
+        >
+          <span className="flex-1 min-w-0 pr-2">
+            <span className="block text-[13px] text-ink">{t("Aide")}</span>
+            <span className="block text-[11px] text-muted mt-[2px] leading-[1.35]">{t("Revoir les visites guidées de l'application.")}</span>
+          </span>
+          <span aria-hidden="true" className="text-placeholder text-[15px]">›</span>
+        </button>
+        <a href={`mailto:${EMAIL_SUPPORT}`} className="w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer">
+          <span className="flex-1 min-w-0 pr-2">
+            <span className="block text-[13px] text-ink">{t("Nous contacter")}</span>
+            <span className="block text-[11px] text-muted mt-[2px] leading-[1.35]">{EMAIL_SUPPORT}</span>
+          </span>
+          <span aria-hidden="true" className="text-placeholder text-[15px]">›</span>
+        </a>
+      </Section>
+
+      <BottomSheet title={t("Aide")} open={aideOuverte} onClose={() => setAideOuverte(false)}>
+        <div className="text-[12px] text-muted mb-[12px] leading-[1.45]">{t("Choisis une visite : son écran s'ouvre et elle recommence.")}</div>
+        <Card className="overflow-hidden">
+          {VISITES.map((v, i) => (
+            <button
+              key={v.id}
+              onClick={() => revoir(v)}
+              className={"w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer" + (i > 0 ? " border-t border-border" : "")}
+            >
+              <span className="text-[13px] text-ink">{t(v.nom)}</span>
+              <span aria-hidden="true" className="text-placeholder text-[15px]">›</span>
+            </button>
+          ))}
+        </Card>
+      </BottomSheet>
 
       <button
         onClick={actions.goLegal}

@@ -46,7 +46,8 @@ export default function BarreDuJour({ className = "", retro }: { className?: str
 
   return (
     <div className={className}>
-      <div className="flex items-center justify-between gap-3">
+      {/* data-tour : la cible « Prépare les jours suivants » de la visite guidée de l'accueil (lib/visites.ts). */}
+      <div className="flex items-center justify-between gap-3" data-tour="jour-meteo">
         <div className="flex items-center min-w-0 text-[12.5px] font-medium text-muted-3">
           <button
             onClick={() => (retro && decalage === 0 ? retro.precedent != null && retro.onChange(retro.precedent) : actions.choisirJour(decalage - 1))}

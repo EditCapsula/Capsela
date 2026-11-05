@@ -86,7 +86,7 @@ export function JourEtMeteo({ className = "", retro }: { className?: string; ret
       <Card rayon="pilule" className="flex items-stretch min-h-[46px]">
         {/* LE JOUR — ‹ libellé ›. Hors d'aujourd'hui, le libellé lui-même
             ramène à aujourd'hui d'un tap. */}
-        <div className="flex items-center flex-shrink-0 pl-[4px]" role="group" aria-label="Jour de la tenue">
+        <div className="flex items-center flex-shrink-0 pl-[4px]" role="group" aria-label="Jour de la tenue" data-tour="jour-meteo">
           <button
             onClick={() => (retro && decalage === 0 ? retro.precedent != null && retro.onChange(retro.precedent) : actions.choisirJour(decalage - 1))}
             disabled={retro && decalage === 0 ? retro.precedent == null : decalage === 0}

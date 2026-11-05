@@ -462,3 +462,114 @@ input.capin[type="date"]::-webkit-date-and-time-value {
     transition: none !important;
   }
 }
+
+/*
+ * LES VISITES GUIDÉES (05/11/2026, src/components/VisiteGuidee.tsx) : l'infobulle de Driver.js habillée aux jetons de l'app, sous
+ * une seule classe. Carte crème à filet (comme Card), rayon `bloc`, titre en `t-titre-ligne`, texte Manrope, actions au style de
+ * Button (capitales `t-bouton`, terracotta-deep plein pour avancer, contour pour revenir), « Passer » en lien discret. Le voile
+ * (encre, 34 %) et le cadre de l'élément (rayon 14) sont réglés dans la configuration du composant.
+ */
+.driver-popover.capsela-visite {
+  font-family: var(--font-sans);
+  background-color: var(--color-card);
+  color: var(--color-ink);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-bloc);
+  box-shadow: 0 10px 30px rgba(29, 26, 22, 0.16);
+  padding: 18px 18px 16px;
+  min-width: 0;
+  width: min(320px, calc(100vw - 32px));
+  max-width: min(320px, calc(100vw - 32px));
+}
+.driver-popover.capsela-visite .driver-popover-title {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--color-ink);
+  padding-right: 64px;
+}
+.driver-popover.capsela-visite .driver-popover-description {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-muted-3);
+  margin-top: 6px;
+  text-wrap: pretty;
+}
+.driver-popover.capsela-visite .driver-popover-close-btn {
+  width: auto;
+  height: auto;
+  top: 16px;
+  right: 16px;
+  padding: 2px 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-muted);
+}
+.driver-popover.capsela-visite .driver-popover-close-btn:hover,
+.driver-popover.capsela-visite .driver-popover-close-btn:focus-visible {
+  color: var(--color-terracotta-deep);
+}
+.driver-popover.capsela-visite .driver-popover-footer {
+  margin-top: 16px;
+  gap: 10px;
+}
+.driver-popover.capsela-visite .driver-popover-progress-text {
+  font-size: 12px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.driver-popover.capsela-visite .driver-popover-navigation-btns {
+  gap: 8px;
+}
+.driver-popover.capsela-visite .driver-popover-navigation-btns button + button {
+  margin-left: 0;
+}
+.driver-popover.capsela-visite .driver-popover-footer-btn {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow: none;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, background-color 0.15s;
+}
+.driver-popover.capsela-visite .driver-popover-next-btn {
+  background-color: var(--color-terracotta-deep);
+  border: 1px solid var(--color-terracotta-deep);
+  color: var(--color-cream);
+}
+.driver-popover.capsela-visite .driver-popover-next-btn:hover,
+.driver-popover.capsela-visite .driver-popover-next-btn:focus-visible {
+  background-color: var(--color-terracotta-hover);
+}
+.driver-popover.capsela-visite .driver-popover-prev-btn {
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-terracotta);
+}
+.driver-popover.capsela-visite .driver-popover-footer-btn:active {
+  transform: scale(0.985);
+}
+.driver-popover.capsela-visite .driver-popover-arrow-side-top {
+  border-top-color: var(--color-card);
+}
+.driver-popover.capsela-visite .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--color-card);
+}
+.driver-popover.capsela-visite .driver-popover-arrow-side-left {
+  border-left-color: var(--color-card);
+}
+.driver-popover.capsela-visite .driver-popover-arrow-side-right {
+  border-right-color: var(--color-card);
+}
+@media (prefers-reduced-motion: reduce) {
+  .driver-popover.capsela-visite .driver-popover-footer-btn {
+    transition: none;
+  }
+}

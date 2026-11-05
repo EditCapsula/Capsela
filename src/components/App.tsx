@@ -55,6 +55,7 @@ import ConfirmationAjout from "./ConfirmationAjout";
 import { ecranARestaurer, memoriserEcran } from "@/lib/ecranRestaure";
 import { initialiserLangue } from "@/lib/langue";
 import { FOND_CREME, FOND_ENCRE, poserFondSysteme } from "@/lib/fondSysteme";
+import VisiteGuidee from "./VisiteGuidee";
 
 // La langue est fixée une fois, avant le premier rendu (docs/traduction.md) : App.tsx n'est chargé que dans le navigateur.
 initialiserLangue();
@@ -283,6 +284,8 @@ function Screens() {
       <ConfirmationAjout auDessusDeLaBarre={showTabbar} />
       <ApercuPiece />
       <FicheEnFeuille />
+      {/* Les visites guidées (lib/visites.ts) : un seul composant, le seul qui manipule Driver.js. */}
+      <VisiteGuidee />
       <Analytics />
     </div>
   );
