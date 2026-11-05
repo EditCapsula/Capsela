@@ -1,0 +1,165 @@
+name: iOS — construire l'app pour l'App Store
+
+# Construit l'app iOS et l'envoie à App Store Connect (TestFlight), sans Mac (05/11/2026, docs/applications-mobiles.md).
+# Lancer depuis l'onglet Actions → « Run workflow », avec le nom de version (« 1.6 »…). Le numéro de build (CFBundleVersion, croissant,
+# exigé par Apple) est le numéro de cette exécution.
+#
+# SIGNATURE GÉRÉE PAR APPLE : Xcode crée lui-même le certificat de distribution et le profil, avec la clé d'API d'App Store Connect
+# (-allowProvisioningUpdates). Rien à exporter d'un Mac. Secrets :
+#   APPLE_TEAM_ID                 l'identifiant d'équipe (10 caractères, developer.apple.com → Membership details)
+#   APP_STORE_CONNECT_KEY_ID      l'identifiant de la clé d'API (App Store Connect → Utilisateurs et accès → Intégrations)
+#   APP_STORE_CONNECT_ISSUER_ID   l'identifiant de l'émetteur (même page)
+#   APP_STORE_CONNECT_KEY         le contenu du fichier AuthKey_XXXX.p8 (texte, lignes BEGIN / END comprises)
+# et la clé publique Supabase, comme pour Android : NEXT_PUBLIC_SUPABASE_ANON_KEY, sinon SUPABASE_PUBLISHABLE_KEY.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Nom de version affiché (ex. 1.6)"
+        required: true
+        default: "1.0"
+      envoyer:
+        description: "Envoyer vers App Store Connect (TestFlight)"
+        type: boolean
+        default: true
+  # Sur une pull request qui touche au projet iOS : la même construction, NON SIGNÉE, pour vérifier que l'app compile
+  # (personne n'a de Mac : c'est la seule compilation native du projet iOS).
+  pull_request:
+    paths:
+      - "ios/**"
+      - "capacitor.config.ts"
+      - ".github/workflows/ios-construire.yml"
+
+jobs:
+  construire:
+    # Xcode 26 : depuis avril 2026, App Store Connect n'accepte que les apps construites avec le SDK iOS 26.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Choisir Xcode 26
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            echo "::error::Aucun Xcode 26 sur la machine : $(ls -d /Applications/Xcode*.app | tr '\n' ' ')"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      # Le même site que sur le web et Android (cf. android-construire.yml).
+      - name: Construire le site et le copier dans le projet iOS
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_PUBLISHABLE_KEY }}
+          # « Continuer avec Apple » (docs/connexion-apple.md) : « 1 » une fois Apple et Supabase réglés ; exigé par l'App Store tant que
+          # Google est proposé (règle 4.8). Absente : le bouton n'est pas affiché.
+          NEXT_PUBLIC_CONNEXION_APPLE: ${{ vars.CONNEXION_APPLE }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "::error::Clé publique Supabase absente : sans elle, l'app tournerait en mode démo."
+            exit 1
+          fi
+          npm run build
+          npx cap sync ios
+
+      - name: Vérifier que le projet compile (sans signature)
+        if: github.event_name == 'pull_request'
+        working-directory: ios/App
+        run: |
+          set -o pipefail
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee "$RUNNER_TEMP/xcode.log" | grep -E "error:|warning: .*deprecated|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" "$RUNNER_TEMP/xcode.log" || { grep -m 30 "error:" "$RUNNER_TEMP/xcode.log" | while IFS= read -r l; do echo "::error::$l"; done; exit 1; }
+
+      - name: Préparer la clé d'API d'App Store Connect
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EQUIPE: ${{ secrets.APPLE_TEAM_ID }}
+          CLE_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          EMETTEUR: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          CLE: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: |
+          for v in EQUIPE CLE_ID EMETTEUR CLE; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Secret manquant : APPLE_TEAM_ID, APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID et APP_STORE_CONNECT_KEY sont nécessaires (docs/applications-mobiles.md)."
+              exit 1
+            fi
+          done
+          printf '%s\n' "$CLE" > "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Archiver l'app signée
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: ios/App
+        env:
+          EQUIPE: ${{ secrets.APPLE_TEAM_ID }}
+          CLE_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          EMETTEUR: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          if ! xcodebuild -project App.xcodeproj -scheme App -configuration Release -destination "generic/platform=iOS" \
+              -archivePath "$RUNNER_TEMP/Capsela.xcarchive" archive \
+              -allowProvisioningUpdates \
+              -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$CLE_ID" -authenticationKeyIssuerID "$EMETTEUR" \
+              DEVELOPMENT_TEAM="$EQUIPE" CODE_SIGN_STYLE=Automatic \
+              MARKETING_VERSION="${{ inputs.version }}" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+              > "$RUNNER_TEMP/archive.log" 2>&1; then
+            grep -m 30 -E "error:|Error Domain|No profiles|requires a provisioning" "$RUNNER_TEMP/archive.log" | while IFS= read -r l; do echo "::error::$l"; done
+            tail -40 "$RUNNER_TEMP/archive.log"
+            exit 1
+          fi
+          tail -3 "$RUNNER_TEMP/archive.log"
+
+      # Deux exports de la même archive : le fichier .ipa gardé en artefact, et l'envoi direct à App Store Connect.
+      - name: Exporter le fichier .ipa
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EQUIPE: ${{ secrets.APPLE_TEAM_ID }}
+          CLE_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          EMETTEUR: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          for destination in export upload; do
+            if [ "$destination" = "upload" ] && [ "${{ inputs.envoyer }}" != "true" ]; then continue; fi
+            cat > "$RUNNER_TEMP/options-$destination.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>$destination</string>
+            <key>teamID</key><string>$EQUIPE</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+            xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Capsela.xcarchive" \
+              -exportOptionsPlist "$RUNNER_TEMP/options-$destination.plist" -exportPath "$RUNNER_TEMP/export-$destination" \
+              -allowProvisioningUpdates \
+              -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$CLE_ID" -authenticationKeyIssuerID "$EMETTEUR" \
+              > "$RUNNER_TEMP/export-$destination.log" 2>&1 || {
+                grep -m 30 -E "error|Error" "$RUNNER_TEMP/export-$destination.log" | while IFS= read -r l; do echo "::error::$l"; done
+                tail -40 "$RUNNER_TEMP/export-$destination.log"
+                exit 1
+              }
+            tail -3 "$RUNNER_TEMP/export-$destination.log"
+          done
+
+      - name: Effacer la clé d'API
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: capsela-ios-${{ inputs.version }}-${{ github.run_number }}
+          path: ${{ runner.temp }}/export-export/*.ipa
+          retention-days: 30
