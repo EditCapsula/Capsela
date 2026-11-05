@@ -3,6 +3,7 @@
 import { trierAvisRecents, verdictCourt, type AvisEnregistre } from "@/lib/avisJournal";
 import Card from "@/components/Card";
 import { useState } from "react";
+import { useCapsela } from "@/lib/store";
 
 /*
  * « MES AVIS DE STYLISTE » DANS LE JOURNAL — la mémoire visuelle des avis
@@ -35,6 +36,7 @@ export function CarteAvis({ avis, onOuvrir }: { avis: AvisEnregistre; onOuvrir: 
   // (signalé le 05/11/2026 : « Tenue analysée le 3 octobre 2026 » et l'icône d'image manquante à la place de la photo).
   // L'URL en échec, et non un simple drapeau : relue avec un lien neuf, la photo revient.
   const [urlCassee, setUrlCassee] = useState<string | null>(null);
+  const { actions } = useCapsela();
   return (
     <button
       type="button"
@@ -52,7 +54,11 @@ export function CarteAvis({ avis, onOuvrir }: { avis: AvisEnregistre; onOuvrir: 
             alt={`Tenue analysée le ${date}`}
             loading="lazy"
             decoding="async"
-            onError={() => setUrlCassee(avis.photoUrl)}
+            onError={() => {
+              // Le monogramme le temps que des liens neufs arrivent : la photo revient avec eux.
+              setUrlCassee(avis.photoUrl);
+              actions.photoNonChargee();
+            }}
             className="w-full h-full object-cover object-top block"
           />
         ) : (

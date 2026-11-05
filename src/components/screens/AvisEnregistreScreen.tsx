@@ -119,7 +119,7 @@ export default function AvisEnregistreScreen() {
           d'un tap, comme au résultat d'origine (PhotoHeros). */}
       {avis.photoUrl && (
         <div className="mt-[18px]">
-          <PhotoHeros url={avis.photoUrl} taille="100%" />
+          <PhotoHeros url={avis.photoUrl} taille="100%" onErreur={actions.photoNonChargee} />
         </div>
       )}
 

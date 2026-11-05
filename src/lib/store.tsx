@@ -1,7 +1,7 @@
 "use client";
 
 import { oublierContexte } from "./memoireEcrans";
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
@@ -26,6 +26,8 @@ import {
   deleteSavedLook,
   dressingPhotoPath,
   fetchDressingItems,
+  PHOTOS_A_RESIGNER_APRES_MS,
+  signerPhotosDressing,
   fetchOutfitHistory,
   fetchOutfitFeedbackDuJour,
   fetchSavedLooks,
@@ -388,6 +390,8 @@ export interface Actions {
   chargerAvisEnregistres: () => void;
   /** La liste des avis a été lue il y a plus de AVIS_A_RELIRE_APRES_MS : ses photos signées approchent de l'expiration. */
   avisEnregistresPerimes: () => boolean;
+  /** Une photo importée ne s'est pas chargée : ses liens d'affichage sont renouvelés (au plus une fois par minute). */
+  photoNonChargee: () => void;
   /** Ouvre un avis enregistré en consultation (depuis le Journal ou la liste complète, qui est retenue pour le retour). */
   ouvrirAvisEnregistre: (id: string) => void;
   /** Referme un avis enregistré : retour à l'écran d'où il a été ouvert. */
@@ -835,6 +839,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const [avisEnregistres, setAvisEnregistres] = useState<AvisEnregistre[] | null>(null);
   // Quand la liste a été lue (et ses photos signées) : relue à l'affichage du Journal une fois trop vieille (05/11/2026).
   const avisChargesLeRef = useRef(0);
+  // Quand les photos du dressing ont été signées (lecture du dressing, puis chaque renouvellement) : cf. rafraichirPhotos.
+  const photosSigneesLeRef = useRef(0);
   const [avisEnregistreActifId, setAvisEnregistreActifId] = useState<string | null>(null);
   const [avisEnregistreRetour, setAvisEnregistreRetour] = useState<Screen>("history");
   const avisEnregistreActif = avisEnregistres?.find((a) => a.id === avisEnregistreActifId) ?? null;
@@ -912,12 +918,58 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         tenuesPlanifiees,
         outfitFeedbackDuJour: avis.map((a) => ({ jour: a.jour, pieceIds: a.piece_ids, verdict: a.verdict })),
       }));
+      photosSigneesLeRef.current = Date.now();
       setDressingLoaded(true);
     });
     return () => {
       cancelled = true;
     };
   }, [ready, userId]);
+
+  /*
+   * LES PHOTOS IMPORTÉES RESTENT VISIBLES TANT QU'ELLES NE SONT PAS SUPPRIMÉES (05/11/2026, demandé). Photos du dressing et des
+   * avis sont privées : l'app les affiche par des URL signées, qui expirent (24 h). L'application, elle, reste ouverte des jours
+   * en arrière-plan. Au retour dans l'app et toutes les 30 minutes, les URL trop vieilles sont donc renouvelées — sans relire le
+   * dressing ni rien changer d'autre : seule l'adresse d'affichage d'une photo inchangée est remplacée.
+   */
+  const rafraichirPhotos = useCallback(
+    (force = false) => {
+      if (!isSupabaseConfigured || !userId) return;
+      const maintenant = Date.now();
+      if (photosSigneesLeRef.current > 0 && (force || maintenant - photosSigneesLeRef.current > PHOTOS_A_RESIGNER_APRES_MS)) {
+        photosSigneesLeRef.current = maintenant;
+        void signerPhotosDressing(stateRef.current.items).then((signees) => {
+          const neuves = new Map(signees.map((it) => [it.id, it.photoUrl]));
+          setState((s) => ({
+            ...s,
+            items: s.items.map((it) => {
+              const neuve = neuves.get(it.id);
+              // Seulement si la pièce a gardé la même photo pendant la signature.
+              return neuve && neuve !== it.photoUrl && dressingPhotoPath(neuve) === dressingPhotoPath(it.photoUrl) ? { ...it, photoUrl: neuve } : it;
+            }),
+          }));
+        });
+      }
+      if (avisChargesLeRef.current > 0 && (force || maintenant - avisChargesLeRef.current > AVIS_A_RELIRE_APRES_MS)) {
+        avisChargesLeRef.current = maintenant;
+        void listerAvis(userId).then(setAvisEnregistres);
+      }
+    },
+    [userId]
+  );
+  useEffect(() => {
+    const auRetour = () => {
+      if (document.visibilityState === "visible") rafraichirPhotos();
+    };
+    document.addEventListener("visibilitychange", auRetour);
+    const minuteur = window.setInterval(auRetour, 30 * 60 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", auRetour);
+      window.clearInterval(minuteur);
+    };
+  }, [rafraichirPhotos]);
+  // Une photo qui ne se charge pas (lien expiré malgré tout) : un renouvellement forcé, au plus une fois par minute.
+  const dernierForcageRef = useRef(0);
 
   /*
    * LES VALISES (27/09/2026) : celles de l'appareil d'abord, celles du
@@ -2096,6 +2148,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       void listerAvis(userId).then(setAvisEnregistres);
     },
     avisEnregistresPerimes: () => avisChargesLeRef.current > 0 && Date.now() - avisChargesLeRef.current > AVIS_A_RELIRE_APRES_MS,
+    photoNonChargee: () => {
+      if (Date.now() - dernierForcageRef.current < 60_000) return;
+      dernierForcageRef.current = Date.now();
+      rafraichirPhotos(true);
+    },
     ouvrirAvisEnregistre: (id) => {
       setAvisEnregistreActifId(id);
       setAvisEnregistreRetour(stateRef.current.screen === "avisTous" ? "avisTous" : "history");
