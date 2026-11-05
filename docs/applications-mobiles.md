@@ -64,7 +64,11 @@ Ce que la propriétaire prépare, une fois :
 3. **Clé d'API** : App Store Connect → Utilisateurs et accès → Intégrations → App Store Connect API → « + », rôle **Admin** (nécessaire pour que la signature soit gérée par Apple). Télécharger le fichier `AuthKey_XXXX.p8` (une seule fois possible) → secrets `APP_STORE_CONNECT_KEY` (contenu du fichier), `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`.
 4. Lancer le workflow ; le build apparaît dans App Store Connect → TestFlight après le traitement d'Apple (de quelques minutes à une heure).
 
-Sur iOS, la vidéo récompensée n'est pas proposée (`src/lib/publicite.ts` : Android seulement) ; l'identifiant AdMob de `Info.plist` est celui de test de Google, à remplacer avant de l'ouvrir sur iOS.
+Sur iOS, la vidéo récompensée n'est pas proposée (`src/lib/publicite.ts` : Android seulement), et le SDK AdMob n'est pas embarqué (`capacitor.config.ts`, `ios.includePlugins`, 05/11/2026 : ses bibliothèques faisaient refuser l'envoi à App Store Connect).
+
+**Publicité sur iOS : décidée, APRÈS la première version** (05/11/2026, propriétaire). À faire alors :
+- propriétaire : une app iOS et un bloc « avec récompense » dans AdMob (deux identifiants) ; la confidentialité d'App Store Connect (identifiant de l'appareil, données d'utilisation, suivi) et la question « Publicité » à Oui ;
+- code : AdMob remis dans `ios.includePlugins` avec une archive signée en distribution (l'archive non signée laisse les bibliothèques de Google mal signées) ; la demande de suivi (App Tracking Transparency, `NSUserTrackingUsageDescription`) ; le vrai `GADApplicationIdentifier` et les `SKAdNetworkItems` dans `Info.plist` ; le formulaire de consentement de Google ; `publiciteDisponibleIci` ouvert à iOS.
 
 ## Ce qui reste à faire avant la première soumission
 

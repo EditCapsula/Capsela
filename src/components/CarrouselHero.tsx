@@ -113,7 +113,10 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
       <div className="flex items-center" style={{ gridColumn: "1 / -1" }} aria-live="polite">
         <ActionRonde icone={<IconeCoeur plein={sauvegardee} />} libelle={sauvegardee ? "Sauvegardée" : "Sauvegarder"} actif={sauvegardee} onClick={onSauvegarder} />
         <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(29,26,22,.2)" }} />
-        <ActionRonde icone={<IconeAutre />} libelle="Autre tenue" label="Propose-moi une autre tenue" disabled={autreDesactive} onClick={onAutre} />
+        {/* data-tour : la visite guidée de l'accueil (lib/visites.ts) met en évidence celle de la première slide, affichée à l'arrivée. */}
+        <span data-tour="accueil-autre-tenue" className="inline-flex">
+          <ActionRonde icone={<IconeAutre />} libelle="Autre tenue" label="Propose-moi une autre tenue" disabled={autreDesactive} onClick={onAutre} />
+        </span>
       </div>
       {pied}
     </div>

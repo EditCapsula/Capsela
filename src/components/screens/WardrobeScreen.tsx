@@ -349,7 +349,7 @@ export default function WardrobeScreen() {
           Ajoute quelques pièces que tu portes vraiment. Une photo suffit pour commencer. Pas besoin d&apos;ajouter toute ta
           garde-robe : commence avec 5 à 10 pièces que tu portes souvent.
         </div>
-        <Button variante="principal" className="mt-5"
+        <Button variante="principal" className="mt-5" data-tour="dressing-ajouter"
           onClick={actions.openAdd}
         >
           Ajouter ma première pièce
@@ -495,6 +495,8 @@ export default function WardrobeScreen() {
           Mon <span className="italic text-terracotta">dressing</span>
         </div>
         <div className="text-[13px] text-muted-3 mt-[4px]">{pl(items.length)}</div>
+        {/* data-tour : la recherche et les catégories, cible de la visite guidée « Dressing » (lib/visites.ts). */}
+        <div data-tour="dressing-filtres">
         <label className="mt-3 flex items-center gap-[10px] h-[44px] pl-[14px] pr-[6px] rounded-full bg-card border" style={{ borderColor: recherche ? "var(--color-terracotta-deep)" : "var(--color-border)" }}>
           <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-muted-3" style={{ display: "block" }}>
             <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -538,6 +540,7 @@ export default function WardrobeScreen() {
           })}
         </div>
         )}
+        </div>
       </div>
 
       <div ref={zoneGrille} onScroll={defilement.onScroll} className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 border-t border-border" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}>
@@ -759,6 +762,7 @@ export function BoutonAjoutFlottant({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       aria-label="Ajouter une pièce à mon dressing"
+      data-tour="dressing-ajouter"
       className="absolute right-4 z-10 flex items-center justify-center rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream cursor-pointer transition-transform active:scale-[.95]"
       // 16 px au-dessus du menu, JAMAIS collé (30/10/2026, arbitré : « je ne veux pas coller le bouton + rond »), contrairement aux barres
       // d'action et aux messages de confirmation, posés sur le menu.

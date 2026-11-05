@@ -15,6 +15,7 @@ import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+import { degres } from "@/lib/unites";
 
 /**
  * « Demander un avis » — mise en page de la maquette du 23/09/2026.
@@ -268,7 +269,7 @@ export default function OpinionShareScreen() {
   const occasionLabel = occasionPartagee !== "all" ? OCC_LABELS[occasionPartagee] : null;
   const meteo =
     tempPartagee != null && Number.isFinite(tempPartagee)
-      ? `${Math.round(tempPartagee)}°${meteoPartagee ? ` · ${meteoPartagee}` : ""}`
+      ? `${degres(tempPartagee)}${meteoPartagee ? ` · ${meteoPartagee}` : ""}`
       : null;
   const retourLibelle = source?.plan ? "Retour à ma tenue planifiée" : "Retour à ma tenue";
 

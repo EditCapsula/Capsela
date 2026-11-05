@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { IconeTuile, type IconePlanifier } from "@/components/PlanifierUI";
 import { chargerRecentes, garderRecentes, ajouterRecente, libelleDestination, presenterResultats, villesDuPaysDabord, type VilleRecente } from "@/lib/lieux";
 import { fetchVilleParPosition, fetchVilles, getBrowserPosition, type VilleSuggeree } from "@/lib/weather";
+import { degres } from "@/lib/unites";
 
 /*
  * L'ÉTAPE « OÙ » (08/10/2026) : fonctionnelle, sans aucune image de destination — un lieu se dit par son nom, son pays, sa météo.
@@ -371,7 +372,7 @@ function MeteoDuLieu({ meteo }: { meteo: MeteoEtapeLieu }) {
           </span>
           <span className="flex-1 min-w-0">
             <span className="block font-serif text-[20px] text-ink leading-[1.2]">
-              {meteo.tempMin === meteo.tempMax ? `${meteo.temp}°` : `${meteo.tempMin}° — ${meteo.tempMax}°`}
+              {meteo.tempMin === meteo.tempMax ? `${degres(meteo.temp)}` : `${degres(meteo.tempMin)} — ${degres(meteo.tempMax)}`}
             </span>
             <span className="block text-[12px] text-muted-3 mt-[1px]">Prévisions pour le jour sélectionné · {meteo.label}</span>
           </span>
@@ -384,7 +385,7 @@ function MeteoDuLieu({ meteo }: { meteo: MeteoEtapeLieu }) {
       <div className="mt-4" aria-live="polite">
         <div className="rounded-bloc border border-border bg-card px-[14px] py-[12px]">
           <div className="font-serif text-[20px] text-ink leading-[1.2]">
-            {meteo.tempMin === meteo.tempMax ? `${meteo.tempMin}°` : `${meteo.tempMin}° — ${meteo.tempMax}°`}
+            {meteo.tempMin === meteo.tempMax ? `${degres(meteo.tempMin)}` : `${degres(meteo.tempMin)} — ${degres(meteo.tempMax)}`}
           </div>
           <div className="text-[12px] text-muted-3 mt-[1px]">Températures habituelles à cette date · la prévision sera disponible plus près du jour.</div>
         </div>

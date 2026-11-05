@@ -13,6 +13,9 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Le fond derrière les barres système (05/11/2026, signalé : l'app n'est pas « full », barres grises en haut et en bas) :
+             le crème de l'app au lieu du gris du thème. L'écran d'accueil, sombre, le change à l'affichage (FondSysteme.java). -->
+        <item name="android:windowBackground">@color/creme</item>
     </style>
 
 

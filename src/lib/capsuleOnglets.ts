@@ -5,6 +5,7 @@ import { libelleStyles, paletteColorName, paletteHexes, silhouetteForme, STYLE_I
 import { raisonsSuggestion } from "./capsuleEcran";
 import { isColRoule } from "./logic";
 import type { CapsuleSeason, CategoryKey, Item } from "./types";
+import { degresUnite } from "./unites";
 
 /*
  * LES QUATRE ONGLETS DE « MA CAPSULE » (refonte du 01/11/2026, maquettes de la propriétaire : Composer, Explorer, Pièces clés,
@@ -279,7 +280,7 @@ export function criteresDeSelection(p: {
   out.push({
     cle: "saison",
     titre: "La saison",
-    valeur: `${saison} · Environ ${temperatureDeSaison(saison)} °C`,
+    valeur: `${saison} · Environ ${degresUnite(temperatureDeSaison(saison))}`,
     texte: `Des pièces adaptées ${A_LA_SAISON[saison]}, privilégiant celles prévues pour cette saison ou portables toute l'année.`,
   });
   if (!styleExplore && morphologieOrienteLaSelection(profile.morphology)) {

@@ -441,7 +441,10 @@ export default function HomeScreen() {
       </div>
 
       {carrouselActif ? (
-        <CarrouselHero slides={slides.map(carteSlide)} libelles={slides.map((sl) => sl.surtitre)} onAvantDerniere={actions.etendreCarrousel} />
+        // data-tour : la cible de la visite guidée « Aujourd'hui » (lib/visites.ts).
+        <div data-tour="accueil-tenue">
+          <CarrouselHero slides={slides.map(carteSlide)} libelles={slides.map((sl) => sl.surtitre)} onAvantDerniere={actions.etendreCarrousel} />
+        </div>
       ) : (
       // LE LOOK DU JOUR : fond blanc cassé des cartes (--color-card) et leur filet (--color-border), comme les slides du carrousel (option 3h,
       // 14/10/2026 : l'accueil, puis Tenue le même jour ; les autres hero gardent --color-hero-background). Texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
@@ -560,17 +563,19 @@ export default function HomeScreen() {
               onClick={() => (jourAVenir ? actions.toggleSaveOutfitLook(sansExterieur) : actions.setOutfitFeedback("adore", sansExterieur))}
             />
             <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(29,26,22,.2)" }} />
-            <ActionRonde
-              icone={
-                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                  <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              }
-              libelle="Autre tenue"
-              label="Propose-moi une autre tenue"
-              disabled={quota.tirageEnCours}
-              onClick={jourAVenir ? () => quota.demander(actions.regenOutfit) : pasPourMoi}
-            />
+            <span data-tour="accueil-autre-tenue" className="inline-flex">
+              <ActionRonde
+                icone={
+                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                }
+                libelle="Autre tenue"
+                label="Propose-moi une autre tenue"
+                disabled={quota.tirageEnCours}
+                onClick={jourAVenir ? () => quota.demander(actions.regenOutfit) : pasPourMoi}
+              />
+            </span>
           </div>
         )}
         {/* « Autre tenue » sans tenue au socle différent (01/11/2026) : la tenue est gardée, et on le dit. */}

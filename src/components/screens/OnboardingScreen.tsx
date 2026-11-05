@@ -1,5 +1,6 @@
 "use client";
 
+import { aTraduire, t } from "@/lib/langue";
 import { useRef, useState } from "react";
 import { ONBOARDING_SLIDES } from "@/lib/data";
 import AppHeader from "@/components/AppHeader";
@@ -64,7 +65,7 @@ function TuileStyle({ id, univers, decale }: { id: StyleId; univers: "femme" | "
         <img src={visuel} alt="" onError={() => setEchec(true)} className="absolute inset-0 w-full h-full object-cover" />
       )}
       <div className="absolute bottom-0 left-0 right-0 px-[8px] pt-[14px] pb-[7px] bg-gradient-to-t from-black/45 to-transparent">
-        <div className="text-[10.5px] text-white font-medium leading-[1.2]">{cfg.label}</div>
+        <div className="text-[10.5px] text-white font-medium leading-[1.2]">{t(cfg.label)}</div>
       </div>
     </div>
   );
@@ -86,7 +87,7 @@ function VisuelStyle() {
   return (
     <div
       role="img"
-      aria-label="Six univers de style, femme et homme : Minimaliste, Casual chic, Créatif, Classique chic, Streetwear et Glamour"
+      aria-label={t("Six univers de style, femme et homme : Minimaliste, Casual chic, Créatif, Classique chic, Streetwear et Glamour")}
       className="grid grid-cols-3 gap-[8px] [@media(max-width:340px)]:gap-[6px] pb-[12px]"
     >
       {STYLES_ONBOARDING.map(({ id, univers }, i) => (
@@ -99,29 +100,29 @@ function VisuelStyle() {
 // ── 2 · Ton dressing : une capsule exemple ──────────────────────────────
 
 const REPERES_CAPSULE: { glyphe: string; libelle: string; texte: string }[] = [
-  { glyphe: "✓", libelle: "Cohérent", texte: "Tout s’accorde facilement" },
-  { glyphe: "✦", libelle: "Polyvalent", texte: "Des pièces faciles à porter" },
-  { glyphe: "↻", libelle: "Évolutif", texte: "Garde, remplace et personnalise" },
+  { glyphe: "✓", libelle: aTraduire("Cohérent"), texte: aTraduire("Tout s’accorde facilement") },
+  { glyphe: "✦", libelle: aTraduire("Polyvalent"), texte: aTraduire("Des pièces faciles à porter") },
+  { glyphe: "↻", libelle: aTraduire("Évolutif"), texte: aTraduire("Garde, remplace et personnalise") },
 ];
 
 function VisuelDressing() {
   return (
-    <div role="img" aria-label="Exemple de capsule : une penderie de pièces qui vont ensemble">
+    <div role="img" aria-label={t("Exemple de capsule : une penderie de pièces qui vont ensemble")}>
       <div className="relative rounded-carte overflow-hidden bg-border" style={{ height: "var(--h-visuel)" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/onboarding/dressing-penderie.webp" alt="" width={368} height={410} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 40%" }} />
         <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 flex items-center gap-[6px] bg-card border border-border rounded-full py-[7px] px-[13px] whitespace-nowrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/capsela-c.png" alt="" style={{ width: 13, height: "auto" }} />
-          <span className="text-[11px] text-ink font-medium">36 pièces · exemple</span>
+          <span className="text-[11px] text-ink font-medium">{t("36 pièces · exemple")}</span>
         </div>
       </div>
       <div className="flex justify-between mt-[12px]">
         {REPERES_CAPSULE.map((r) => (
           <div key={r.libelle} className="flex flex-col items-center text-center w-1/3 px-[4px]">
             <div className="w-7 h-7 rounded-full bg-card border border-border flex items-center justify-center text-terracotta text-[13px] flex-shrink-0">{r.glyphe}</div>
-            <div className="text-[11px] text-ink font-medium mt-[6px] leading-[1.2]">{r.libelle}</div>
-            <div className="text-[10px] text-muted mt-[2px] leading-[1.3]">{r.texte}</div>
+            <div className="text-[11px] text-ink font-medium mt-[6px] leading-[1.2]">{t(r.libelle)}</div>
+            <div className="text-[10px] text-muted mt-[2px] leading-[1.3]">{t(r.texte)}</div>
           </div>
         ))}
       </div>
@@ -131,20 +132,20 @@ function VisuelDressing() {
 
 // ── 3 · Tes tenues : la « Tenue du jour » ───────────────────────────────
 
-const PIECES_EXEMPLE = ["Blazer", "Top rayé", "Jean", "Baskets", "Sac"];
+const PIECES_EXEMPLE = [aTraduire("Blazer"), aTraduire("Top rayé"), aTraduire("Jean"), aTraduire("Baskets"), aTraduire("Sac")];
 
 function VisuelTenue() {
   return (
-    <div role="img" aria-label="Exemple de tenue du jour : 22 degrés à Paris, occasion travail, une tenue complète de cinq pièces" className="bg-terracotta rounded-hero p-[12px]">
+    <div role="img" aria-label={t("Exemple de tenue du jour : 22 degrés à Paris, occasion travail, une tenue complète de cinq pièces")} className="bg-terracotta rounded-hero p-[12px]">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-[6px] t-label" style={{ color: "rgba(243,238,229,.86)" }}>
           <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">
             ✦
           </span>
-          Ton look du jour
+          {t("Ton look du jour")}
         </div>
         <span className="text-[10px]" style={{ color: "rgba(243,238,229,.7)" }}>
-          exemple
+          {t("exemple")}
         </span>
       </div>
       <div className="grid grid-cols-[1fr_1.05fr] gap-[12px] mt-[10px]" style={{ minHeight: "var(--h-visuel)" }}>
@@ -155,22 +156,22 @@ function VisuelTenue() {
               ☀️ 22° · Paris
             </span>
             <span className="inline-flex rounded-full text-[11px] px-[10px] py-[6px] whitespace-nowrap" style={{ background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)" }}>
-              Travail · Bureau
+              {t("Travail · Bureau")}
             </span>
           </div>
           <div className="mt-[10px] text-[10px] uppercase tracking-[.08em] [@media(max-height:700px)]:hidden" style={{ color: "rgba(243,238,229,.7)" }}>
-            Pièces de la tenue
+            {t("Pièces de la tenue")}
           </div>
           <ul className="mt-[4px] flex flex-col gap-[2px] text-[12px] list-none p-0" style={{ color: "var(--color-on-terracotta)" }}>
             {PIECES_EXEMPLE.map((p) => (
               <li key={p} className="leading-[1.3]">
-                {p}
+                {t(p)}
               </li>
             ))}
           </ul>
           <div className="flex-1 min-h-[8px]" />
           <div className="bg-cream text-ink text-center rounded-full py-[8px] text-[11px] tracking-[.06em] uppercase" aria-hidden="true">
-            Voir le détail →
+            {t("Voir le détail")} →
           </div>
         </div>
       </div>
@@ -182,18 +183,18 @@ function VisuelTenue() {
 
 /** La répartition d'une valise exemple de 24 pièces : le total est la somme des lignes. */
 const REPARTITION_VALISE: { libelle: string; n: number; couleur: string }[] = [
-  { libelle: "robes", n: 4, couleur: "var(--color-terracotta-deep)" },
-  { libelle: "hauts", n: 6, couleur: "var(--color-terracotta)" },
-  { libelle: "bas", n: 4, couleur: "var(--color-gold)" },
-  { libelle: "vestes", n: 3, couleur: "var(--color-sand-border)" },
-  { libelle: "chaussures", n: 3, couleur: "var(--color-warm-border)" },
-  { libelle: "accessoires", n: 4, couleur: "var(--color-border)" },
+  { libelle: aTraduire("robes"), n: 4, couleur: "var(--color-terracotta-deep)" },
+  { libelle: aTraduire("hauts"), n: 6, couleur: "var(--color-terracotta)" },
+  { libelle: aTraduire("bas"), n: 4, couleur: "var(--color-gold)" },
+  { libelle: aTraduire("vestes"), n: 3, couleur: "var(--color-sand-border)" },
+  { libelle: aTraduire("chaussures"), n: 3, couleur: "var(--color-warm-border)" },
+  { libelle: aTraduire("accessoires"), n: 4, couleur: "var(--color-border)" },
 ];
 
 function VisuelValise() {
   const total = REPARTITION_VALISE.reduce((s, r) => s + r.n, 0);
   return (
-    <Card rayon="carte" className="overflow-hidden" role="img" aria-label="Exemple de valise : Rhodes, sept jours, 23 degrés, 24 pièces sélectionnées et les tenues du séjour">
+    <Card rayon="carte" className="overflow-hidden" role="img" aria-label={t("Exemple de valise : Rhodes, sept jours, 23 degrés, 24 pièces sélectionnées et les tenues du séjour")}>
       {/* La valise ouverte : de la photo seulement, sur les écrans assez hauts. */}
       <div className="relative h-[82px] [@media(max-height:760px)]:hidden bg-border">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -202,9 +203,9 @@ function VisuelValise() {
       <div className="p-[14px] [@media(max-height:700px)]:p-[11px]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="t-label text-terracotta">1 · Destination</div>
+            <div className="t-label text-terracotta">{t("1 · Destination")}</div>
             <div className="font-serif text-[22px] text-ink leading-[1.1] mt-[4px]">Rhodes</div>
-            <div className="text-[11px] text-muted mt-[2px]">7 jours · 23° · exemple</div>
+            <div className="text-[11px] text-muted mt-[2px]">{t("7 jours · 23° · exemple")}</div>
           </div>
           <div className="flex gap-[3px] text-[15px] leading-none flex-shrink-0 mt-[4px]" aria-hidden="true">
             <span>☀️</span>
@@ -215,10 +216,10 @@ function VisuelValise() {
         </div>
 
         <div className="border-t border-divider mt-[12px] [@media(max-height:700px)]:mt-[8px] pt-[10px] [@media(max-height:700px)]:pt-[7px]">
-          <div className="t-label text-terracotta">2 · Pièces</div>
+          <div className="t-label text-terracotta">{t("2 · Pièces")}</div>
           <div className="flex items-baseline gap-[6px] mt-[4px]">
             <span className="t-chiffre text-ink">{total}</span>
-            <span className="text-[12px] text-ink">pièces sélectionnées</span>
+            <span className="text-[12px] text-ink">{t("pièces sélectionnées")}</span>
           </div>
           <div className="flex h-[7px] rounded-full overflow-hidden mt-[8px]" aria-hidden="true">
             {REPARTITION_VALISE.map((r) => (
@@ -226,17 +227,17 @@ function VisuelValise() {
             ))}
           </div>
           <div className="mt-[7px] text-[10.5px] text-muted leading-[1.5] [@media(max-height:760px)]:hidden">
-            {REPARTITION_VALISE.map((r) => `${r.n} ${r.libelle}`).join(" · ")}
+            {REPARTITION_VALISE.map((r) => `${r.n} ${t(r.libelle)}`).join(" · ")}
           </div>
         </div>
 
         <div className="border-t border-divider mt-[10px] [@media(max-height:700px)]:mt-[7px] pt-[10px] [@media(max-height:700px)]:pt-[7px]">
-          <div className="t-label text-terracotta">3 · Tenues du séjour</div>
+          <div className="t-label text-terracotta">{t("3 · Tenues du séjour")}</div>
           <div className="flex gap-[8px] mt-[7px]">
             {(
               [
-                ["Jour 1", "/onboarding/valise-look-1.webp"],
-                ["Jour 2", "/onboarding/valise-look-2.webp"],
+                [t("Jour {n}", { n: 1 }), "/onboarding/valise-look-1.webp"],
+                [t("Jour {n}", { n: 2 }), "/onboarding/valise-look-2.webp"],
               ] as const
             ).map(([jour, src]) => (
               <div key={jour} className="w-[78px] [@media(max-height:700px)]:w-[60px] flex-shrink-0">
@@ -244,7 +245,7 @@ function VisuelValise() {
                 <div className="text-[10px] text-muted mt-[3px]">{jour}</div>
               </div>
             ))}
-            <div className="flex-1 min-w-0 text-[11px] text-muted leading-[1.4] self-center">Une tenue pour chaque jour du séjour.</div>
+            <div className="flex-1 min-w-0 text-[11px] text-muted leading-[1.4] self-center">{t("Une tenue pour chaque jour du séjour.")}</div>
           </div>
         </div>
       </div>
@@ -256,7 +257,7 @@ function VisuelValise() {
 
 function VisuelCompte() {
   return (
-    <div role="img" aria-label="Un téléphone affichant Capsela, posé parmi un tissu terracotta, des lunettes et des créoles dorées" className="relative rounded-carte overflow-hidden bg-border" style={{ height: "calc(var(--h-visuel) + 10px)" }}>
+    <div role="img" aria-label={t("Un téléphone affichant Capsela, posé parmi un tissu terracotta, des lunettes et des créoles dorées")} className="relative rounded-carte overflow-hidden bg-border" style={{ height: "calc(var(--h-visuel) + 10px)" }}>
       {/* Visuel fourni le 30/10/2026, au format paysage (1 200 × 800) : centré, le téléphone reste entier à toutes les hauteurs du cadre. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/onboarding/compte-telephone.webp" alt="" width={1200} height={800} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center" }} />
@@ -319,7 +320,7 @@ export default function OnboardingScreen() {
             <div className="w-[34px] h-[34px]" />
             {!dernier && (
               <button onClick={actions.onbPasser} className="text-[13px] text-muted cursor-pointer py-2 pl-4">
-                Passer
+                {t("Passer")}
               </button>
             )}
           </div>
@@ -334,7 +335,7 @@ export default function OnboardingScreen() {
               {visuels[indice]}
             </div>
             <div className="mt-[clamp(14px,3.2svh,28px)] motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
-              <div className="t-surtitre text-terracotta">{slide.kicker}</div>
+              <div className="t-surtitre text-terracotta">{t(slide.kicker)}</div>
               <h1
                 className="t-display text-ink mt-[10px]"
                 // 34 px sur un écran courant, un peu moins sur un petit : « Tout ce que tu peux porter. » tient en deux lignes.
@@ -342,12 +343,12 @@ export default function OnboardingScreen() {
               >
                 {slide.title.map((ligne, i) => (
                   <span key={ligne} className={"block " + (i === slide.title.length - 1 ? "italic text-terracotta" : "")}>
-                    {ligne}
+                    {t(ligne)}
                   </span>
                 ))}
               </h1>
               <p className="text-[14px] [@media(max-height:700px)]:text-[13px] text-muted mt-3 [@media(max-height:700px)]:mt-2 leading-[1.5]" style={{ textWrap: "pretty" }}>
-                {slide.body}
+                {t(slide.body)}
               </p>
             </div>
           </div>
@@ -361,13 +362,13 @@ export default function OnboardingScreen() {
           const points = (
             // Cliquables (04/11/2026, comme le carrousel de l'accueil) : chaque point ouvre son écran. La zone touchable déborde du
             // point (pseudo-élément, 22 px de haut) : on le touche sans viser, et l'écart visuel entre les points ne change pas.
-            <div className="flex items-center gap-[7px]" role="group" aria-label={`Écran ${indice + 1} sur ${nbEcrans}`}>
+            <div className="flex items-center gap-[7px]" role="group" aria-label={t("Écran {i} sur {n}", { i: indice + 1, n: nbEcrans })}>
               {Array.from({ length: nbEcrans }, (_, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => actions.onbAller(i)}
-                  aria-label={`Écran ${i + 1} sur ${nbEcrans}`}
+                  aria-label={t("Écran {i} sur {n}", { i: i + 1, n: nbEcrans })}
                   aria-current={i === indice}
                   className="relative flex items-center cursor-pointer before:absolute before:content-[''] before:-inset-x-[4px] before:-inset-y-[8px]"
                 >
@@ -383,17 +384,17 @@ export default function OnboardingScreen() {
             <div className="flex flex-col gap-[10px] pt-4">
               <div className="flex justify-center pb-[2px]">{points}</div>
               <Button variante="sombre" onClick={actions.onbNext}>
-                Créer mon compte
+                {t("Créer mon compte")}
               </Button>
               <Button variante="contour" onClick={actions.goLogin}>
-                J’ai déjà un compte
+                {t("J'ai déjà un compte")}
               </Button>
             </div>
           ) : (
             <div className="flex items-center justify-between pt-4">
               {points}
               <Button variante="sombre" pleine={false} className="px-[26px]" onClick={actions.onbNext}>
-                Continuer
+                {t("Continuer")}
               </Button>
             </div>
           );

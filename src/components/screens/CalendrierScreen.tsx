@@ -28,6 +28,7 @@ import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 import { useMeteoDuJourCalendrier } from "@/lib/useMeteoDuJourCalendrier";
 import { useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
+import { degres } from "@/lib/unites";
 
 /*
  * MON PLANNING (07/10/2026 « Mon calendrier » ; refondu le 08/10/2026 sur la maquette « Capsela – Mon planning ») — la mémoire et
@@ -159,7 +160,7 @@ function PastilleMeteo({ temp, label }: { temp: number; label: string | null }) 
   return (
     <span className={pastilleChip}>
       <IconeTuile nom={soleil ? "apresmidi" : "nuage"} taille={14} />
-      {Math.round(temp)}°{label ? ` · ${label}` : ""}
+      {degres(temp)}{label ? ` · ${label}` : ""}
     </span>
   );
 }

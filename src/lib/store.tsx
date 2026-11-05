@@ -1,7 +1,7 @@
 "use client";
 
 import { oublierContexte } from "./memoireEcrans";
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
@@ -26,6 +26,8 @@ import {
   deleteSavedLook,
   dressingPhotoPath,
   fetchDressingItems,
+  PHOTOS_A_RESIGNER_APRES_MS,
+  signerPhotosDressing,
   fetchOutfitHistory,
   fetchOutfitFeedbackDuJour,
   fetchSavedLooks,
@@ -58,7 +60,7 @@ import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
 import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSuggeree, type ResultatDemande } from "./avisStylisteClient";
-import { enregistrerAvis, enregistrerReconnaissanceAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
+import { AVIS_A_RELIRE_APRES_MS, enregistrerAvis, enregistrerReconnaissanceAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
 import { appliquerChoix, type ChoixReconnaissance, type VetementReconnu } from "./reconnaissance";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import {
@@ -89,6 +91,7 @@ import {
 } from "./attributes";
 import type {
   AccessoireType,
+  VueReglages,
   AppState,
   BijouType,
   CapsuleSeason,
@@ -148,7 +151,7 @@ export interface SessionAvisStyliste {
 }
 
 /** Écrans qui s'ouvrent depuis le profil : jamais retenus comme « retour » du profil. */
-const SOUS_ECRANS_PROFIL = new Set<Screen>(["profile", "profileSetup", "preferences", "account", "legal"]);
+const SOUS_ECRANS_PROFIL = new Set<Screen>(["profile", "profileSetup", "preferences", "legal"]);
 
 /** Occasion par défaut suggérée en arrivant sur "Tenue du jour" sans choix explicite (recette 13/08/2026) — toujours modifiable manuellement ensuite. */
 // La règle vit dans jourConsulte.ts depuis le 27/09/2026 (occasionParDefaut),
@@ -174,6 +177,7 @@ function buildInitialState(): AppState {
     jourDecalage: 0,
     preferencesReturn: "profile",
     preferencesSection: null,
+    preferencesDirect: false,
     legalReturn: "profile",
     legalDoc: null,
     premiumReturn: "home",
@@ -316,15 +320,16 @@ export interface Actions {
   fermerApercuPiece: () => void;
   goLooks: () => void;
   goProfile: () => void;
-  /** Réglages de fonctionnement de l'application (notifications, météo, rythme). */
-  /** `section` : rubrique à amener dans la vue (la ligne météo de l’Accueil et de Tenue ouvre « Localisation & météo »). */
-  goPreferences: (section?: "localisation") => void;
-  /** Quitte les Préférences vers l'écran d'où elles ont été ouvertes. */
+  /**
+   * Réglages Capsela (05/11/2026), ou l'une de ses sous-pages (`section`). Ouverte depuis un autre écran — la ligne météo de
+   * l'Accueil et de Tenue, « Gérer mon compte » du Profil —, la sous-page ramène à cet écran ; ouverte depuis Réglages, à Réglages.
+   */
+  goPreferences: (section?: VueReglages) => void;
+  /** Le retour de Réglages : d'une sous-page vers Réglages (ou vers l'écran qui l'a ouverte directement), de Réglages vers l'écran d'origine. */
   closePreferences: () => void;
-  oublierSectionPreferences: () => void;
   /** Change le jour consulté (0 aujourd'hui … JOUR_MAX) — Accueil et Tenue lisent le même. */
   choisirJour: (decalage: number) => void;
-  /** Compte : e-mail, confidentialité et données, légal, suppression, déconnexion. */
+  /** « Gérer mon compte » (Profil) : la sous-page Compte et sécurité de Réglages. */
   goAccount: () => void;
   goLegal: () => void;
   /** Ouvre un texte légal par-dessus l'écran courant (01/10/2026) — sans quitter l'app ni perdre la saisie en cours. */
@@ -383,6 +388,10 @@ export interface Actions {
   corrigerReconnaissanceEnregistree: (avisId: string, index: number, choix: ChoixReconnaissance) => Promise<boolean>;
   /** Charge les avis enregistrés (Journal). */
   chargerAvisEnregistres: () => void;
+  /** La liste des avis a été lue il y a plus de AVIS_A_RELIRE_APRES_MS : ses photos signées approchent de l'expiration. */
+  avisEnregistresPerimes: () => boolean;
+  /** Une photo importée ne s'est pas chargée : ses liens d'affichage sont renouvelés (au plus une fois par minute). */
+  photoNonChargee: () => void;
   /** Ouvre un avis enregistré en consultation (depuis le Journal ou la liste complète, qui est retenue pour le retour). */
   ouvrirAvisEnregistre: (id: string) => void;
   /** Referme un avis enregistré : retour à l'écran d'où il a été ouvert. */
@@ -828,6 +837,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
      qu'une analyse, même avant le rendu suivant. */
   const analyseAvisEnCoursRef = useRef(false);
   const [avisEnregistres, setAvisEnregistres] = useState<AvisEnregistre[] | null>(null);
+  // Quand la liste a été lue (et ses photos signées) : relue à l'affichage du Journal une fois trop vieille (05/11/2026).
+  const avisChargesLeRef = useRef(0);
+  // Quand les photos du dressing ont été signées (lecture du dressing, puis chaque renouvellement) : cf. rafraichirPhotos.
+  const photosSigneesLeRef = useRef(0);
   const [avisEnregistreActifId, setAvisEnregistreActifId] = useState<string | null>(null);
   const [avisEnregistreRetour, setAvisEnregistreRetour] = useState<Screen>("history");
   const avisEnregistreActif = avisEnregistres?.find((a) => a.id === avisEnregistreActifId) ?? null;
@@ -905,12 +918,58 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         tenuesPlanifiees,
         outfitFeedbackDuJour: avis.map((a) => ({ jour: a.jour, pieceIds: a.piece_ids, verdict: a.verdict })),
       }));
+      photosSigneesLeRef.current = Date.now();
       setDressingLoaded(true);
     });
     return () => {
       cancelled = true;
     };
   }, [ready, userId]);
+
+  /*
+   * LES PHOTOS IMPORTÉES RESTENT VISIBLES TANT QU'ELLES NE SONT PAS SUPPRIMÉES (05/11/2026, demandé). Photos du dressing et des
+   * avis sont privées : l'app les affiche par des URL signées, qui expirent (24 h). L'application, elle, reste ouverte des jours
+   * en arrière-plan. Au retour dans l'app et toutes les 30 minutes, les URL trop vieilles sont donc renouvelées — sans relire le
+   * dressing ni rien changer d'autre : seule l'adresse d'affichage d'une photo inchangée est remplacée.
+   */
+  const rafraichirPhotos = useCallback(
+    (force = false) => {
+      if (!isSupabaseConfigured || !userId) return;
+      const maintenant = Date.now();
+      if (photosSigneesLeRef.current > 0 && (force || maintenant - photosSigneesLeRef.current > PHOTOS_A_RESIGNER_APRES_MS)) {
+        photosSigneesLeRef.current = maintenant;
+        void signerPhotosDressing(stateRef.current.items).then((signees) => {
+          const neuves = new Map(signees.map((it) => [it.id, it.photoUrl]));
+          setState((s) => ({
+            ...s,
+            items: s.items.map((it) => {
+              const neuve = neuves.get(it.id);
+              // Seulement si la pièce a gardé la même photo pendant la signature.
+              return neuve && neuve !== it.photoUrl && dressingPhotoPath(neuve) === dressingPhotoPath(it.photoUrl) ? { ...it, photoUrl: neuve } : it;
+            }),
+          }));
+        });
+      }
+      if (avisChargesLeRef.current > 0 && (force || maintenant - avisChargesLeRef.current > AVIS_A_RELIRE_APRES_MS)) {
+        avisChargesLeRef.current = maintenant;
+        void listerAvis(userId).then(setAvisEnregistres);
+      }
+    },
+    [userId]
+  );
+  useEffect(() => {
+    const auRetour = () => {
+      if (document.visibilityState === "visible") rafraichirPhotos();
+    };
+    document.addEventListener("visibilitychange", auRetour);
+    const minuteur = window.setInterval(auRetour, 30 * 60 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", auRetour);
+      window.clearInterval(minuteur);
+    };
+  }, [rafraichirPhotos]);
+  // Une photo qui ne se charge pas (lien expiré malgré tout) : un renouvellement forcé, au plus une fois par minute.
+  const dernierForcageRef = useRef(0);
 
   /*
    * LES VALISES (27/09/2026) : celles de l'appareil d'abord, celles du
@@ -1907,15 +1966,30 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: "profile",
       })),
     goPreferences: (section) =>
+      setState((s) => {
+        const dejaLa = s.screen === "preferences";
+        return {
+          ...s,
+          preferencesReturn: dejaLa ? s.preferencesReturn : s.screen,
+          preferencesSection: section ?? null,
+          preferencesDirect: dejaLa ? false : Boolean(section),
+          screen: "preferences",
+        };
+      }),
+    closePreferences: () =>
+      setState((s) =>
+        s.preferencesSection && !s.preferencesDirect
+          ? { ...s, preferencesSection: null }
+          : { ...s, screen: s.preferencesReturn, preferencesSection: null, preferencesDirect: false }
+      ),
+    goAccount: () =>
       setState((s) => ({
         ...s,
         preferencesReturn: s.screen === "preferences" ? s.preferencesReturn : s.screen,
-        preferencesSection: section ?? null,
+        preferencesSection: "compte",
+        preferencesDirect: s.screen !== "preferences",
         screen: "preferences",
       })),
-    closePreferences: () => setState((s) => ({ ...s, screen: s.preferencesReturn })),
-    oublierSectionPreferences: () => setState((s) => (s.preferencesSection ? { ...s, preferencesSection: null } : s)),
-    goAccount: () => go("account"),
     goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),
     goPremium: (origine) =>
       setState((s) => ({
@@ -2070,7 +2144,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         setAvisEnregistres([]);
         return;
       }
+      avisChargesLeRef.current = Date.now();
       void listerAvis(userId).then(setAvisEnregistres);
+    },
+    avisEnregistresPerimes: () => avisChargesLeRef.current > 0 && Date.now() - avisChargesLeRef.current > AVIS_A_RELIRE_APRES_MS,
+    photoNonChargee: () => {
+      if (Date.now() - dernierForcageRef.current < 60_000) return;
+      dernierForcageRef.current = Date.now();
+      rafraichirPhotos(true);
     },
     ouvrirAvisEnregistre: (id) => {
       setAvisEnregistreActifId(id);

@@ -130,6 +130,7 @@ import Button from "@/components/Button";
 import LigneInterrupteur from "@/components/LigneInterrupteur";
 import EmptyState from "@/components/EmptyState";
 import Card from "@/components/Card";
+import { degres } from "@/lib/unites";
 
 /**
  * PRÉPARER SA VALISE (docs/valise.md).
@@ -189,7 +190,7 @@ const plusJours = (jour: string, n: number) => {
 const joursEntre = (a: string, b: string) => Math.round((dateDe(b).getTime() - dateDe(a).getTime()) / 86400000);
 
 /** « 17° » ou « 17° – 18° ». */
-const libelleAmplitude = (a: { min: number; max: number }) => (a.min === a.max ? `${a.min}°` : `${a.min}° – ${a.max}°`);
+const libelleAmplitude = (a: { min: number; max: number }) => (a.min === a.max ? `${degres(a.min)}` : `${degres(a.min)} – ${degres(a.max)}`);
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

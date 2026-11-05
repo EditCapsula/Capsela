@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Les couleurs de l'app (globals.css) : crème du fond, encre de l'écran d'accueil. Sous les barres système (FondSysteme.java). -->
+    <color name="creme">#F3EEE5</color>
+    <color name="encre">#1D1A16</color>
+</resources>

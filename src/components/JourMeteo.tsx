@@ -4,6 +4,7 @@ import Card from "@/components/Card";
 import { WEATHER_ICONS } from "@/lib/data";
 import { JOUR_MAX, libelleJour, libelleJourCourt, quandPhrase } from "@/lib/jourConsulte";
 import { useCapsela } from "@/lib/store";
+import { degres } from "@/lib/unites";
 
 /*
  * LE JOUR ET SA MÉTÉO, SUR UNE SEULE LIGNE — composant partagé par l'Accueil
@@ -86,7 +87,7 @@ export function JourEtMeteo({ className = "", retro }: { className?: string; ret
       <Card rayon="pilule" className="flex items-stretch min-h-[46px]">
         {/* LE JOUR — ‹ libellé ›. Hors d'aujourd'hui, le libellé lui-même
             ramène à aujourd'hui d'un tap. */}
-        <div className="flex items-center flex-shrink-0 pl-[4px]" role="group" aria-label="Jour de la tenue">
+        <div className="flex items-center flex-shrink-0 pl-[4px]" role="group" aria-label="Jour de la tenue" data-tour="jour-meteo">
           <button
             onClick={() => (retro && decalage === 0 ? retro.precedent != null && retro.onChange(retro.precedent) : actions.choisirJour(decalage - 1))}
             disabled={retro && decalage === 0 ? retro.precedent == null : decalage === 0}
@@ -120,7 +121,7 @@ export function JourEtMeteo({ className = "", retro }: { className?: string; ret
         {/* LA LOCALISATION ET LA MÉTÉO DU JOUR — ouvre les réglages existants. */}
         <button
           onClick={() => actions.goPreferences("localisation")}
-          aria-label={`Météo : ${geoCity.city}${temp != null ? `, ${temp}°${label ? ` ${label}` : ""}` : ""}. Régler la localisation et la météo`}
+          aria-label={`Météo : ${geoCity.city}${temp != null ? `, ${degres(temp)}${label ? ` ${label}` : ""}` : ""}. Régler la localisation et la météo`}
           className="flex-1 min-w-0 flex items-center gap-[7px] pl-[12px] pr-[12px] text-left cursor-pointer"
         >
           {enAttente ? (
@@ -139,7 +140,7 @@ export function JourEtMeteo({ className = "", retro }: { className?: string; ret
               {temp != null && label && (
                 <span className="flex items-center gap-[5px] flex-shrink-0 text-[12px] text-ink-soft whitespace-nowrap">
                   <span aria-hidden="true">{WEATHER_ICONS[label] || "🌤️"}</span>
-                  {temp}°<span className="hidden min-[400px]:inline"> · {label}</span>
+                  {degres(temp)}<span className="hidden min-[400px]:inline"> · {label}</span>
                 </span>
               )}
             </>

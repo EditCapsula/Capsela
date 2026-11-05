@@ -37,7 +37,6 @@ import DateNaissanceScreen from "./screens/DateNaissanceScreen";
 import { doitDemanderNaissance } from "@/lib/ageMinimum";
 import ProfileScreen from "./screens/ProfileScreen";
 import PreferencesScreen from "./screens/PreferencesScreen";
-import AccountScreen from "./screens/AccountScreen";
 import LegalScreen from "./screens/LegalScreen";
 import LoginScreen from "./screens/LoginScreen";
 import OpinionShareScreen from "./screens/OpinionShareScreen";
@@ -54,6 +53,9 @@ import LoadingSpinner from "./LoadingSpinner";
 import ConfirmationAjout from "./ConfirmationAjout";
 import { ecranARestaurer, memoriserEcran } from "@/lib/ecranRestaure";
 import { initialiserLangue } from "@/lib/langue";
+import { FOND_CREME, FOND_ENCRE, poserFondSysteme } from "@/lib/fondSysteme";
+import VisiteGuidee from "./VisiteGuidee";
+import { definirSystemeUnites } from "@/lib/unites";
 
 // La langue est fixée une fois, avant le premier rendu (docs/traduction.md) : App.tsx n'est chargé que dans le navigateur.
 initialiserLangue();
@@ -82,6 +84,8 @@ const FLOW_SCREENS = new Set(["planifier", "premium", "valise", "add", "importer
 function Screens() {
   const { state, actions, etatPremium } = useCapsela();
   const auth = useAuth();
+  // Les températures s'affichent dans l'unité du profil (unites.ts) : posée ici, avant le rendu des écrans.
+  definirSystemeUnites(auth.profile.prefs.unitSystem);
   const showTabbar = !NO_TABBAR_SCREENS.has(state.screen) && !FLOW_SCREENS.has(state.screen);
 
   // LA VIDÉO RÉCOMPENSÉE (AdMob, 02/11/2026, publicite.ts) : Android seulement, compte connecté au profil complet et
@@ -140,6 +144,8 @@ function Screens() {
   // Rechargement sur le web : on garde l'écran de premier niveau courant pour le retrouver (cf. ecranRestaure.ts).
   useEffect(() => {
     memoriserEcran(state.screen);
+    // Les barres système d'Android prennent le fond de l'écran (fondSysteme.ts) : encre sur l'accueil, crème ailleurs.
+    poserFondSysteme(state.screen === "welcome" ? FOND_ENCRE : FOND_CREME);
   }, [state.screen]);
   // LE RETOUR ANDROID (22/10/2026, retourSysteme.ts) : il ferme ce qui est ouvert par-dessus, sinon suit le bouton Retour de l'écran,
   // sinon revient à l'accueil depuis un écran de la barre du bas ; l'app ne se ferme plus que depuis l'accueil.
@@ -266,7 +272,6 @@ function Screens() {
         {state.screen === "profileSetup" && <ProfileSetupScreen />}
         {state.screen === "profile" && <ProfileScreen />}
         {state.screen === "preferences" && <PreferencesScreen />}
-        {state.screen === "account" && <AccountScreen />}
         {state.screen === "legal" && <LegalScreen />}
         {state.screen === "login" && <LoginScreen />}
         {state.screen === "opinionShare" && <OpinionShareScreen />}
@@ -280,6 +285,8 @@ function Screens() {
       <ConfirmationAjout auDessusDeLaBarre={showTabbar} />
       <ApercuPiece />
       <FicheEnFeuille />
+      {/* Les visites guidées (lib/visites.ts) : un seul composant, le seul qui manipule Driver.js. */}
+      <VisiteGuidee />
       <Analytics />
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { t } from "@/lib/langue";
 import { useState } from "react";
 import { messageAge, verifierAge, AGE_MINIMUM } from "@/lib/ageMinimum";
 import { useAuth } from "@/lib/auth";
@@ -54,11 +55,11 @@ export default function DateNaissanceScreen({
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[44px] pb-[30px]">
         <div className="t-titre-ecran text-ink">
-          On ne peut pas créer ton <span className="italic text-terracotta">compte</span>
+          {t("On ne peut pas créer ton")} <span className="italic text-terracotta">{t("compte")}</span>
         </div>
-        <div className="t-chapeau text-muted mt-[10px]">{refus} Le compte qui venait d&apos;être créé a été supprimé.</div>
+        <div className="t-chapeau text-muted mt-[10px]">{refus} {t("Le compte qui venait d'être créé a été supprimé.")}</div>
         <Button variante="principal" pleine={false} className="mt-7" onClick={onQuitter}>
-          Revenir à l&apos;accueil
+          {t("Revenir à l'accueil")}
         </Button>
       </div>
     );
@@ -67,10 +68,10 @@ export default function DateNaissanceScreen({
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[44px] pb-[30px]">
       <div className="t-titre-ecran text-ink">
-        Une dernière <span className="italic text-terracotta">chose</span>
+        {t("Une dernière")} <span className="italic text-terracotta">{t("chose")}</span>
       </div>
       <div className="t-chapeau text-muted mt-[10px]">
-        Pour créer ton compte, indique ta date de naissance. Il faut avoir au moins {AGE_MINIMUM} ans.
+        {t("Pour créer ton compte, indique ta date de naissance. Il faut avoir au moins {n} ans.", { n: AGE_MINIMUM })}
       </div>
       <Input
         type="date"
@@ -79,7 +80,7 @@ export default function DateNaissanceScreen({
         value={naissance}
         max={new Date().toISOString().slice(0, 10)}
         onChange={(e) => setNaissance(e.target.value)}
-        aria-label="Date de naissance"
+        aria-label={t("Date de naissance")}
       />
       {erreur && (
         <div role="alert" className="mt-4 bg-error-bg border border-error-border rounded-champ px-4 py-3 text-[12px] text-rust leading-[1.45]">
@@ -92,18 +93,18 @@ export default function DateNaissanceScreen({
         </div>
       )}
       <Button pleine={false} className="mt-5" onClick={continuer} disabled={envoi}>
-        {envoi ? "Un instant…" : "Continuer"}
+        {envoi ? t("Un instant…") : t("Continuer")}
       </Button>
       <div className="text-[11px] text-placeholder text-center mt-4 leading-[1.5]">
-        Pourquoi ? Voir notre{" "}
+        {t("Pourquoi ? Voir notre")}{" "}
         <button type="button" onClick={() => actions.openLegalDoc("confidentialite")} className="text-muted underline cursor-pointer">
-          Politique de confidentialité
+          {t("Politique de confidentialité")}
         </button>
         .
       </div>
       <div className="flex-1" />
       <button onClick={() => void auth.signOut()} className="text-center pt-4 text-[13px] text-muted cursor-pointer">
-        Se déconnecter
+        {t("Se déconnecter")}
       </button>
     </div>
   );

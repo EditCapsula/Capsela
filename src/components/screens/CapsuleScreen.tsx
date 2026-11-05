@@ -652,6 +652,7 @@ export default function CapsuleScreen() {
             <button
               type="button"
               onClick={() => setFeuille("saison")}
+              data-tour="capsule-saison"
               className="italic text-terracotta cursor-pointer"
               aria-label={`Saison ${capsuleSeason}, changer de saison`}
             >
@@ -716,7 +717,7 @@ export default function CapsuleScreen() {
           </Card>
         )}
 
-        <div className="mt-[16px]">
+        <div className="mt-[16px]" data-tour="capsule-onglets">
           <SegmentedControl segments={ONGLETS} actif={onglet} onChange={setOnglet} ariaLabel="Vues de la capsule" variante="pastilles" serre />
         </div>
 
@@ -737,6 +738,7 @@ export default function CapsuleScreen() {
               flèches et le glissement ne changent que la pièce de l'emplacement choisi dessous (brief, 3.2).
             */}
             <div
+              data-tour="capsule-planche"
               className="relative rounded-feuille overflow-hidden"
               style={{ aspectRatio: "100 / 100", background: "var(--color-hero-background)", touchAction: "pan-y" }}
               onTouchStart={(e) => (toucher.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}

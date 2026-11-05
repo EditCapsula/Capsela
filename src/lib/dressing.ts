@@ -426,6 +426,12 @@ const PREFIXE_PHOTOS_DRESSING_SIGNEE = "/storage/v1/object/sign/dressing-photos/
  * le bucket public. [HYPOTHÈSE TECHNIQUE]
  */
 export const DUREE_URL_PHOTO_DRESSING_S = 24 * 3600;
+/**
+ * Âge au-delà duquel les URL signées du dressing sont renouvelées (05/11/2026, demandé : « les visuels importés s'affichent tout
+ * le temps jusqu'à ce que l'utilisateur supprime »). L'application reste ouverte des jours en arrière-plan : lue une fois par
+ * session, une URL de 24 h finissait par expirer. Le store la renouvelle au retour dans l'app et toutes les 30 minutes.
+ */
+export const PHOTOS_A_RESIGNER_APRES_MS = 12 * 3600 * 1000;
 
 /** L'URL désigne-t-elle une photo du bucket dressing-photos ? Rend l'index et le préfixe trouvés. */
 function prefixePhoto(url: string): { i: number; prefixe: string } | null {
@@ -468,7 +474,7 @@ export function urlPhotoCanonique(url: string | undefined): string | undefined {
  * sont rendues telles quelles : la photo reste visible tant que le bucket est
  * public, et rien d'autre du dressing n'est perdu.
  */
-async function signerPhotosDressing(items: Item[]): Promise<Item[]> {
+export async function signerPhotosDressing(items: Item[]): Promise<Item[]> {
   const chemins = [...new Set(items.map((it) => dressingPhotoPath(it.photoUrl)).filter((c): c is string => Boolean(c)))];
   if (!chemins.length) return items;
   try {

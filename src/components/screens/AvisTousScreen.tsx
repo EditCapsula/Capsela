@@ -16,7 +16,8 @@ export default function AvisTousScreen() {
   const { actions, avisEnregistres } = useCapsela();
 
   useEffect(() => {
-    if (avisEnregistres === null) actions.chargerAvisEnregistres();
+    // Relue aussi quand elle est trop vieille : l'app reste ouverte, les liens signés des photos expirent.
+    if (avisEnregistres === null || actions.avisEnregistresPerimes()) actions.chargerAvisEnregistres();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avisEnregistres]);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { libelleCoupes, libelleMiseEnValeur } from "@/lib/preferencesSilhouette";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import {
   GenderModal,
@@ -14,6 +14,7 @@ import {
   I_PALETTE,
   I_REGLAGES,
   I_REPERE,
+  FeuilleDateNaissance,
   I_SILHOUETTE,
   Icone,
   LigneInfo,
@@ -56,12 +57,14 @@ import Card from "@/components/Card";
  *   Ton style        Genre (feuille), Style, Morphologie, Palette (étapes du
  *                    questionnaire, retour ici)
  *   Mes tailles      Haut, Bas, Chaussures (étape « taille », retour ici)
- *   Ta météo         la ville et ce qu'elle fait (→ Préférences)
+ *   Ta météo         la ville et ce qu'elle fait (→ Réglages, Météo et localisation)
  *   (Mon abonnement, sous l'identité ; « Ma capsule » retirée le 27/09/2026)
- *   Préférences      réglages de fonctionnement de l'app
  *
- * L'ADMINISTRATIF VIT DANS MON COMPTE (« Gérer mon compte ») : e-mail, mot de
- * passe, prénom, date de naissance, données, légal, suppression, déconnexion.
+ * RÉGLAGES CAPSELA (05/11/2026, maquette « Mon profil » / « Réglages Capsela ») : l'engrenage en haut à droite ouvre les
+ * réglages de l'app, du compte et l'assistance (PreferencesScreen) ; la ligne « Préférences Capsela » qui y menait est retirée
+ * (un seul chemin). « Gérer mon compte » ouvre « Compte et sécurité » (e-mail, mot de passe). Prénom, date de naissance et
+ * photo, qui vivaient dans « Gérer mon compte », se modifient ici, sur la carte d'identité (arbitré le 05/11/2026). L'abonnement
+ * garde un seul emplacement : la carte « Mon abonnement » ci-dessous.
  *
  * CHAQUE PHRASE « À QUOI ÇA SERT » A ÉTÉ VÉRIFIÉE DANS LE CODE (refonte du
  * 25/09) : la morphologie n'oriente la sélection que pour deux silhouettes
@@ -77,6 +80,14 @@ export default function ProfileScreen() {
   const [aRevalider, setARevalider] = useState<GenderDependentField | null>(null);
 
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
+  const [dateOuverte, setDateOuverte] = useState(false);
+  // Photo : locale à l'appareil (blob:), comme dans l'ancien « Gérer mon compte » — l'envoi vers le stockage n'est pas branché
+  // pour l'avatar ; elle ne dure que le temps de l'écran.
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const naissance = profile.birthdate
+    ? new Date(profile.birthdate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
 
   /* Le genre se modifie par le mécanisme existant — la feuille et la
      revalidation de l'écran d'édition (applyGenderChange) — et non par
@@ -117,7 +128,20 @@ export default function ProfileScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <AppHeader showAvatar={false} onBack={() => actions.go(state.profileReturn)} backLabel="Revenir à l'écran précédent" />
+      <AppHeader
+        showAvatar={false}
+        onBack={() => actions.go(state.profileReturn)}
+        backLabel="Revenir à l'écran précédent"
+        action={
+          <button
+            onClick={() => actions.goPreferences()}
+            aria-label="Ouvrir les réglages de Capsela"
+            className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70"
+          >
+            <Icone taille={24}>{I_REGLAGES}</Icone>
+          </button>
+        }
+      />
       <div className="t-surtitre text-muted mt-[18px]">Profil</div>
       <div className="t-titre-ecran text-ink mt-[6px]">
         Mon <span className="italic text-terracotta">profil</span>
@@ -126,10 +150,27 @@ export default function ProfileScreen() {
 
       {/* IDENTITÉ — « Gérer mon compte » mène au compte, jamais à l'édition du
           profil : ce sont deux espaces différents. */}
-      <Card className="p-4 mt-5 flex items-center gap-[14px]">
-        <div className="w-[52px] h-[52px] rounded-full bg-terracotta flex items-center justify-center flex-shrink-0">
-          <span className="font-serif text-[21px] text-cream">{initial}</span>
-        </div>
+      <Card className="overflow-hidden mt-5">
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) setPhotoUrl(URL.createObjectURL(file));
+        }}
+        className="hidden"
+      />
+      <div className="p-4 flex items-center gap-[14px] border-b border-border">
+        {/* La photo de profil (optionnelle, jamais partagée) : un toucher sur l'avatar. */}
+        <button
+          onClick={() => photoInputRef.current?.click()}
+          aria-label="Changer ma photo de profil (optionnelle, jamais partagée)"
+          className="relative w-[52px] h-[52px] rounded-full bg-terracotta flex items-center justify-center flex-shrink-0 overflow-hidden bg-cover bg-center cursor-pointer"
+          style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}
+        >
+          {!photoUrl && <span className="font-serif text-[21px] text-cream">{initial}</span>}
+        </button>
         <div className="min-w-0 flex-1">
           <div className={"t-titre-carte break-words " + (profile.displayName ? "text-ink" : "text-placeholder")}>
             {profile.displayName || "Ton nom"}
@@ -146,6 +187,14 @@ export default function ProfileScreen() {
             Gérer mon compte ›
           </button>
         </div>
+      </div>
+      <LigneInfo
+        label="Prénom"
+        valeur={profile.displayName || "Non renseigné"}
+        renseigne={Boolean(profile.displayName)}
+        onClick={() => actions.goProfileSetup("prenom", true)}
+      />
+      <LigneInfo label="Date de naissance" valeur={naissance || "Non renseignée"} renseigne={Boolean(naissance)} onClick={() => setDateOuverte(true)} />
       </Card>
 
       {/* MON ABONNEMENT (27/09/2026) — l'emplacement de la gestion de l'offre,
@@ -290,7 +339,7 @@ export default function ProfileScreen() {
         />
         <LigneProfil
           icone={I_PALETTE}
-          titre="Palette"
+          titre="Palette de couleurs"
           valeur={<PastillesPalette couleurs={profile.paletteCouleurs} />}
           renseigne={renseigne("palette")}
           explication="Oriente les couleurs de ta capsule et de tes tenues."
@@ -301,21 +350,30 @@ export default function ProfileScreen() {
       {/* MES TAILLES — une ligne par taille, toutes ouvrent l'étape « taille »
           du questionnaire (les trois s'y règlent ensemble). */}
       <Surtitre icone={I_METRE}>Mes tailles</Surtitre>
-      <Card className="overflow-hidden">
-        <LigneInfo
-          label="Haut"
-          valeur={profile.tailleHaut || "Non renseignée"}
-          renseigne={Boolean(profile.tailleHaut)}
-          onClick={() => ouvrirChamp("tailles")}
-        />
-        <LigneInfo label="Bas" valeur={profile.tailleBas || "Non renseignée"} renseigne={Boolean(profile.tailleBas)} onClick={() => ouvrirChamp("tailles")} />
-        <LigneInfo
-          label="Chaussures"
-          valeur={profile.pointure || "Non renseignée"}
-          renseigne={Boolean(profile.pointure)}
-          onClick={() => ouvrirChamp("tailles")}
-        />
-      </Card>
+      {/* Trois tuiles sur une ligne (05/11/2026, maquette) : la même information, plus compacte. */}
+      <div className="grid grid-cols-3 gap-[8px]">
+        {(
+          [
+            ["Haut", profile.tailleHaut],
+            ["Bas", profile.tailleBas],
+            ["Chaussures", profile.pointure],
+          ] as const
+        ).map(([label, valeur]) => (
+          <button
+            key={label}
+            onClick={() => ouvrirChamp("tailles")}
+            aria-label={`${label} : ${valeur || "non renseignée"}. Modifier mes tailles`}
+            className="bg-card border border-border rounded-tuile px-3 py-[12px] text-left cursor-pointer min-w-0"
+          >
+            <span className="block text-[11px] text-muted">{label}</span>
+            {valeur ? (
+              <span className="block t-titre-ligne text-ink mt-[2px] truncate">{valeur}</span>
+            ) : (
+              <span className="block text-[12px] text-placeholder leading-[1.3] mt-[3px]">Non renseignée</span>
+            )}
+          </button>
+        ))}
+      </div>
       <div className="text-[12px] text-muted leading-[1.45] mt-[8px] px-1">Pré-remplies quand tu ajoutes une pièce.</div>
 
       {/* « MA CAPSULE » RETIRÉE (27/09/2026) : pièces et looks portés ont leurs
@@ -324,7 +382,7 @@ export default function ProfileScreen() {
 
       {/* TA MÉTÉO — informative : la ville, et ce qu'elle fait vraiment ; les
           réglages (géolocalisation, météo de la position, ville) vivent dans
-          Préférences Capsela, que la ligne ouvre. */}
+          Réglages, « Météo et localisation », que la ligne ouvre (et dont le retour ramène ici). */}
       <Surtitre icone={I_GRAPHIQUE}>Mon lieu et ma météo</Surtitre>
       <Card className="overflow-hidden">
         <LigneProfil
@@ -342,19 +400,8 @@ export default function ProfileScreen() {
         />
       </Card>
 
-      {/* PRÉFÉRENCES CAPSELA — le fonctionnement de l'app, pas l'identité :
-          elles ont leur propre écran. */}
-      <Surtitre icone={I_GRAPHIQUE}>Préférences Capsela</Surtitre>
-      <Card className="overflow-hidden">
-        <LigneProfil
-          icone={I_REGLAGES}
-          titre="Réglages de l'application"
-          valeur={<span className="text-muted-3">Notifications, météo, localisation et habitudes.</span>}
-          renseigne
-          onClick={() => actions.goPreferences()}
-        />
-      </Card>
 
+      <FeuilleDateNaissance open={dateOuverte} onClose={() => setDateOuverte(false)} />
       {genreOuvert && <GenderModal current={profile.gender} onSelect={changerGenre} onClose={() => setGenreOuvert(false)} />}
       {aRevalider && (
         <RevalidationSheet

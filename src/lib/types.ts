@@ -313,8 +313,10 @@ export interface AppState {
   jourDecalage: number;
   /** Écran vers lequel revenir en quittant Préférences Capsela (Profil, ou l’Accueil et Tenue depuis la ligne météo). */
   preferencesReturn: Screen;
-  /** Rubrique à amener dans la vue à l'ouverture des Préférences — consommée une fois. */
-  preferencesSection: "localisation" | null;
+  /** La sous-page ouverte de Réglages Capsela (05/11/2026) ; null : la page Réglages elle-même. */
+  preferencesSection: VueReglages | null;
+  /** La sous-page a été ouverte directement depuis un autre écran (la ligne météo, « Gérer mon compte ») : son retour y ramène. */
+  preferencesDirect: boolean;
   /** Écran vers lequel revenir en quittant Informations légales (toujours "profile" en pratique). */
   legalReturn: Screen;
   /**
@@ -625,6 +627,12 @@ export interface AppState {
   ficheEnFeuille: { ecran: Screen } | null;
 }
 
+/**
+ * Les sous-pages de Réglages Capsela (05/11/2026, docs/reglages.md). Langue, unités, tutoriel et contact s'ouvrent en feuille
+ * par-dessus la page ; ces rubriques-ci ont trop de contenu pour une feuille.
+ */
+export type VueReglages = "notifications" | "quotidien" | "localisation" | "compte" | "donnees" | "centreAide";
+
 export type Screen =
   | "welcome"
   | "onboarding"
@@ -646,7 +654,6 @@ export type Screen =
   // profil (consulter), Personnaliser (profileEdit, modifier), Préférences
   // Capsela (régler l'application), Mon compte (gérer compte et données).
   | "preferences"
-  | "account"
   | "legal"
   | "login"
   | "opinionShare"

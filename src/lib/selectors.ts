@@ -4,6 +4,7 @@ import { chaussureHabillee, estDenim, formalityOf } from "./attributes";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, estDeSaison, occasionsOf, saisonCalendairePour, type ContexteSaisonnier } from "./capsule";
 import type { CapsuleSeason, CategoryKey, FiltrePieces, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
+import { degresUnite } from "./unites";
 
 /**
  * "Wishlist" (Mes looks, recette 23/08/2026) n'est pas une 3ᵉ façon
@@ -933,7 +934,7 @@ export function buildOpinionMessageParts(args: {
   const prenom = args.prenom?.trim().split(/\s+/)[0] || null;
   const moment = args.moment?.trim() ? ` ${args.moment.trim()}` : "";
   const occasionLibelle = occasion !== "all" ? OCC_LABELS[occasion] : null;
-  const temperature = temp != null && Number.isFinite(temp) ? `${Math.round(temp)}\u00a0°C` : null;
+  const temperature = temp != null && Number.isFinite(temp) ? degresUnite(temp, undefined, "\u00a0") : null;
   const condition = conditionMeteo?.trim() || null;
 
   return {

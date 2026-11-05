@@ -46,6 +46,7 @@ import type { Item } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button, { BoutonDiscret } from "@/components/Button";
 import Card from "@/components/Card";
+import { degres } from "@/lib/unites";
 
 /** Icônes des CTA de pièce suggérée (recette 23/08/2026) — trait fin, même style que TabBar, jamais d'emoji. */
 function PlusIcon() {
@@ -1522,7 +1523,7 @@ export default function TenuesScreen() {
                 <div className="text-[12px] text-muted mt-[2px]">{isCatalogId(exterieur.id) ? "De ta capsule" : "De ton dressing"}</div>
                 {tempReelle != null && (
                   <div className="text-[12px] text-muted-3 mt-[6px] leading-[1.4]">
-                    À ajouter par-dessus ta tenue : {Math.round(tempReelle)}° {decalage === 0 ? "aujourd'hui" : "prévus"}.
+                    À ajouter par-dessus ta tenue : {degres(tempReelle)} {decalage === 0 ? "aujourd'hui" : "prévus"}.
                   </div>
                 )}
               </div>

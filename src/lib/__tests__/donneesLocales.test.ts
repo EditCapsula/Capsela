@@ -27,6 +27,7 @@ describe("clesLocalesDuCompte", () => {
       "capsela.favorisPieces.u1",
       "capsela.votesSuggestions.u1",
       "capsela.villesRecentes",
+      "capsela.visites.u1",
     ]);
   });
   it("le mode démo range ses valises sous « demo »", () => {
