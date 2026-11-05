@@ -97,7 +97,7 @@ jobs:
           done
           printf '%s\n' "$CLE" > "$RUNNER_TEMP/AuthKey.p8"
 
-      - name: Archiver l'app signée
+      - name: Archiver l'app
         if: github.event_name == 'workflow_dispatch'
         working-directory: ios/App
         env:
@@ -106,11 +106,12 @@ jobs:
           EMETTEUR: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           set -o pipefail
+          # Archive NON signée (05/11/2026, premier essai : « Your team has no devices from which to generate a provisioning profile ») :
+          # signée à l'archivage, l'app demandait un profil de DÉVELOPPEMENT, qui exige un iPhone enregistré. La signature de
+          # distribution, gérée par Apple, se fait à l'export ci-dessous — le profil App Store n'a besoin d'aucun appareil.
           if ! xcodebuild -project App.xcodeproj -scheme App -configuration Release -destination "generic/platform=iOS" \
               -archivePath "$RUNNER_TEMP/Capsela.xcarchive" archive \
-              -allowProvisioningUpdates \
-              -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$CLE_ID" -authenticationKeyIssuerID "$EMETTEUR" \
-              DEVELOPMENT_TEAM="$EQUIPE" CODE_SIGN_STYLE=Automatic \
+              DEVELOPMENT_TEAM="$EQUIPE" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
               MARKETING_VERSION="${{ inputs.version }}" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
               > "$RUNNER_TEMP/archive.log" 2>&1; then
             grep -m 30 -E "error:|Error Domain|No profiles|requires a provisioning" "$RUNNER_TEMP/archive.log" | while IFS= read -r l; do echo "::error::$l"; done
