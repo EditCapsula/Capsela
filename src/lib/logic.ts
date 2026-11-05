@@ -299,6 +299,9 @@ function isClosedKnit(it: Item): boolean {
  * que leur absence reproduit le comportement livré.
  */
 /** R-S28 (04/11/2026) : les rendez-vous où la tenue est décontractée d'abord — une activité, un cinéma ou une balade. */
+/** R-B19 bis : la température sous laquelle une robe ou une jupe sans borne déclarée appelle des collants (05/11/2026). */
+export const SEUIL_COLLANT_SANS_BORNE = 15;
+
 export const DATES_DECONTRACTEES: readonly DateContext[] = ["Activité", "Cinéma / balade"];
 
 export interface LeviersMesure {
@@ -415,6 +418,8 @@ export interface LeviersMesure {
   vesteEnTeletravail?: boolean;
   /** Reproduit le comportement d'AVANT le 04/11/2026 : en Rendez-vous · Activité ou Cinéma / balade, les pièces décontractées ne sont pas préférées (R-S28). */
   sansDecontracteEnActivite?: boolean;
+  /** Reproduit le comportement d'AVANT le 05/11/2026 : une robe ou une jupe sans température minimale déclarée n'appelle jamais de collants (R-B19 bis). */
+  sansCollantParDefaut?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
@@ -1387,6 +1392,11 @@ export function generateOutfit(
   // seulement dans le cas de repli météo. Jupe/robe gardent exactement
   // l'ancien déclencheur (repli météo uniquement), inchangé.
   let needsCollant = false;
+  // R-B19 bis (05/11/2026, signalé : une robe du dressing à 6 °C, sans collants ; seuil de 15 °C validé par la propriétaire). Les pièces du
+  // dressing n'ont pas de température minimale déclarée (seules celles du catalogue en portent une) : la règle ne s'y appliquait jamais.
+  // Sans borne déclarée, 15 °C : la borne haute des collants opaques du catalogue, celle où les plus fins (dès 12 °C) prennent le relais.
+  // Une pièce qui déclare sa borne garde la sienne.
+  const seuilCollant = (i: Item): number => i.meteoMinTemp ?? (leviers?.sansCollantParDefaut ? -Infinity : SEUIL_COLLANT_SANS_BORNE);
   // Correctif 22/08/2026 (signalé : "aucune de mes combinaisons ne me soit
   // proposées dans les tenues recommandées") — ce tirage "pièce unique" ne
   // portait que sur la catégorie "robe", jamais "combinaison", alors que les
@@ -1456,7 +1466,7 @@ export function generateOutfit(
     primaryTop = r;
     // Collant seulement pour une robe (jambes nues) — une combinaison
     // couvre déjà les jambes comme un pantalon, R-B19 ne s'y applique pas.
-    if (r && r.cat === "robe" && r.meteoMinTemp != null && weather.temp < r.meteoMinTemp) needsCollant = true;
+    if (r && r.cat === "robe" && weather.temp < seuilCollant(r)) needsCollant = true;
   } else {
     // Formalité du haut compensée par une veste structurée (recette
     // 19/08/2026, audit moteur) : "t-shirt + blazer" doit pouvoir
@@ -1536,7 +1546,7 @@ export function generateOutfit(
     if (h) ids.push(h.id);
     if (b) ids.push(b.id);
     if (compensatingVeste) { chosen.push(compensatingVeste); ids.push(compensatingVeste.id); }
-    if (b && b.cat === "jupe" && b.meteoMinTemp != null && weather.temp < b.meteoMinTemp) needsCollant = true;
+    if (b && b.cat === "jupe" && weather.temp < seuilCollant(b)) needsCollant = true;
     if (b && b.cat === "short" && currentSeasonKey() !== "Été") needsCollant = true;
   }
   if (needsCollant && gender === "femme") {

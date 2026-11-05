@@ -812,6 +812,16 @@ function composerParOccasion(
   return cats.flatMap((cat) => {
     const reelles = items.filter((i) => i.cat === cat);
     if (!reelles.length) return capsule.filter((i) => i.cat === cat);
+    // LES COLLANTS DE LA CAPSULE RESTENT (05/11/2026, R-B19 bis) : une ceinture ou un foulard du dressing remplaçait TOUS les accessoires de
+    // la capsule, collants compris, et une robe à 6 °C partait sans collants faute d'en trouver dans le pool. Sans collants au dressing, ceux
+    // de la capsule restent disponibles ; le moteur ne les pose que quand la règle les demande, ou comme un accessoire parmi d'autres.
+    const collantsCapsule =
+      cat === "accessoire" && !reelles.some((i) => i.accessoireType === "Collants") ? capsule.filter((i) => i.cat === cat && i.accessoireType === "Collants") : [];
+    if (collantsCapsule.length) return [...composerUneCategorie(cat, reelles), ...collantsCapsule];
+    return composerUneCategorie(cat, reelles);
+  });
+
+  function composerUneCategorie(cat: CategoryKey, reelles: Item[]): Item[] {
     if (!occasion) return reelles;
     // Des baskets pour un trajet (14/10/2026, demandé : « pour le voyage on privilégie des baskets ») : les baskets du dressing restent
     // éligibles en Voyage même déclarées pour d'autres occasions — l'app leur pré-suggère « Quotidien » et « Sport », pas « Voyage », et
@@ -841,7 +851,7 @@ function composerParOccasion(
     // — une tenue annoncée comme élargie vaut mieux que pas de tenue.
     if (!secours.length) return reelles;
     return [...gardees, ...secours];
-  });
+  }
 }
 
 /**
