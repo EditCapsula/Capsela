@@ -62,6 +62,8 @@ export interface AuthContextValue {
   ) => Promise<"ok" | "confirm_email" | "error">;
   signInEmail: (email: string, password: string) => Promise<boolean>;
   signInGoogle: () => Promise<boolean>;
+  /** Connexion avec Apple (05/11/2026) : même chemin que Google, par Supabase. N'est proposée que si `connexionAppleActive`. */
+  signInApple: () => Promise<boolean>;
   signOut: () => Promise<void>;
   /** Supprime définitivement le compte (Edge Function delete-account, cf. son en-tête) et déconnecte. Renvoie false + error rempli en cas d'échec — jamais de déconnexion locale silencieuse si la suppression serveur a échoué. */
   deleteAccount: () => Promise<boolean>;
@@ -324,7 +326,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  const signInGoogle = async () => {
+  const signInGoogle = () => signInOAuth("google");
+  const signInApple = () => signInOAuth("apple");
+
+  // Google et Apple (05/11/2026) passent par le même chemin : Supabase ouvre la page du fournisseur, la session revient par
+  // onAuthStateChange (web) ou par le lien profond (app, authNatif.ts). Seul le fournisseur change.
+  const signInOAuth = async (provider: "google" | "apple") => {
     setError(null);
     if (!isSupabaseConfigured) {
       const email = "demo@capsela.app";
@@ -338,7 +345,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Dans l'app : la page Google s'ouvre dans le navigateur du système et revient par le lien profond (authNatif.ts).
     if (estNatif()) {
       const { data, error: err } = await getSupabase().auth.signInWithOAuth({
-        provider: "google",
+        provider,
         options: { redirectTo: REDIRECTION_NATIVE, skipBrowserRedirect: true },
       });
       if (err || !data?.url) {
@@ -349,7 +356,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
     const { error: err } = await getSupabase().auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: { redirectTo: window.location.origin },
     });
     if (err) {
@@ -492,6 +499,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUpEmail,
     signInEmail,
     signInGoogle,
+    signInApple,
     signOut,
     deleteAccount,
     saveProfile,
