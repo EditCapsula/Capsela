@@ -817,3 +817,21 @@ describe("la planche en deux colonnes (05/11/2026, planches de référence de la
     expect(robe.h / (c.hauteur - 2 * c.marge)).toBeGreaterThan(0.85);
   });
 });
+
+describe("trop de pièces pour deux colonnes (05/11/2026, robe + sac + chaussures + collants + bijou)", () => {
+  const T = (id: number, cat: CategoryKey, ratio: number, accessoireType?: string) => ({ id, cat, ratio, accessoireType });
+  const tenue = [T(6, "robe", 0.55), T(4, "sac", 0.84), T(3, "chaussures", 1.4), T(9, "accessoire", 0.3, "Collants"), T(8, "bijou", 1.6)];
+  it("une troisième colonne s'ouvre : la robe garde au moins 60 % de la hauteur de la zone", () => {
+    const c = CONTEXTES["look-detail"];
+    const r = composerFlatLay(tenue, "x", { contexte: "look-detail" }).pieces;
+    const robe = r.find((q) => q.cat === "robe")!;
+    expect(new Set(r.map((q) => Math.round(q.x))).size).toBeGreaterThanOrEqual(3);
+    expect(robe.h / (c.hauteur - (c.margeHaute ?? c.marge) - c.marge)).toBeGreaterThan(0.6);
+  });
+  it("les collants se posent en hauteur, comme un bas, et non comme un petit accessoire", () => {
+    const r = composerFlatLay(tenue, "x", { contexte: "look-detail" }).pieces;
+    const robe = r.find((q) => q.cat === "robe")!;
+    const collants = r.find((q) => q.id === 9)!;
+    expect(collants.h / robe.h).toBeCloseTo(0.85 / 1.65, 1);
+  });
+});

@@ -171,6 +171,8 @@ export const PROPORTION_PIECE: Partial<Record<CategoryKey, number>> = {
   accessoire: 0.5,
   bijou: 0.45,
 };
+/** Des collants, en hauteur (une pièce longue, posée à plat comme un bas), pantalon = 1. */
+const PROPORTION_COLLANTS = 0.85;
 /** Les catégories dont la proportion vaut pour le PLUS GRAND CÔTÉ (un objet posé), et non pour la hauteur (un vêtement). */
 const PROPORTION_PAR_COTE: CategoryKey[] = ["chaussures", "sac", "accessoire", "bijou"];
 /** La hauteur du bas, en part de la hauteur de la zone, avant l'ajustement à la zone : l'unité des proportions. */
@@ -694,8 +696,11 @@ export function composerFlatLay(
     const ecartH = 0.1 * U;
     const poser = (piece: PieceFlatLay, role: RoleFlatLay): PlacementFlatLay => {
       const ratio = piece.ratio > 0 ? piece.ratio : 1;
-      const t = (PROPORTION_PIECE[piece.cat] ?? 0.5) * U;
-      let l = PROPORTION_PAR_COTE.includes(piece.cat) ? (ratio >= 1 ? t : t * ratio) : t * ratio;
+      // Les collants se posent comme un bas, en hauteur (05/11/2026, vu en rendu réel : posés comme un accessoire, ils faisaient la taille
+      // d'une paire de boucles d'oreilles).
+      const collants = piece.accessoireType === "Collants";
+      const t = (collants ? PROPORTION_COLLANTS : (PROPORTION_PIECE[piece.cat] ?? 0.5)) * U;
+      let l = PROPORTION_PAR_COTE.includes(piece.cat) && !collants ? (ratio >= 1 ? t : t * ratio) : t * ratio;
       if (l > largeurMax) l = largeurMax;
       return { id: piece.id, cat: piece.cat, role, visualScale: 1, x: 0, y: 0, l, h: l / ratio, angle: 0, z: profondeur(role, piece.cat) };
     };
@@ -708,8 +713,20 @@ export function composerFlatLay(
     const gauche = posees.filter(aGauche).sort((a, b) => rangG(a.piece.cat) - rangG(b.piece.cat));
     const droite = posees.filter((r) => !aGauche(r)).sort((a, b) => rangD(a) - rangD(b));
     if (!gauche.length && droite.length > 1) gauche.push(droite.shift()!);
-    const colonnes = [gauche, droite].filter((c) => c.length).map((c) => c.map(({ piece, role }) => poser(piece, role)));
     const hauteurDe = (c: PlacementFlatLay[]) => c.reduce((t, q) => t + q.h, 0) + ecartV * (c.length - 1);
+    // UNE TROISIÈME COLONNE PLUTÔT QU'UNE COLONNE TROP HAUTE (05/11/2026, vu en rendu réel : robe, sac à dos, mocassins, collants, boucles
+    // d'oreilles — quatre pièces empilées à droite, la planche réduite d'autant, la robe minuscule). La colonne de droite s'arrête à la hauteur
+    // de celle de gauche (15 % de tolérance) ; la suite ouvre une colonne de plus, trois au plus.
+    const premiere = gauche.map(({ piece, role }) => poser(piece, role));
+    const capacite = Math.max(hauteurDe(premiere), 1.6 * U) * 1.15;
+    const suivantes: PlacementFlatLay[][] = [];
+    for (const { piece, role } of droite) {
+      const q = poser(piece, role);
+      const courante = suivantes[suivantes.length - 1];
+      if (courante && (suivantes.length >= 2 || hauteurDe(courante) + ecartV + q.h <= capacite)) courante.push(q);
+      else suivantes.push([q]);
+    }
+    const colonnes = [premiere, ...suivantes].filter((c) => c.length);
     const H = Math.max(...colonnes.map(hauteurDe));
     let x = 0;
     for (const c of colonnes) {
