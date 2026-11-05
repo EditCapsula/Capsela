@@ -35,7 +35,7 @@ export const cleEntree = (e: EntreeCapsule): string => `${e.possedee ? "d" : "c"
  * `facultatif` : l'emplacement peut rester vide (« Sans »), position -1. Les hauts, les bas et les chaussures font la silhouette ;
  * la robe la remplace (une robe choisie retire le haut et le bas de la planche, un haut ou un bas choisi retire la robe).
  */
-export type CleEmplacement = "haut" | "bas" | "robe" | "maille" | "dessus" | "chaussures" | "sac" | "accessoire";
+export type CleEmplacement = "haut" | "bas" | "robe" | "maille" | "dessus" | "chaussures" | "sac" | "bijou" | "accessoire";
 
 export interface DefEmplacement {
   cle: CleEmplacement;
@@ -52,7 +52,9 @@ export const EMPLACEMENTS: DefEmplacement[] = [
   { cle: "dessus", libelle: "Vestes", cats: ["veste", "manteau"], facultatif: true },
   { cle: "chaussures", libelle: "Chaussures", cats: ["chaussures"], facultatif: false },
   { cle: "sac", libelle: "Sacs", cats: ["sac"], facultatif: true },
-  { cle: "accessoire", libelle: "Accessoires", cats: ["bijou", "accessoire"], facultatif: true },
+  // Bijoux et accessoires séparés (05/11/2026, demandé : un collier sous la tuile « Accessoires » et ses lunettes prêtait à confusion).
+  { cle: "bijou", libelle: "Bijoux", cats: ["bijou"], facultatif: true },
+  { cle: "accessoire", libelle: "Accessoires", cats: ["accessoire"], facultatif: true },
 ];
 
 export const emplacementDe = (cat: CategoryKey): CleEmplacement | null => EMPLACEMENTS.find((e) => e.cats.includes(cat))?.cle ?? null;
