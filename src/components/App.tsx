@@ -53,6 +53,10 @@ import { readConsent, subscribeConsent, type ConsentState } from "@/lib/consent"
 import LoadingSpinner from "./LoadingSpinner";
 import ConfirmationAjout from "./ConfirmationAjout";
 import { ecranARestaurer, memoriserEcran } from "@/lib/ecranRestaure";
+import { initialiserLangue } from "@/lib/langue";
+
+// La langue est fixée une fois, avant le premier rendu (docs/traduction.md) : App.tsx n'est chargé que dans le navigateur.
+initialiserLangue();
 
 /** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) — la barre d'onglets n'y a pas de sens. */
 const NO_TABBAR_SCREENS = new Set(["welcome", "onboarding", "auth", "login", "profileSetup"]);
