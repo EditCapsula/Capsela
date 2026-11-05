@@ -16,6 +16,12 @@ const config: CapacitorConfig = {
   webDir: "out",
   // Le fond crème de l'app (--color-cream) derrière la vue web : pas d'éclair blanc au démarrage ni au rebond du défilement.
   backgroundColor: "#F3EEE5",
+  // iOS sans AdMob (05/11/2026) : la publicité n'existe que sur Android (src/lib/publicite.ts), et ses bibliothèques, déjà signées par
+  // Google, faisaient refuser l'envoi à App Store Connect (« Invalid Signature … GoogleMobileAds.framework »). Sur iOS, seuls les
+  // plugins qui servent y sont embarqués.
+  ios: {
+    includePlugins: ["@capacitor/app", "@capacitor/browser", "@capacitor/local-notifications"],
+  },
   plugins: {
     // Icônes sombres dans les barres système, sur le crème de l'app (05/11/2026) ; l'écran d'accueil, sombre, les éclaircit
     // (src/lib/fondSysteme.ts). La page reste entre les barres : rien ne passe sous l'encoche ni sous les boutons de navigation.
