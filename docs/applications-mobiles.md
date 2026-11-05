@@ -50,6 +50,22 @@ Sans Android Studio : deux workflows GitHub (onglet Actions).
 - **Sur une pull request** qui touche `android/`, `capacitor.config.ts` ou le workflow : la même construction, non signée, pour vérifier que le projet compile.
 - Gradle lit la clé et la version dans l'environnement (`android/app/build.gradle`) : rien de secret dans le dépôt.
 
+## Construction automatique de l'app iOS (05/11/2026)
+
+Sans Mac : le workflow **« iOS — construire l'app pour l'App Store »** (`ios-construire.yml`) tourne sur une machine macOS de GitHub (Xcode 26, exigé par App Store Connect depuis avril 2026).
+- **« Run workflow »** avec le nom de version : l'app est archivée, signée, envoyée à App Store Connect (case « Envoyer », cochée par défaut), et le `.ipa` reste en artefact 30 jours. Le numéro de build (`CFBundleVersion`) est le numéro d'exécution, toujours croissant.
+- **Signature gérée par Apple** : Xcode crée le certificat de distribution et le profil avec la clé d'API d'App Store Connect (`-allowProvisioningUpdates`) ; rien à exporter d'un Mac.
+- **Sur une pull request** qui touche `ios/`, `capacitor.config.ts` ou le workflow : la même construction, non signée, pour vérifier que le projet compile.
+- Coût : sur un dépôt privé, une minute macOS compte pour dix minutes du quota GitHub Actions.
+
+Ce que la propriétaire prépare, une fois :
+1. **Compte Apple Developer** (99 $/an) ; noter l'**identifiant d'équipe** (developer.apple.com → Membership details) → secret `APPLE_TEAM_ID`.
+2. **Fiche de l'app dans App Store Connect** (Apps → « + » → Nouvelle app) : plateforme iOS, nom « Capsela », langue principale français, identifiant de lot `app.capsela` (s'il n'est pas proposé : developer.apple.com → Identifiers → « + » → App IDs, `app.capsela`, cocher « Sign in with Apple »), SKU libre (ex. `capsela-ios`). Sans cette fiche, l'envoi est refusé.
+3. **Clé d'API** : App Store Connect → Utilisateurs et accès → Intégrations → App Store Connect API → « + », rôle **Admin** (nécessaire pour que la signature soit gérée par Apple). Télécharger le fichier `AuthKey_XXXX.p8` (une seule fois possible) → secrets `APP_STORE_CONNECT_KEY` (contenu du fichier), `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`.
+4. Lancer le workflow ; le build apparaît dans App Store Connect → TestFlight après le traitement d'Apple (de quelques minutes à une heure).
+
+Sur iOS, la vidéo récompensée n'est pas proposée (`src/lib/publicite.ts` : Android seulement) ; l'identifiant AdMob de `Info.plist` est celui de test de Google, à remplacer avant de l'ouvrir sur iOS.
+
 ## Ce qui reste à faire avant la première soumission
 
 1. **Sign in with Apple** : exigé sur iOS tant que la connexion Google y est proposée (règle 4.8 de l'App Store) — à faire quand le compte Apple existe (identifiant de service, clé, fournisseur « Apple » dans Supabase).
@@ -58,4 +74,4 @@ Sans Android Studio : deux workflows GitHub (onglet Actions).
 
 ## Ce qui n'a pas été vérifié
 
-Ni Xcode ni le SDK Android ne sont disponibles dans l'environnement où les projets ont été générés : **aucune compilation native n'a été faite**. La première ouverture dans Xcode et Android Studio est l'étape de vérification.
+Ni Xcode ni le SDK Android ne sont disponibles dans l'environnement où les projets ont été générés. Android compile dans son workflow depuis le 17/10/2026 ; iOS compile pour la première fois dans `ios-construire.yml` (05/11/2026). Aucun des deux n'a été ouvert dans Xcode ou Android Studio.
