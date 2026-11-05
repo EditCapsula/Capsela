@@ -405,19 +405,55 @@ describe("completerAvecCapsule — une occasion seulement élargie peut être co
   });
 });
 
-describe("completerAvecCapsule — la capsule complète, elle ne remplace pas le dressing", () => {
+describe("completerAvecCapsule — la capsule complète jusqu'au besoin entier (05/11/2026)", () => {
   const situations = situationsDuSejour(["quotidien", "soiree"], [meteo("2026-10-16")]);
   const capsule = [piece(60, "robe"), piece(61, "veste"), piece(62, "bijou")];
   const dressing = [piece(1, "haut"), piece(7, "chaussures")];
   const r = { pieceIds: [1, 7], looks: [], situationsSansLook: [1] };
 
-  it("jamais plus de suggestions que la moitié des pièces possédées (arrondie au-dessus)", () => {
+  it("plus de plafond : un look qui demande trois pièces de capsule pour deux possédées entre", () => {
     const gen: Generateur = (pool) => (pool.some((p) => p.id === 60) ? { ids: [1, 7, 60, 61, 62], elargie: false } : null);
-    const out = completerAvecCapsule(dressing, capsule, situations, r, 99, gen);
-    // 2 pièces possédées dans la valise : au plus 1 suggestion ; le look qui en demande 3 n'entre pas.
+    expect(completerAvecCapsule(dressing, capsule, situations, r, 99, gen).suggestionIds.sort()).toEqual([60, 61, 62]);
+  });
+
+  it("un dressing vide : la valise entière vient de la capsule", () => {
+    const vide = { pieceIds: [], looks: [], situationsSansLook: [0, 1] };
+    const gen: Generateur = (pool) => (pool.some((p) => p.id === 60) ? { ids: [60, 61], elargie: false } : null);
+    const out = completerAvecCapsule([], capsule, situations, vide, 99, gen);
+    expect(out.pieceIds.sort()).toEqual([60, 61]);
+    expect(out.suggestionIds.sort()).toEqual([60, 61]);
+    expect(out.situationsSansLook).toEqual([]);
+  });
+});
+
+describe("completerAvecCapsule — le volume rempli jusqu'à la cible, le dressing d'abord", () => {
+  const situations = situationsDuSejour(["quotidien"], [meteo("2026-10-16"), meteo("2026-10-17")]);
+  const dressing = [piece(1, "haut"), piece(4, "pantalon"), piece(7, "chaussures"), piece(2, "haut")];
+  const capsule = [piece(60, "haut"), piece(61, "pantalon")];
+  // Tout couvert avec 1 + 4 + 7 (6 unités) ; le moteur sait aussi composer avec 2, 60 ou 61.
+  const r = { pieceIds: [1, 4, 7], looks: [{ ids: [1, 4, 7], situations: [0], elargie: false }], situationsSansLook: [] };
+  let n = 0;
+  const gen: Generateur = (pool) => {
+    const looks = [[1, 4, 7], [2, 4, 7], [60, 4, 7], [1, 61, 7]].filter((l) => l.every((id) => pool.some((p) => p.id === id)));
+    return looks.length ? { ids: looks[n++ % looks.length], elargie: false } : null;
+  };
+
+  it("sans cible : rien n'est ajouté à une valise qui couvre tout (comportement d'avant)", () => {
+    expect(completerAvecCapsule(dressing, capsule, situations, r, 22, gen).pieceIds).toEqual([1, 4, 7]);
+  });
+
+  it("sous la cible : la pièce du dressing passe avant celles de la capsule", () => {
+    // Cible 7 unités : une pièce de plus suffit, et le haut 2 du dressing est préféré au haut 60 de la capsule.
+    const out = completerAvecCapsule(dressing, capsule, situations, r, 22, gen, 7);
+    expect(out.pieceIds).toContain(2);
     expect(out.suggestionIds).toEqual([]);
-    const gen1: Generateur = (pool) => (pool.some((p) => p.id === 60) ? { ids: [1, 7, 60], elargie: false } : null);
-    expect(completerAvecCapsule(dressing, capsule, situations, r, 99, gen1).suggestionIds).toEqual([60]);
+  });
+
+  it("le dressing épuisé, la capsule complète jusqu'à la cible, jamais au-delà de la capacité", () => {
+    const out = completerAvecCapsule(dressing, capsule, situations, r, 22, gen, 22);
+    expect(out.suggestionIds.sort()).toEqual([60, 61]);
+    const out2 = completerAvecCapsule(dressing, capsule, situations, r, 8, gen, 22);
+    expect(out2.pieceIds.length).toBeLessThanOrEqual(5);
   });
 });
 

@@ -158,7 +158,7 @@ Brief : intégrer les améliorations pertinentes de la maquette sans la recopier
 - le look composé dans le pool dressing + capsule (`composeWardrobePool`, le moteur habituel) apporte au moins une pièce que le dressing n'a pas ;
 - les suggestions DÉJÀ retenues pour une autre occasion sont réutilisées avant d'en ajouter une seconde (aucune redondance) ;
 - le volume de la valise n'est jamais dépassé ;
-- jamais plus de suggestions que la moitié des pièces possédées de la valise, arrondie au-dessus (`PLAFOND_SUGGESTIONS`, ARBITRAGE ÉDITORIAL à revoir sur des dressings réels) : la capsule complète, elle ne remplace pas le dressing.
+- ~~jamais plus de suggestions que la moitié des pièces possédées de la valise~~ : plafond **levé le 05/11/2026** (voir § 8 quinquies).
 Un dressing qui couvre tout : aucune suggestion. Ce que ni le dressing ni la capsule ne couvrent reste dit (« Optimise ta valise » : seulement les pièces pas encore dans la valise).
 
 **Capacité** : un seul endroit, `BAGAGES` et le barème de volume (valise.ts), paramètres métier documentés au § 3 ; l'écran dit « environ N pièces », jamais une capacité universelle. Corrections : le remplacement d'une pièce est refusé quand il ferait dépasser la valise (`alternatives(…, capacite)` rend `tient: false`, la pièce est grisée avec la raison) ; le **changement de taille après génération** conserve la sélection — plus petite et dépassée, l'écran le dit et mène à « On allège un peu ? » ; plus grande, il dit qu'il reste de la place et propose de recomposer. Rien n'est retiré sans la personne. Compteurs : toujours calculés sur la sélection enregistrée.
@@ -411,3 +411,14 @@ sur la météo d'aujourd'hui chez soi — fraîche en automne, elle écartait le
 - Les jours composés avec la climatologie sont marqués (`MeteoJour.habituelle`, avec leurs températures basse et haute). Hors de
   l'horizon de prévision (dates passées ou lointaines), le résultat les affiche comme « températures habituelles à ces dates », jamais
   comme une prévision. Une valise composée sans climatologie garde « Météo non disponible pour ces dates ».
+
+## 8 quinquies. La capsule complète la valise jusqu'au besoin entier (05/11/2026)
+
+Demandé : « une valise devrait être entièrement faite si besoin avec les pièces de la capsule si les pièces du dressing ne couvrent pas en totalité le besoin ». [DÉCIDÉ]
+
+- **Le besoin, c'est la cible « prête »** : un look par occasion ET 70 % du volume du bagage (`cibleDeVolume`). `completerAvecCapsule` reçoit désormais cette cible.
+- **Ordre** (`completerAvecCapsule`, valise.ts, testé) : le dressing compose d'abord seul (`composerValise`, inchangé) ; puis les occasions sans look (ou seulement élargies) sont complétées comme avant ; puis, tant que la valise est sous sa cible, des looks tirés dans le dressing et la capsule réunis entrent, dans la capacité — d'abord ceux qui demandent le moins de pièces de capsule (le dressing passe devant), puis le moins de pièces nouvelles, puis ceux qui servent le plus de situations.
+- **Plus de plafond de suggestions** : `PLAFOND_SUGGESTIONS` (la moitié des pièces possédées) est retiré. Un dressing vide peut donner une valise entièrement faite de la capsule.
+- **« Ton dressing d'abord » ne bloque plus** : l'écran ne s'affiche que si la capsule est vide elle aussi (cas théorique).
+- **Inchangé** : « Uniquement mon dressing » garde la valise aux seules pièces possédées ; les suggestions restent marquées « à ajouter à ton dressing » et comptent dans le volume ; jamais au-delà de la capacité.
+- **NON vérifié en rendu réel** au moment de l'écriture : le parcours complet avec un dressing vide ou très court.
