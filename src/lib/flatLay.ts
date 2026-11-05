@@ -171,6 +171,8 @@ export const PROPORTION_PIECE: Partial<Record<CategoryKey, number>> = {
   accessoire: 0.5,
   bijou: 0.45,
 };
+/** Le nombre d'accessoires posés dans une planche en colonnes, sur tous les heros (05/11/2026). */
+const ACCESSOIRES_EN_GRILLE = 2;
 /** Des collants, en hauteur (une pièce longue, posée à plat comme un bas), pantalon = 1. */
 const PROPORTION_COLLANTS = 0.85;
 /** Les catégories dont la proportion vaut pour le PLUS GRAND CÔTÉ (un objet posé), et non pour la hauteur (un vêtement). */
@@ -604,21 +606,26 @@ export function composerFlatLay(
   const retirees = pieces.filter((p) => !!p.accessoireType && !!config.accessoiresMasques?.includes(p.accessoireType));
   const compatibles = pieces.filter((p) => p.flatLayCompatible !== false && !retirees.includes(p));
   // Un contexte qui limite le nombre de pièces (hero-home) ne pose que les plus représentatives ; les autres restent dans la tenue.
-  const choix = config.maxPieces ? pieceRepresentatives(compatibles, config.maxPieces + (options.piecesEnPlus ?? 0)) : { gardees: compatibles, ecartees: [] as PieceFlatLay[] };
+  const proportionnee = options.proportions !== false;
+  // UNE SEULE RÈGLE POUR TOUS LES HEROS (05/11/2026, demandé : « en faire une règle commune pour éviter que chaque écran ait son propre
+  // traitement »). En colonnes, l'accueil pose toutes les pièces comme la Tenue du jour : la limite de 4 pièces (09/10/2026) venait des
+  // chevauchements de l'ancien moteur, que la grille n'a plus. La même tenue montre donc les mêmes pièces sur les deux écrans.
+  const choix = config.maxPieces && !proportionnee ? pieceRepresentatives(compatibles, config.maxPieces + (options.piecesEnPlus ?? 0)) : { gardees: compatibles, ecartees: [] as PieceFlatLay[] };
   const tous = attribuerRoles(choix.gardees);
   // Le groupe stylistique se décide sur TOUTE la tenue : un t-shirt masqué (hero-home) ne défait pas le gabarit pull + pantalon.
   // Seule une couche de haut (t-shirt sous un pull) fait un groupe et se masque sur l'accueil : une veste en plus reste dans la planche.
   const coucheHaut = (r: { piece: { cat: CategoryKey }; role: RoleFlatLay }) => r.role === "couche" && HAUTS.includes(r.piece.cat);
   const avecCouche = tous.some(coucheHaut);
   const masquees = [
-    ...(config.masquerCouche ? tous.filter(coucheHaut).map((r) => r.piece.id) : []),
+    ...((proportionnee || config.masquerCouche) ? tous.filter(coucheHaut).map((r) => r.piece.id) : []),
     ...retirees.map((p) => p.id),
     ...choix.ecartees.map((p) => p.id),
   ];
-  const roles = config.masquerCouche ? tous.filter((r) => !coucheHaut(r)) : tous;
+  // En colonnes, le t-shirt sous un pull reste dans la tenue mais n'est posé sur AUCUN hero (règle commune du 05/11/2026 ; l'accueil le
+  // masquait déjà depuis le 09/10/2026) : il ouvrait une troisième colonne et rapetissait toute la planche.
+  const roles = proportionnee || config.masquerCouche ? tous.filter((r) => !coucheHaut(r)) : tous;
   if (!roles.length) return { pieces: [], ecartees: [], masquees };
   const alea = generateur(graine);
-  const proportionnee = options.proportions !== false;
   const dans = (min: number, max: number) => min + (max - min) * alea();
   // La veste ou le manteau héros se pose toujours à DROITE (maquette) : pas de miroir. Sinon le sens est tiré par la graine.
   const heroDessus = DESSUS.includes(roles[0].piece.cat);
@@ -637,7 +644,8 @@ export function composerFlatLay(
 
   // Les accessoires : on garde les plus utiles, en nombre limité par le contexte et le nombre de pièces.
   const accessoires = roles.filter((r) => r.role === "accessoire").sort((a, b) => rangAccessoire(a.piece.cat) - rangAccessoire(b.piece.cat));
-  const plafond = config.maxAccessoires[nb >= 6 ? 1 : 0];
+  // En colonnes, deux accessoires au plus sur tous les heros (la règle commune du 05/11/2026) : visibles, sans prendre le dessus.
+  const plafond = proportionnee ? ACCESSOIRES_EN_GRILLE : config.maxAccessoires[nb >= 6 ? 1 : 0];
   const gardes = new Set(accessoires.slice(0, plafond).map((r) => r.piece));
   const ecartees: number[] = accessoires.filter((r) => !gardes.has(r.piece)).map((r) => r.piece.id);
 
@@ -714,19 +722,30 @@ export function composerFlatLay(
     const droite = posees.filter((r) => !aGauche(r)).sort((a, b) => rangD(a) - rangD(b));
     if (!gauche.length && droite.length > 1) gauche.push(droite.shift()!);
     const hauteurDe = (c: PlacementFlatLay[]) => c.reduce((t, q) => t + q.h, 0) + ecartV * (c.length - 1);
-    // UNE TROISIÈME COLONNE PLUTÔT QU'UNE COLONNE TROP HAUTE (05/11/2026, vu en rendu réel : robe, sac à dos, mocassins, collants, boucles
-    // d'oreilles — quatre pièces empilées à droite, la planche réduite d'autant, la robe minuscule). La colonne de droite s'arrête à la hauteur
-    // de celle de gauche (15 % de tolérance) ; la suite ouvre une colonne de plus, trois au plus.
+    // UNE TROISIÈME COLONNE QUAND ELLE AGRANDIT LA PLANCHE (05/11/2026, vu en rendu réel : robe, sac à dos, mocassins, collants, boucles
+    // d'oreilles — quatre pièces empilées à droite, toute la planche réduite d'autant, la robe à 40 % de la hauteur). Deux dispositions sont
+    // essayées — tout à droite, ou une colonne de plus dès que la droite dépasse la hauteur de la gauche — et la planche retient celle qui
+    // donne les pièces les plus grandes une fois ajustées à la zone. Trois colonnes au plus.
     const premiere = gauche.map(({ piece, role }) => poser(piece, role));
-    const capacite = Math.max(hauteurDe(premiere), 1.6 * U) * 1.15;
-    const suivantes: PlacementFlatLay[][] = [];
-    for (const { piece, role } of droite) {
-      const q = poser(piece, role);
-      const courante = suivantes[suivantes.length - 1];
-      if (courante && (suivantes.length >= 2 || hauteurDe(courante) + ecartV + q.h <= capacite)) courante.push(q);
-      else suivantes.push([q]);
-    }
-    const colonnes = [premiere, ...suivantes].filter((c) => c.length);
+    const droiteposee = droite.map(({ piece, role }) => poser(piece, role));
+    const disposer = (capacite: number): PlacementFlatLay[][] => {
+      const suivantes: PlacementFlatLay[][] = [];
+      for (const q of droiteposee) {
+        const courante = suivantes[suivantes.length - 1];
+        if (courante && (suivantes.length >= 2 || hauteurDe(courante) + ecartV + q.h <= capacite)) courante.push(q);
+        else suivantes.push([q]);
+      }
+      return [premiere, ...suivantes].filter((c) => c.length);
+    };
+    const largeurUtile = 100 - 2 * config.marge;
+    const hauteurUtile = hauteurZone - (config.margeHaute ?? config.marge) - config.marge;
+    const echelle = (cols: PlacementFlatLay[][]) => {
+      const W = cols.reduce((t, c) => t + Math.max(...c.map((q) => q.l)), 0) + ecartH * (cols.length - 1);
+      const Hc = Math.max(...cols.map(hauteurDe));
+      return Math.min(largeurUtile / W, hauteurUtile / Hc);
+    };
+    const candidates = [disposer(Infinity), disposer(Math.max(hauteurDe(premiere), 1.6 * U) * 1.15)];
+    const colonnes = candidates.reduce((m, c) => (echelle(c) > echelle(m) + 1e-9 ? c : m));
     const H = Math.max(...colonnes.map(hauteurDe));
     let x = 0;
     for (const c of colonnes) {
