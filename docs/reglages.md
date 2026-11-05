@@ -42,6 +42,6 @@ Une sous-page ouverte par un raccourci (ligne météo, « Gérer mon compte ») 
 - **Affichage** (thème, taille du texte) : aucun réglage dans l'app.
 - **Unités du corps** : aucune mesure n'est affichée en centimètres (les tailles sont des tailles). Les **Unités** ne règlent que
   les températures, partout où elles s'affichent ; la météo reçue, le moteur et ce qui est enregistré restent en °C.
-- **Centre d'aide** : aucune FAQ n'existait. Le contenu de `centreAide.ts` est un brouillon rédigé d'après le code ; l'entrée
-  n'apparaît qu'une fois `CENTRE_AIDE_VALIDE` passé à `true`, après validation par la propriétaire.
+- **Centre d'aide** : aucune FAQ n'existait. Le contenu de `centreAide.ts`, rédigé d'après le code, a été validé par la
+  propriétaire le 05/11/2026 (`CENTRE_AIDE_VALIDE = true`). La réponse sur « Autre tenue » lit `GENERATIONS_GRATUITES_PAR_JOUR`.
 - **Délai de réponse du support** (« sous 48 h » sur la maquette) : aucun engagement n'est pris, rien n'est promis.
