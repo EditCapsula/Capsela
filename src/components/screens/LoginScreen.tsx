@@ -8,6 +8,7 @@ import { emailPlausible } from "@/lib/motDePasse";
 import Button from "@/components/Button";
 import Input, { ChampMotDePasse } from "@/components/Input";
 import LogoCapsela from "@/components/LogoCapsela";
+import ConnexionSociale from "@/components/ConnexionSociale";
 
 export default function LoginScreen() {
   const { actions } = useCapsela();
@@ -34,6 +35,14 @@ export default function LoginScreen() {
   // passe était proposé ici). Jamais markSignupIntent ici, à la différence
   // d'AuthScreen (Créer un compte) : cet écran suppose un compte déjà
   // existant, il ne doit jamais être traité comme une nouvelle inscription.
+  // Apple (05/11/2026) : même chemin que Google, jamais d'intention d'inscription ici (cf. plus haut).
+  const submitApple = async () => {
+    if (busy) return;
+    setBusy(true);
+    await auth.signInApple();
+    setBusy(false);
+  };
+
   const submitGoogle = async () => {
     if (busy) return;
     setBusy(true);
@@ -139,18 +148,7 @@ export default function LoginScreen() {
         </div>
       </div>
 
-      <button
-        onClick={submitGoogle}
-        className="flex items-center justify-center gap-[10px] bg-card border border-border text-ink rounded-full py-[15px] text-[14px] cursor-pointer mt-7"
-      >
-        <span className="font-serif font-semibold">G</span>Continuer avec Google
-      </button>
-
-      <div className="flex items-center gap-[11px] my-[22px]">
-        <div className="flex-1 h-px bg-border" />
-        <span className="t-label text-placeholder">ou par e-mail</span>
-        <div className="flex-1 h-px bg-border" />
-      </div>
+      <ConnexionSociale onApple={submitApple} onGoogle={submitGoogle} occupe={busy} />
 
       <div className="flex flex-col gap-3">
         <Input

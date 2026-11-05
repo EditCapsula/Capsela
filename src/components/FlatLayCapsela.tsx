@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { dessinSilhouette } from "@/lib/silhouetteFlatLay";
 import { useAuth } from "@/lib/auth";
-import { margesDe, objectBounds, ratioHero } from "@/lib/catalogMarges";
+import { margesDe, objectBounds, ratioHero, type Marges } from "@/lib/catalogMarges";
+import { mesureConnue, mesurerImage, ratioPiece, type MesureImage } from "@/lib/margesMesurees";
 import { resolveHeroImage } from "@/lib/catalogImages";
 import { composerFlatLay, hauteurDuContexte, type ContexteFlatLay } from "@/lib/flatLay";
 import { choisirTemplate } from "@/lib/flatLayTemplates";
@@ -134,6 +135,33 @@ export function FlatLayCapsela({
       .filter(({ img }) => img.url || avecImage.length === 0);
     return [...base.map((e) => ({ ...e, fantome: undefined as number | undefined, ajout: undefined as (() => void) | undefined })), ...ombres.map((o) => ({ ...o, ajout: undefined as (() => void) | undefined })), ...conseils];
   }, [items, context, fantomes, ajouts, homme]);
+  // LA FORME RÉELLE D'UNE PHOTO DU DRESSING (05/11/2026, margesMesurees.ts) : une image hors du tableau des marges et sans format dans son
+  // nom est mesurée une fois chargée ; la planche se recompose alors avec la vraie forme de la pièce (une robe nuisette n'est pas un
+  // portrait 0,8). En attendant, l'ancien format supposé.
+  const [versionMesures, setMesures] = useState(0);
+  const aMesurer = (url: string | undefined): url is string => !!url && !margesDe(url) && ratioHero(url) === null;
+  useEffect(() => {
+    let actif = true;
+    for (const { img, fantome } of images) {
+      if (fantome || !aMesurer(img.url) || mesureConnue(img.url) !== undefined) continue;
+      void mesurerImage(img.url).then(() => actif && setMesures((v) => v + 1));
+    }
+    return () => {
+      actif = false;
+    };
+  }, [images]);
+  // Les mesures connues des images posées : recalculées quand une mesure arrive (versionMesures), pour que la planche se recompose.
+  const mesures = useMemo(() => {
+    void versionMesures;
+    const m = new Map<string, MesureImage>();
+    for (const { img } of images) {
+      const connue = aMesurer(img.url) ? mesureConnue(img.url) : undefined;
+      if (connue && img.url) m.set(img.url, connue);
+    }
+    return m;
+  }, [images, versionMesures]);
+  const margesAffichees = (url: string | undefined): Marges | null => margesDe(url) ?? (url ? mesures.get(url)?.marges : undefined) ?? null;
+
   const template = useMemo(
     // Pas de template sur l'accueil (14/10/2026) : jamais validé en rendu réel dans ce contexte (seul look-detail l'a été), et une tenue y a
     // paru sans ses chaussures. Le moteur d'origine y compose seul ; le moteur de templates sait le faire (flatLay.ts), il faut juste le valider.
@@ -147,13 +175,14 @@ export function FlatLayCapsela({
           if (fantome) return { id: it.id, cat: it.cat, ratio: fantome, visualScale: 1.35 };
           // La boîte réelle de l'objet (objectBounds) : son format fait la taille. Photo du dressing sans boîte connue : un portrait courant ; sans visuel : un carré.
           const b = objectBounds(img.url);
-          const ratio = b ? (b.width * (ratioHero(img.url) ?? 1)) / b.height : img.kind === "placeholder" ? 1 : 0.8;
+          const mesure = img.url ? mesures.get(img.url) : undefined;
+          const ratio = mesure ? ratioPiece(mesure) : b ? (b.width * (ratioHero(img.url) ?? 1)) / b.height : img.kind === "placeholder" ? 1 : 0.8;
           return { id: it.id, cat: catDePlanche(it), ratio, accessoireType: it.accessoireType, photoBrute: img.kind === "photo" };
         }),
         graine,
         { contexte: context, template, piecesEnPlus: images.filter((e) => e.ajout).length, hauteurZone: HAUTEUR }
       ).pieces,
-    [images, graine, context, template, HAUTEUR]
+    [images, graine, context, template, HAUTEUR, mesures]
   );
 
   // Toutes les images chargées (ou en échec) : la planche est prête.
@@ -188,7 +217,7 @@ export function FlatLayCapsela({
         {composition.map((p) => {
           const entree = images.find(({ it }) => it.id === p.id)!;
           const { it, img, fantome, ajout } = entree;
-          const m = fantome ? null : margesDe(img.url);
+          const m = fantome ? null : margesAffichees(img.url);
           const cliquable = onPiece && !fantome
             ? {
                 role: "button" as const,

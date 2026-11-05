@@ -258,6 +258,14 @@ body {
 
 input.capin {
   outline: none;
+  /* Un repère au focus (05/11/2026, cahier des charges de l'écran de connexion) : sans lui, `outline: none` ne laissait voir aucun
+     champ actif, au clavier comme au doigt. */
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+input.capin:focus-visible,
+input.capin:focus {
+  border-color: var(--color-terracotta);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-terracotta) 14%, transparent);
 }
 input.capin::placeholder {
   color: var(--color-placeholder);

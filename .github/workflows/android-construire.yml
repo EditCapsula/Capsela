@@ -52,6 +52,9 @@ jobs:
           # bloc de test de Google, publicités de test non rémunérées — un export pour Google Play est alors refusé, plus bas.
           NEXT_PUBLIC_ADMOB_RECOMPENSE_ID: ${{ vars.ADMOB_RECOMPENSE_ID || secrets.ADMOB_RECOMPENSE_ID }}
           CAPSELA_ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID || secrets.ADMOB_APP_ID }}
+          # « Continuer avec Apple » (05/11/2026, src/components/ConnexionSociale.tsx) : « 1 » une fois Apple et Supabase réglés
+          # (docs/connexion-apple.md). Absente : le bouton n'est pas affiché.
+          NEXT_PUBLIC_CONNEXION_APPLE: ${{ vars.CONNEXION_APPLE }}
         run: |
           if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "::error::Clé publique Supabase absente : sans elle, l'app tournerait en mode démo."
