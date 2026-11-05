@@ -17,8 +17,15 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
  */
 
 export const BUCKET_AVIS = "avis-styliste-photos";
-/** Durée de validité des URL signées des photos (s). Suffit pour une visite du Journal. */
-const DUREE_URL_SIGNEE_S = 3600;
+/**
+ * Durée de validité des URL signées des photos (s). Une heure jusqu'au 05/11/2026 : « suffit pour une visite du Journal »
+ * était faux dans l'application, qui reste ouverte des heures en arrière-plan — la liste, lue une seule fois, gardait des liens
+ * expirés et les photos s'affichaient cassées (signalé le 05/11/2026). 24 h, comme les photos du dressing
+ * (DUREE_URL_PHOTO_DRESSING_S), et la liste est relue bien avant l'expiration (AVIS_A_RELIRE_APRES_MS).
+ */
+const DUREE_URL_SIGNEE_S = 24 * 3600;
+/** Âge au-delà duquel la liste des avis est relue à l'affichage du Journal : ses liens signés ne sont jamais près d'expirer. */
+export const AVIS_A_RELIRE_APRES_MS = 6 * 3600 * 1000;
 
 export interface AvisEnregistre {
   id: string;

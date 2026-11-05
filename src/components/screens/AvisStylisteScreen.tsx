@@ -349,7 +349,10 @@ function EtatAnalyse({ etapes, phrase }: { etapes: string[]; phrase: string }) {
  */
 export function PhotoHeros({ url, largeur, hauteur, taille = "78%" }: { url: string; largeur?: number; hauteur?: number; taille?: string }) {
   const [plein, setPlein] = useState(false);
+  // Une photo qui ne se charge pas (lien signé expiré, fichier absent) disparaît plutôt que d'afficher une image cassée (05/11/2026).
+  const [urlCassee, setUrlCassee] = useState<string | null>(null);
   const ratio = largeur && hauteur ? `${largeur} / ${hauteur}` : undefined;
+  if (urlCassee === url) return null;
   return (
     <>
       <button
@@ -369,6 +372,7 @@ export function PhotoHeros({ url, largeur, hauteur, taille = "78%" }: { url: str
         <img
           src={url}
           alt="Ta tenue"
+          onError={() => setUrlCassee(url)}
           className={ratio ? "w-full h-full object-cover block" : "w-full h-auto object-contain block"}
           style={ratio ? undefined : { maxHeight: "62vh" }}
         />

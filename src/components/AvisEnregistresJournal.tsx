@@ -2,6 +2,7 @@
 
 import { trierAvisRecents, verdictCourt, type AvisEnregistre } from "@/lib/avisJournal";
 import Card from "@/components/Card";
+import { useState } from "react";
 
 /*
  * « MES AVIS DE STYLISTE » DANS LE JOURNAL — la mémoire visuelle des avis
@@ -30,6 +31,10 @@ export function CarteAvis({ avis, onOuvrir }: { avis: AvisEnregistre; onOuvrir: 
   const verdict = verdictCourt(avis.avis.overallAssessment);
   const extrait = avis.avis.strengths[0];
   const date = formatDate(avis.creeLe);
+  // Une photo qui ne se charge pas (lien signé expiré, fichier absent) cède la place au monogramme, jamais à une image cassée
+  // (signalé le 05/11/2026 : « Tenue analysée le 3 octobre 2026 » et l'icône d'image manquante à la place de la photo).
+  // L'URL en échec, et non un simple drapeau : relue avec un lien neuf, la photo revient.
+  const [urlCassee, setUrlCassee] = useState<string | null>(null);
   return (
     <button
       type="button"
@@ -40,9 +45,16 @@ export function CarteAvis({ avis, onOuvrir }: { avis: AvisEnregistre; onOuvrir: 
       {/* La photo d'abord : assez grande pour reconnaître la tenue, entière
           (portrait 4:5, cadrée en haut — là où se lit la tenue). */}
       <span className="block self-start flex-shrink-0 w-[40%] max-w-[150px] rounded-bloc overflow-hidden bg-warm-bg" style={{ aspectRatio: "4/5" }}>
-        {avis.photoUrl ? (
+        {avis.photoUrl && avis.photoUrl !== urlCassee ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avis.photoUrl} alt={`Tenue analysée le ${date}`} loading="lazy" decoding="async" className="w-full h-full object-cover object-top block" />
+          <img
+            src={avis.photoUrl}
+            alt={`Tenue analysée le ${date}`}
+            loading="lazy"
+            decoding="async"
+            onError={() => setUrlCassee(avis.photoUrl)}
+            className="w-full h-full object-cover object-top block"
+          />
         ) : (
           // Sans photo (enregistrée sans, ou lien expiré) : le monogramme de
           // la marque sur le beige, plutôt qu'un vide.

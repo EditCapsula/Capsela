@@ -58,7 +58,7 @@ import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
 import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSuggeree, type ResultatDemande } from "./avisStylisteClient";
-import { enregistrerAvis, enregistrerReconnaissanceAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
+import { AVIS_A_RELIRE_APRES_MS, enregistrerAvis, enregistrerReconnaissanceAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
 import { appliquerChoix, type ChoixReconnaissance, type VetementReconnu } from "./reconnaissance";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import {
@@ -386,6 +386,8 @@ export interface Actions {
   corrigerReconnaissanceEnregistree: (avisId: string, index: number, choix: ChoixReconnaissance) => Promise<boolean>;
   /** Charge les avis enregistrés (Journal). */
   chargerAvisEnregistres: () => void;
+  /** La liste des avis a été lue il y a plus de AVIS_A_RELIRE_APRES_MS : ses photos signées approchent de l'expiration. */
+  avisEnregistresPerimes: () => boolean;
   /** Ouvre un avis enregistré en consultation (depuis le Journal ou la liste complète, qui est retenue pour le retour). */
   ouvrirAvisEnregistre: (id: string) => void;
   /** Referme un avis enregistré : retour à l'écran d'où il a été ouvert. */
@@ -831,6 +833,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
      qu'une analyse, même avant le rendu suivant. */
   const analyseAvisEnCoursRef = useRef(false);
   const [avisEnregistres, setAvisEnregistres] = useState<AvisEnregistre[] | null>(null);
+  // Quand la liste a été lue (et ses photos signées) : relue à l'affichage du Journal une fois trop vieille (05/11/2026).
+  const avisChargesLeRef = useRef(0);
   const [avisEnregistreActifId, setAvisEnregistreActifId] = useState<string | null>(null);
   const [avisEnregistreRetour, setAvisEnregistreRetour] = useState<Screen>("history");
   const avisEnregistreActif = avisEnregistres?.find((a) => a.id === avisEnregistreActifId) ?? null;
@@ -2088,8 +2092,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         setAvisEnregistres([]);
         return;
       }
+      avisChargesLeRef.current = Date.now();
       void listerAvis(userId).then(setAvisEnregistres);
     },
+    avisEnregistresPerimes: () => avisChargesLeRef.current > 0 && Date.now() - avisChargesLeRef.current > AVIS_A_RELIRE_APRES_MS,
     ouvrirAvisEnregistre: (id) => {
       setAvisEnregistreActifId(id);
       setAvisEnregistreRetour(stateRef.current.screen === "avisTous" ? "avisTous" : "history");
