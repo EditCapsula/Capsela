@@ -7,8 +7,12 @@
  * réponse qui en parle.
  */
 
+import { GENERATIONS_GRATUITES_PAR_JOUR } from "./premium";
+
 /** Passe à true une fois le contenu validé : l'entrée apparaît alors dans Réglages. */
 export const CENTRE_AIDE_VALIDE = false;
+
+const enLettres = (n: number) => ["zéro", "une", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix"][n] ?? String(n);
 
 export interface QuestionAide {
   question: string;
@@ -52,9 +56,9 @@ export const CENTRE_AIDE: readonly ThemeAide[] = [
       },
       {
         question: "Combien de fois puis-je demander une autre tenue ?",
-        // generations.ts : GENERATIONS_GRATUITES_PAR_JOUR = 2 ; vidéo récompensée : Android, une par jour.
+        // Le chiffre est lu dans premium.ts (GENERATIONS_GRATUITES_PAR_JOUR) : la réponse suit la limite. Vidéo : Android, une par jour.
         reponse:
-          "Sans abonnement, « Autre tenue » est disponible deux fois par jour. Sur Android, tu peux en obtenir une de plus en regardant une courte vidéo. Avec Premium, il n'y a pas de limite.",
+          `Sans abonnement, « Autre tenue » est disponible ${enLettres(GENERATIONS_GRATUITES_PAR_JOUR)} fois par jour. Sur Android, tu peux en obtenir une de plus en regardant une courte vidéo. Avec Premium, il n'y a pas de limite.`,
       },
     ],
   },
