@@ -135,6 +135,29 @@ export function avancer(sel: SelectionComposer, cle: CleEmplacement, groupes: Re
   return exclusivite({ ...sel, [cle]: suivante }, cle, groupes);
 }
 
+/**
+ * LES FLÈCHES ENCHAÎNENT LES CATÉGORIES (05/11/2026, demandé : « si j'ai fini d'explorer les pièces d'une catégorie je bascule à la
+ * suivante »). Tant qu'il reste des pièces dans l'emplacement actif, la flèche les fait défiler, comme `avancer` ; arrivé au bout (la
+ * dernière pièce en avançant, la première — ou « Sans » — en reculant), elle active l'emplacement voisin et y montre la pièce
+ * suivante, ou la précédente. Les emplacements se parcourent en boucle : après le dernier vient le premier.
+ */
+export function avancerOuChanger(
+  sel: SelectionComposer,
+  actif: CleEmplacement,
+  presents: readonly CleEmplacement[],
+  groupes: Record<CleEmplacement, EntreeCapsule[]>,
+  pas: 1 | -1
+): { sel: SelectionComposer; actif: CleEmplacement } {
+  const n = groupes[actif].length;
+  const min = emplacementFacultatif(actif, groupes, sel) ? -1 : 0;
+  const actuelle = Math.max(position(sel, actif, n), min);
+  const auBout = pas === 1 ? actuelle >= n - 1 : actuelle <= min;
+  const i = presents.indexOf(actif);
+  if (!auBout || presents.length < 2 || i < 0) return { sel: avancer(sel, actif, groupes, pas), actif };
+  const voisin = presents[(i + pas + presents.length) % presents.length];
+  return { sel: avancer(sel, voisin, groupes, pas), actif: voisin };
+}
+
 /** Place une pièce précise dans son emplacement (« Composer avec cette pièce »), les autres emplacements gardant la leur. */
 export function choisir(sel: SelectionComposer, cle: CleEmplacement, index: number, groupes: Record<CleEmplacement, EntreeCapsule[]>): SelectionComposer {
   return exclusivite({ ...sel, [cle]: index }, cle, groupes);
@@ -218,6 +241,9 @@ export interface CritereSelection {
   texte: string;
 }
 
+/** « adaptées à l'automne », « au printemps » : la préposition et l'article de chaque saison (textes du 05/11/2026). */
+const A_LA_SAISON: Record<CapsuleSeason, string> = { Printemps: "au printemps", Été: "à l'été", Automne: "à l'automne", Hiver: "à l'hiver" };
+
 export function criteresDeSelection(p: {
   profile: Profile;
   /** Le style exploré (« Aperçu du style … »), sinon null : la capsule est alors celle d'un autre style. */
@@ -237,26 +263,24 @@ export function criteresDeSelection(p: {
       valeur: libelle,
       texte:
         (styleExplore ? "Un aperçu d'un autre style que le tien. " : "") +
-        "La capsule retient en priorité les pièces du catalogue associées à ce style ; s'il en compte trop peu pour une capsule complète, elle s'élargit au reste du catalogue.",
+        "Des pièces sélectionnées en priorité dans tes univers de style. Si nécessaire, la sélection s'ouvre à d'autres styles pour composer une capsule suffisamment variée.",
     });
   }
   const noms = paletteHexes(profile).map(paletteColorName).filter((n): n is string => Boolean(n));
   if (noms.length || profile.paletteAffinite || profile.paletteIntensite) {
     out.push({
       cle: "couleurs",
-      titre: "Tes couleurs",
+      titre: "Ta palette",
       valeur: noms.length ? noms.slice(0, 4).join(", ") + (noms.length > 4 ? ` et ${noms.length - 4} autre${noms.length > 5 ? "s" : ""}` : "") : "Tes préférences de ton et d'intensité",
       texte:
-        "Quand le catalogue le permet, la capsule écarte les pièces dont le ton ou l'intensité contredisent tes préférences ; celles à tes couleurs restent toujours éligibles.",
+        "Tes préférences de couleurs guident la sélection. Les pièces aux nuances ou intensités moins adaptées à ta palette sont écartées lorsque le catalogue le permet.",
     });
   }
   out.push({
     cle: "saison",
     titre: "La saison",
-    valeur: saison,
-    texte:
-      `En priorité, des pièces prévues pour cette saison ou pour toute l'année, et adaptées à une température d'environ ${temperatureDeSaison(saison)} °C.` +
-      (saison === "Été" ? " En été, les pulls fermés laissent la place aux gilets." : ""),
+    valeur: `${saison} · Environ ${temperatureDeSaison(saison)} °C`,
+    texte: `Des pièces adaptées ${A_LA_SAISON[saison]}, privilégiant celles prévues pour cette saison ou portables toute l'année.`,
   });
   if (!styleExplore && morphologieOrienteLaSelection(profile.morphology)) {
     out.push({
@@ -272,11 +296,11 @@ export function criteresDeSelection(p: {
     out.push({
       cle: "dressing",
       titre: "Ton dressing",
-      valeur: `${pl(p.possedees, "pièce")} de ton dressing · ${pl(p.suggestions, "suggestion")} Capsela`,
+      valeur: `${pl(p.possedees, "pièce")} intégrée${p.possedees > 1 ? "s" : ""} · ${pl(p.suggestions, "suggestion")} Capsela`,
       texte: styleExplore
         ? "Aperçu d'un autre style : les pièces de ton dressing n'entrent pas dans cette sélection."
         : p.possedees > 0
-          ? "Tes pièces de cette saison entrent dans la sélection, à côté des suggestions qui complètent chaque catégorie."
+          ? "Tes propres pièces rejoignent la sélection. Capsela les complète avec de nouvelles suggestions pour enrichir chaque catégorie."
           : "Aucune pièce de ton dressing pour cette saison pour l'instant : la sélection repose sur les suggestions Capsela.",
     });
   }
