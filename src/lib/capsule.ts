@@ -107,6 +107,9 @@ const REPRESENTATIVE_TEMP: Record<CapsuleSeason, number> = {
   Hiver: 7,
 };
 
+/** La température représentative d'une saison de capsule (lecture seule, 05/11/2026 : « Une sélection pensée pour toi » la cite). */
+export const temperatureDeSaison = (saison: CapsuleSeason): number => REPRESENTATIVE_TEMP[saison];
+
 /**
  * Météo synthétique représentative d'une saison de capsule (recette
  * 19/08/2026, module "Comment porter cette pièce ?") — pour un contexte

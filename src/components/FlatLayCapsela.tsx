@@ -50,6 +50,7 @@ export function FlatLayCapsela({
   ajouts = AUCUN_AJOUT,
   onFantome,
   afficherCouche = false,
+  transitionDouce = false,
 }: {
   items: Item[];
   /** Où la planche s'affiche : elle règle la zone, la marge, le gabarit et le nombre d'accessoires (cf. CONTEXTES dans flatLay.ts). */
@@ -90,6 +91,11 @@ export function FlatLayCapsela({
   onFantome?: (cat: CategoryKey) => void;
   /** Dessine aussi le t-shirt porté sous un pull (Capsule › Composer, où chaque pièce est choisie). Cf. OptionsFlatLay.afficherCouche. */
   afficherCouche?: boolean;
+  /**
+   * Les pièces glissent vers leur nouvelle place quand la planche se recompose (05/11/2026, Composer : « transitions douces sans
+   * rechargement visuel brutal »). Coupé si l'appareil demande moins d'animations (globals.css, [data-peint]).
+   */
+  transitionDouce?: boolean;
 }) {
   // LA ZONE PREND LE FORMAT DE SON CADRE (14/10/2026, « exploiter tout l'espace alloué au flat lay ») : la planche gardait le format fixe
   // du contexte et laissait vides les bords d'un cadre plus large ou plus haut. Mesurée avant la peinture ; bornée entre le carré et
@@ -243,6 +249,7 @@ export function FlatLayCapsela({
             aspectRatio: `${p.l} / ${p.h}`,
             // Une pièce droite n'a aucune rotation CSS (accueil, 09/10/2026) : pas de rotate(0deg) pour autant.
             transform: p.angle === 0 ? "translate(-50%, -50%)" : `translate(-50%, -50%) rotate(${p.angle}deg)`,
+            transition: transitionDouce ? "left .32s ease, top .32s ease, width .32s ease" : undefined,
             zIndex: p.z,
             // Ombre douce, jamais noire : 6 px de décalage, 12 px de flou, 12 % d'opacité.
             filter:

@@ -455,3 +455,10 @@ input.capin[type="date"]::-webkit-date-and-time-value {
 .font-hand {
   font-family: var(--font-hand);
 }
+
+/* Les planches qui glissent (FlatLayCapsela, `transitionDouce`, 05/11/2026) restent immobiles si l'appareil demande moins d'animations. */
+@media (prefers-reduced-motion: reduce) {
+  [data-peint] {
+    transition: none !important;
+  }
+}
