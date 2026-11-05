@@ -103,7 +103,9 @@ describe("composerFlatLay avec template — mêmes garanties que le moteur", () 
 
   it("blazer-chic et veste-dominante donnent deux compositions différentes pour les mêmes pièces de base", () => {
     const pieces = [p("veste", 0.9), p("haut", 0.9), p("pantalon", 0.5), p("chaussures", 1.3), p("sac", 1)];
-    const x = (tpl: TemplateFlatLay) => composerFlatLay(pieces, "meme-graine", { contexte: "look-detail", template: tpl }).pieces.map((q) => [q.id, Math.round(q.x), Math.round(q.y)]);
+    // Avec les tailles d'avant le 04/11/2026 : depuis, une tenue veste + bas se pose en colonnes (flatLay.ts, « la veste en colonne »), quel que
+    // soit le template ; les templates restent pour les autres tenues.
+    const x = (tpl: TemplateFlatLay) => composerFlatLay(pieces, "meme-graine", { contexte: "look-detail", template: tpl, proportions: false }).pieces.map((q) => [q.id, Math.round(q.x), Math.round(q.y)]);
     expect(x("blazer-chic")).not.toEqual(x("veste-dominante"));
   });
 
@@ -129,14 +131,14 @@ describe("composerFlatLay avec template — mêmes garanties que le moteur", () 
   it("les corrections ponctuelles s'appliquent avec un template, jamais sans", () => {
     const pieces = LOOKS.robe();
     const id = pieces[0].id;
-    const avant = composerFlatLay(pieces, "c", { contexte: "look-detail", template: "robe" }).pieces.find((q) => q.id === id)!;
+    const avant = composerFlatLay(pieces, "c", { proportions: false, contexte: "look-detail", template: "robe" }).pieces.find((q) => q.id === id)!;
     CORRECTIONS_PIECES[id] = { echelle: 0.8 };
     try {
-      const apres = composerFlatLay(pieces, "c", { contexte: "look-detail", template: "robe" }).pieces.find((q) => q.id === id)!;
+      const apres = composerFlatLay(pieces, "c", { proportions: false, contexte: "look-detail", template: "robe" }).pieces.find((q) => q.id === id)!;
       expect(apres.l).toBeLessThan(avant.l);
-      const sans1 = composerFlatLay(pieces, "c", { contexte: "look-detail" });
+      const sans1 = composerFlatLay(pieces, "c", { proportions: false, contexte: "look-detail" });
       delete CORRECTIONS_PIECES[id];
-      const sans2 = composerFlatLay(pieces, "c", { contexte: "look-detail" });
+      const sans2 = composerFlatLay(pieces, "c", { proportions: false, contexte: "look-detail" });
       expect(sans1).toEqual(sans2);
     } finally {
       delete CORRECTIONS_PIECES[id];
