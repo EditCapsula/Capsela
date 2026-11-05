@@ -38,6 +38,9 @@ const vivier = (): CatalogItem[] => {
         id: id++, category, name: `${category} ${k}`,
         sous_type: k % 2 ? "Oversize" : "Ajusté",
         coupe: k % 3 === 0 ? "oversize" : k % 3 === 1 ? "ajustee" : "droite",
+        // Une couleur par pièce (05/11/2026) : toutes noires, les pièces d'une catégorie étaient jumelles entre elles
+        // (sontJumelles, capsule.ts) et la règle des jumelles, pas la morphologie, décidait de la sélection.
+        couleur_dominante: `Couleur ${k}`,
       }));
     }
   }
