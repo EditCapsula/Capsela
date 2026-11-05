@@ -38,8 +38,12 @@ android {
     buildTypes {
         release {
             if (System.getenv("CAPSELA_KEYSTORE_PATH")) signingConfig signingConfigs.release
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // R8 (05/11/2026, alerte de la Play Console : « Obscurcissement 0 % », seuil 25 %) : réduit et obscurcit le code Java/Kotlin.
+            // Capacitor fournit ses règles de conservation (plugins, méthodes appelées depuis le JavaScript) ; le site embarqué n'est pas
+            // touché. Pas de shrinkResources : des ressources sont lues par leur nom (icône des notifications locales).
+            // Le fichier de correspondance est joint au .aab (Google Play l'en extrait) et gardé en artefact (android-construire.yml).
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
