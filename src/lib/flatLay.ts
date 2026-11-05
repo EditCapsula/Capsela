@@ -564,6 +564,11 @@ export interface OptionsFlatLay {
   accessoiresFixes?: boolean;
   /** false : les tailles d'avant le 04/11/2026, réglées rôle par rôle (le levier de la mesure avant / après de PROPORTION_PIECE). */
   proportions?: boolean;
+  /**
+   * true : le t-shirt porté sous un pull est dessiné (05/11/2026, Capsule › Composer : la personne y choisit chaque pièce, et un haut
+   * choisi mais invisible donnait des flèches « Hauts » qui ne changeaient rien). Partout ailleurs, la règle commune le laisse hors planche.
+   */
+  afficherCouche?: boolean;
 }
 
 /**
@@ -619,13 +624,13 @@ export function composerFlatLay(
   const coucheHaut = (r: { piece: { cat: CategoryKey }; role: RoleFlatLay }) => r.role === "couche" && HAUTS.includes(r.piece.cat);
   const avecCouche = tous.some(coucheHaut);
   const masquees = [
-    ...((proportionnee || config.masquerCouche) ? tous.filter(coucheHaut).map((r) => r.piece.id) : []),
+    ...((proportionnee || config.masquerCouche) && !options.afficherCouche ? tous.filter(coucheHaut).map((r) => r.piece.id) : []),
     ...retirees.map((p) => p.id),
     ...choix.ecartees.map((p) => p.id),
   ];
   // En colonnes, le t-shirt sous un pull reste dans la tenue mais n'est posé sur AUCUN hero (règle commune du 05/11/2026 ; l'accueil le
   // masquait déjà depuis le 09/10/2026) : il ouvrait une troisième colonne et rapetissait toute la planche.
-  const roles = proportionnee || config.masquerCouche ? tous.filter((r) => !coucheHaut(r)) : tous;
+  const roles = (proportionnee || config.masquerCouche) && !options.afficherCouche ? tous.filter((r) => !coucheHaut(r)) : tous;
   if (!roles.length) return { pieces: [], ecartees: [], masquees };
   const alea = generateur(graine);
   const dans = (min: number, max: number) => min + (max - min) * alea();

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  accrocheSelection,
+  criteresDeSelection,
   avancer,
   categoriesPresentes,
   choisir,
@@ -186,5 +188,39 @@ describe("Détails", () => {
       sugg(piece(3, { cat: "veste", statement: true })),
     ]);
     expect(d).toMatchObject({ pieces: 3, couleurs: 2, categories: 3, dansLeDressing: 1, suggestions: 2, indispensables: 1, signatures: 1 });
+  });
+});
+
+describe("« Une sélection pensée pour toi » : seuls les critères réellement utilisés (05/11/2026)", () => {
+  const base = { styleExplore: null, saison: "Automne" as const, possedees: 3, suggestions: 31 };
+
+  it("style, couleurs déclarées, saison et dressing, avec les chiffres réels", () => {
+    const c = criteresDeSelection({ ...base, profile: profil({ styles: ["minimaliste"], paletteCouleurs: ["#2A2724"] }) });
+    expect(c.map((x) => x.cle)).toEqual(["style", "couleurs", "saison", "dressing"]);
+    expect(c.find((x) => x.cle === "dressing")!.valeur).toBe("3 pièces de ton dressing · 31 suggestions Capsela");
+    expect(c.find((x) => x.cle === "saison")!.texte).toContain("12 °C");
+    expect(accrocheSelection(c)).toBe("Des pièces choisies pour ton style, ta palette de couleurs et la saison.");
+  });
+
+  it("jamais la colorimétrie : elle n'oriente pas la capsule, même exploitable", () => {
+    const c = criteresDeSelection({
+      ...base,
+      profile: profil({ styles: ["minimaliste"], colorimetrie: { statut: "faite", saison: "automne", libelle: "Automne profond", signature: ["#8B4513"] } }),
+    });
+    expect(c.map((x) => x.cle)).not.toContain("couleurs");
+    expect(JSON.stringify(c)).not.toMatch(/Automne profond|colorim/i);
+    expect(accrocheSelection(c)).toBe("Des pièces choisies pour ton style et la saison.");
+  });
+
+  it("la silhouette seulement quand elle oriente la sélection ; aucun critère inventé sans profil", () => {
+    expect(criteresDeSelection({ ...base, profile: profil({ morphology: "f_poire" }) }).map((x) => x.cle)).toContain("silhouette");
+    expect(criteresDeSelection({ ...base, profile: profil({ morphology: "f_sablier" }) }).map((x) => x.cle)).not.toContain("silhouette");
+    expect(criteresDeSelection({ ...base, possedees: 0, suggestions: 0, profile: profil() }).map((x) => x.cle)).toEqual(["saison"]);
+  });
+
+  it("un style exploré : le style exploré, et le dressing dit qu'il n'entre pas dans cette sélection", () => {
+    const c = criteresDeSelection({ ...base, possedees: 0, styleExplore: "boheme", profile: profil({ styles: ["minimaliste"] }) });
+    expect(c[0].titre).toBe("Le style exploré");
+    expect(c.find((x) => x.cle === "dressing")!.texte).toContain("n'entrent pas");
   });
 });

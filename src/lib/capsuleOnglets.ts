@@ -1,7 +1,7 @@
 import { huesHarmonious, isStatement, rolePieceOf } from "./attributes";
-import { styleFit } from "./capsule";
+import { morphologieOrienteLaSelection, styleFit, temperatureDeSaison } from "./capsule";
 import { CATS } from "./data";
-import { paletteHexes, STYLE_ID_TO_CATALOG_LABEL, styleLabel, type Profile, type StyleId } from "./profile";
+import { libelleStyles, paletteColorName, paletteHexes, silhouetteForme, STYLE_ID_TO_CATALOG_LABEL, styleLabel, stylesLabels, type Profile, type StyleId } from "./profile";
 import { raisonsSuggestion } from "./capsuleEcran";
 import { isColRoule } from "./logic";
 import type { CapsuleSeason, CategoryKey, Item } from "./types";
@@ -197,6 +197,102 @@ export function raisonsComposition(pieces: Item[], profile: Profile): string[] {
   const indispensables = pieces.filter((it) => it.estBasiqueCapsule).length;
   if (indispensables >= 2) raisons.push(`Construite sur ${indispensables} indispensables, faciles à associer.`);
   return raisons;
+}
+
+/*
+ * « UNE SÉLECTION PENSÉE POUR TOI » (05/11/2026, brief « Évolution UX/UI – Onglet Composer ») : remplace « Pourquoi cette tenue ? »,
+ * dont l'intitulé laissait croire à une tenue complète. Le panneau dit ce qui a RÉELLEMENT orienté la sélection de la capsule
+ * (`computeDefaultCapsule`, capsule.ts), et seulement ce qui s'applique à ce profil :
+ *
+ *   · le style — la capsule retient en priorité les pièces du catalogue associées à ses styles (repli sur tout le catalogue sous 18) ;
+ *   · les couleurs — la palette DÉCLARÉE (couleurs, ton, intensité), via `paletteFit`. PAS la colorimétrie : le questionnaire de
+ *     colorimétrie oriente les tenues (colorimetrieMoteur.ts), jamais la sélection de la capsule ; l'écrire ici serait faux ;
+ *   · la saison — pièces déclarées pour elle (ou toutes saisons), adaptées à sa température représentative ;
+ *   · la silhouette — seulement si elle oriente la sélection (`morphologieOrienteLaSelection`, la même liste que le moteur) ;
+ *   · le dressing — les chiffres réels des pièces montrées.
+ */
+export interface CritereSelection {
+  cle: "style" | "couleurs" | "saison" | "silhouette" | "dressing";
+  titre: string;
+  valeur: string;
+  texte: string;
+}
+
+export function criteresDeSelection(p: {
+  profile: Profile;
+  /** Le style exploré (« Aperçu du style … »), sinon null : la capsule est alors celle d'un autre style. */
+  styleExplore: string | null;
+  saison: CapsuleSeason;
+  possedees: number;
+  suggestions: number;
+}): CritereSelection[] {
+  const { profile, styleExplore, saison } = p;
+  const out: CritereSelection[] = [];
+  const styles = styleExplore ? [styleExplore] : profile.styles || [];
+  const libelle = libelleStyles(styles, profile.gender);
+  if (libelle) {
+    out.push({
+      cle: "style",
+      titre: styleExplore ? "Le style exploré" : stylesLabels(styles, profile.gender).length > 1 ? "Tes styles" : "Ton style",
+      valeur: libelle,
+      texte:
+        (styleExplore ? "Un aperçu d'un autre style que le tien. " : "") +
+        "La capsule retient en priorité les pièces du catalogue associées à ce style ; s'il en compte trop peu pour une capsule complète, elle s'élargit au reste du catalogue.",
+    });
+  }
+  const noms = paletteHexes(profile).map(paletteColorName).filter((n): n is string => Boolean(n));
+  if (noms.length || profile.paletteAffinite || profile.paletteIntensite) {
+    out.push({
+      cle: "couleurs",
+      titre: "Tes couleurs",
+      valeur: noms.length ? noms.slice(0, 4).join(", ") + (noms.length > 4 ? ` et ${noms.length - 4} autre${noms.length > 5 ? "s" : ""}` : "") : "Tes préférences de ton et d'intensité",
+      texte:
+        "Quand le catalogue le permet, la capsule écarte les pièces dont le ton ou l'intensité contredisent tes préférences ; celles à tes couleurs restent toujours éligibles.",
+    });
+  }
+  out.push({
+    cle: "saison",
+    titre: "La saison",
+    valeur: saison,
+    texte:
+      `En priorité, des pièces prévues pour cette saison ou pour toute l'année, et adaptées à une température d'environ ${temperatureDeSaison(saison)} °C.` +
+      (saison === "Été" ? " En été, les pulls fermés laissent la place aux gilets." : ""),
+  });
+  if (!styleExplore && morphologieOrienteLaSelection(profile.morphology)) {
+    out.push({
+      cle: "silhouette",
+      titre: "Ta silhouette",
+      valeur: silhouetteForme(profile.morphology),
+      texte: "Entre deux pièces proches, la sélection retient les coupes conseillées pour ta silhouette.",
+    });
+  }
+  const total = p.possedees + p.suggestions;
+  if (total > 0) {
+    const pl = (n: number, s: string) => `${n} ${s}${n > 1 ? "s" : ""}`;
+    out.push({
+      cle: "dressing",
+      titre: "Ton dressing",
+      valeur: `${pl(p.possedees, "pièce")} de ton dressing · ${pl(p.suggestions, "suggestion")} Capsela`,
+      texte: styleExplore
+        ? "Aperçu d'un autre style : les pièces de ton dressing n'entrent pas dans cette sélection."
+        : p.possedees > 0
+          ? "Tes pièces de cette saison entrent dans la sélection, à côté des suggestions qui complètent chaque catégorie."
+          : "Aucune pièce de ton dressing pour cette saison pour l'instant : la sélection repose sur les suggestions Capsela.",
+    });
+  }
+  return out;
+}
+
+/** L'accroche du composant : les critères présents, dans l'ordre du brief (« ton style, ta palette de couleurs et la saison »). */
+export function accrocheSelection(criteres: readonly CritereSelection[]): string {
+  const morceaux = [
+    criteres.some((c) => c.cle === "style") && "ton style",
+    criteres.some((c) => c.cle === "couleurs") && "ta palette de couleurs",
+    criteres.some((c) => c.cle === "saison") && "la saison",
+  ].filter((m): m is string => Boolean(m));
+  if (!morceaux.length) return "";
+  const liste = morceaux.length > 1 ? `${morceaux.slice(0, -1).join(", ")} et ${morceaux[morceaux.length - 1]}` : morceaux[0];
+  return `Des pièces choisies pour ${liste}.`;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------

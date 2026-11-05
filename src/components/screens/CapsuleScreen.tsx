@@ -8,6 +8,7 @@ import OptionRow from "@/components/OptionRow";
 import SegmentedControl, { type Segment } from "@/components/SegmentedControl";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import GlyphePiece from "@/components/GlyphePiece";
+import SelectionPenseePourToi, { DetailSelection } from "@/components/SelectionPenseePourToi";
 import Vignette from "@/components/VignettePiece";
 import FicheSuggestion, { type AssociationFiche } from "@/components/FicheSuggestion";
 import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
@@ -44,7 +45,7 @@ import {
   piecesComposees,
   piecesParEmplacement,
   position,
-  raisonsComposition,
+  criteresDeSelection,
   selectionDeDepart,
   type CleEmplacement,
   type EntreeCapsule,
@@ -183,7 +184,7 @@ function useParcoursAGarder() {
   };
 }
 type Onglet = "composer" | "explorer" | "cles" | "details";
-type Feuille = "saison" | "pourquoi" | "categorie" | "couleur" | "tri" | null;
+type Feuille = "saison" | "selection" | "categorie" | "couleur" | "tri" | null;
 
 const ONGLETS: readonly Segment<Onglet>[] = [
   { key: "composer", label: "Composer" },
@@ -319,7 +320,18 @@ export default function CapsuleScreen() {
   // Mémorisées : la planche (FlatLayCapsela) ne se recompose que si les pièces changent.
   const composees = useMemo(() => piecesComposees(groupes, selection), [groupes, selection]);
   const piecesTenue = useMemo(() => composees.map((e) => e.item), [composees]);
-  const raisonsTenue = raisonsComposition(piecesTenue, capsuleProfile);
+  // « Une sélection pensée pour toi » (05/11/2026) : ce qui a réellement orienté la capsule, avec les chiffres des pièces montrées.
+  const criteresSelection = useMemo(
+    () =>
+      criteresDeSelection({
+        profile,
+        styleExplore: exploredStyleId,
+        saison: capsuleSeason,
+        possedees: entrees.filter((e) => e.possedee).length,
+        suggestions: entrees.filter((e) => !e.possedee).length,
+      }),
+    [profile, exploredStyleId, capsuleSeason, entrees]
+  );
   const cleTenue = clePieces(piecesTenue.map((it) => it.id)).join(",");
   const tenueEnregistree = state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue);
 
@@ -331,6 +343,16 @@ export default function CapsuleScreen() {
   };
   // Le glissement horizontal sur la planche change la pièce de l'emplacement actif ; un geste surtout vertical reste un défilement.
   const toucher = useRef<{ x: number; y: number } | null>(null);
+  // La tuile de l'emplacement actif reste visible dans la rangée qui défile (05/11/2026) : choisi depuis la planche, un emplacement
+  // pouvait devenir actif hors de l'écran.
+  const cleActive = emplacementActif?.cle;
+  const cleVue = useRef(cleActive);
+  useEffect(() => {
+    // Seulement quand l'emplacement CHANGE : au premier affichage, la page ne doit pas sauter jusqu'aux tuiles.
+    if (!cleActive || cleVue.current === cleActive) return;
+    cleVue.current = cleActive;
+    document.querySelector(`[data-emplacement="${cleActive}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  }, [cleActive]);
 
   const composerAvec = (it: Item, possedee: boolean) => {
     const cle = emplacementDe(it.cat);
@@ -702,7 +724,16 @@ export default function CapsuleScreen() {
                     context="look-detail"
                     // Graine de la capsule, pas des pièces : changer une pièce ne redistribue pas toute la planche.
                     layoutSeed={cleComposition}
-                    onPiece={(it) => ouvrir(it, composees.find((e) => e.item.id === it.id)?.possedee ?? false)}
+                    afficherCouche
+                    transitionDouce
+                    // Toucher une pièce (05/11/2026, demandé : « au clic sur une autre pièce on devrait basculer sur la catégorie concernée ») :
+                    // une pièce d'un autre emplacement le rend actif, et ses flèches la font varier ; une pièce de l'emplacement déjà actif
+                    // ouvre sa fiche, comme avant.
+                    onPiece={(it) => {
+                      const cle = emplacementDe(it.cat);
+                      if (cle && cle !== emplacementActif?.cle && groupes[cle].length) changerSelection(selection, cle);
+                      else ouvrir(it, composees.find((e) => e.item.id === it.id)?.possedee ?? false);
+                    }}
                   />
                 )}
               </div>
@@ -737,9 +768,10 @@ export default function CapsuleScreen() {
                     key={e.cle}
                     role="tab"
                     aria-selected={on}
+                    data-emplacement={e.cle}
                     onClick={() => changerSelection(selection, e.cle)}
                     className={
-                      "flex-none w-[78px] rounded-tuile border py-[9px] flex flex-col items-center gap-[3px] cursor-pointer " +
+                      "flex-none w-[78px] rounded-tuile border py-[9px] flex flex-col items-center gap-[3px] cursor-pointer motion-safe:transition-colors motion-safe:duration-200 motion-safe:active:scale-[.97] " +
                       (on ? "border-terracotta text-terracotta-deep" : "border-border bg-card text-ink")
                     }
                     style={on ? { background: "var(--color-chip-soft-bg)" } : undefined}
@@ -752,22 +784,7 @@ export default function CapsuleScreen() {
               })}
             </div>
 
-            {raisonsTenue.length > 0 && (
-              <button
-                onClick={() => setFeuille("pourquoi")}
-                className="mt-[14px] w-full flex items-center gap-[12px] rounded-bloc px-4 py-[13px] text-left cursor-pointer"
-                style={{ background: "var(--color-chip-soft-bg)" }}
-              >
-                <span aria-hidden="true" className="text-terracotta text-[16px] flex-shrink-0">✦</span>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-[13px] text-ink font-semibold">Pourquoi cette tenue ?</span>
-                  <span className="block text-[12px] text-ink-soft leading-[1.4] mt-[2px]">{raisonsTenue[0]}</span>
-                </span>
-                <span aria-hidden="true" className="text-muted flex-shrink-0">
-                  <Fleche sens="droite" />
-                </span>
-              </button>
-            )}
+            <SelectionPenseePourToi criteres={criteresSelection} onOuvrir={() => setFeuille("selection")} />
 
             {piecesTenue.length >= 2 && (
               <Button
@@ -1083,13 +1100,13 @@ export default function CapsuleScreen() {
         </div>
       )}
 
-      {/* Les feuilles de l'écran : saison, « Pourquoi cette tenue ? » et filtres d'Explorer. Une seule ouverte à la fois. */}
+      {/* Les feuilles de l'écran : saison, « Une sélection pensée pour toi » et filtres d'Explorer. Une seule ouverte à la fois. */}
       <BottomSheet
         title={
           feuille === "saison"
             ? "Choisir la saison"
-            : feuille === "pourquoi"
-              ? "Pourquoi cette tenue ?"
+            : feuille === "selection"
+              ? "Une sélection pensée pour toi"
               : feuille === "categorie"
                 ? "Pièces à afficher"
                 : feuille === "couleur"
@@ -1120,16 +1137,7 @@ export default function CapsuleScreen() {
             })}
           </div>
         )}
-        {feuille === "pourquoi" && (
-          <ul className="flex flex-col gap-[10px]">
-            {raisonsTenue.map((r) => (
-              <li key={r} className="flex items-start gap-[10px] text-[13px] text-ink leading-[1.45]">
-                <span aria-hidden="true" className="text-terracotta text-[11px] mt-[2px]">✦</span>
-                {r}
-              </li>
-            ))}
-          </ul>
-        )}
+        {feuille === "selection" && <DetailSelection criteres={criteresSelection} />}
         {feuille === "categorie" && (
           <div className="flex flex-col gap-[8px]">
             {[
