@@ -26,8 +26,9 @@ Rien de cela n'est dans le code ni dans les docs ; je ne l'ai pas inventé.
    RCS ou RNE, adresse, numéro de TVA intracommunautaire, directrice de la
    publication. En entreprise individuelle, l'adresse personnelle peut être
    remplacée par celle d'une domiciliation.
-2. ~~**Adresse de contact**~~ : capsela.angela@gmail.com, donnée par la
-   propriétaire le 22/10/2026 et reportée dans tous les textes.
+2. ~~**Adresse de contact**~~ : capsela.app@gmail.com, la même que « Contacter
+   Capsela » dans l'app (changée le 05/11/2026 à la demande de la propriétaire ;
+   capsela.angela@gmail.com du 22/10/2026 auparavant), reportée dans tous les textes.
 3. **Région d'hébergement Supabase** (visible dans le tableau de bord :
    Settings → General → Region). Elle décide s'il y a transfert hors UE pour
    la base et les photos.
