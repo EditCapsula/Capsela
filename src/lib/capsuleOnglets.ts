@@ -241,6 +241,9 @@ export interface CritereSelection {
   texte: string;
 }
 
+/** « adaptées à l'automne », « au printemps » : la préposition et l'article de chaque saison (textes du 05/11/2026). */
+const A_LA_SAISON: Record<CapsuleSeason, string> = { Printemps: "au printemps", Été: "à l'été", Automne: "à l'automne", Hiver: "à l'hiver" };
+
 export function criteresDeSelection(p: {
   profile: Profile;
   /** Le style exploré (« Aperçu du style … »), sinon null : la capsule est alors celle d'un autre style. */
@@ -260,26 +263,24 @@ export function criteresDeSelection(p: {
       valeur: libelle,
       texte:
         (styleExplore ? "Un aperçu d'un autre style que le tien. " : "") +
-        "La capsule retient en priorité les pièces du catalogue associées à ce style ; s'il en compte trop peu pour une capsule complète, elle s'élargit au reste du catalogue.",
+        "Des pièces sélectionnées en priorité dans tes univers de style. Si nécessaire, la sélection s'ouvre à d'autres styles pour composer une capsule suffisamment variée.",
     });
   }
   const noms = paletteHexes(profile).map(paletteColorName).filter((n): n is string => Boolean(n));
   if (noms.length || profile.paletteAffinite || profile.paletteIntensite) {
     out.push({
       cle: "couleurs",
-      titre: "Tes couleurs",
+      titre: "Ta palette",
       valeur: noms.length ? noms.slice(0, 4).join(", ") + (noms.length > 4 ? ` et ${noms.length - 4} autre${noms.length > 5 ? "s" : ""}` : "") : "Tes préférences de ton et d'intensité",
       texte:
-        "Quand le catalogue le permet, la capsule écarte les pièces dont le ton ou l'intensité contredisent tes préférences ; celles à tes couleurs restent toujours éligibles.",
+        "Tes préférences de couleurs guident la sélection. Les pièces aux nuances ou intensités moins adaptées à ta palette sont écartées lorsque le catalogue le permet.",
     });
   }
   out.push({
     cle: "saison",
     titre: "La saison",
-    valeur: saison,
-    texte:
-      `En priorité, des pièces prévues pour cette saison ou pour toute l'année, et adaptées à une température d'environ ${temperatureDeSaison(saison)} °C.` +
-      (saison === "Été" ? " En été, les pulls fermés laissent la place aux gilets." : ""),
+    valeur: `${saison} · Environ ${temperatureDeSaison(saison)} °C`,
+    texte: `Des pièces adaptées ${A_LA_SAISON[saison]}, privilégiant celles prévues pour cette saison ou portables toute l'année.`,
   });
   if (!styleExplore && morphologieOrienteLaSelection(profile.morphology)) {
     out.push({
@@ -295,11 +296,11 @@ export function criteresDeSelection(p: {
     out.push({
       cle: "dressing",
       titre: "Ton dressing",
-      valeur: `${pl(p.possedees, "pièce")} de ton dressing · ${pl(p.suggestions, "suggestion")} Capsela`,
+      valeur: `${pl(p.possedees, "pièce")} intégrée${p.possedees > 1 ? "s" : ""} · ${pl(p.suggestions, "suggestion")} Capsela`,
       texte: styleExplore
         ? "Aperçu d'un autre style : les pièces de ton dressing n'entrent pas dans cette sélection."
         : p.possedees > 0
-          ? "Tes pièces de cette saison entrent dans la sélection, à côté des suggestions qui complètent chaque catégorie."
+          ? "Tes propres pièces rejoignent la sélection. Capsela les complète avec de nouvelles suggestions pour enrichir chaque catégorie."
           : "Aucune pièce de ton dressing pour cette saison pour l'instant : la sélection repose sur les suggestions Capsela.",
     });
   }
