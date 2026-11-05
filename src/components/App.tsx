@@ -49,7 +49,7 @@ import IdeeLookScreen from "./screens/IdeeLookScreen";
 import TabBar from "./TabBar";
 import CookieBanner from "./CookieBanner";
 import { readConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
-import LoadingSpinner from "./LoadingSpinner";
+import ChargementApp from "./ChargementApp";
 import ConfirmationAjout from "./ConfirmationAjout";
 import { ecranARestaurer, memoriserEcran } from "@/lib/ecranRestaure";
 import { initialiserLangue } from "@/lib/langue";
@@ -220,13 +220,8 @@ function Screens() {
     );
   }
 
-  if (!ready) {
-    return (
-      <div className="relative w-full max-w-[480px] mx-auto h-dvh flex items-center justify-center bg-cream">
-        <LoadingSpinner size={76} />
-      </div>
-    );
-  }
+  // L'écran de chargement et son astuce (05/11/2026, ChargementApp).
+  if (!ready) return <ChargementApp />;
 
   return (
     <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden">

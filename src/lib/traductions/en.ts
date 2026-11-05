@@ -243,4 +243,20 @@ export const EN: Record<string, string> = {
   "Écrire un e-mail": "Write an email",
   "Copier l'adresse": "Copy the address",
   "Adresse copiée": "Address copied",
+
+  // --- Écran de chargement : les astuces (05/11/2026) ---
+  "Le savais-tu ?": "Did you know?",
+  "Tu peux indiquer tes congés dans les Réglages : pendant ces dates, Capsela met les tenues de travail en pause.":
+    "You can add your time off in Settings: during those dates, Capsela pauses work outfits.",
+  "Plus tu ajoutes de pièces à ton dressing, plus tes tenues te ressemblent.": "The more pieces you add to your wardrobe, the more your outfits look like you.",
+  "Une photo suffit pour ajouter une pièce : Capsela reconnaît sa catégorie et sa couleur, puis la détoure.":
+    "One photo is all it takes to add a piece: Capsela recognises its category and colour, then cuts it out.",
+  "Les flèches à côté de « Aujourd'hui » te montrent la tenue des jours suivants, avec leur météo.":
+    "The arrows next to “Today” show you the outfit for the coming days, with their weather.",
+  "Tu pars bientôt ? Capsela prépare ta valise : les pièces à emporter et les looks de ton séjour.":
+    "Leaving soon? Capsela packs your suitcase: the pieces to bring and the looks for your trip.",
+  "Un dîner, un rendez-vous ? Planifie ta tenue à l'avance : elle suit la météo du jour prévu.":
+    "A dinner, a date? Plan your outfit ahead: it follows the weather of the day.",
+  "Touche la saison dans Capsule pour découvrir ta capsule d'une autre saison.": "Tap the season in Capsule to discover your capsule for another season.",
+  "Envie de revoir une visite guidée ? Retrouve-les dans les Réglages, rubrique Tutoriel.": "Want to replay a guided tour? Find them in Settings, under Tutorial.",
 };
