@@ -2,7 +2,7 @@ import { GENERATIONS_GRATUITES_PAR_JOUR } from "./premium";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 
 /**
- * QUOTA DE GÉNÉRATIONS — « Autre tenue », 2 par jour sans abonnement.
+ * QUOTA DE GÉNÉRATIONS — « Autre tenue », 2 par jour sans abonnement (GENERATIONS_GRATUITES_PAR_JOUR, migration 0059).
  *
  * Tout se décide côté base (migration 0032, fonction `consommer_generation`
  * en `security definer`). Ce fichier ne fait que l'appeler et traduire sa
