@@ -29,6 +29,7 @@ import type { Planification, ValiseGardee } from "@/lib/valises";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
+import { degres } from "@/lib/unites";
 
 /*
  * « MES LOOKS À VENIR » — la page « Mes planifications » de Planifier. Refondue le 30/09/2026 (agenda de looks : le prochain en grand,
@@ -101,7 +102,7 @@ const pluriel = (n: number, un: string, plusieurs: string) => `${n} ${n > 1 ? pl
 /** Le moment, sauf quand il répète l'occasion (« Soirée · Soirée ») : alors rien. */
 const momentDistinct = (t: Pick<TenuePlanifiee, "moment" | "occasion">) => (t.moment === occasionShortLabel(t.occasion) ? null : t.moment);
 const meteoEnregistree = (t: Pick<TenuePlanifiee, "temp" | "weatherLabel">) =>
-  t.temp != null ? `${t.temp}°${t.weatherLabel ? ` · ${t.weatherLabel}` : ""}` : null;
+  t.temp != null ? `${degres(t.temp)}${t.weatherLabel ? ` · ${t.weatherLabel}` : ""}` : null;
 
 function Fleche({ vers }: { vers: "gauche" | "droite" }) {
   return (
@@ -497,7 +498,7 @@ function LignePlanification({
         {!avecDate && <span className="block t-label text-terracotta">{dateCourte(t.jour)}</span>}
         <span className="block t-titre-vignette text-ink truncate">{occasionShortLabel(t.occasion)}</span>
         <span className="block text-[12px] text-muted-3 mt-[2px] truncate">
-          {[momentDistinct(t), ville, avecDate && meteo ? `${t.temp}°` : null].filter(Boolean).join(" · ")}
+          {[momentDistinct(t), ville, avecDate && meteo && t.temp != null ? degres(t.temp) : null].filter(Boolean).join(" · ")}
         </span>
       </span>
       <span className="text-muted">
@@ -546,7 +547,7 @@ function VueJour({
   // celle enregistrée à la planification, dite comme telle. Jamais inventée, jamais la météo d'aujourd'hui pour un autre jour.
   const prevision = useMeteoDuPlan(premiere);
   const meteo = prevision
-    ? { texte: `${Math.round(prevision.temp)}° · ${prevision.label}`, source: "Prévision" }
+    ? { texte: `${degres(prevision.temp)} · ${prevision.label}`, source: "Prévision" }
     : premiere && premiere.temp != null
       ? { texte: meteoEnregistree(premiere)!, source: "Prévue à la planification" }
       : null;
@@ -731,7 +732,7 @@ function ProchainLook({
   // Le conseil des pièces réelles ; sans lui, la phrase éditoriale de l'occasion (celle du « Look du jour »).
   const detail =
     detailCapsela(pieces, t.occasion) ?? titreLookDuJour(t.occasion, (t.sousChoix ?? "") as WorkMode, (t.sousChoix ?? "") as DateContext);
-  const meteo = t.temp != null ? `${t.temp}°${t.weatherLabel ? ` · ${t.weatherLabel}` : ""}` : null;
+  const meteo = t.temp != null ? `${degres(t.temp)}${t.weatherLabel ? ` · ${t.weatherLabel}` : ""}` : null;
   const contexte = [ville, meteo].filter(Boolean).join(" · ");
   return (
     <section className="mt-[28px] motion-safe:animate-[capsule-apparition_420ms_ease-out_both]">

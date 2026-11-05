@@ -89,6 +89,7 @@ import {
 } from "./attributes";
 import type {
   AccessoireType,
+  VueReglages,
   AppState,
   BijouType,
   CapsuleSeason,
@@ -148,7 +149,7 @@ export interface SessionAvisStyliste {
 }
 
 /** Écrans qui s'ouvrent depuis le profil : jamais retenus comme « retour » du profil. */
-const SOUS_ECRANS_PROFIL = new Set<Screen>(["profile", "profileSetup", "preferences", "account", "legal"]);
+const SOUS_ECRANS_PROFIL = new Set<Screen>(["profile", "profileSetup", "preferences", "legal"]);
 
 /** Occasion par défaut suggérée en arrivant sur "Tenue du jour" sans choix explicite (recette 13/08/2026) — toujours modifiable manuellement ensuite. */
 // La règle vit dans jourConsulte.ts depuis le 27/09/2026 (occasionParDefaut),
@@ -174,6 +175,7 @@ function buildInitialState(): AppState {
     jourDecalage: 0,
     preferencesReturn: "profile",
     preferencesSection: null,
+    preferencesDirect: false,
     legalReturn: "profile",
     legalDoc: null,
     premiumReturn: "home",
@@ -316,15 +318,16 @@ export interface Actions {
   fermerApercuPiece: () => void;
   goLooks: () => void;
   goProfile: () => void;
-  /** Réglages de fonctionnement de l'application (notifications, météo, rythme). */
-  /** `section` : rubrique à amener dans la vue (la ligne météo de l’Accueil et de Tenue ouvre « Localisation & météo »). */
-  goPreferences: (section?: "localisation") => void;
-  /** Quitte les Préférences vers l'écran d'où elles ont été ouvertes. */
+  /**
+   * Réglages Capsela (05/11/2026), ou l'une de ses sous-pages (`section`). Ouverte depuis un autre écran — la ligne météo de
+   * l'Accueil et de Tenue, « Gérer mon compte » du Profil —, la sous-page ramène à cet écran ; ouverte depuis Réglages, à Réglages.
+   */
+  goPreferences: (section?: VueReglages) => void;
+  /** Le retour de Réglages : d'une sous-page vers Réglages (ou vers l'écran qui l'a ouverte directement), de Réglages vers l'écran d'origine. */
   closePreferences: () => void;
-  oublierSectionPreferences: () => void;
   /** Change le jour consulté (0 aujourd'hui … JOUR_MAX) — Accueil et Tenue lisent le même. */
   choisirJour: (decalage: number) => void;
-  /** Compte : e-mail, confidentialité et données, légal, suppression, déconnexion. */
+  /** « Gérer mon compte » (Profil) : la sous-page Compte et sécurité de Réglages. */
   goAccount: () => void;
   goLegal: () => void;
   /** Ouvre un texte légal par-dessus l'écran courant (01/10/2026) — sans quitter l'app ni perdre la saisie en cours. */
@@ -1907,15 +1910,30 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: "profile",
       })),
     goPreferences: (section) =>
+      setState((s) => {
+        const dejaLa = s.screen === "preferences";
+        return {
+          ...s,
+          preferencesReturn: dejaLa ? s.preferencesReturn : s.screen,
+          preferencesSection: section ?? null,
+          preferencesDirect: dejaLa ? false : Boolean(section),
+          screen: "preferences",
+        };
+      }),
+    closePreferences: () =>
+      setState((s) =>
+        s.preferencesSection && !s.preferencesDirect
+          ? { ...s, preferencesSection: null }
+          : { ...s, screen: s.preferencesReturn, preferencesSection: null, preferencesDirect: false }
+      ),
+    goAccount: () =>
       setState((s) => ({
         ...s,
         preferencesReturn: s.screen === "preferences" ? s.preferencesReturn : s.screen,
-        preferencesSection: section ?? null,
+        preferencesSection: "compte",
+        preferencesDirect: s.screen !== "preferences",
         screen: "preferences",
       })),
-    closePreferences: () => setState((s) => ({ ...s, screen: s.preferencesReturn })),
-    oublierSectionPreferences: () => setState((s) => (s.preferencesSection ? { ...s, preferencesSection: null } : s)),
-    goAccount: () => go("account"),
     goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),
     goPremium: (origine) =>
       setState((s) => ({

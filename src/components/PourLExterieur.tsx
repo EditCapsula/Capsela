@@ -2,6 +2,7 @@
 
 import PhotoPiece from "@/components/PhotoPiece";
 import type { Item } from "@/lib/types";
+import { degres } from "@/lib/unites";
 
 /**
  * « POUR L'EXTÉRIEUR » (04/11/2026, coucheExterieure.ts) : le manteau ajouté par le froid, montré À CÔTÉ du look, sur tous les hero
@@ -39,11 +40,11 @@ export default function PourLExterieur({
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
               <path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0Z" />
             </svg>
-            {t}°
+            {degres(t)}
           </span>
         </span>
         <span className={"block text-muted-3 leading-[1.4] mt-[2px] " + (compact ? "text-[11px]" : "text-[12px]")} style={{ textWrap: "pretty" }}>
-          {piece.name}, à ajouter selon la météo ({t}° {quand}).
+          {piece.name}, à ajouter selon la météo ({degres(t)} {quand}).
         </span>
       </span>
       <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>

@@ -37,7 +37,6 @@ import DateNaissanceScreen from "./screens/DateNaissanceScreen";
 import { doitDemanderNaissance } from "@/lib/ageMinimum";
 import ProfileScreen from "./screens/ProfileScreen";
 import PreferencesScreen from "./screens/PreferencesScreen";
-import AccountScreen from "./screens/AccountScreen";
 import LegalScreen from "./screens/LegalScreen";
 import LoginScreen from "./screens/LoginScreen";
 import OpinionShareScreen from "./screens/OpinionShareScreen";
@@ -56,6 +55,7 @@ import { ecranARestaurer, memoriserEcran } from "@/lib/ecranRestaure";
 import { initialiserLangue } from "@/lib/langue";
 import { FOND_CREME, FOND_ENCRE, poserFondSysteme } from "@/lib/fondSysteme";
 import VisiteGuidee from "./VisiteGuidee";
+import { definirSystemeUnites } from "@/lib/unites";
 
 // La langue est fixée une fois, avant le premier rendu (docs/traduction.md) : App.tsx n'est chargé que dans le navigateur.
 initialiserLangue();
@@ -84,6 +84,8 @@ const FLOW_SCREENS = new Set(["planifier", "premium", "valise", "add", "importer
 function Screens() {
   const { state, actions, etatPremium } = useCapsela();
   const auth = useAuth();
+  // Les températures s'affichent dans l'unité du profil (unites.ts) : posée ici, avant le rendu des écrans.
+  definirSystemeUnites(auth.profile.prefs.unitSystem);
   const showTabbar = !NO_TABBAR_SCREENS.has(state.screen) && !FLOW_SCREENS.has(state.screen);
 
   // LA VIDÉO RÉCOMPENSÉE (AdMob, 02/11/2026, publicite.ts) : Android seulement, compte connecté au profil complet et
@@ -270,7 +272,6 @@ function Screens() {
         {state.screen === "profileSetup" && <ProfileSetupScreen />}
         {state.screen === "profile" && <ProfileScreen />}
         {state.screen === "preferences" && <PreferencesScreen />}
-        {state.screen === "account" && <AccountScreen />}
         {state.screen === "legal" && <LegalScreen />}
         {state.screen === "login" && <LoginScreen />}
         {state.screen === "opinionShare" && <OpinionShareScreen />}

@@ -93,13 +93,36 @@ export const I_REPERE = (
     <circle cx="12" cy="10.3" r="2.2" {...T} />
   </>
 );
+/* Un engrenage depuis le 05/11/2026 (maquette Réglages) : le dessin à rayons d'avant se lisait comme un soleil, à côté de la
+   météo. */
 export const I_REGLAGES = (
   <>
     <circle cx="12" cy="12" r="3" {...T} />
-    <path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4L6 18M18 18l-1.6-1.6M7.6 7.6L6 6" {...T} />
+    <path
+      d="M10.4 3.5h3.2l.5 2.4 1.7 1 2.3-.8 1.6 2.8-1.8 1.6v2l1.8 1.6-1.6 2.8-2.3-.8-1.7 1-.5 2.4h-3.2l-.5-2.4-1.7-1-2.3.8-1.6-2.8 1.8-1.6v-2L4.3 8.9l1.6-2.8 2.3.8 1.7-1 .5-2.4z"
+      {...T}
+    />
   </>
 );
 export const I_CLOCHE = <path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5H5l1.5-1.5zM10 20h4" {...T} />;
+/* Ajoutées le 05/11/2026 (Réglages Capsela) : même trait, même grille 24. */
+export const I_GLOBE = (
+  <>
+    <circle cx="12" cy="12" r="8.5" {...T} />
+    <path d="M3.5 12h17M12 3.5c2.3 2.4 3.5 5.2 3.5 8.5s-1.2 6.1-3.5 8.5c-2.3-2.4-3.5-5.2-3.5-8.5s1.2-6.1 3.5-8.5z" {...T} />
+  </>
+);
+export const I_THERMOMETRE = <path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0zM12 10v7" {...T} />;
+export const I_LIVRE = <path d="M12 6.5c-1.8-1.4-4.6-2-8-2v13c3.4 0 6.2.6 8 2 1.8-1.4 4.6-2 8-2v-13c-3.4 0-6.2.6-8 2zM12 6.5v13" {...T} />;
+export const I_QUESTION = (
+  <>
+    <circle cx="12" cy="12" r="8.5" {...T} />
+    <path d="M9.6 9.6a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.2 1-1.2 1.8v.4M12 16.8v.2" {...T} />
+  </>
+);
+export const I_BULLE = <path d="M4.5 11.5c0-3.9 3.4-7 7.5-7s7.5 3.1 7.5 7-3.4 7-7.5 7c-1 0-2-.2-2.9-.5L5 19.5l1-3.4c-1-1.3-1.5-2.9-1.5-4.6z" {...T} />;
+export const I_REPRENDRE = <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" {...T} />;
+export const I_SORTIE = <path d="M13.5 4.5h-7a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h7M10.5 12h9M16.5 8.5L20 12l-3.5 3.5" {...T} />;
 
 export function Surtitre({ icone, children }: { icone: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -124,7 +147,8 @@ export function LigneProfil({
   valeur: React.ReactNode;
   renseigne: boolean;
   explication?: string;
-  onClick: () => void;
+  /** Sans `onClick`, la ligne n'est qu'une information : pas de chevron (Réglages : la langue tant qu'elle ne se choisit pas). */
+  onClick?: () => void;
 }) {
   return (
     <Rangee onClick={onClick} className="gap-[13px]">
@@ -136,7 +160,7 @@ export function LigneProfil({
         <span className={"block text-[13px] leading-[1.4] mt-[2px] " + (renseigne ? "text-ink" : "text-placeholder")}>{valeur}</span>
         {renseigne && explication && <span className="block text-[12px] text-muted leading-[1.4] mt-[3px]">{explication}</span>}
       </span>
-      <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
+      {onClick && <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>}
     </Rangee>
   );
 }

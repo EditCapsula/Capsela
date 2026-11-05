@@ -21,7 +21,7 @@ export interface Visite {
   id: IdVisite;
   /** L'écran où la visite se joue : elle se lance à sa première ouverture. */
   ecran: Screen;
-  /** Le nom de la visite dans la feuille « Aide » (Gérer mon compte → Support). */
+  /** Le nom de la visite dans la feuille « Tutoriel » (Réglages → Aide & Support). */
   nom: string;
   etapes: EtapeVisite[];
 }

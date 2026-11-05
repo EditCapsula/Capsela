@@ -231,9 +231,16 @@ export const EN: Record<string, string> = {
   "Choisis une catégorie, puis fais défiler ses pièces avec les flèches ou d'un glissement.":
     "Choose a category, then browse its pieces with the arrows or a swipe.",
 
-  // --- Gérer mon compte : Support ---
-  Aide: "Help",
+  // --- Réglages Capsela : Aide & Support (05/11/2026) ---
+  "Aide & Support": "Help & Support",
+  Tutoriel: "Tutorial",
   "Revoir les visites guidées de l'application.": "Replay the app's guided tours.",
-  "Nous contacter": "Contact us",
   "Choisis une visite : son écran s'ouvre et elle recommence.": "Choose a tour: its screen opens and it starts again.",
+  "Centre d'aide": "Help center",
+  "Les réponses aux questions fréquentes.": "Answers to frequently asked questions.",
+  "Contacter Capsela": "Contact Capsela",
+  "Une question, une remarque ? Écris-nous :": "A question, a comment? Write to us:",
+  "Écrire un e-mail": "Write an email",
+  "Copier l'adresse": "Copy the address",
+  "Adresse copiée": "Address copied",
 };

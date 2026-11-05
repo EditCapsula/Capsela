@@ -33,6 +33,7 @@ Les textes sont dans `src/lib/visites.ts` (traduits par `src/lib/traductions/en.
 - Fermée de n'importe quelle façon (« Passer », « C'est parti », le voile, Échap, le Retour d'Android, un changement d'écran),
   elle est marquée vue : d'abord sur l'appareil, puis dans le compte (`profiles.prefs.visitesVues`, sans migration : `prefs` est
   déjà un JSON). Une visite vue ne revient pas, sur aucun appareil.
-- Relance : Gérer mon compte → Support → « Aide » ouvre la liste des visites ; en choisir une ouvre son écran et la rejoue, même
-  déjà vue. « Nous contacter » ouvre un e-mail à capsela.app@gmail.com.
+- Relance : Profil → engrenage (Réglages Capsela) → Aide & Support → « Tutoriel » ouvre la liste des visites ; en choisir une
+  ouvre son écran et la rejoue, même déjà vue. « Contacter Capsela », juste dessous, ouvre un e-mail à capsela.app@gmail.com
+  (cf. `docs/reglages.md`).
 - « Réinitialiser mes préférences » garde les visites vues.

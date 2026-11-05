@@ -50,6 +50,7 @@ import Button from "@/components/Button";
 import LigneInterrupteur from "@/components/LigneInterrupteur";
 import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
+import { degres } from "@/lib/unites";
 
 /**
  * Planifier une tenue — maquette du 23/09/2026, LOT 1.
@@ -963,7 +964,7 @@ export default function PlanifierScreen() {
       : []),
     ...(occ && occ !== "all" ? [{ cle: "occasion", icone: ICONES_INDICATEUR.occasion, texte: [occ, ...secondaires].map((o) => occasionShortLabel(o)).join(" · ") }] : []),
     ...(meteoMoment && !composition && !alerteMeteoPlan(piecesDuLook, meteoMoment)
-      ? [{ cle: "meteo", icone: ICONES_INDICATEUR.meteo, texte: `Adaptée à ${Math.round(meteoMoment.temp)}°` }]
+      ? [{ cle: "meteo", icone: ICONES_INDICATEUR.meteo, texte: `Adaptée à ${degres(meteoMoment.temp)}` }]
       : []),
     ...(coloResultat && accordVisage(piecesDuLook, coloResultat) ? [{ cle: "palette", icone: ICONES_INDICATEUR.palette, texte: "Ta palette", coche: true }] : []),
   ];
@@ -1001,7 +1002,7 @@ export default function PlanifierScreen() {
    *      n'a aucune raison d'avoir à les distinguer.
    */
   const phraseMeteo = (() => {
-    const aujourdhui = `${weather.temp}°, ${weather.label.toLowerCase()}`;
+    const aujourdhui = `${degres(weather.temp)}, ${weather.label.toLowerCase()}`;
     // Avant l'appel, rien à dire : la phrase n'est plus affichée pendant les
     // étapes (recette du 26/09/2026 — une question par étape, la météo n'en
     // est pas une), seulement dans « Pourquoi ce look ? », après l'appel.
@@ -1009,20 +1010,20 @@ export default function PlanifierScreen() {
     if (meteoMoment) {
       const amplitude =
         meteoMoment.tempMin === meteoMoment.tempMax
-          ? `${meteoMoment.temp}°`
-          : `de ${meteoMoment.tempMin}° à ${meteoMoment.tempMax}°`;
+          ? `${degres(meteoMoment.temp)}`
+          : `de ${degres(meteoMoment.tempMin)} à ${degres(meteoMoment.tempMax)}`;
       // « La tenue en tient compte » retiré le 18/10/2026 (demandé) : le bloc « Pourquoi ce look ? » le dit déjà par sa place.
       return `Prévision à ${villeAffichee} pour ce moment : ${amplitude}, ${meteoMoment.label.toLowerCase()}.`;
     }
     if (prevision && dernierJourConnu && dateChoisie && jourLocal(dateChoisie) > dernierJourConnu) {
       const d = new Date(`${dernierJourConnu}T12:00:00`);
       return climat
-        ? `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue suit les températures habituelles de ${villeAffichee} à cette date : ${climat.tempMin}° à ${climat.tempMax}°.`
+        ? `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue suit les températures habituelles de ${villeAffichee} à cette date : ${degres(climat.tempMin)} à ${degres(climat.tempMax)}.`
         : `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue suit la saison de la date et ses températures habituelles.`;
     }
     return auDela
       ? climat
-        ? `Pas de prévision pour cette date. La tenue suit les températures habituelles de ${villeAffichee} à cette date : ${climat.tempMin}° à ${climat.tempMax}°.`
+        ? `Pas de prévision pour cette date. La tenue suit les températures habituelles de ${villeAffichee} à cette date : ${degres(climat.tempMin)} à ${degres(climat.tempMax)}.`
         : "Pas de prévision pour cette date. La tenue suit la saison de la date et ses températures habituelles."
       : `Pas de prévision disponible pour ce lieu. La tenue suit la saison de la date et la météo d'aujourd'hui — ${aujourdhui}.`;
   })();
@@ -1699,7 +1700,7 @@ export default function PlanifierScreen() {
                   "Analyse du contexte",
                   [
                     choisies.map((o) => occasionShortLabel(o)).join(" et "),
-                    meteoMoment && villeAffichee ? `${villeAffichee} · ${meteoMoment.temp}°` : villeAffichee || lieu.trim() || "",
+                    meteoMoment && villeAffichee ? `${villeAffichee} · ${degres(meteoMoment.temp)}` : villeAffichee || lieu.trim() || "",
                     humeur ? libelleHumeur(humeur, profile.gender) : "",
                   ]
                     .filter(Boolean)
@@ -1912,7 +1913,7 @@ export default function PlanifierScreen() {
             </div>
             <div className="text-[12px] text-muted mt-[2px]">
               {meteoMoment && villeAffichee
-                ? `${villeAffichee} · ${meteoMoment.temp}° · ${meteoMoment.label}`
+                ? `${villeAffichee} · ${degres(meteoMoment.temp)} · ${meteoMoment.label}`
                 : !lieu.trim()
                   ? "Lieu non précisé · météo non prise en compte"
                   : `${villeAffichee || lieu.trim()} · météo disponible à partir du ${debutMeteo}`}
@@ -2062,7 +2063,7 @@ export default function PlanifierScreen() {
                     <span className="block text-[12px] text-muted mt-[2px]">
                       {occasionShortLabel(gardee.occasion)} · {gardee.moment}
                       {villeGardee ? ` · ${villeGardee}` : ""}
-                      {gardee.temp != null ? ` · ${Math.round(gardee.temp)}°` : ""}
+                      {gardee.temp != null ? ` · ${degres(gardee.temp)}` : ""}
                     </span>
                   </span>
                 </div>
@@ -2108,7 +2109,7 @@ export default function PlanifierScreen() {
             // Une tenue polyvalente (04/11/2026) dit toutes ses occasions, la principale d'abord.
             { cle: "occasion", icone: ICONES_INDICATEUR.occasion, texte: t.occasion === "all" ? "Toutes occasions" : [t.occasion, ...(t.occasionsSecondaires ?? [])].map((o) => occasionShortLabel(o)).join(" · ") },
             // La météo : seulement avec une température, et seulement si le moteur ne signale rien (alerteMeteoPlan).
-            ...(tempPlan != null && !alertePlan ? [{ cle: "meteo", icone: ICONES_INDICATEUR.meteo, texte: `Adaptée à ${Math.round(tempPlan)}°` }] : []),
+            ...(tempPlan != null && !alertePlan ? [{ cle: "meteo", icone: ICONES_INDICATEUR.meteo, texte: `Adaptée à ${degres(tempPlan)}` }] : []),
             // La palette : seulement avec une colorimétrie, et si la tenue s'y accorde près du visage (accordVisage, R-S18).
             ...(colo && accordVisage(sepPlan.principal, colo) ? [{ cle: "palette", icone: ICONES_INDICATEUR.palette, texte: "Ta palette", coche: true }] : []),
           ];

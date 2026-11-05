@@ -13,7 +13,7 @@ import { selecteurCible, visiteAMontrer, type Visite } from "@/lib/visites";
  * LES VISITES GUIDÉES (05/11/2026, docs/visites-guidees.md) — le SEUL endroit qui manipule Driver.js. Monté une fois dans App.tsx.
  *
  * - Une visite par écran (lib/visites.ts), lancée à la première ouverture de l'écran une fois le compte prêt, ou relancée depuis
- *   l'Aide (Gérer mon compte → Support), même déjà vue.
+ *   le Tutoriel (Profil → Réglages → Aide & Support), même déjà vue.
  * - Elle attend que sa première cible soit affichée (l'écran se monte, les données arrivent), puis ne garde que les étapes dont
  *   l'élément existe : une cible absente (dressing vide, autre onglet) est sautée, jamais une étape vide. Aucune cible : la visite
  *   n'est pas lancée, ni marquée vue.

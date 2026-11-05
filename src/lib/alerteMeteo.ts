@@ -3,6 +3,7 @@ import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import { isRainy, type Weather } from "./data";
 import { CHAUSSURES_OUVERTES, candidatsDeRemplacement, computeLookScore, evaluateBlocking } from "./logic";
 import type { CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
+import { degresUnite } from "./unites";
 
 /*
  * L'ALERTE MÉTÉO D'UN LOOK PLANIFIÉ, ET SON ADAPTATION (12/10/2026, demandé : un vrai conseil stylistique à la place de « plus frais que ce
@@ -56,7 +57,7 @@ function momentDit(moment?: string): string {
   return "ta journée";
 }
 
-const tempDite = (t: number, ville?: string) => `${Math.round(t)} °C ${ville ? `prévus à ${ville}` : "prévus ce jour-là"}`;
+const tempDite = (t: number, ville?: string) => `${degresUnite(t)} ${ville ? `prévus à ${ville}` : "prévus ce jour-là"}`;
 
 /**
  * Le constat, ou null. Priorité : le froid ou le chaud (des bornes déclarées non respectées), puis la pluie sur des chaussures ouvertes.
@@ -81,7 +82,7 @@ export function evaluerAlerteMeteo(pieces: readonly Item[], meteo: MeteoDuPlan, 
           niveau: "forte",
           cause: "froid",
           titre: "Ton look mérite un ajustement",
-          message: `Les températures prévues (${Math.round(t)} °C${lieuDit}) risquent d'être trop fraîches pour cette tenue. Découvre une alternative plus adaptée.`,
+          message: `Les températures prévues (${degresUnite(t)}${lieuDit}) risquent d'être trop fraîches pour cette tenue. Découvre une alternative plus adaptée.`,
           cta: "Trouver une alternative",
           ecart: ecartFroid,
           pieceIds: froides.map((p) => p.id),
@@ -103,7 +104,7 @@ export function evaluerAlerteMeteo(pieces: readonly Item[], meteo: MeteoDuPlan, 
           niveau: "forte",
           cause: "chaud",
           titre: "Ton look mérite un ajustement",
-          message: `Les températures prévues (${Math.round(t)} °C${lieuDit}) risquent d'être trop élevées pour cette tenue. Découvre une alternative plus légère.`,
+          message: `Les températures prévues (${degresUnite(t)}${lieuDit}) risquent d'être trop élevées pour cette tenue. Découvre une alternative plus légère.`,
           cta: "Trouver une alternative",
           ecart: ecartChaud,
           pieceIds: chaudes.map((p) => p.id),

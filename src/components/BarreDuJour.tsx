@@ -5,6 +5,7 @@ import { IconeTuile } from "@/components/PlanifierUI";
 import { useDonneesJour, type RetroJour } from "@/components/JourMeteo";
 import { JOUR_MAX, libelleJour, libelleJourCourt } from "@/lib/jourConsulte";
 import { useCapsela } from "@/lib/store";
+import { degres } from "@/lib/unites";
 
 /**
  * LA BARRE DU JOUR DE L'ACCUEIL (maquette « Accueil V9 », 07/10/2026) : à gauche le jour et la ville, à droite la température
@@ -101,13 +102,13 @@ export default function BarreDuJour({ className = "", retro }: { className?: str
         </div>
 
         {!enAttente && temp != null && (
-          <div className="flex-shrink-0 text-right" aria-label={`${temp}°${label ? `, ${label}` : ""}`}>
+          <div className="flex-shrink-0 text-right" aria-label={`${degres(temp)}${label ? `, ${label}` : ""}`}>
             <div className="flex items-center justify-end gap-[6px] text-terracotta">
               <IconeTuile nom={soleil ? "apresmidi" : "nuage"} taille={22} />
-              <span className="text-[20px] font-medium text-ink tabular-nums">{temp}°</span>
+              <span className="text-[20px] font-medium text-ink tabular-nums">{degres(temp)}</span>
             </div>
             {label && <div className="text-[11px] text-muted mt-[2px] whitespace-nowrap">{label}</div>}
-            {amplitude && <div className="text-[11px] text-muted-3 whitespace-nowrap tabular-nums">Max {amplitude.max}° · min {amplitude.min}°</div>}
+            {amplitude && <div className="text-[11px] text-muted-3 whitespace-nowrap tabular-nums">Max {degres(amplitude.max)} · min {degres(amplitude.min)}</div>}
           </div>
         )}
       </div>
@@ -177,13 +178,13 @@ export function BarreDuPlan({
           </span>
         </div>
         {temp != null && (
-          <div className="flex-shrink-0 text-right" aria-label={`${temp}°${label ? `, ${label}` : ""}`}>
+          <div className="flex-shrink-0 text-right" aria-label={`${degres(temp)}${label ? `, ${label}` : ""}`}>
             <div className="flex items-center justify-end gap-[6px] text-terracotta">
               <IconeTuile nom={soleil ? "apresmidi" : "nuage"} taille={22} />
-              <span className="text-[20px] font-medium text-ink tabular-nums">{temp}°</span>
+              <span className="text-[20px] font-medium text-ink tabular-nums">{degres(temp)}</span>
             </div>
             {label && <div className="text-[11px] text-muted mt-[2px] whitespace-nowrap">{label}</div>}
-            {prevision && <div className="text-[11px] text-muted-3 whitespace-nowrap tabular-nums">Max {prevision.tempMax}° · min {prevision.tempMin}°</div>}
+            {prevision && <div className="text-[11px] text-muted-3 whitespace-nowrap tabular-nums">Max {degres(prevision.tempMax)} · min {degres(prevision.tempMin)}</div>}
           </div>
         )}
       </div>

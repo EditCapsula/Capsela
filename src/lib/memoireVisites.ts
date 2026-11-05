@@ -33,7 +33,7 @@ export function vuesReunies(duCompte: readonly string[] | undefined, locales: re
   return [...new Set([...(duCompte ?? []), ...locales])];
 }
 
-// ── La visite demandée depuis l'Aide (Gérer mon compte → Support) ──────────────────────────────────────────────────────────
+// ── La visite demandée depuis le Tutoriel (Réglages → Aide & Support) ──────────────────────────────────────────────────────────
 
 let demandee: IdVisite | null = null;
 const abonnes = new Set<() => void>();
