@@ -897,3 +897,15 @@ describe("le t-shirt : affiché quand il est le haut de la tenue, pas quand il e
     });
   }
 });
+
+describe("Capsule › Composer : le haut choisi sous un pull est dessiné (05/11/2026)", () => {
+  const T = (id: number, cat: CategoryKey, ratio: number) => ({ id, cat, ratio });
+  const tenue = [T(10, "pull", 0.9), T(1, "haut", 0.94), T(2, "jean", 0.41), T(3, "chaussures", 1.36)];
+  it("afficherCouche pose le t-shirt, sans chevauchement ; sans l'option, la règle commune le laisse hors planche", () => {
+    const avec = composerFlatLay(tenue, "x", { contexte: "look-detail", afficherCouche: true });
+    expect(avec.pieces.some((q) => q.id === 1)).toBe(true);
+    expect(avec.masquees).not.toContain(1);
+    const sans = composerFlatLay(tenue, "x", { contexte: "look-detail" });
+    expect(sans.pieces.some((q) => q.id === 1)).toBe(false);
+  });
+});

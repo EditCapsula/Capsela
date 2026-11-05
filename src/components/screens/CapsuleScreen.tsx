@@ -331,6 +331,16 @@ export default function CapsuleScreen() {
   };
   // Le glissement horizontal sur la planche change la pièce de l'emplacement actif ; un geste surtout vertical reste un défilement.
   const toucher = useRef<{ x: number; y: number } | null>(null);
+  // La tuile de l'emplacement actif reste visible dans la rangée qui défile (05/11/2026) : choisi depuis la planche, un emplacement
+  // pouvait devenir actif hors de l'écran.
+  const cleActive = emplacementActif?.cle;
+  const cleVue = useRef(cleActive);
+  useEffect(() => {
+    // Seulement quand l'emplacement CHANGE : au premier affichage, la page ne doit pas sauter jusqu'aux tuiles.
+    if (!cleActive || cleVue.current === cleActive) return;
+    cleVue.current = cleActive;
+    document.querySelector(`[data-emplacement="${cleActive}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  }, [cleActive]);
 
   const composerAvec = (it: Item, possedee: boolean) => {
     const cle = emplacementDe(it.cat);
@@ -702,7 +712,15 @@ export default function CapsuleScreen() {
                     context="look-detail"
                     // Graine de la capsule, pas des pièces : changer une pièce ne redistribue pas toute la planche.
                     layoutSeed={cleComposition}
-                    onPiece={(it) => ouvrir(it, composees.find((e) => e.item.id === it.id)?.possedee ?? false)}
+                    afficherCouche
+                    // Toucher une pièce (05/11/2026, demandé : « au clic sur une autre pièce on devrait basculer sur la catégorie concernée ») :
+                    // une pièce d'un autre emplacement le rend actif, et ses flèches la font varier ; une pièce de l'emplacement déjà actif
+                    // ouvre sa fiche, comme avant.
+                    onPiece={(it) => {
+                      const cle = emplacementDe(it.cat);
+                      if (cle && cle !== emplacementActif?.cle && groupes[cle].length) changerSelection(selection, cle);
+                      else ouvrir(it, composees.find((e) => e.item.id === it.id)?.possedee ?? false);
+                    }}
                   />
                 )}
               </div>
@@ -737,6 +755,7 @@ export default function CapsuleScreen() {
                     key={e.cle}
                     role="tab"
                     aria-selected={on}
+                    data-emplacement={e.cle}
                     onClick={() => changerSelection(selection, e.cle)}
                     className={
                       "flex-none w-[78px] rounded-tuile border py-[9px] flex flex-col items-center gap-[3px] cursor-pointer " +

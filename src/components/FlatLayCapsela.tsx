@@ -49,6 +49,7 @@ export function FlatLayCapsela({
   onPiece,
   ajouts = AUCUN_AJOUT,
   onFantome,
+  afficherCouche = false,
 }: {
   items: Item[];
   /** Où la planche s'affiche : elle règle la zone, la marge, le gabarit et le nombre d'accessoires (cf. CONTEXTES dans flatLay.ts). */
@@ -87,6 +88,8 @@ export function FlatLayCapsela({
    * restent décoratives.
    */
   onFantome?: (cat: CategoryKey) => void;
+  /** Dessine aussi le t-shirt porté sous un pull (Capsule › Composer, où chaque pièce est choisie). Cf. OptionsFlatLay.afficherCouche. */
+  afficherCouche?: boolean;
 }) {
   // LA ZONE PREND LE FORMAT DE SON CADRE (14/10/2026, « exploiter tout l'espace alloué au flat lay ») : la planche gardait le format fixe
   // du contexte et laissait vides les bords d'un cadre plus large ou plus haut. Mesurée avant la peinture ; bornée entre le carré et
@@ -180,9 +183,9 @@ export function FlatLayCapsela({
           return { id: it.id, cat: catDePlanche(it), ratio, accessoireType: it.accessoireType, photoBrute: img.kind === "photo" };
         }),
         graine,
-        { contexte: context, template, piecesEnPlus: images.filter((e) => e.ajout).length, hauteurZone: HAUTEUR }
+        { contexte: context, template, piecesEnPlus: images.filter((e) => e.ajout).length, hauteurZone: HAUTEUR, afficherCouche }
       ).pieces,
-    [images, graine, context, template, HAUTEUR, mesures]
+    [images, graine, context, template, HAUTEUR, mesures, afficherCouche]
   );
 
   // Toutes les images chargées (ou en échec) : la planche est prête.
