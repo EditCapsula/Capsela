@@ -53,6 +53,10 @@ import { readConsent, subscribeConsent, type ConsentState } from "@/lib/consent"
 import LoadingSpinner from "./LoadingSpinner";
 import ConfirmationAjout from "./ConfirmationAjout";
 import { ecranARestaurer, memoriserEcran } from "@/lib/ecranRestaure";
+import { initialiserLangue } from "@/lib/langue";
+
+// La langue est fixée une fois, avant le premier rendu (docs/traduction.md) : App.tsx n'est chargé que dans le navigateur.
+initialiserLangue();
 
 /** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) — la barre d'onglets n'y a pas de sens. */
 const NO_TABBAR_SCREENS = new Set(["welcome", "onboarding", "auth", "login", "profileSetup"]);
@@ -99,6 +103,27 @@ function Screens() {
     void synchroniserNotifications(prefsNotif, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.signedIn, profilCompletPub]);
+  // ET À CHAQUE RETOUR DANS L'APP (05/11/2026) : les notifications sont programmées jour par jour, sur deux semaines
+  // (notifications.ts) ; chaque retour reconduit la fenêtre, avec l'heure du compte telle qu'elle est alors. Sans demande d'autorisation.
+  const notifRef = useRef({ actif: false, prefs: prefsNotif });
+  useEffect(() => {
+    notifRef.current = { actif: auth.signedIn && profilCompletPub, prefs: prefsNotif };
+  });
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let ecoute: { remove: () => Promise<void> } | null = null;
+    let fini = false;
+    void CapApp.addListener("resume", () => {
+      if (notifRef.current.actif) void synchroniserNotifications(notifRef.current.prefs, false);
+    }).then((h) => {
+      if (fini) void h.remove();
+      else ecoute = h;
+    });
+    return () => {
+      fini = true;
+      void ecoute?.remove();
+    };
+  }, []);
 
   // Session déjà ouverte (connexion, retour OAuth ou rechargement) : saute les écrans
   // d'accueil, direction la Homepage — jamais le questionnaire, même si le profil est

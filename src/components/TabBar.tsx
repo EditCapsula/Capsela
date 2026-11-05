@@ -3,6 +3,7 @@
 import { oublierContexte } from "@/lib/memoireEcrans";
 import { useCapsela } from "@/lib/store";
 import type { Screen } from "@/lib/types";
+import { aTraduire, t } from "@/lib/langue";
 
 type IconName = "home" | "hanger" | "sparkle" | "capsule" | "journal" | "calendrier";
 
@@ -81,9 +82,9 @@ function TabIcon({ name, actif }: { name: IconName; actif: boolean }) {
 }
 
 const TABS: { label: string; icon: IconName; screen: Screen; go: (a: ReturnType<typeof useCapsela>["actions"]) => void }[] = [
-  { label: "Aujourd’hui", icon: "home", screen: "home", go: (a) => a.goHome() },
-  { label: "Dressing", icon: "hanger", screen: "wardrobe", go: (a) => a.goWardrobe() },
-  { label: "Capsule", icon: "capsule", screen: "capsule", go: (a) => a.goCapsule() },
+  { label: aTraduire("Aujourd’hui"), icon: "home", screen: "home", go: (a) => a.goHome() },
+  { label: aTraduire("Dressing"), icon: "hanger", screen: "wardrobe", go: (a) => a.goWardrobe() },
+  { label: aTraduire("Capsule"), icon: "capsule", screen: "capsule", go: (a) => a.goCapsule() },
   /**
    * CINQ ONGLETS (07/10/2026, refonte de l'accueil « Aujourd'hui »).
    *
@@ -104,9 +105,9 @@ const TABS: { label: string; icon: IconName; screen: Screen; go: (a: ReturnType<
    * `planifier` est dans FLOW_SCREENS (App.tsx), la barre disparaît une fois
    * le parcours ouvert.
    */
-  { label: "Planifier", icon: "calendrier", screen: "planifier", go: (a) => a.goPlanifier() },
+  { label: aTraduire("Planifier"), icon: "calendrier", screen: "planifier", go: (a) => a.goPlanifier() },
   // Journal en DERNIÈRE position (12/10/2026, demandé) : il était avant Planifier. Aujourd'hui · Dressing · Capsule · Planifier · Journal.
-  { label: "Journal", icon: "journal", screen: "history", go: (a) => a.goHistory() },
+  { label: aTraduire("Journal"), icon: "journal", screen: "history", go: (a) => a.goHistory() },
 ];
 
 /**
@@ -206,7 +207,7 @@ export default function TabBar() {
               className="max-w-full overflow-hidden text-ellipsis t-nav whitespace-nowrap"
               style={{ fontWeight: active ? 600 : 400, letterSpacing: "0.02em" }}
             >
-              {tab.label}
+              {t(tab.label)}
             </span>
           </button>
         );

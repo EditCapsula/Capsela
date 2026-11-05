@@ -13,6 +13,8 @@ import { notificationsDisponiblesIci, synchroniserNotifications, type EtatNotifi
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+import OptionRow from "@/components/OptionRow";
+import { aTraduire, anglaisOuvert, choisirLangue, langue, t, type Langue } from "@/lib/langue";
 
 /*
  * PRÉFÉRENCES CAPSELA (architecture du profil, 25/09/2026) : « comment je
@@ -53,6 +55,8 @@ function Ligne({ children }: { children: React.ReactNode }) {
   return <Rangee className="justify-between">{children}</Rangee>;
 }
 
+const NOMS_LANGUES: Record<Langue, string> = { fr: aTraduire("Français"), en: aTraduire("Anglais") };
+
 export default function PreferencesScreen() {
   const { profile, saveProfile } = useAuth();
   const { state, actions } = useCapsela();
@@ -67,6 +71,7 @@ export default function PreferencesScreen() {
   const prefs = profile.prefs;
   const [confirmerReinit, setConfirmerReinit] = useState(false);
   const [villeOuverte, setVilleOuverte] = useState(false);
+  const [langueOuverte, setLangueOuverte] = useState(false);
   const [reinitFaite, setReinitFaite] = useState(false);
   // La notification suit le réglage (04/11/2026, notifications.ts) : chaque changement de l'interrupteur ou de l'heure la
   // reprogramme. `etatNotif` dit ce que le téléphone a répondu — autorisation refusée, ou web, où rien n'est envoyé.
@@ -133,12 +138,8 @@ export default function PreferencesScreen() {
             className="border-none bg-transparent text-[13px] text-ink font-sans outline-none min-h-[32px]"
           />
         </Ligne>
-        {/* Ce que le réglage fait réellement, dit seulement quand il ne peut pas agir. */}
-        {prefs.notifEnabled && !notificationsDisponiblesIci() && (
-          <div className="px-4 py-[12px] text-[11px] text-muted leading-[1.45]">
-            Les notifications arrivent dans l&apos;application Capsela sur Android. Le site n&apos;en envoie pas.
-          </div>
-        )}
+        {/* La phrase « Les notifications arrivent dans l'application Capsela sur Android. Le site n'en envoie pas. », affichée sur le
+            site, a été retirée le 05/11/2026 (demandé : « cette phrase ne sert à rien »). */}
         {prefs.notifEnabled && etatNotif === "refusee" && (
           <div className="px-4 py-[12px] text-[11px] text-rust leading-[1.45]" role="alert">
             Ton téléphone bloque les notifications de Capsela. Autorise-les dans ses réglages (Applications, Capsela,
@@ -279,14 +280,23 @@ export default function PreferencesScreen() {
         </div>
       </Section>
 
-      {/* AUTRES. Langue et fuseau sont AFFICHÉS, pas réglables : l'app n'existe
-          qu'en français et n'a aucun réglage de fuseau (celui-ci est lu sur
-          l'appareil). Un chevron promettrait un écran qui n'existe pas. */}
+      {/* AUTRES. Le fuseau est AFFICHÉ, pas réglable : il est lu sur l'appareil. La langue se choisit une fois l'anglais ouvert
+          (05/11/2026, langue.ts) ; avant, elle est affichée seulement — un chevron promettrait un choix qui n'existe pas. */}
       <Section titre="Autres" icone={I_GRAPHIQUE}>
-        <Ligne>
-          <span className="text-[13px] text-ink">Langue</span>
-          <span className="text-[13px] text-muted-3">Français</span>
-        </Ligne>
+        {anglaisOuvert() ? (
+          <button onClick={() => setLangueOuverte(true)} className="w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer">
+            <span className="text-[13px] text-ink">{t("Langue")}</span>
+            <span className="flex items-center gap-[8px] text-[13px] text-muted-3">
+              {t(NOMS_LANGUES[langue()])}
+              <span aria-hidden="true" className="text-placeholder text-[15px]">›</span>
+            </span>
+          </button>
+        ) : (
+          <Ligne>
+            <span className="text-[13px] text-ink">Langue</span>
+            <span className="text-[13px] text-muted-3">Français</span>
+          </Ligne>
+        )}
         <Ligne>
           <span className="text-[13px] text-ink">Fuseau horaire</span>
           <span className="text-[13px] text-muted-3 truncate">{fuseau}</span>
@@ -310,6 +320,24 @@ export default function PreferencesScreen() {
       </Section>
 
       <FeuilleVille open={villeOuverte} onClose={() => setVilleOuverte(false)} />
+
+      <BottomSheet title={t("Choisir la langue")} open={langueOuverte} onClose={() => setLangueOuverte(false)}>
+        <div className="text-[12px] text-muted mb-[12px]">{t("L'app redémarre dans la langue choisie.")}</div>
+        <div className="flex flex-col gap-[8px]">
+          {(["fr", "en"] as Langue[]).map((l) => (
+            <OptionRow
+              key={l}
+              label={t(NOMS_LANGUES[l])}
+              on={langue() === l}
+              accent
+              onClick={() => {
+                setLangueOuverte(false);
+                if (l !== langue()) choisirLangue(l);
+              }}
+            />
+          ))}
+        </div>
+      </BottomSheet>
 
       <BottomSheet title="Réinitialiser les préférences" open={confirmerReinit} onClose={() => setConfirmerReinit(false)}>
         <div className="text-[13px] text-ink leading-[1.55]">
