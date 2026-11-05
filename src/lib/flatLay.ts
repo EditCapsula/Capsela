@@ -166,8 +166,10 @@ export const PROPORTION_PIECE: Partial<Record<CategoryKey, number>> = {
   // La robe occupe toute sa colonne, comme le haut et le bas réunis (« la robe dans Capsela est trop petite », 05/11/2026).
   robe: 1.65,
   combinaison: 1.65,
-  chaussures: 0.62,
-  sac: 0.6,
+  // Ramenés le 05/11/2026 (« le sac, les chaussures et les vêtements doivent conserver une échelle visuelle crédible ») : 0,62 et 0,6
+  // donnaient des baskets presque aussi hautes qu'un t-shirt. Entre la taille réelle (0,3 environ) et les planches de référence.
+  chaussures: 0.52,
+  sac: 0.55,
   accessoire: 0.5,
   bijou: 0.45,
 };
@@ -700,8 +702,10 @@ export function composerFlatLay(
   const grille = (): PlacementFlatLay[] => {
     const U = UNITE_PROPORTIONS * hauteurZone;
     const largeurMax = 0.95 * U;
-    const ecartV = 0.05 * U;
-    const ecartH = 0.1 * U;
+    // Des écarts resserrés (05/11/2026, « certains vêtements pourraient être légèrement agrandis pour mieux remplir l'espace ») : l'espace
+    // rendu va aux pièces, la planche étant ensuite ajustée à la zone.
+    const ecartV = 0.04 * U;
+    const ecartH = 0.07 * U;
     const poser = (piece: PieceFlatLay, role: RoleFlatLay): PlacementFlatLay => {
       const ratio = piece.ratio > 0 ? piece.ratio : 1;
       // Les collants se posent comme un bas, en hauteur (05/11/2026, vu en rendu réel : posés comme un accessoire, ils faisaient la taille
@@ -727,7 +731,11 @@ export function composerFlatLay(
     // essayées — tout à droite, ou une colonne de plus dès que la droite dépasse la hauteur de la gauche — et la planche retient celle qui
     // donne les pièces les plus grandes une fois ajustées à la zone. Trois colonnes au plus.
     const premiere = gauche.map(({ piece, role }) => poser(piece, role));
-    const droiteposee = droite.map(({ piece, role }) => poser(piece, role));
+    // Les accessoires (hors collants, posés comme un vêtement) ne prolongent plus la colonne de droite : chacun va dans la colonne la plus
+    // courte, sous ses pièces (05/11/2026, « éviter que les accessoires soient trop regroupés dans un coin ou trop éloignés de la tenue »).
+    const estPetit = (r: { piece: PieceFlatLay; role: RoleFlatLay }) => r.role === "accessoire" && r.piece.accessoireType !== "Collants";
+    const droiteposee = droite.filter((r) => !estPetit(r)).map(({ piece, role }) => poser(piece, role));
+    const petits = droite.filter(estPetit).map(({ piece, role }) => poser(piece, role));
     const disposer = (capacite: number): PlacementFlatLay[][] => {
       const suivantes: PlacementFlatLay[][] = [];
       for (const q of droiteposee) {
@@ -735,7 +743,12 @@ export function composerFlatLay(
         if (courante && (suivantes.length >= 2 || hauteurDe(courante) + ecartV + q.h <= capacite)) courante.push(q);
         else suivantes.push([q]);
       }
-      return [premiere, ...suivantes].filter((c) => c.length);
+      const cols = [premiere.slice(), ...suivantes].filter((c) => c.length);
+      for (const q of petits) {
+        if (!cols.length) cols.push([]);
+        cols.reduce((m, c) => (hauteurDe(c) < hauteurDe(m) ? c : m)).push(q);
+      }
+      return cols;
     };
     const largeurUtile = 100 - 2 * config.marge;
     const hauteurUtile = hauteurZone - (config.margeHaute ?? config.marge) - config.marge;
@@ -744,8 +757,22 @@ export function composerFlatLay(
       const Hc = Math.max(...cols.map(hauteurDe));
       return Math.min(largeurUtile / W, hauteurUtile / Hc);
     };
-    const candidates = [disposer(Infinity), disposer(Math.max(hauteurDe(premiere), 1.6 * U) * 1.15)];
-    const colonnes = candidates.reduce((m, c) => (echelle(c) > echelle(m) + 1e-9 ? c : m));
+    // UNE TROISIÈME COLONNE QUAND ELLE AGRANDIT LA PLANCHE (05/11/2026, vu en rendu réel : quatre pièces empilées à droite, la robe à 40 % de
+    // la hauteur). Plusieurs hauteurs de colonne sont essayées — tout à droite, puis une colonne de plus à partir de 60 à 130 % de la hauteur
+    // de la gauche — et la planche retient la disposition qui donne les pièces les plus grandes une fois ajustées à la zone. Trois colonnes
+    // au plus.
+    const hGauche = Math.max(hauteurDe(premiere), 1.6 * U);
+    const candidates = [disposer(Infinity), ...[0.6, 0.75, 0.9, 1.0, 1.15, 1.3].map((f) => disposer(hGauche * f))];
+    // À taille presque égale (3 %), la disposition la plus ÉQUILIBRÉE : des colonnes de hauteurs proches, aucune pièce seule au milieu
+    // d'une colonne vide (05/11/2026, « l'équilibre »).
+    const desequilibre = (cols: PlacementFlatLay[][]) => {
+      const h = cols.map(hauteurDe);
+      return (Math.max(...h) - Math.min(...h)) / Math.max(...h);
+    };
+    const meilleure = Math.max(...candidates.map(echelle));
+    const colonnes = candidates
+      .filter((c) => echelle(c) >= meilleure * 0.97)
+      .reduce((m, c) => (desequilibre(c) < desequilibre(m) - 1e-9 ? c : m));
     const H = Math.max(...colonnes.map(hauteurDe));
     let x = 0;
     for (const c of colonnes) {
