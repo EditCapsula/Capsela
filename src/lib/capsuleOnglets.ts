@@ -135,6 +135,29 @@ export function avancer(sel: SelectionComposer, cle: CleEmplacement, groupes: Re
   return exclusivite({ ...sel, [cle]: suivante }, cle, groupes);
 }
 
+/**
+ * LES FLÈCHES ENCHAÎNENT LES CATÉGORIES (05/11/2026, demandé : « si j'ai fini d'explorer les pièces d'une catégorie je bascule à la
+ * suivante »). Tant qu'il reste des pièces dans l'emplacement actif, la flèche les fait défiler, comme `avancer` ; arrivé au bout (la
+ * dernière pièce en avançant, la première — ou « Sans » — en reculant), elle active l'emplacement voisin et y montre la pièce
+ * suivante, ou la précédente. Les emplacements se parcourent en boucle : après le dernier vient le premier.
+ */
+export function avancerOuChanger(
+  sel: SelectionComposer,
+  actif: CleEmplacement,
+  presents: readonly CleEmplacement[],
+  groupes: Record<CleEmplacement, EntreeCapsule[]>,
+  pas: 1 | -1
+): { sel: SelectionComposer; actif: CleEmplacement } {
+  const n = groupes[actif].length;
+  const min = emplacementFacultatif(actif, groupes, sel) ? -1 : 0;
+  const actuelle = Math.max(position(sel, actif, n), min);
+  const auBout = pas === 1 ? actuelle >= n - 1 : actuelle <= min;
+  const i = presents.indexOf(actif);
+  if (!auBout || presents.length < 2 || i < 0) return { sel: avancer(sel, actif, groupes, pas), actif };
+  const voisin = presents[(i + pas + presents.length) % presents.length];
+  return { sel: avancer(sel, voisin, groupes, pas), actif: voisin };
+}
+
 /** Place une pièce précise dans son emplacement (« Composer avec cette pièce »), les autres emplacements gardant la leur. */
 export function choisir(sel: SelectionComposer, cle: CleEmplacement, index: number, groupes: Record<CleEmplacement, EntreeCapsule[]>): SelectionComposer {
   return exclusivite({ ...sel, [cle]: index }, cle, groupes);

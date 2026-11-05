@@ -30,7 +30,7 @@ import {
   type AlternativeRemplacement,
 } from "@/lib/capsuleEcran";
 import {
-  avancer,
+  avancerOuChanger,
   emplacementFacultatif,
   categoriesPresentes,
   choisir,
@@ -339,7 +339,9 @@ export default function CapsuleScreen() {
 
   const avancerActif = (pas: 1 | -1) => {
     if (!emplacementActif) return;
-    changerSelection(avancer(selection, emplacementActif.cle, groupes, pas));
+    // Au bout des pièces de l'emplacement, la flèche passe à l'emplacement voisin (05/11/2026, avancerOuChanger).
+    const r = avancerOuChanger(selection, emplacementActif.cle, presents.map((e) => e.cle), groupes, pas);
+    changerSelection(r.sel, r.actif);
   };
   // Le glissement horizontal sur la planche change la pièce de l'emplacement actif ; un geste surtout vertical reste un défilement.
   const toucher = useRef<{ x: number; y: number } | null>(null);
@@ -737,7 +739,7 @@ export default function CapsuleScreen() {
                   />
                 )}
               </div>
-              {emplacementActif && groupes[emplacementActif.cle].length + (emplacementFacultatif(emplacementActif.cle, groupes, selection) ? 1 : 0) > 1 && (
+              {emplacementActif && (presents.length > 1 || groupes[emplacementActif.cle].length + (emplacementFacultatif(emplacementActif.cle, groupes, selection) ? 1 : 0) > 1) && (
                 <>
                   <button
                     onClick={() => avancerActif(-1)}

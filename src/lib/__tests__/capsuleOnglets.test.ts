@@ -3,6 +3,7 @@ import {
   accrocheSelection,
   criteresDeSelection,
   avancer,
+  avancerOuChanger,
   categoriesPresentes,
   choisir,
   cleEntree,
@@ -224,3 +225,27 @@ describe("« Une sélection pensée pour toi » : seuls les critères réellemen
     expect(c.find((x) => x.cle === "dressing")!.texte).toContain("n'entrent pas");
   });
 });
+
+describe("Composer : les flèches enchaînent les catégories (05/11/2026)", () => {
+  const groupes = piecesParEmplacement(entrees);
+  const presents = (["haut", "bas", "robe", "dessus", "chaussures"] as const).slice();
+  it("tant qu'il reste des pièces, la flèche reste dans la catégorie", () => {
+    const depart = selectionDeDepart(groupes, "Automne");
+    const r = avancerOuChanger(depart, "haut", presents, groupes, 1);
+    expect(r.actif).toBe("haut");
+    expect(r.sel.haut).toBe(1);
+  });
+  it("à la dernière pièce, la flèche suivante passe à la catégorie suivante et y montre la pièce d'après", () => {
+    const fin = { ...selectionDeDepart(groupes, "Automne"), haut: 2 };
+    const r = avancerOuChanger(fin, "haut", presents, groupes, 1);
+    expect(r.actif).toBe("bas");
+    expect(r.sel.haut).toBe(2);
+  });
+  it("en reculant depuis la première pièce, la flèche passe à la catégorie précédente ; après la dernière, la première", () => {
+    const depart = selectionDeDepart(groupes, "Automne");
+    expect(avancerOuChanger(depart, "haut", presents, groupes, -1).actif).toBe("chaussures");
+    const finChaussures = { ...depart, chaussures: 0 };
+    expect(avancerOuChanger(finChaussures, "chaussures", presents, groupes, 1).actif).toBe("haut");
+  });
+});
+
