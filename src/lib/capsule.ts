@@ -527,6 +527,15 @@ export type SelectionStrategy = {
    * collants. Absent : comportement d'avant.
    */
   paireHabillee?: "garantie";
+  /**
+   * LES PIÈCES JUMELLES (05/11/2026, signalé : « dans cette capsule j'ai deux tee-shirts blancs », puis « il faut éviter les
+   * doublons »). « evitees » : une pièce jumelle d'une pièce déjà retenue (cf. `sontJumelles`) n'entre que s'il ne reste aucune
+   * autre candidate. Absent : comportement d'avant, pour l'audit avant / après. Mesuré sur l'export du catalogue du 31/10/2026
+   * (jumelles-capsule.audit.ts, 64 capsules) : 45 jumelles dans 38 capsules avant, 9 dans 9 après ; 62 capsules gardent leur taille,
+   * 2 (homme Minimaliste, Automne et Hiver) perdent le second t-shirt blanc sans remplaçant — sa place est allée à une pièce que
+   * les garanties de fin ajoutaient déjà.
+   */
+  jumelles?: "evitees";
 };
 /**
  * Depuis le 29/08/2026, la production ne consulte plus `morphoFit` au rang 3.
@@ -551,7 +560,11 @@ export const STRATEGIE_PRODUCTION: SelectionStrategy = {
   coupesPreferees: "apres_basique",
   miseEnValeurPrime: true,
   paireHabillee: "garantie",
+  jumelles: "evitees",
 };
+
+/** La production juste avant la règle des pièces jumelles (05/11/2026) — pour l'audit avant / après (jumelles-capsule.audit.ts). */
+export const STRATEGIE_AVANT_JUMELLES: SelectionStrategy = { ...STRATEGIE_PRODUCTION, jumelles: undefined };
 
 /** La production juste avant la paire habillée garantie (01/11/2026) — pour l'audit avant / après. */
 export const STRATEGIE_AVANT_PAIRE_HABILLEE: SelectionStrategy = {
@@ -759,6 +772,43 @@ function signatureVisuelle(it: CatalogItem): string | null {
   return it.imageStatus === "ready" && it.imageUrl ? it.imageUrl : null;
 }
 
+const sansAccent = (v: string | null | undefined): string =>
+  (v ?? "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+
+/**
+ * LES PIÈCES JUMELLES (05/11/2026). Deux pièces sont jumelles si elles ont la même catégorie, la même couleur, et des sous-types du
+ * catalogue dont l'un prolonge l'autre : « T-shirt » et « T-shirt col rond » (le cas signalé, ids 448 et 451), mais pas « Pull col
+ * roulé » et « Pull col rond », ni « Robe portefeuille » et « Robe chemise ». Le motif et la longueur des manches, quand ils sont
+ * connus des deux côtés, doivent aussi être les mêmes ; inconnus d'un côté, ils ne séparent pas. Le niveau de formalité aussi : des
+ * baskets de sport et des baskets de ville blanches, un t-shirt technique et un t-shirt de coton noirs ne servent pas les mêmes
+ * occasions (mesuré sur l'export du 31/10 : sans cette condition, presque toutes les jumelles restantes étaient de ce type). Sans
+ * sous-type ou sans couleur : jamais jumelle, faute de savoir.
+ */
+export function sontJumelles(a: Item, b: Item): boolean {
+  const ta = sansAccent(a.subtype).split(/\s+/).filter(Boolean);
+  const tb = sansAccent(b.subtype).split(/\s+/).filter(Boolean);
+  if (!ta.length || !tb.length || a.cat !== b.cat) return false;
+  const couleur = sansAccent(a.color);
+  if (!couleur || couleur !== sansAccent(b.color)) return false;
+  const [court, long] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
+  if (court.some((mot, i) => long[i] !== mot)) return false;
+  const compatibles = (x?: string, y?: string) => !x || !y || sansAccent(x) === sansAccent(y);
+  return compatibles(a.motif, b.motif) && compatibles(a.manches, b.manches) && formalityOf(a) === formalityOf(b);
+}
+
+/**
+ * Les candidates qui ont le MOINS de jumelles parmi les pièces déjà retenues : d'abord celles qui n'en ont aucune ; s'il n'y en a
+ * plus, celles qui n'en ont qu'une (jamais une troisième pièce identique avant une deuxième ailleurs), etc. Jamais vide quand
+ * `candidates` ne l'est pas : la capsule ne rétrécit pas à cause de la règle.
+ */
+function horsJumelles(candidates: CatalogItem[], retenues: readonly CatalogItem[], strategy: SelectionStrategy): CatalogItem[] {
+  if (strategy.jumelles !== "evitees" || candidates.length < 2) return candidates;
+  const n = (it: CatalogItem) => retenues.reduce((k, r) => k + (sontJumelles(it, r) ? 1 : 0), 0);
+  const comptes = candidates.map(n);
+  const min = Math.min(...comptes);
+  return candidates.filter((_, i) => comptes[i] === min);
+}
+
 /**
  * Une capsule ne montre jamais deux fois la même image (signalé le
  * 28/08/2026 : « beaucoup de doublons de pièces dans les capsules »).
@@ -801,13 +851,13 @@ function selectGroup(
 
   const statementCandidates = pool.filter((it) => isStatement(it) && disponible(it));
   if (statementCandidates.length && remaining > 0) {
-    const best = pickBestMarginal(statementCandidates, covered, morphology, strategy, [...dejaRetenues, ...picked], prefs);
+    const best = pickBestMarginal(horsJumelles(statementCandidates, [...dejaRetenues, ...picked], strategy), covered, morphology, strategy, [...dejaRetenues, ...picked], prefs);
     if (best) retenir(best);
   }
 
   let candidates = pool.filter((it) => !picked.some((p) => p.id === it.id) && disponible(it));
   while (remaining > 0 && candidates.length) {
-    const best = pickBestMarginal(candidates, covered, morphology, strategy, [...dejaRetenues, ...picked], prefs);
+    const best = pickBestMarginal(horsJumelles(candidates, [...dejaRetenues, ...picked], strategy), covered, morphology, strategy, [...dejaRetenues, ...picked], prefs);
     if (!best) break;
     retenir(best);
     candidates = candidates.filter((it) => it.id !== best.id && disponible(it));
@@ -1005,7 +1055,7 @@ export function computeDefaultCapsule(
           return !sig || !visuelsUtilises.has(sig);
         });
         if (!candidates.length) continue;
-        const best = pickBestMarginal(candidates, covered, profile.morphology, strategy, out, profile.preferencesSilhouette ?? null);
+        const best = pickBestMarginal(horsJumelles(candidates, out, strategy), covered, profile.morphology, strategy, out, profile.preferencesSilhouette ?? null);
         if (!best) continue;
         out = [...out, best];
         chosenIds.add(best.id);
