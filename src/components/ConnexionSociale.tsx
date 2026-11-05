@@ -1,5 +1,6 @@
 "use client";
 
+import { t } from "@/lib/langue";
 import { Capacitor } from "@capacitor/core";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -53,7 +54,7 @@ export default function ConnexionSociale({ onApple, onGoogle, occupe }: { onAppl
   const apple = connexionAppleActive() ? (
     <button key="apple" type="button" onClick={onApple} disabled={occupe} className={BASE + " bg-[#000] text-[#fff] hover:opacity-90"}>
       <LogoApple />
-      Continuer avec Apple
+      {t("Continuer avec Apple")}
     </button>
   ) : null;
   const google = (
@@ -65,7 +66,7 @@ export default function ConnexionSociale({ onApple, onGoogle, occupe }: { onAppl
       className={BASE + " bg-[#fff] text-[#3c4043] border border-[#dadce0] shadow-[0_1px_2px_rgba(60,64,67,.12)] hover:shadow-[0_2px_6px_rgba(60,64,67,.18)]"}
     >
       <LogoGoogle />
-      Continuer avec Google
+      {t("Continuer avec Google")}
     </button>
   );
   const boutons = surAppareilApple() ? [apple, google] : [google, apple];
@@ -74,7 +75,7 @@ export default function ConnexionSociale({ onApple, onGoogle, occupe }: { onAppl
       <div className="flex flex-col gap-[10px] mt-7">{boutons}</div>
       <div className="flex items-center gap-[11px] my-[22px]">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-[10.5px] tracking-[.14em] uppercase text-placeholder">ou par e-mail</span>
+        <span className="text-[10.5px] tracking-[.14em] uppercase text-placeholder">{t("ou par e-mail")}</span>
         <div className="flex-1 h-px bg-border" />
       </div>
     </>

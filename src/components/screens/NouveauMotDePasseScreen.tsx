@@ -1,5 +1,6 @@
 "use client";
 
+import { t } from "@/lib/langue";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { LONGUEUR_MIN_MOT_DE_PASSE, validerNouveauMotDePasse } from "@/lib/motDePasse";
@@ -36,8 +37,8 @@ export default function NouveauMotDePasseScreen() {
   const enregistrer = async () => {
     if (envoi) return;
     const invalide = validerNouveauMotDePasse(motDePasse, confirmation);
-    if (invalide === "trop_court") return setErreur(`Choisis au moins ${LONGUEUR_MIN_MOT_DE_PASSE} caractères.`);
-    if (invalide === "differents") return setErreur("Les deux mots de passe ne sont pas identiques.");
+    if (invalide === "trop_court") return setErreur(t("Choisis au moins {n} caractères.", { n: LONGUEUR_MIN_MOT_DE_PASSE }));
+    if (invalide === "differents") return setErreur(t("Les deux mots de passe ne sont pas identiques."));
     setErreur(null);
     setEnvoi(true);
     const refus = await auth.enregistrerNouveauMotDePasse(motDePasse);
@@ -54,16 +55,15 @@ export default function NouveauMotDePasseScreen() {
           <LogoCapsela />
         </div>
         <div className="t-titre-ecran text-ink">
-          Ce lien n&apos;est plus <span className="italic text-terracotta">valide</span>
+          {t("Ce lien n'est plus")} <span className="italic text-terracotta">{t("valide")}</span>
         </div>
         <div className="t-chapeau text-muted mt-[10px]">
-          Il a expiré ou a déjà servi. Demande un nouveau lien depuis l&apos;écran de connexion, avec « Mot de passe
-          oublié ? ».
+          {t("Il a expiré ou a déjà servi. Demande un nouveau lien depuis l'écran de connexion, avec « Mot de passe oublié ? ».")}
         </div>
         <Button variante="principal" pleine={false} className="mt-7"
           onClick={allerALaConnexion}
         >
-          Retour à la connexion
+          {t("Retour à la connexion")}
         </Button>
       </div>
     );
@@ -77,13 +77,13 @@ export default function NouveauMotDePasseScreen() {
           <LogoCapsela />
         </div>
         <div className="t-titre-ecran text-ink">
-          Ton mot de passe a été <span className="italic text-terracotta">mis à jour</span>
+          {t("Ton mot de passe a été")} <span className="italic text-terracotta">{t("mis à jour")}</span>
         </div>
-        <div className="t-chapeau text-muted mt-[10px]">Tu peux maintenant te connecter avec ton nouveau mot de passe.</div>
+        <div className="t-chapeau text-muted mt-[10px]">{t("Tu peux maintenant te connecter avec ton nouveau mot de passe.")}</div>
         <Button variante="principal" pleine={false} className="mt-7"
           onClick={allerALaConnexion}
         >
-          Se connecter
+          {t("Se connecter")}
         </Button>
       </div>
     );
@@ -96,10 +96,10 @@ export default function NouveauMotDePasseScreen() {
         <LogoCapsela />
       </div>
       <div className="t-titre-ecran text-ink">
-        Nouveau <span className="italic text-terracotta">mot de passe</span>
+        {t("Nouveau")} <span className="italic text-terracotta">{t("mot de passe")}</span>
       </div>
       <div className="t-chapeau text-muted mt-[10px]">
-        Choisis ton nouveau mot de passe : au moins {LONGUEUR_MIN_MOT_DE_PASSE} caractères.
+        {t("Choisis ton nouveau mot de passe : au moins {n} caractères.", { n: LONGUEUR_MIN_MOT_DE_PASSE })}
       </div>
       <form
         className="flex flex-col gap-3 mt-[26px]"
@@ -109,7 +109,7 @@ export default function NouveauMotDePasseScreen() {
         }}
       >
         <label className="flex flex-col gap-[6px]">
-          <span className="t-label text-muted">Nouveau mot de passe</span>
+          <span className="t-label text-muted">{t("Nouveau mot de passe")}</span>
           <ChampMotDePasse
             autoComplete="new-password"
             value={motDePasse}
@@ -117,7 +117,7 @@ export default function NouveauMotDePasseScreen() {
           />
         </label>
         <label className="flex flex-col gap-[6px]">
-          <span className="t-label text-muted">Confirmer le nouveau mot de passe</span>
+          <span className="t-label text-muted">{t("Confirmer le nouveau mot de passe")}</span>
           <ChampMotDePasse
             autoComplete="new-password"
             value={confirmation}
@@ -133,7 +133,7 @@ export default function NouveauMotDePasseScreen() {
           type="submit"
           disabled={envoi}
         >
-          {envoi ? "Un instant…" : "Enregistrer mon nouveau mot de passe"}
+          {envoi ? t("Un instant…") : t("Enregistrer mon nouveau mot de passe")}
         </Button>
       </form>
     </div>

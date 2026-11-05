@@ -11,6 +11,7 @@ import type {
   ShoeType,
   WorkMode,
 } from "./types";
+import { aTraduire } from "./langue";
 import { NOMS_AJOUTES_AU_DRESSING, PAL_COULEURS } from "./palCouleurs";
 
 export const CATS: [CategoryKey, string, string][] = [
@@ -500,28 +501,28 @@ export interface OnboardingSlide {
 
 export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
-    kicker: "Ton style",
-    title: ["Un dressing", "qui te ressemble."],
-    body: "Découvre des styles, des pièces et des associations qui correspondent à ta personnalité. Capsela imagine des tenues adaptées à tes envies.",
+    kicker: aTraduire("Ton style"),
+    title: [aTraduire("Un dressing"), aTraduire("qui te ressemble.")],
+    body: aTraduire("Découvre des styles, des pièces et des associations qui correspondent à ta personnalité. Capsela imagine des tenues adaptées à tes envies."),
   },
   {
-    kicker: "Ton dressing",
-    title: ["Tout ce que tu as.", "Tout ce que tu peux porter."],
-    body: "Ajoute les pièces que tu possèdes et laisse Capsela repérer celles qui vont ensemble. Ton dressing devient une source d’idées, pas une pile de vêtements.",
+    kicker: aTraduire("Ton dressing"),
+    title: [aTraduire("Tout ce que tu as."), aTraduire("Tout ce que tu peux porter.")],
+    body: aTraduire("Ajoute les pièces que tu possèdes et laisse Capsela repérer celles qui vont ensemble. Ton dressing devient une source d’idées, pas une pile de vêtements."),
   },
   {
-    kicker: "Tes tenues",
-    title: ["Chaque matin,", "tu sais quoi porter."],
-    body: "Capsela compose des tenues adaptées à ton style, à la météo et à tes occasions, avec tes pièces et celles qui peuvent compléter ton dressing.",
+    kicker: aTraduire("Tes tenues"),
+    title: [aTraduire("Chaque matin,"), aTraduire("tu sais quoi porter.")],
+    body: aTraduire("Capsela compose des tenues adaptées à ton style, à la météo et à tes occasions, avec tes pièces et celles qui peuvent compléter ton dressing."),
   },
   {
-    kicker: "Tes valises",
-    title: ["Partir devient", "plus simple."],
-    body: "Indique ta destination, tes dates et ton programme. Capsela sélectionne les pièces à emporter et compose tes tenues pour tout le séjour.",
+    kicker: aTraduire("Tes valises"),
+    title: [aTraduire("Partir devient"), aTraduire("plus simple.")],
+    body: aTraduire("Indique ta destination, tes dates et ton programme. Capsela sélectionne les pièces à emporter et compose tes tenues pour tout le séjour."),
   },
   {
-    kicker: "Capsela",
-    title: ["Ton dressing.", "Ton style.", "Ton quotidien."],
-    body: "Crée ton compte pour retrouver ton dressing, tes capsules, tes tenues et tes valises au même endroit.",
+    kicker: aTraduire("Capsela"),
+    title: [aTraduire("Ton dressing."), aTraduire("Ton style."), aTraduire("Ton quotidien.")],
+    body: aTraduire("Crée ton compte pour retrouver ton dressing, tes capsules, tes tenues et tes valises au même endroit."),
   },
 ];

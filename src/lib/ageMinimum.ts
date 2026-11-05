@@ -1,3 +1,5 @@
+import { t } from "./langue";
+
 /**
  * Âge minimum d'inscription (01/10/2026, docs/legal/README.md, écart 4).
  *
@@ -35,9 +37,9 @@ export function verifierAge(naissance: string, maintenant: Date = new Date()): {
 }
 
 export function messageAge(raison: RaisonAge): string {
-  if (raison === "manquante") return "Indique ta date de naissance pour créer ton compte.";
-  if (raison === "invalide") return "Cette date de naissance n'est pas valide.";
-  return `Il faut avoir au moins ${AGE_MINIMUM} ans pour créer un compte.`;
+  if (raison === "manquante") return t("Indique ta date de naissance pour créer ton compte.");
+  if (raison === "invalide") return t("Cette date de naissance n'est pas valide.");
+  return t("Il faut avoir au moins {n} ans pour créer un compte.", { n: AGE_MINIMUM });
 }
 
 /**

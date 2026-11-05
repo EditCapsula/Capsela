@@ -1,5 +1,6 @@
 "use client";
 
+import { t } from "./langue";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { lirePreferencesSilhouette, memesPreferencesSilhouette, preferencesSilhouetteVersLigne } from "./preferencesSilhouette";
@@ -148,12 +149,12 @@ function profileToRow(p: Profile) {
 
 function frenchAuthError(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes("invalid login credentials")) return "E-mail ou mot de passe incorrect.";
-  if (m.includes("already registered")) return "Un compte existe déjà avec cet e-mail.";
-  if (m.includes("password should be at least")) return "Le mot de passe doit contenir au moins 6 caractères.";
-  if (m.includes("valid email")) return "Adresse e-mail invalide.";
-  if (m.includes("rate limit")) return "Trop de tentatives — réessaie dans quelques minutes.";
-  return "Une erreur est survenue : " + message;
+  if (m.includes("invalid login credentials")) return t("E-mail ou mot de passe incorrect.");
+  if (m.includes("already registered")) return t("Un compte existe déjà avec cet e-mail.");
+  if (m.includes("password should be at least")) return t("Le mot de passe doit contenir au moins 6 caractères.");
+  if (m.includes("valid email")) return t("Adresse e-mail invalide.");
+  if (m.includes("rate limit")) return t("Trop de tentatives — réessaie dans quelques minutes.");
+  return t("Une erreur est survenue : {message}", { message });
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

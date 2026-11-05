@@ -1,5 +1,6 @@
 "use client";
 
+import { t } from "@/lib/langue";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -58,15 +59,15 @@ export default function LoginScreen() {
    */
   const envoyerLien = async () => {
     if (forgotBusy) return;
-    if (!emailPlausible(email)) return setForgotErreur("Cette adresse e-mail ne semble pas complète.");
+    if (!emailPlausible(email)) return setForgotErreur(t("Cette adresse e-mail ne semble pas complète."));
     setForgotErreur(null);
     setForgotBusy(true);
     const issue = await auth.demanderLienReinitialisation(email);
     setForgotBusy(false);
     if (issue === "envoye") setForgotSent(true);
-    else if (issue === "demo") setForgotErreur("Mode démo : aucun e-mail ne peut être envoyé.");
-    else if (issue === "trop_de_tentatives") setForgotErreur("Trop de demandes — réessaie dans quelques minutes.");
-    else setForgotErreur("Connexion impossible. Vérifie ton réseau et réessaie.");
+    else if (issue === "demo") setForgotErreur(t("Mode démo : aucun e-mail ne peut être envoyé."));
+    else if (issue === "trop_de_tentatives") setForgotErreur(t("Trop de demandes — réessaie dans quelques minutes."));
+    else setForgotErreur(t("Connexion impossible. Vérifie ton réseau et réessaie."));
   };
   const fermerOubli = () => {
     setForgotOpen(false);
@@ -77,41 +78,41 @@ export default function LoginScreen() {
   if (forgotOpen) {
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
-        <BoutonRetour onClick={fermerOubli} label="Revenir à la connexion" />
+        <BoutonRetour onClick={fermerOubli} label={t("Revenir à la connexion")} />
 
         {forgotSent ? (
           <div className="mt-[30px] flex flex-col items-center text-center px-[10px] py-5">
             <span className="w-[52px] h-[52px] rounded-full bg-warm-bg text-terracotta flex items-center justify-center text-[22px] mb-4">
               ✉
             </span>
-            <div className="t-titre-carte text-ink">Vérifie ta boîte mail</div>
+            <div className="t-titre-carte text-ink">{t("Vérifie ta boîte mail")}</div>
             <div className="text-[13px] text-muted mt-2 leading-[1.5] max-w-[280px]">
-              Si un compte correspond à cette adresse, tu recevras un e-mail pour réinitialiser ton mot de passe.
+              {t("Si un compte correspond à cette adresse, tu recevras un e-mail pour réinitialiser ton mot de passe.")}
             </div>
             <Button variante="principal" className="mt-[22px]"
               onClick={fermerOubli}
             >
-              Retour à la connexion
+              {t("Retour à la connexion")}
             </Button>
           </div>
         ) : (
           <>
             <div className="mt-[30px]">
               <div className="t-titre-ecran text-ink">
-                Réinitialiser mon <span className="italic text-terracotta">mot de passe</span>
+                {t("Réinitialiser mon")} <span className="italic text-terracotta">{t("mot de passe")}</span>
               </div>
               <div className="t-chapeau text-muted mt-[10px]">
-                Entre ton adresse e-mail et nous t&apos;enverrons un lien pour créer un nouveau mot de passe.
+                {t("Entre ton adresse e-mail et nous t'enverrons un lien pour créer un nouveau mot de passe.")}
               </div>
             </div>
             <label className="mt-[26px] flex flex-col gap-[6px]">
-              <span className="t-label text-muted">E-mail</span>
+              <span className="t-label text-muted">{t("E-mail")}</span>
               <Input
                 type="email"
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Adresse e-mail"
+                placeholder={t("Adresse e-mail")}
               />
             </label>
             {forgotErreur && (
@@ -123,7 +124,7 @@ export default function LoginScreen() {
               onClick={envoyerLien}
               disabled={forgotBusy}
             >
-              {forgotBusy ? "Un instant…" : "Recevoir le lien"}
+              {forgotBusy ? t("Un instant…") : t("Recevoir le lien")}
             </Button>
           </>
         )}
@@ -134,17 +135,17 @@ export default function LoginScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
       <div className="flex items-center justify-between">
-        <BoutonRetour onClick={actions.goAuth} label="Revenir à la création de compte" />
+        <BoutonRetour onClick={actions.goAuth} label={t("Revenir à la création de compte")} />
         <LogoCapsela />
         <div className="w-[38px] flex-shrink-0" />
       </div>
 
       <div className="mt-[30px]">
         <div className="t-titre-ecran text-ink">
-          Content de te <span className="italic text-terracotta">revoir</span>
+          {t("Content de te")} <span className="italic text-terracotta">{t("revoir")}</span>
         </div>
         <div className="t-chapeau text-muted mt-[10px]">
-          Connecte-toi pour retrouver ton dressing et ta tenue du jour.
+          {t("Connecte-toi pour retrouver ton dressing et ta tenue du jour.")}
         </div>
       </div>
 
@@ -155,13 +156,13 @@ export default function LoginScreen() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Adresse e-mail"
+          placeholder={t("Adresse e-mail")}
         />
         <ChampMotDePasse
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Mot de passe"
+          placeholder={t("Mot de passe")}
         />
       </div>
 
@@ -169,7 +170,7 @@ export default function LoginScreen() {
         onClick={() => setForgotOpen(true)}
         className="mt-3 self-end text-[12px] text-terracotta cursor-pointer"
       >
-        Mot de passe oublié ?
+        {t("Mot de passe oublié ?")}
       </button>
 
       {auth.error && (
@@ -179,14 +180,14 @@ export default function LoginScreen() {
       )}
 
       <Button pleine={false} className="mt-5" onClick={submit} disabled={busy}>
-        {busy ? "Un instant…" : "Se connecter"}
+        {busy ? t("Un instant…") : t("Se connecter")}
       </Button>
 
       <div className="flex-1" />
       <div className="text-center pt-4 pb-[6px] text-[13px] text-muted">
-        Pas encore de compte ·{" "}
+        {t("Pas encore de compte")} ·{" "}
         <button onClick={actions.goAuth} className="text-terracotta cursor-pointer">
-          Créer un compte
+          {t("Créer un compte")}
         </button>
       </div>
     </div>
