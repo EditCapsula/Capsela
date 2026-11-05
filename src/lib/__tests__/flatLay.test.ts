@@ -165,8 +165,8 @@ describe("contextes du flat lay — un moteur, des paramètres différents", () 
   const look = () => [p("veste", 0.94), p("haut", 1), p("pantalon", 0.6), p("chaussures", 1.1), p("sac", 0.82)];
 
   it("hero-home et look-detail utilisent le même moteur mais pas la même zone ni les mêmes angles", () => {
-    const home = composerFlatLay(look(), "ctx", { contexte: "hero-home" });
-    const detail = composerFlatLay(look(), "ctx", { contexte: "look-detail" });
+    const home = composerFlatLay(look(), "ctx", { proportions: false, contexte: "hero-home" });
+    const detail = composerFlatLay(look(), "ctx", { proportions: false, contexte: "look-detail" });
     expect(CONTEXTES["look-detail"].hauteur).toBeGreaterThan(CONTEXTES["hero-home"].hauteur);
     // L'accueil ne pose que 4 pièces (09/10/2026), la Tenue du jour toutes.
     expect(home.pieces.length).toBe(CONTEXTES["hero-home"].maxPieces);
@@ -204,7 +204,7 @@ describe("contextes du flat lay — un moteur, des paramètres différents", () 
     for (const c of ["hero-home", "look-detail", "capsule", "dressing", "packing"] as const) {
       expect(CONTEXTES[c].hauteur).toBeGreaterThanOrEqual(95);
       expect(CONTEXTES[c].marge).toBeGreaterThanOrEqual(3);
-      expect(composerFlatLay(look(), "x", { contexte: c }).pieces.length).toBe(Math.min(5, CONTEXTES[c].maxPieces ?? 5));
+      expect(composerFlatLay(look(), "x", { proportions: false, contexte: c }).pieces.length).toBe(Math.min(5, CONTEXTES[c].maxPieces ?? 5));
     }
   });
 });
@@ -213,9 +213,9 @@ describe("accessoires — jamais isolés, jamais en surnombre", () => {
   it("le nombre d'accessoires est limité par le contexte et par le nombre de pièces", () => {
     const base = [p("veste", 0.94), p("haut", 1), p("pantalon", 0.6)];
     const trois = [p("bijou", 1), p("accessoire", 1), p("bijou", 1), p("accessoire", 1)];
-    const { pieces } = composerFlatLay([...base, ...trois], "a");
+    const { pieces } = composerFlatLay([...base, ...trois], "a", { proportions: false });
     expect(pieces.filter((q) => q.role === "accessoire").length).toBeLessThanOrEqual(CONTEXTES["hero-home"].maxAccessoires[0]);
-    const beaucoup = composerFlatLay([...base, p("chaussures"), p("sac"), ...trois], "a").pieces.filter((q) => q.role === "accessoire");
+    const beaucoup = composerFlatLay([...base, p("chaussures"), p("sac"), ...trois], "a", { proportions: false }).pieces.filter((q) => q.role === "accessoire");
     expect(beaucoup.length).toBeLessThanOrEqual(CONTEXTES["hero-home"].maxAccessoires[1]);
   });
 
@@ -444,7 +444,7 @@ describe("accueil (hero-home) — 3 à 4 pièces lisibles (09/10/2026, brief « 
 
   it("jamais plus de 4 pièces dans la planche ; les autres restent dans la tenue (masquées), jamais retirées de la tenue réelle", () => {
     for (const [nom, pieces] of Object.entries(CONFIGS)) {
-      const r = composerFlatLay(pieces, "h", { contexte: "hero-home" });
+      const r = composerFlatLay(pieces, "h", { proportions: false, contexte: "hero-home" });
       expect(r.pieces.length, nom).toBeLessThanOrEqual(4);
       expect(r.pieces.length, nom).toBeGreaterThanOrEqual(Math.min(3, pieces.length));
       expect(r.pieces.length + r.masquees.length + r.ecartees.length, nom).toBe(pieces.length);
@@ -452,9 +452,9 @@ describe("accueil (hero-home) — 3 à 4 pièces lisibles (09/10/2026, brief « 
   });
 
   it("les pièces retenues sont les plus représentatives : haut, bas, veste ou manteau, chaussures avant le sac ; un second haut ou une seconde veste après", () => {
-    const six = composerFlatLay(CONFIGS["six pièces"], "h", { contexte: "hero-home" });
+    const six = composerFlatLay(CONFIGS["six pièces"], "h", { proportions: false, contexte: "hero-home" });
     expect(six.pieces.map((q) => q.cat).sort()).toEqual(["chaussures", "pantalon", "pull", "veste"]);
-    const cinq = composerFlatLay(CONFIGS["chemise + pantalon + blazer + sac + chaussures"], "h", { contexte: "hero-home" });
+    const cinq = composerFlatLay(CONFIGS["chemise + pantalon + blazer + sac + chaussures"], "h", { proportions: false, contexte: "hero-home" });
     expect(cinq.pieces.map((q) => q.cat).sort()).toEqual(["chaussures", "haut", "pantalon", "veste"]);
   });
 
@@ -516,7 +516,7 @@ describe("accueil (hero-home) — 3 à 4 pièces lisibles (09/10/2026, brief « 
   it("le haut et le bas se lisent : au moins 29 % de la largeur de la zone ; sac et chaussures au moins 22 %", () => {
     for (const [nom, pieces] of Object.entries(CONFIGS))
       for (let i = 0; i < 20; i++)
-        for (const q of composerFlatLay(pieces, "l" + i, { contexte: "hero-home" }).pieces) {
+        for (const q of composerFlatLay(pieces, "l" + i, { proportions: false, contexte: "hero-home" }).pieces) {
           if (["haut", "pull", "pantalon", "jean", "robe", "veste", "manteau"].includes(q.cat)) expect(q.l, `${nom} ${q.cat}`).toBeGreaterThanOrEqual(29);
           if (q.cat === "sac" || q.cat === "chaussures") expect(q.l, `${nom} ${q.cat}`).toBeGreaterThanOrEqual(22);
         }
@@ -524,10 +524,10 @@ describe("accueil (hero-home) — 3 à 4 pièces lisibles (09/10/2026, brief « 
 
   it("le t-shirt sous un pull reste masqué sur l'accueil (et posé dans la Tenue du jour)", () => {
     const pieces = [p("pull", 1), p("haut", 0.95), p("pantalon", 0.5), p("sac", 0.85)];
-    const home = composerFlatLay(pieces, "h", { contexte: "hero-home" });
+    const home = composerFlatLay(pieces, "h", { proportions: false, contexte: "hero-home" });
     expect(home.masquees).toContain(pieces[1].id);
     expect(home.pieces.find((q) => q.id === pieces[1].id)).toBeUndefined();
-    const detail = composerFlatLay(pieces, "h", { contexte: "look-detail" });
+    const detail = composerFlatLay(pieces, "h", { proportions: false, contexte: "look-detail" });
     expect(detail.masquees).toEqual([]);
     expect(detail.pieces.find((q) => q.id === pieces[1].id)?.role).toBe("couche");
   });
@@ -536,12 +536,12 @@ describe("accueil (hero-home) — 3 à 4 pièces lisibles (09/10/2026, brief « 
     const manteauPhoto = { ...p("manteau", 0.8), photoBrute: true };
     const sacPhoto = { ...p("sac", 1), photoBrute: true };
     const tenue = [manteauPhoto, p("haut", 1), p("pantalon", 0.55), p("veste", 1), p("chaussures", 1.5), sacPhoto];
-    const home = composerFlatLay(tenue, "h", { contexte: "hero-home" });
+    const home = composerFlatLay(tenue, "h", { proportions: false, contexte: "hero-home" });
     expect(home.pieces.map((q) => q.id)).not.toContain(manteauPhoto.id);
     expect(home.pieces.map((q) => q.id)).not.toContain(sacPhoto.id);
     expect(home.masquees).toEqual(expect.arrayContaining([manteauPhoto.id, sacPhoto.id]));
     // La Tenue du jour montre toujours la tenue entière.
-    expect(composerFlatLay(tenue, "h", { contexte: "look-detail" }).pieces.map((q) => q.id)).toContain(manteauPhoto.id);
+    expect(composerFlatLay(tenue, "h", { proportions: false, contexte: "look-detail" }).pieces.map((q) => q.id)).toContain(manteauPhoto.id);
   });
 
   it("les chaussures restent sur l'accueil même en photo brute (14/10/2026, signalé : tenue de l'accueil sans ses chaussures)", () => {
@@ -584,7 +584,7 @@ describe("une seconde veste n'est pas un accessoire (09/10/2026, « la veste ove
     }
   });
   it("sur l'accueil (4 pièces), la veste en plus passe après le manteau, le haut, le bas et les chaussures : elle reste dans la tenue", () => {
-    const { pieces, masquees } = composerFlatLay(tenue, "x,y", { contexte: "hero-home" });
+    const { pieces, masquees } = composerFlatLay(tenue, "x,y", { contexte: "hero-home", proportions: false });
     expect(pieces.length).toBe(4);
     expect(pieces.some((q) => q.cat === "veste")).toBe(false);
     expect(masquees.length).toBe(2);
@@ -816,4 +816,84 @@ describe("la planche en deux colonnes (05/11/2026, planches de référence de la
     const c = CONTEXTES["hero-home"];
     expect(robe.h / (c.hauteur - 2 * c.marge)).toBeGreaterThan(0.85);
   });
+});
+
+describe("trop de pièces pour deux colonnes (05/11/2026, robe + sac + chaussures + collants + bijou)", () => {
+  const T = (id: number, cat: CategoryKey, ratio: number, accessoireType?: string) => ({ id, cat, ratio, accessoireType });
+  const tenue = [T(6, "robe", 0.55), T(4, "sac", 0.84), T(3, "chaussures", 1.4), T(9, "accessoire", 0.3, "Collants"), T(8, "bijou", 1.6)];
+  it("la disposition retenue (deux ou trois colonnes) laisse à la robe au moins 60 % de la hauteur de la zone (40 % sur la capture)", () => {
+    const c = CONTEXTES["look-detail"];
+    const r = composerFlatLay(tenue, "x", { contexte: "look-detail" }).pieces;
+    const robe = r.find((q) => q.cat === "robe")!;
+    expect(robe.h / (c.hauteur - (c.margeHaute ?? c.marge) - c.marge)).toBeGreaterThan(0.6);
+  });
+  it("les collants se posent en hauteur, comme un bas, et non comme un petit accessoire", () => {
+    const r = composerFlatLay(tenue, "x", { contexte: "look-detail" }).pieces;
+    const robe = r.find((q) => q.cat === "robe")!;
+    const collants = r.find((q) => q.id === 9)!;
+    expect(collants.h / robe.h).toBeCloseTo(0.85 / 1.65, 1);
+  });
+});
+
+describe("la règle commune des compositions de looks (05/11/2026, docs/compositions-looks.md)", () => {
+  const T = (id: number, cat: CategoryKey, ratio: number, accessoireType?: string) => ({ id, cat, ratio, accessoireType });
+  const TENUES: PieceFlatLay[][] = [
+    [T(1, "haut", 0.94), T(2, "jean", 0.41), T(3, "chaussures", 1.36), T(4, "sac", 0.84)],
+    [T(1, "haut", 0.61), T(5, "veste", 0.8), T(2, "jean", 0.41), T(3, "chaussures", 1.36), T(4, "sac", 0.84), T(8, "bijou", 1.6)],
+    [T(6, "robe", 0.55), T(4, "sac", 0.84), T(3, "chaussures", 1.4), T(9, "accessoire", 0.3, "Collants"), T(8, "bijou", 1.6)],
+    [T(7, "manteau", 0.68), T(1, "pull", 0.9), T(10, "haut", 0.95), T(2, "jupe", 0.68), T(3, "chaussures", 0.93), T(4, "sac", 0.84)],
+  ];
+  const VETEMENTS: CategoryKey[] = ["haut", "pull", "veste", "manteau", "pantalon", "jean", "jupe", "short", "robe", "combinaison"];
+  const PETITS: CategoryKey[] = ["bijou", "accessoire"];
+
+  it("l'accueil et la Tenue du jour posent les mêmes pièces, aux mêmes proportions entre elles", () => {
+    for (const t of TENUES) {
+      const a = composerFlatLay(t, "x", { contexte: "hero-home" });
+      const b = composerFlatLay(t, "x", { contexte: "look-detail" });
+      expect(a.pieces.map((q) => q.id).sort()).toEqual(b.pieces.map((q) => q.id).sort());
+      const ref = (r: PlacementFlatLay[]) => Math.max(...r.map((q) => q.h));
+      for (const q of a.pieces) {
+        const autre = b.pieces.find((x) => x.id === q.id)!;
+        expect(q.h / ref(a.pieces)).toBeCloseTo(autre.h / ref(b.pieces), 2);
+      }
+    }
+  });
+
+  it("les vêtements restent grands : la plus grande pièce fait au moins 40 % de la hauteur utile, même à six pièces", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      for (const t of TENUES) {
+        const c = CONTEXTES[contexte];
+        const r = composerFlatLay(t, "x", { contexte }).pieces;
+        const utile = c.hauteur - (c.margeHaute ?? c.marge) - c.marge;
+        expect(Math.max(...r.filter((q) => VETEMENTS.includes(q.cat)).map((q) => q.h)) / utile).toBeGreaterThan(0.4);
+      }
+  });
+
+  it("les accessoires se voient sans prendre le dessus : jamais plus grands que le plus petit vêtement, deux au plus", () => {
+    for (const t of TENUES) {
+      const r = composerFlatLay(t, "x", { contexte: "look-detail" }).pieces;
+      const taille = (q: PlacementFlatLay) => Math.max(q.l, q.h);
+      const petits = r.filter((q) => PETITS.includes(q.cat) && q.id !== 9);
+      const vetements = r.filter((q) => VETEMENTS.includes(q.cat));
+      expect(petits.length).toBeLessThanOrEqual(2);
+      for (const q of petits) expect(taille(q)).toBeLessThanOrEqual(Math.min(...vetements.map(taille)) + 1e-6);
+    }
+  });
+});
+
+describe("le t-shirt : affiché quand il est le haut de la tenue, pas quand il est une couche sous un pull (05/11/2026)", () => {
+  const T = (id: number, cat: CategoryKey, ratio: number) => ({ id, cat, ratio });
+  for (const contexte of ["hero-home", "look-detail"] as const) {
+    it(`${contexte} : t-shirt seul en haut → posé`, () => {
+      const r = composerFlatLay([T(1, "haut", 0.94), T(2, "jean", 0.41), T(3, "chaussures", 1.36)], "x", { contexte });
+      expect(r.pieces.some((q) => q.id === 1)).toBe(true);
+      expect(r.masquees).not.toContain(1);
+    });
+    it(`${contexte} : t-shirt sous un pull → dans la tenue, non dessiné ; le pull, lui, est posé`, () => {
+      const r = composerFlatLay([T(10, "pull", 0.9), T(1, "haut", 0.94), T(2, "jean", 0.41), T(3, "chaussures", 1.36)], "x", { contexte });
+      expect(r.pieces.some((q) => q.id === 1)).toBe(false);
+      expect(r.masquees).toContain(1);
+      expect(r.pieces.some((q) => q.id === 10)).toBe(true);
+    });
+  }
 });

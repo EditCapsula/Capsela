@@ -3,6 +3,33 @@
 Décidé le 08/10/2026. Le hero de l'accueil pose les pièces du look comme sur une planche de stylisme (`FlatLayCapsela`,
 `src/lib/flatLay.ts`). Ce document fixe ce que le moteur attend des images et ce qu'il en fait.
 
+## La règle commune des compositions de looks (05/11/2026)
+
+Arbitrée par la propriétaire sur des rendus réels : la composition en colonnes devient la **référence visuelle de Capsela**, avec une
+seule règle pour tous les écrans qui passent par `FlatLayCapsela` (accueil, Tenue du jour, Planifier, idées de looks, Créer un look, avis
+d'un proche, Capsule, Dressing). Aucun écran n'a son propre traitement : le contexte (`hero-home`, `look-detail`) ne règle plus que la
+zone et ses marges.
+
+1. **Les vêtements restent grands.** La plus grande pièce occupe au moins 40 % de la hauteur utile, même à six pièces ; une robe, au
+   moins 60 %. Le moteur essaie deux et trois colonnes et retient la disposition qui donne les pièces les plus grandes.
+2. **Les accessoires se voient sans prendre le dessus.** Deux au plus, jamais plus grands que le plus petit vêtement ; les collants,
+   pièce longue, se posent en hauteur comme un bas.
+3. **Les pièces ne se chevauchent pas.** Chaque pièce a sa place dans sa colonne.
+4. **Les proportions sont homogènes d'une tenue à l'autre.** Chaque pièce a la taille `PROPORTION_PIECE` (pantalon = 1 : haut 0,8,
+   blazer 0,75, manteau 1,0, jupe 0,75, short 0,6, robe 1,65, sac 0,55, chaussures 0,52, accessoire 0,5, bijou 0,45, collants 0,85),
+   mesurée sur les planches de référence ; la même tenue montre les mêmes pièces, aux mêmes proportions, sur tous les écrans.
+
+Disposition : à gauche le haut puis le bas, ou la robe seule ; à droite la veste ou le manteau, le sac, les chaussures, puis les
+accessoires. Plusieurs dispositions sont essayées (deux ou trois colonnes) : la planche retient celle qui donne les pièces les plus
+grandes et, à taille presque égale, celle dont les colonnes ont les hauteurs les plus proches. Chaque accessoire va dans la colonne la
+plus courte, jamais regroupé dans un coin. Le t-shirt porté sous un pull reste dans la tenue sans être dessiné ; quand il est le haut de la tenue, il est posé comme toute pièce (arbitré le 05/11/2026).
+Testé dans `src/lib/__tests__/flatLay.test.ts` (« la règle commune des compositions de looks »). L'ancien moteur, décrit dans la suite
+de ce document, reste accessible par le levier `proportions: false` pour les mesures avant / après.
+
+Depuis le 05/11/2026, l'agenda des looks (Planifier → Mes planifications) et la valise (page d'un look, cartes du programme, carrousel
+des looks) posent aussi leurs planches avec ce moteur, par `PlancheLook` (contexte « packing ») : l'ancienne grille `OutfitComposition`
+n'est plus affichée nulle part.
+
 ## Les images
 
 | | Standard |

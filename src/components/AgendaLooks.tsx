@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { RailPiecesTenue } from "@/components/HeroTenue";
-import { OutfitComposition } from "@/components/OutfitComposition";
+import PlancheLook from "@/components/PlancheLook";
 import {
   detailCapsela,
   echeanceLongue,
@@ -140,8 +140,8 @@ const nomMarque = (m: ReturnType<typeof marqueDuJour>) =>
 /** La miniature d'une ligne : la planche de la tenue, petite, sur le fond chaud des cartes éditoriales. */
 function Miniature({ pieces, taille }: { pieces: Item[]; taille: number }) {
   return (
-    <span className="flex-shrink-0 rounded-champ bg-warm-bg p-[5px]" style={{ width: taille, height: taille }} aria-hidden="true">
-      {pieces.length > 0 && <OutfitComposition items={pieces} variant="planche" />}
+    <span className="block flex-shrink-0 rounded-champ bg-warm-bg p-[5px]" style={{ width: taille, height: taille }} aria-hidden="true">
+      {pieces.length > 0 && <PlancheLook pieces={pieces} />}
     </span>
   );
 }
@@ -632,7 +632,7 @@ function VueJour({
                       style={{ aspectRatio: "100 / 86", padding: "18px 16px" }}
                     >
                       {pieces.length > 0 ? (
-                        <OutfitComposition items={pieces} variant="planche" />
+                        <PlancheLook pieces={pieces} />
                       ) : (
                         <span className="h-full flex items-center justify-center text-center px-6 text-[13px] text-muted-3 leading-[1.5]">
                           Les pièces de ce look ne sont plus dans ton dressing.
@@ -759,7 +759,7 @@ function ProchainLook({
             style={{ aspectRatio: "100 / 86", padding: "18px 16px" }}
           >
             {pieces.length > 0 ? (
-              <OutfitComposition items={pieces} variant="planche" />
+              <PlancheLook pieces={pieces} />
             ) : (
               <span className="h-full flex items-center justify-center text-center px-6 text-[13px] text-muted-3 leading-[1.5]">
                 Les pièces de ce look ne sont plus dans ton dressing.
