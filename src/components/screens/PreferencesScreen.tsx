@@ -138,12 +138,8 @@ export default function PreferencesScreen() {
             className="border-none bg-transparent text-[13px] text-ink font-sans outline-none min-h-[32px]"
           />
         </Ligne>
-        {/* Ce que le réglage fait réellement, dit seulement quand il ne peut pas agir. */}
-        {prefs.notifEnabled && !notificationsDisponiblesIci() && (
-          <div className="px-4 py-[12px] text-[11px] text-muted leading-[1.45]">
-            Les notifications arrivent dans l&apos;application Capsela sur Android. Le site n&apos;en envoie pas.
-          </div>
-        )}
+        {/* La phrase « Les notifications arrivent dans l'application Capsela sur Android. Le site n'en envoie pas. », affichée sur le
+            site, a été retirée le 05/11/2026 (demandé : « cette phrase ne sert à rien »). */}
         {prefs.notifEnabled && etatNotif === "refusee" && (
           <div className="px-4 py-[12px] text-[11px] text-rust leading-[1.45]" role="alert">
             Ton téléphone bloque les notifications de Capsela. Autorise-les dans ses réglages (Applications, Capsela,
