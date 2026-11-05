@@ -11,7 +11,8 @@ import type { Ref, RoleFlatLay } from "./flatLay";
  *   · flatLayTemplates.ts (ce fichier) — QUEL gabarit pour quelles pièces (`choisirTemplate`, hiérarchie configurable) et OÙ chaque rôle se pose
  *     (`GABARITS_TEMPLATES`), plus les corrections ponctuelles (`CORRECTIONS_PIECES`). Aucun calcul de taille, de chevauchement ni d'aléa.
  *   · FlatLayCapsela.tsx — passe le template choisi au moteur ; aucune règle de placement.
- *   · compositionEditoriale.ts / OutfitComposition.tsx — l'autre planche (agenda, valise, avis) : NON concernée, inchangée.
+ *   · compositionEditoriale.ts / OutfitComposition.tsx — l'autre planche : plus affichée depuis le 05/11/2026 (agenda et valise passent par
+ *     PlancheLook, le même moteur que les heros) ; agendaLooks.ts lit encore composerPlanche pour nommer la pièce principale d'un look.
  *
  * UN TEMPLATE N'EST PAS UN CONTEXTE MÉTIER : il ne change ni la tenue, ni les pièces, ni les recommandations ; il ne fait que poser les
  * mêmes pièces autrement. Aucune pièce absente de la tenue n'est ajoutée. Sans template adapté (`choisirTemplate` rend null), ou pour un

@@ -1,6 +1,6 @@
 "use client";
 
-import { OutfitComposition } from "@/components/OutfitComposition";
+import PlancheLook from "@/components/PlancheLook";
 import { OCC_LABELS } from "@/lib/data";
 import { provenanceLook } from "@/lib/ideesLooks";
 import { titreEditorialOccasion } from "@/lib/logic";
@@ -57,7 +57,7 @@ function CarteLookIdee({
     >
       {/* L'image est l'élément principal : une planche de pièces réelles, en 4/3, jamais une vignette. */}
       <div className="rounded-bloc overflow-hidden w-full" style={{ aspectRatio: "4 / 3", background: "var(--color-warm-bg)" }}>
-        <OutfitComposition items={tenue.pieces} variant="planche" label={`Composition du look : ${tenue.pieces.map((p) => p.name).join(", ")}`} />
+        <PlancheLook pieces={tenue.pieces} label={`Composition du look : ${tenue.pieces.map((p) => p.name).join(", ")}`} />
       </div>
       <div className="px-[6px] pt-[12px] pb-[6px] flex flex-wrap items-end justify-between gap-x-[12px] gap-y-[10px]">
         <div className="min-w-0" style={{ flex: "1 1 150px" }}>

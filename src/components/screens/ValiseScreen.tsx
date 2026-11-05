@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import FilEtapes from "@/components/FilEtapes";
-import { OutfitComposition } from "@/components/OutfitComposition";
+import PlancheLook from "@/components/PlancheLook";
 import Input from "@/components/Input";
 import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
@@ -2449,7 +2449,9 @@ function Resultat({
         )}
         {l.elargie && <div className="text-[11px] text-muted mt-2">Occasion élargie : ton dressing n&apos;a pas de pièce déclarée pour cette occasion.</div>}
         <div className="rounded-feuille px-[16px] py-[20px] mt-4" style={{ background: "var(--color-hero-background)" }}>
-          <OutfitComposition items={items} variant="editoriale" label={"Composition du look : " + items.map((p) => p.name).join(", ")} />
+          <div style={{ aspectRatio: "100 / 112" }}>
+            <PlancheLook pieces={items} label={"Composition du look : " + items.map((p) => p.name).join(", ")} />
+          </div>
         </div>
         {sep.exterieur && sep.temperature != null && (
           <div className="mt-3">
@@ -2919,7 +2921,7 @@ function Resultat({
                 style={{ scrollSnapAlign: "start" }}
               >
                 <span className="block h-[150px] px-[8px] py-[10px]" style={{ background: "var(--color-hero-background)" }}>
-                  <OutfitComposition items={piecesDuLook(looks[c.look])} variant="planche" />
+                  <PlancheLook pieces={piecesDuLook(looks[c.look])} />
                 </span>
                 <span className="block px-[10px] py-[9px]">
                   <span className="block t-label text-terracotta truncate">{c.quand}</span>
@@ -3071,7 +3073,7 @@ function Resultat({
                     className="block w-full rounded-carte px-[12px] py-[14px] cursor-pointer"
                     style={{ height: "clamp(270px, 80vw, 340px)", background: "var(--color-hero-background)" }}
                   >
-                    <OutfitComposition items={exterieurDuLook(l).principal} variant="hero" ajustee />
+                    <PlancheLook pieces={exterieurDuLook(l).principal} />
                   </button>
                   {looks.length > 1 && (
                     <>

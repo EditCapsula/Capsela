@@ -26,8 +26,9 @@ plus courte, jamais regroupé dans un coin. Le t-shirt porté sous un pull reste
 Testé dans `src/lib/__tests__/flatLay.test.ts` (« la règle commune des compositions de looks »). L'ancien moteur, décrit dans la suite
 de ce document, reste accessible par le levier `proportions: false` pour les mesures avant / après.
 
-**Hors de cette règle pour l'instant** : la vignette `OutfitComposition` (agenda des looks, valise, associations du dressing, tenues
-d'une pièce), qui a sa propre grille.
+Depuis le 05/11/2026, l'agenda des looks (Planifier → Mes planifications) et la valise (page d'un look, cartes du programme, carrousel
+des looks) posent aussi leurs planches avec ce moteur, par `PlancheLook` (contexte « packing ») : l'ancienne grille `OutfitComposition`
+n'est plus affichée nulle part.
 
 ## Les images
 
