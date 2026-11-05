@@ -880,3 +880,20 @@ describe("la règle commune des compositions de looks (05/11/2026, docs/composit
     }
   });
 });
+
+describe("le t-shirt : affiché quand il est le haut de la tenue, pas quand il est une couche sous un pull (05/11/2026)", () => {
+  const T = (id: number, cat: CategoryKey, ratio: number) => ({ id, cat, ratio });
+  for (const contexte of ["hero-home", "look-detail"] as const) {
+    it(`${contexte} : t-shirt seul en haut → posé`, () => {
+      const r = composerFlatLay([T(1, "haut", 0.94), T(2, "jean", 0.41), T(3, "chaussures", 1.36)], "x", { contexte });
+      expect(r.pieces.some((q) => q.id === 1)).toBe(true);
+      expect(r.masquees).not.toContain(1);
+    });
+    it(`${contexte} : t-shirt sous un pull → dans la tenue, non dessiné ; le pull, lui, est posé`, () => {
+      const r = composerFlatLay([T(10, "pull", 0.9), T(1, "haut", 0.94), T(2, "jean", 0.41), T(3, "chaussures", 1.36)], "x", { contexte });
+      expect(r.pieces.some((q) => q.id === 1)).toBe(false);
+      expect(r.masquees).toContain(1);
+      expect(r.pieces.some((q) => q.id === 10)).toBe(true);
+    });
+  }
+});

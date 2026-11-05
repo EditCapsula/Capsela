@@ -22,7 +22,7 @@ zone et ses marges.
 Disposition : à gauche le haut puis le bas, ou la robe seule ; à droite la veste ou le manteau, le sac, les chaussures, puis les
 accessoires. Plusieurs dispositions sont essayées (deux ou trois colonnes) : la planche retient celle qui donne les pièces les plus
 grandes et, à taille presque égale, celle dont les colonnes ont les hauteurs les plus proches. Chaque accessoire va dans la colonne la
-plus courte, jamais regroupé dans un coin. Le t-shirt porté sous un pull reste dans la tenue sans être dessiné.
+plus courte, jamais regroupé dans un coin. Le t-shirt porté sous un pull reste dans la tenue sans être dessiné ; quand il est le haut de la tenue, il est posé comme toute pièce (arbitré le 05/11/2026).
 Testé dans `src/lib/__tests__/flatLay.test.ts` (« la règle commune des compositions de looks »). L'ancien moteur, décrit dans la suite
 de ce document, reste accessible par le levier `proportions: false` pour les mesures avant / après.
 
