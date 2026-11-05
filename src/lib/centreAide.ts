@@ -9,8 +9,8 @@
 
 import { GENERATIONS_GRATUITES_PAR_JOUR } from "./premium";
 
-/** Passe à true une fois le contenu validé : l'entrée apparaît alors dans Réglages. */
-export const CENTRE_AIDE_VALIDE = false;
+/** true : contenu validé par la propriétaire le 05/11/2026 (« C'est ok pour le centre d'aide ») ; l'entrée apparaît dans Réglages. */
+export const CENTRE_AIDE_VALIDE = true;
 
 const enLettres = (n: number) => ["zéro", "une", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix"][n] ?? String(n);
 
