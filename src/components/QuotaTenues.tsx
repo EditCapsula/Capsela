@@ -51,8 +51,17 @@ export function useQuotaTenues() {
    * LES TROIS TEMPS DE LA VIDÉO RÉCOMPENSÉE (maquette Premium Gates).
    * "propose" — la carte dans la feuille ; "lecture" — la vidéo tourne ;
    * "echec"   — elle n'a pas pu se charger, et on le dit UNE fois.
+   *
+   * Depuis le 05/11/2026 (signalé : deux vidéos regardées jusqu'au bout, deux fois « La vidéo n'a pas pu se charger »), l'échec dit
+   * CE QUI s'est passé : "interrompue" (fermée avant la fin), "verification" (vue en entier, l'app attend la confirmation de Google),
+   * "nonConfirmee" (vue en entier, la confirmation n'est pas arrivée à temps). Le même message couvrait les trois.
    */
-  const [tempsVideo, setTempsVideo] = useState<"propose" | "lecture" | "echec">("propose");
+  const [tempsVideo, setTempsVideo] = useState<"propose" | "lecture" | "verification" | "echec" | "interrompue" | "nonConfirmee">("propose");
+  /**
+   * Une vidéo VUE EN ENTIER dans cette session : la carte ne revient pas. Le bonus est d'une vidéo par jour ; sans ce drapeau, une
+   * confirmation en retard laissait la carte réapparaître, et l'on regardait une seconde vidéo pour rien (05/11/2026).
+   */
+  const [videoVue, setVideoVue] = useState(false);
 
   // Le tirage à rejouer une fois la génération accordée — fourni par l'écran
   // appelant, et gardé pour le cas où l'accord arrive après une vidéo.
@@ -98,13 +107,17 @@ export function useQuotaTenues() {
     setTempsVideo("lecture");
     const issue = await f.montrer();
     if (issue !== "vue") {
-      setTempsVideo("echec");
+      setTempsVideo(issue === "abandonnee" ? "interrompue" : "echec");
       return;
     }
-    const quota = await consommerApresVideo();
+    setVideoVue(true);
+    setTempsVideo("verification");
+    // Google confirme le visionnage à notre serveur (vérification côté serveur), et cet appel peut prendre plusieurs secondes : 10 essais
+    // espacés de 2 s, au lieu de 4 de 0,9 s (05/11/2026).
+    const quota = await consommerApresVideo(10, 2000);
     setDernierQuota(quota);
     if (!generationAutorisee(quota)) {
-      setTempsVideo("echec");
+      setTempsVideo("nonConfirmee");
       return;
     }
     setQuotaAtteint(false);
@@ -112,7 +125,7 @@ export function useQuotaTenues() {
     rejouerRef.current();
   };
 
-  const videoProposable = peutProposerVideo(fournisseurVideo(), (dernierQuota?.bonus ?? 0) > 0);
+  const videoProposable = !videoVue && peutProposerVideo(fournisseurVideo(), (dernierQuota?.bonus ?? 0) > 0);
 
   const feuille = (
     <>
@@ -189,11 +202,22 @@ export function useQuotaTenues() {
 
             {/* Troisième temps, cas d'échec. Dit UNE fois, sans perte — la tenue
                 et le quota sont intacts — et sans nouvel essai automatique. */}
-            {tempsVideo === "echec" && (
+            {tempsVideo === "verification" && (
+              <Card rayon="tuile" className="mt-3 px-[14px] py-[13px]" aria-live="polite">
+                <div className="text-[13px] font-medium text-ink">Vérification de la vidéo…</div>
+                <div className="text-[11px] text-muted leading-[1.45] mt-[2px]">
+                  Google confirme le visionnage, cela peut prendre quelques secondes.
+                </div>
+              </Card>
+            )}
+            {(tempsVideo === "echec" || tempsVideo === "interrompue" || tempsVideo === "nonConfirmee") && (
               <Card rayon="tuile" className="mt-3 px-[14px] py-[13px]" aria-live="polite">
                 <div className="text-[12px] text-muted-3 leading-[1.45]">
-                  La vidéo n&apos;a pas pu se charger. Rien n&apos;est perdu : ta tenue et tes tirages du jour sont
-                  intacts.
+                  {tempsVideo === "echec" && "La vidéo n'a pas pu se charger. Rien n'est perdu : ta tenue et tes tirages du jour sont intacts."}
+                  {tempsVideo === "interrompue" &&
+                    "La vidéo s'est arrêtée avant la fin, la tenue de plus n'est donc pas accordée. Ta tenue et tes tirages du jour sont intacts."}
+                  {tempsVideo === "nonConfirmee" &&
+                    "Ta vidéo a bien été vue, mais Google n'a pas encore confirmé le visionnage. Dès que la confirmation arrive, ta tenue de plus est disponible depuis « Autre tenue »."}
                 </div>
               </Card>
             )}
