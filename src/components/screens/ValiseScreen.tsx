@@ -133,7 +133,7 @@ import LigneInterrupteur from "@/components/LigneInterrupteur";
 import EmptyState from "@/components/EmptyState";
 import Card from "@/components/Card";
 import { degres } from "@/lib/unites";
-import { estBaignade, piecesDeBaignade } from "@/lib/piecesDeValise";
+import { piecesPourLaSituation, piecesReserveesDuProfil } from "@/lib/piecesDeValise";
 
 /**
  * PRÉPARER SA VALISE (docs/valise.md).
@@ -1012,10 +1012,12 @@ export default function ValiseScreen() {
   /** La capsule du séjour : bâtie sur la météo du séjour, pas sur celle d'aujourd'hui à la maison (capsuleDuSejour, 22/10/2026). */
   // Les pièces de baignade du profil, réservées à la valise (06/11/2026, piecesDeValise.ts) : jamais dans une capsule, ajoutées à
   // celle du séjour quand il compte plage, piscine ou spa (elles comptent alors comme ses suggestions, et le moteur les reçoit).
-  const piecesValise = useMemo(() => piecesDeBaignade(vestiairePool, profile, paletteHexes(profile)), [vestiairePool, profile]);
+  const piecesValise = useMemo(() => piecesReserveesDuProfil(vestiairePool, profile, paletteHexes(profile)), [vestiairePool, profile]);
   const capsuleDe = (situations: SituationValise[]): Item[] => {
     const capsule = capsuleDuSejour(situations, (meteo, saison) => computeDefaultCapsule(profile, meteo, state.suggestedExcluded, saison, vestiairePool));
-    return situations.some(estBaignade) ? [...capsule, ...piecesValise.filter((p) => !capsule.some((c) => c.id === p.id))] : capsule;
+    // Les pièces réservées qui servent à au moins une situation du séjour (baignade, randonnée), une seule fois chacune.
+    const utiles = piecesValise.filter((p) => situations.some((st) => piecesPourLaSituation([p], st).length > 0) && !capsule.some((c) => c.id === p.id));
+    return [...capsule, ...utiles];
   };
   const dressing = state.items;
   const generer = useMemo(
@@ -1999,7 +2001,7 @@ function Resultat({
   const cocher = cocherPiece;
   const [tailleOuverte, setTailleOuverte] = useState(false);
   /** Les affaires de voyage : celles du séjour (programme, météo) moins les masquées, plus celles que la personne a ajoutées. */
-  const contexteAffaires = { programme: valise.programme ?? [], meteos: valise.meteos };
+  const contexteAffaires = { programme: valise.programme ?? [], meteos: valise.meteos, sousTypes: pieces.flatMap((p) => (p.subtype ? [p.subtype] : [])) };
   const affaires = affairesAffichees(contexteAffaires, valise.affaires);
   const affairesCochees = cocheesValides(affaires, valise.affaires);
   const affairesCachees = affairesMasquees(contexteAffaires, valise.affaires);
