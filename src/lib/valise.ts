@@ -1,6 +1,6 @@
 import { previsionPour, type Prevision } from "./prevision";
 import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
-import { ajouterCouverture, piecesPourLaSituation, poolDeBaignade, poolDeRandonnee } from "./piecesDeValise";
+import { ajouterCouverture, estJourneeDeMarche, estRandonnee, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee, sansTenueDeSport } from "./piecesDeValise";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, saisonCapsuleDuJour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -227,6 +227,8 @@ export interface SituationValise {
   contrainte?: Contrainte;
   /** Les occasions du programme que ce look-type sert : plage et piscine partagent une situation, pas deux tenues. */
   sousIds?: string[];
+  /** Un trajet ou une journée de marche d'un séjour qui compte une randonnée : la paire de randonnée y est proposée (06/11/2026, piecesDeValise.ts). */
+  avecRandonnee?: true;
 }
 
 /**
@@ -283,10 +285,18 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
     if (g) g.sousIds.push(e.id);
     else parGroupe.set(cle, { mere: e.mere, contrainte: e.contrainte, trajet: e.creneau === "trajet", sousIds: [e.id] });
   }
+  const randonnee = elements.some((e) => e.id === "randonnee");
   const out: SituationValise[] = [];
   for (const g of parGroupe.values()) {
     for (const m of groupesMeteo(g.trajet ? extremes : tries)) {
-      out.push({ occasion: g.mere, meteo: m.meteo, jours: m.jours, ...(g.contrainte ? { contrainte: g.contrainte } : {}), sousIds: g.sousIds });
+      out.push({
+        occasion: g.mere,
+        meteo: m.meteo,
+        jours: m.jours,
+        ...(g.contrainte ? { contrainte: g.contrainte } : {}),
+        sousIds: g.sousIds,
+        ...((g.trajet || g.contrainte === "marche") && randonnee ? { avecRandonnee: true as const } : {}),
+      });
     }
   }
   return out;
@@ -349,14 +359,29 @@ export function generateurMoteur(
     const avecBain = [...poolComplet, ...piecesPourLaSituation(piecesValise, s).filter((p) => !poolComplet.some((q) => q.id === p.id))];
     // La contrainte de la situation (chaleur, marche, outdoor) restreint le pool ; le moteur, lui, ne change pas. En baignade, la tenue
     // de bain et sa couverture tiennent lieu de vêtements (poolDeBaignade).
-    const pool = sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeRandonnee(poolDeBaignade(avecBain, s), s), s.contrainte, s.meteo), s.occasion);
+    const brut = sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeRandonnee(poolDeBaignade(avecBain, s), s), s.contrainte, s.meteo), s.occasion);
+    // Un trajet, une randonnée : une tenue décontractée, jamais de blazer (06/11/2026, poolDecontracte).
+    const decontracte = s.occasion === "voyage" || estRandonnee(s) ? poolDecontracte(brut) : brut;
+    // Hors randonnée, la paire de randonnée se porte avec des vêtements ordinaires (06/11/2026, sansTenueDeSport).
+    const pool = estJourneeDeMarche(s) && !estRandonnee(s) ? sansTenueDeSport(decontracte) : decontracte;
+    const t = composer(pool, s.occasion, s.meteo, s);
+    if (t || !estRandonnee(s)) return t;
+    // UNE RANDONNÉE SANS TENUE DE SPORT (06/11/2026, signalé : deux journées de randonnée « Aucun look de ta valise ne répond encore à
+    // cette occasion »). Le moteur Sport n'admet que des vêtements et un sac de sport ; une valise qui n'en a pas reçoit une tenue de
+    // marche décontractée, toujours avec la paire de randonnée (poolDeRandonnee), dite élargie. Le premier choix reste la tenue de sport.
+    const marche = poolDecontracte(sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeRandonnee(avecBain, s), "marche", s.meteo), "quotidien"));
+    const repli = composer(marche, "quotidien", s.meteo, s);
+    return repli ? { ...repli, elargie: true } : null;
+  };
+
+  function composer(pool: Item[], occasion: OccasionKey, meteo: Weather, s: SituationValise): TenueMoteur | null {
     if (!pool.length) return null;
-    const r = generateOutfitWithFallback(pool, s.meteo, s.occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
+    const r = generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
     // Les chaussures et le sac ajoutés suivent les règles du moteur (météo, occasion, couleur, saison) : 12/10/2026, demandé « tenir compte des règles du moteur ».
-    const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion: s.occasion, meteo: s.meteo });
+    const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion, meteo });
     return ids ? { ids: ajouterCouverture(ids, pool, s), elargie: r.occasionRelachee } : null;
-  };
+  }
 }
 
 /**

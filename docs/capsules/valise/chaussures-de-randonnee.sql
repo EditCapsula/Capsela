@@ -1,4 +1,5 @@
 -- Chaussures de randonnée réservées à la valise (06/11/2026, demandé : « Pour des randos dans les tenues vacances il faut intégrer une
+-- Niveau de formalité corrigé en 'sport' le même jour : chaussures-de-randonnee-niveau-sport.sql.
 -- paire de chaussures de randonnée pour femme et homme »). Une paire par genre, sans style : reconnues par leur sous_type
 -- (src/lib/piecesDeValise.ts), jamais dans une capsule ; la valise les ajoute à ses seules journées de randonnée, où elles remplacent
 -- les autres chaussures. Pour le moteur, une chaussure de sport (SHOE_TYPE_MAP : Baskets). Nouvelles lignes seulement, aucune pièce

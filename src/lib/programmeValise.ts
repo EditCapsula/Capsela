@@ -314,6 +314,15 @@ export function chaussuresDeMarche(saison?: Weather["season"]): string[] {
 }
 
 /**
+ * UNE CHAUSSURE À TALON, lue sur son type ou son nom (06/11/2026, signalé : « J'ai choisi l'activité plage et tu me pousses des
+ * slingbacks à talons » ; rappelé : aux visites, « une paire de sandales sans talons »). Escarpins, sandales à talons, slingbacks, ou
+ * un talon écrit dans le nom (« Sandales à petit talon »). Rien n'est deviné d'une chaussure sans type ni talon nommé.
+ */
+const TYPES_A_TALON = ["Escarpins", "Sandales à talons", "Slingbacks"];
+export const aTalon = (it: Item): boolean =>
+  it.cat === "chaussures" && (Boolean(it.shoeType && TYPES_A_TALON.includes(it.shoeType)) || /talon/i.test(`${it.name} ${it.subtype ?? ""}`));
+
+/**
  * LES VÊTEMENTS D'UNE JOURNÉE DE MARCHE (06/11/2026, arbitré : « Privilégie le confort dans le style et la morphologie de
  * l'utilisateur »). Peu confortable pour marcher : une pièce habillée (formalité 4), une coupe serrée, une jupe crayon ou une
  * mini-jupe. PRIVILÉGIER, pas exclure : dans chaque catégorie, ces pièces sortent seulement s'il en reste une confortable ; sinon elles
@@ -330,7 +339,8 @@ export function filtrerParContrainte(pool: Item[], contrainte?: Contrainte, mete
   if (!contrainte) return pool;
   if (contrainte === "marche") {
     const permises = chaussuresDeMarche(meteo?.season);
-    const marche = privilegierLeConfort(pool.filter((it) => it.cat !== "chaussures" || !it.shoeType || permises.includes(it.shoeType)));
+    // Des sandales plates seulement : une paire « à talon » dans son nom sort, quel que soit son type.
+    const marche = privilegierLeConfort(pool.filter((it) => it.cat !== "chaussures" || ((!it.shoeType || permises.includes(it.shoeType)) && !aTalon(it))));
     // Aucune chaussure de marche dans la valise : la règle d'avant (ni talons, ni chaussons), plutôt qu'une journée sans tenue.
     if (marche.some((it) => it.cat === "chaussures") || !pool.some((it) => it.cat === "chaussures")) return marche;
     return privilegierLeConfort(pool.filter((it) => it.cat !== "chaussures" || !it.shoeType || !CHAUSSURES_PAS_POUR_LA_MARCHE.includes(it.shoeType)));
@@ -340,6 +350,8 @@ export function filtrerParContrainte(pool: Item[], contrainte?: Contrainte, mete
       if (["manteau", "pull", "veste"].includes(it.cat)) return false;
       if (it.season === "Automne / Hiver") return false;
       if (it.cat === "chaussures" && it.shoeType && CHAUSSURES_PAS_POUR_LA_CHALEUR.includes(it.shoeType)) return false;
+      // Plage et piscine : jamais de talons (06/11/2026, signalé : des slingbacks à talons pour la plage).
+      if (aTalon(it)) return false;
       return true;
     }
     if (it.cat !== "chaussures" || !it.shoeType) return true;

@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { computeDefaultCapsule } from "../capsule";
 import type { CatalogItem } from "../catalog";
 import { EMPTY_PROFILE, type Profile } from "../profile";
-import { ajouterCouverture, chaussuresDeRandonnee, estBaignade, estPieceDeValise, piecesDeBaignade, piecesPourLaSituation, poolDeBaignade, poolDeRandonnee } from "../piecesDeValise";
-import { generateurMoteur, type SituationValise } from "../valise";
+import type { Item } from "../types";
+import { ajouterCouverture, chaussuresDeRandonnee, estBaignade, estBlazer, sansTenueDeSport, estPieceDeValise, piecesDeBaignade, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee } from "../piecesDeValise";
+import { generateurMoteur, situationsDuProgramme, type SituationValise } from "../valise";
+import { filtrerParContrainte } from "../programmeValise";
 import { at, item } from "./fixtures";
 
 /** LES PIÈCES RÉSERVÉES À LA VALISE (06/11/2026) : plage, piscine, spa. */
@@ -107,5 +109,107 @@ describe("chaussures de randonnée (06/11/2026) : une paire par genre, pour les 
     const pool = [haut, baskets, catalogue[0]];
     expect(poolDeRandonnee(pool, { sousIds: ["randonnee"] }).map((p) => p.name)).toEqual(["T-shirt", "Rando femme"]);
     expect(poolDeRandonnee(pool, { sousIds: ["visites"] })).toEqual(pool);
+  });
+});
+
+describe("randonnée et trajets (06/11/2026, signalé : randonnées sans look, blazer au trajet)", () => {
+  const T = "Printemps, Été, Automne, Hiver";
+  const paire = (formalite: string) =>
+    item({ id: 1, category: "chaussures", name: "Chaussures de randonnée en nubuck", sous_type: "Chaussures de randonnée", genre: "femme", saison_capsule: T, occasions: "sport", niveau_formalite: formalite, couleur_dominante: "Taupe" });
+  const tshirt = item({ id: 20, category: "hauts", name: "T-shirt en coton", sous_type: "T-shirt", couleur_dominante: "Blanc", niveau_formalite: "decontracte", occasions: "quotidien,voyage", saison_capsule: T, manches: "courtes" });
+  const pantalon = item({ id: 21, category: "pantalons", name: "Pantalon large", sous_type: "Large", couleur_dominante: "Noir", niveau_formalite: "decontracte", occasions: "quotidien,voyage", saison_capsule: T });
+  const sacADos = item({ id: 22, category: "sacs", name: "Sac à dos", sous_type: "Sac à dos", couleur_dominante: "Noir", niveau_formalite: "decontracte", occasions: "quotidien,voyage", saison_capsule: T });
+  const blazer = item({ id: 23, category: "vestes_blazers", name: "Blazer en laine", sous_type: "Blazer", couleur_dominante: "Beige", niveau_formalite: "business_casual", occasions: "travail_formel,quotidien,voyage", saison_capsule: T });
+  const baskets = item({ id: 24, category: "chaussures", name: "Baskets blanches", sous_type: "Baskets", couleur_dominante: "Blanc", niveau_formalite: "sport", occasions: "quotidien,voyage", saison_capsule: T });
+  const dressing = [tshirt, pantalon, sacADos, blazer, baskets];
+  const meteo = at(26, "Printemps / Été");
+  const randonnee: SituationValise = { occasion: "sport", meteo, jours: ["2026-11-24"], contrainte: "outdoor", sousIds: ["randonnee"] };
+  const trajet = (avecRandonnee: boolean): SituationValise => ({ occasion: "voyage", meteo, jours: ["2026-11-23"], sousIds: ["trajet"], ...(avecRandonnee ? { avecRandonnee: true as const } : {}) });
+  const noms = (ids: number[] | undefined, pieces: Item[]) => (ids ?? []).map((id) => pieces.find((p) => p.id === id)?.name);
+  const tirages = (n: number, f: () => ReturnType<ReturnType<typeof generateurMoteur>>) => Array.from({ length: n }, f);
+
+  it("un blazer est reconnu ; une tenue décontractée l'écarte, et privilégie le décontracté sans vider une catégorie", () => {
+    expect(estBlazer(blazer)).toBe(true);
+    expect(estBlazer(tshirt)).toBe(false);
+    const chemise = item({ id: 30, category: "hauts", name: "Chemise en popeline", sous_type: "Chemise", niveau_formalite: "business_casual" });
+    expect(poolDecontracte([blazer, tshirt, chemise]).map((p) => p.name)).toEqual(["T-shirt en coton"]);
+    expect(poolDecontracte([chemise]).map((p) => p.name)).toEqual(["Chemise en popeline"]);
+  });
+
+  it("une randonnée sans tenue de sport reçoit un look de marche avec la paire de randonnée, sans blazer, dit élargi", () => {
+    const pieces = [...dressing, paire("decontracte")];
+    for (const t of tirages(20, () => generateurMoteur([], "femme", null, [paire("decontracte")])(dressing, randonnee))) {
+      expect(t).not.toBeNull();
+      expect(t!.elargie).toBe(true);
+      expect(noms(t!.ids, pieces)).toContain("Chaussures de randonnée en nubuck");
+      expect(noms(t!.ids, pieces)).not.toContain("Blazer en laine");
+    }
+  });
+
+  it("avec une tenue de sport, la randonnée garde le look de sport", () => {
+    const sport = [
+      item({ id: 40, category: "hauts", name: "T-shirt technique", sous_type: "T-shirt technique", couleur_dominante: "Noir", niveau_formalite: "sport", occasions: "sport", saison_capsule: T, manches: "courtes" }),
+      item({ id: 41, category: "pantalons", name: "Legging de sport", sous_type: "Legging", couleur_dominante: "Noir", niveau_formalite: "sport", occasions: "sport", saison_capsule: T }),
+      item({ id: 42, category: "sacs", name: "Sac de sport", sous_type: "Sac de sport", couleur_dominante: "Noir", niveau_formalite: "sport", occasions: "sport", saison_capsule: T }),
+    ];
+    const t = generateurMoteur([], "femme", null, [paire("sport")])(sport, randonnee);
+    expect(t?.elargie).toBe(false);
+    expect(noms(t?.ids, [...sport, paire("sport")])).toEqual(expect.arrayContaining(["Legging de sport", "Chaussures de randonnée en nubuck"]));
+  });
+
+  it("le trajet n'a jamais de blazer ; il porte la paire de randonnée quand le séjour en compte une", () => {
+    const pieces = [...dressing, paire("sport")];
+    const gen = generateurMoteur([], "femme", null, [paire("sport")]);
+    for (const t of tirages(20, () => gen(dressing, trajet(true)))) {
+      expect(noms(t?.ids, pieces)).not.toContain("Blazer en laine");
+      expect(noms(t?.ids, pieces)).toContain("Chaussures de randonnée en nubuck");
+    }
+    for (const t of tirages(20, () => gen(dressing, trajet(false)))) {
+      expect(noms(t?.ids, pieces)).not.toContain("Blazer en laine");
+      expect(noms(t?.ids, pieces)).not.toContain("Chaussures de randonnée en nubuck");
+    }
+  });
+
+  it("le programme marque les trajets et journées de marche d'un séjour avec randonnée, et eux seuls", () => {
+    const meteos = ["2026-11-23", "2026-11-24", "2026-11-25"].map((jour) => ({ jour, temp: 26, label: "Ensoleillé", prevue: true }));
+    const avec = situationsDuProgramme([{ id: "randonnee", frequence: 2 }, { id: "visites", frequence: 1 }, { id: "restaurant", frequence: 1 }, { id: "trajet", frequence: 2 }], meteos, []);
+    expect(avec.filter((x) => x.avecRandonnee).map((x) => x.sousIds)).toEqual([["visites"], ["trajet"]]);
+    const sans = situationsDuProgramme([{ id: "visites", frequence: 2 }, { id: "trajet", frequence: 2 }], meteos, []);
+    expect(sans.some((x) => x.avecRandonnee)).toBe(false);
+  });
+
+  it("séjour avec randonnée : la paire est proposée aux trajets et journées de marche, parmi les autres chaussures, avec une tenue ordinaire ; sans randonnée, jamais", () => {
+    const visites: SituationValise = { occasion: "quotidien", meteo, jours: ["2026-11-26"], contrainte: "marche", sousIds: ["visites"], avecRandonnee: true };
+    expect(piecesPourLaSituation([paire("sport")], visites)).toHaveLength(1);
+    expect(piecesPourLaSituation([paire("sport")], { occasion: "quotidien", contrainte: "marche", sousIds: ["balade"], avecRandonnee: true })).toHaveLength(1);
+    expect(piecesPourLaSituation([paire("sport")], trajet(true))).toHaveLength(1);
+    expect(piecesPourLaSituation([paire("sport")], { occasion: "soiree", sousIds: ["restaurant"] })).toEqual([]);
+    // Sans randonnée au programme : ni aux visites, ni à la balade, ni au trajet.
+    expect(piecesPourLaSituation([paire("sport")], { occasion: "quotidien", contrainte: "marche", sousIds: ["visites"] })).toEqual([]);
+    expect(piecesPourLaSituation([paire("sport")], { occasion: "quotidien", contrainte: "marche", sousIds: ["balade"] })).toEqual([]);
+    expect(piecesPourLaSituation([paire("sport")], trajet(false))).toEqual([]);
+    expect(poolDeRandonnee([baskets, paire("sport")], visites)).toHaveLength(2);
+    const legging = item({ id: 41, category: "pantalons", name: "Legging de sport", sous_type: "Legging", couleur_dominante: "Noir", niveau_formalite: "sport", occasions: "sport,quotidien", saison_capsule: T });
+    expect(sansTenueDeSport([legging, pantalon, paire("sport")]).map((p) => p.name)).toEqual(["Pantalon large", "Chaussures de randonnée en nubuck"]);
+    expect(sansTenueDeSport([legging]).map((p) => p.name)).toEqual(["Legging de sport"]);
+    const pieces = [...dressing, legging, paire("sport")];
+    const gen = generateurMoteur([], "femme", null, [paire("sport")]);
+    for (const t of tirages(20, () => gen([...dressing, legging], visites))) expect(noms(t?.ids, pieces)).not.toContain("Legging de sport");
+  });
+});
+
+describe("pas de talons à la plage ni aux visites (06/11/2026, signalé : des slingbacks à talons pour la plage)", () => {
+  const T = "Printemps, Été";
+  const slingbacks = item({ id: 50, category: "chaussures", name: "Slingbacks à talons", sous_type: "Slingbacks", couleur_dominante: "Noir", saison_capsule: T });
+  const petitTalon = item({ id: 51, category: "chaussures", name: "Sandales à petit talon", sous_type: "Sandales", couleur_dominante: "Camel", saison_capsule: T });
+  const plates = item({ id: 52, category: "chaussures", name: "Sandales plates", sous_type: "Sandales", couleur_dominante: "Camel", saison_capsule: T });
+  const baskets = item({ id: 53, category: "chaussures", name: "Baskets blanches", sous_type: "Baskets", couleur_dominante: "Blanc", saison_capsule: T });
+  const pool = [slingbacks, petitTalon, plates, baskets];
+  const ete = at(28, "Printemps / Été");
+  it("plage et piscine : aucune paire à talon", () => {
+    expect(filtrerParContrainte(pool, "chaleur", ete).map((p) => p.name)).toEqual(["Sandales plates", "Baskets blanches"]);
+  });
+  it("visites : baskets et sandales plates par temps chaud, jamais de talon", () => {
+    expect(filtrerParContrainte(pool, "marche", ete).map((p) => p.name)).toEqual(["Sandales plates", "Baskets blanches"]);
   });
 });

@@ -53,3 +53,40 @@ réservée à la valise. `chaussuresDeRandonnee` choisit celle du genre du profi
 donne qu'aux journées de randonnée ; `poolDeRandonnee` en fait la seule chaussure de ces journées. Pour le moteur, une chaussure de
 sport (Baskets). Les affaires de voyage ne redemandent plus « Chaussures de randonnée » quand la paire est dans la valise (ni
 « Maillot de bain » quand le maillot ou le short de bain y est).
+
+### Randonnées sans look, trajets (06/11/2026)
+
+Signalé sur une valise pour le Cap-Vert : deux journées de randonnée « Aucun look de ta valise ne répond encore à cette occasion », et
+un look Voyage · trajet avec un blazer du dressing (« Il faut que ce soit plus décontracté »).
+
+- **Cause des randonnées sans look** (DÉMONTRÉ, test du même jour, même pool, seul ce levier changé) : les deux paires avaient été
+  créées en niveau « décontracté » ; une randonnée passe par les règles Sport du moteur, qui n'admettent que des chaussures de niveau
+  sport. 0 look sur 20 en « décontracté », 20 sur 20 en « sport ». Correction des données :
+  `docs/capsules/valise/chaussures-de-randonnee-niveau-sport.sql` (deux lignes, une colonne), à lancer à la main.
+- **Randonnée sans tenue de sport** : le moteur Sport demande aussi des vêtements et un sac de sport. Quand la valise n'en a pas, la
+  randonnée reçoit une tenue de marche décontractée (Quotidien, contrainte « marche »), toujours avec la paire de randonnée, dite
+  élargie (`generateurMoteur`). La tenue de sport reste le premier choix.
+- **Les trajets d'un séjour avec randonnée portent la paire** (demandé : « pour les trajets aller et retour pour limiter le poids dans
+  la valise ») : `situationsDuProgramme` marque ces trajets (`avecRandonnee`), `piecesPourLaSituation` et `poolDeRandonnee` leur
+  donnent la paire comme seule chaussure. Une valise enregistrée avant n'a pas la marque : elle la reçoit quand elle est refaite.
+- **Trajets et randonnées en tenue décontractée** (`poolDecontracte`) : jamais de blazer (exclu) ; une pièce business casual ou
+  habillée sort de sa catégorie quand il y reste une pièce décontractée — privilégier, pas exclure. ARBITRAGE ÉDITORIAL, à confirmer
+  sur de vrais voyages ; instruit sur le trajet et la randonnée seulement.
+
+### Talons, visites, paire de randonnée hors randonnée (06/11/2026)
+
+- **Plage et piscine : jamais de talons** (signalé : des slingbacks à talons pour la plage). `aTalon` (`programmeValise.ts`) :
+  escarpins, sandales à talons, slingbacks, ou un talon écrit dans le nom ; la contrainte « chaleur » les écarte.
+- **Visites, balade, excursion** (rappelé : « en fonction de la température une paire de baskets, une paire de sandales sans talons
+  si la marche n'est pas longue ou des chaussures de randonnées si elles sont bien dans la valise ») : la règle des chaussures de marche
+  reste celle de la saison du jour (baskets, bottines ; bottes au froid ; sandales au chaud), et une sandale « à talon » dans son nom
+  sort désormais. La longueur de la marche n'est pas connue de l'app : rien n'en est déduit (NON DÉMONTRÉ qu'il faille distinguer
+  visites et excursion).
+- **La paire de randonnée hors randonnée** (précisé le même jour : « peut être proposée lors d'un trajet, lors de balades longues,
+  lors d'activités entraînant beaucoup de marche, sans tenue de sport et avec une tenue ordinaire », puis : « ne doit pas être
+  proposée dans une valise si le séjour n'inclut pas une activité de randonnée ») : seulement dans un séjour qui compte une randonnée,
+  les trajets et journées de marche (visites, balade, excursion) la reçoivent (`avecRandonnee`, `estJourneeDeMarche`), parmi les
+  autres chaussures ; le trajet la porte d'office. Sans randonnée au programme, la paire n'entre dans aucun look ni aucune valise.
+- **Jours sans activité** : aucun look n'y est ajouté (arbitré le 06/11/2026 : « Non »).
+- **La paire de randonnée sans tenue de sport hors randonnée** (demandé le même jour) : aux trajets et aux journées de marche, un
+  vêtement de sport sort de sa catégorie quand il y reste un vêtement ordinaire (`sansTenueDeSport`).

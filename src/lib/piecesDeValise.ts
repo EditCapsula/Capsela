@@ -1,3 +1,4 @@
+import { formalityOf, vetementDeSport } from "./attributes";
 import type { CatalogItem } from "./catalog";
 import { STYLE_ID_TO_CATALOG_LABEL, type Profile, type StyleId } from "./profile";
 import type { CategoryKey, Item } from "./types";
@@ -62,15 +63,72 @@ export function piecesReserveesDuProfil(catalogue: readonly CatalogItem[], profi
   return [...piecesDeBaignade(catalogue, profile, couleurs), ...chaussuresDeRandonnee(catalogue, profile)];
 }
 
-/** Les pièces réservées qui servent à CETTE situation : la tenue de bain à la baignade, la paire de randonnée à la randonnée. */
-export function piecesPourLaSituation<T extends Pick<Item, "subtype">>(pieces: readonly T[], s: { sousIds?: string[] }): T[] {
-  return pieces.filter((p) => (estBaignade(s) && !estChaussureDeRando(p)) || (estRandonnee(s) && estChaussureDeRando(p)));
+/**
+ * Un trajet d'un séjour qui compte une randonnée (06/11/2026, demandé : « Les chaussures de randonnée, si elles font partie de la
+ * valise car il y a des randonnées de prévues, doivent être proposées pour les trajets aller et retour pour limiter le poids dans la
+ * valise »). La paire se porte pendant le voyage au lieu de prendre de la place dans la valise.
+ */
+export const estTrajetAvecRandonnee = (s: { occasion?: string; avecRandonnee?: boolean }): boolean => s.occasion === "voyage" && Boolean(s.avecRandonnee);
+
+type SituationPieces = { sousIds?: string[]; occasion?: string; contrainte?: string; avecRandonnee?: boolean };
+
+/**
+ * Les journées où la paire de randonnée peut être proposée, avec une tenue ordinaire (06/11/2026, précisé : « la paire de chaussures
+ * de randonnée peut être proposée lors d'un trajet, lors de balades longues, lors d'activités entraînant beaucoup de marche, sans tenue
+ * de sport et avec une tenue ordinaire ») : les trajets et les journées de marche (visites, balade, excursion).
+ */
+export const estJourneeDeMarche = (s: SituationPieces): boolean => s.occasion === "voyage" || s.contrainte === "marche";
+
+/**
+ * Les pièces réservées qui servent à CETTE situation : la tenue de bain à la baignade ; la paire de randonnée à la randonnée, et aux
+ * trajets et journées de marche d'un séjour QUI COMPTE UNE RANDONNÉE seulement (`avecRandonnee`, 06/11/2026 : « la paire de chaussures
+ * de randonnée ne doit pas être proposée dans une valise si le séjour n'inclut pas une activité de randonnée »).
+ */
+export function piecesPourLaSituation<T extends Pick<Item, "subtype">>(pieces: readonly T[], s: SituationPieces): T[] {
+  return pieces.filter(
+    (p) => (estBaignade(s) && !estChaussureDeRando(p)) || ((estRandonnee(s) || (estJourneeDeMarche(s) && Boolean(s.avecRandonnee))) && estChaussureDeRando(p))
+  );
 }
 
-/** Une journée de randonnée se marche en chaussures de randonnée : quand le pool en a une paire, les autres chaussures sortent. */
-export function poolDeRandonnee(pool: Item[], s: { sousIds?: string[] }): Item[] {
-  if (!estRandonnee(s) || !pool.some(estChaussureDeRando)) return pool;
+/**
+ * Une journée de randonnée se marche en chaussures de randonnée, et les trajets de son séjour les portent : quand le pool en a une
+ * paire, les autres chaussures sortent.
+ */
+export function poolDeRandonnee(pool: Item[], s: SituationPieces): Item[] {
+  if (!(estRandonnee(s) || estTrajetAvecRandonnee(s)) || !pool.some(estChaussureDeRando)) return pool;
   return pool.filter((it) => it.cat !== "chaussures" || estChaussureDeRando(it));
+}
+
+/** Un blazer : lu sur le type ou le nom de la veste, rien n'est deviné. */
+export const estBlazer = (it: Pick<Item, "cat" | "name" | "subtype">): boolean => it.cat === "veste" && /blazer/i.test(`${it.name} ${it.subtype ?? ""}`);
+
+const VETEMENTS_DU_TRAJET: readonly CategoryKey[] = ["haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison", "veste", "manteau"];
+
+/**
+ * UN TRAJET SE FAIT EN TENUE DÉCONTRACTÉE (06/11/2026, signalé : un look Voyage · trajet avec un blazer du dressing — « Le blazer,
+ * bien qu'il fasse partie de mon dressing, ne doit pas être affiché pour un voyage. Il faut que ce soit plus décontracté »).
+ * Valise seulement, trajets et randonnées seulement :
+ *   · un blazer n'est jamais proposé (exclu, même s'il est la seule veste : la tenue s'en passe) ;
+ *   · une pièce business casual ou habillée (formalité 3 ou plus) sort de sa catégorie quand il y reste une pièce décontractée ou de
+ *     sport (formalité 1 au plus) — PRIVILÉGIER, pas exclure : sans alternative décontractée, elle reste. ARBITRAGE ÉDITORIAL.
+ */
+/**
+ * LA PAIRE DE RANDONNÉE NE DEMANDE PAS UNE TENUE DE SPORT (06/11/2026, demandé : « La paire de randonnée n'est pas obligatoirement mise
+ * avec des vêtements de sport si l'activité dans la journée ne contient pas de randonnée »). Hors randonnée, un vêtement de sport sort
+ * de sa catégorie quand il y reste un vêtement qui n'en est pas — privilégier, pas exclure. Valise seulement : trajets et journées de
+ * marche (estJourneeDeMarche), où la paire peut être proposée.
+ */
+export function sansTenueDeSport(pool: Item[]): Item[] {
+  const deSport = (it: Item) => VETEMENTS_DU_TRAJET.includes(it.cat) && vetementDeSport(it);
+  return pool.filter((it) => !deSport(it) || !pool.some((x) => x.cat === it.cat && !deSport(x)));
+}
+
+export function poolDecontracte(pool: Item[]): Item[] {
+  const sansBlazer = pool.filter((it) => !estBlazer(it));
+  const decontractee = (it: Item) => formalityOf(it) <= 1;
+  return sansBlazer.filter(
+    (it) => !VETEMENTS_DU_TRAJET.includes(it.cat) || decontractee(it) || !sansBlazer.some((x) => x.cat === it.cat && decontractee(x))
+  );
 }
 
 export const estBaignade = (s: { sousIds?: string[] }): boolean =>
