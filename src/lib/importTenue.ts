@@ -224,6 +224,11 @@ export interface ArticleTicketConfie {
   categorie: string | null;
   taille: string | null;
   couleur: { nom: string; hex: string } | null;
+  /** Préremplissage enrichi (06/11/2026, lectureTicket.ts) : null ou vide quand le ticket ne permet pas de trancher. Absents d'un ticket lu avant. */
+  modele?: string | null;
+  manches?: Manches | null;
+  motif?: Motif | null;
+  saisons?: string[];
 }
 let ticketConfie: { magasin: string | null; articles: ArticleTicketConfie[] } | null = null;
 export const confierTicket = (t: { magasin: string | null; articles: ArticleTicketConfie[] } | null): void => {
@@ -244,12 +249,13 @@ export function brouillonsDepuisTicket(t: { magasin: string | null; articles: Ar
       cle: i,
       nom: a.nom,
       cat,
-      type: "",
+      // Le modèle, les manches, le motif et les saisons que la lecture a pu établir (06/11/2026) ; jamais d'une autre catégorie.
+      type: a.modele && modelesDe(cat).includes(a.modele) ? a.modele : "",
       couleur: a.couleur ?? { nom: "Blanc cassé", hex: "#EDE4D6" },
       couleurLue: Boolean(a.couleur),
-      manches: null,
-      motif: null,
-      saisons: [],
+      manches: a.manches ?? null,
+      motif: a.motif ?? null,
+      saisons: QUATRE_SAISONS.filter((x) => (a.saisons ?? []).includes(x)),
       photoUrl: "",
       coche: true,
       marque: t.magasin ?? "",

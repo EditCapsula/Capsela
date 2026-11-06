@@ -25,6 +25,14 @@ Il n'est jamais présenté comme la photo du produit : badge « Visuel indicatif
 Le cas « plusieurs visuels à choisir » du cahier des charges ne s'applique pas : un visuel créé est unique, et l'utilisatrice garde
 toujours le choix de sa propre photo.
 
+## Vérification article par article et préremplissage (06/11/2026)
+
+Brief « Optimisation UX/UI du parcours d'ajout au dressing et import de ticket de caisse Premium ».
+
+- **Un article à la fois** (`ImporterTenueScreen`, mode ticket) : « Article 2 sur 3 », la fiche ouverte avec le formulaire de la carte (nom, catégorie, modèle, couleur, manches, motif, saisons — aucun champ ajouté), et une barre fixe en bas : « Ajouter cet article » et « Ajouter la photo de la pièce » (facultative, appareil ou galerie). Le bouton « Ajouter » de la carte et « Tout ajouter » ne s'affichent plus pour un ticket : un seul bouton d'ajout à l'écran. L'article ajouté sort de la liste, le suivant s'affiche ; à la fin, la confirmation et « Voir mon dressing ». L'import de plusieurs pièces depuis une PHOTO ne change pas.
+- **Préremplissage enrichi** (`_shared/lectureTicket.ts`, la même fonction `lire-ticket`, aucun second moteur) : en plus du nom, de la catégorie, de la taille et de la couleur, la lecture rend le modèle, les manches, le motif et les saisons, chacun seulement parmi les valeurs permises POUR SA CATÉGORIE (les mêmes listes que le formulaire) ; une valeur incertaine reste vide. La consigne demande d'identifier l'article (abréviations de l'enseigne, référence produit quand elle l'établit avec certitude, jamais recopiée), et de tirer les saisons de la nature du vêtement, jamais de la date d'achat. Le nom n'a qu'une majuscule, la première (`nomAvecUneMajuscule`).
+- **Limites** : aucune base produit externe n'est interrogée (aucune source autorisée à ce jour) ; la reconnaissance par référence repose sur ce que le modèle sait de l'enseigne, et reste vide quand il n'est pas sûr. Les champs obligatoires du formulaire (saisons, manches d'une pièce qui en a, modèle d'une chaussure) le restent : la barre le dit (« Précise les saisons ») et amène au champ.
+
 ## Architecture
 
 - `supabase/functions/_shared/visuelArticle.ts` (pur, testé) : la demande validée (`articleValide`), la ligne lue par

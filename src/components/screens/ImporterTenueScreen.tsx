@@ -6,7 +6,7 @@ import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
-import { CameraIcon, CarteAnalyse, ChampSelect, chip, Coche, EYEBROW, luminance, NOMS_PASTILLES, SpinnerCintre } from "@/components/screens/AddScreen";
+import { CameraIcon, CarteAnalyse, GalerieIcon, ChampSelect, chip, Coche, EYEBROW, luminance, NOMS_PASTILLES, SpinnerCintre } from "@/components/screens/AddScreen";
 import { useAuth } from "@/lib/auth";
 import { MISE_A_PLAT_DISPONIBLE } from "@/lib/miseAPlat";
 import { CATS, FAMILLES_COULEURS, PALETTE, PALETTE_BIJOU } from "@/lib/data";
@@ -404,7 +404,17 @@ export default function ImporterTenueScreen() {
 
   const imageZone = apercu;
   const listeAffichee = phase === "resultat" || phase === "ajout";
-  const toutAjouterVisible = listeAffichee && brouillons.length > 1;
+  /*
+   * UN TICKET, ARTICLE PAR ARTICLE (06/11/2026, brief « Optimisation UX/UI du parcours d'ajout… », parties 2, 5 et 6). Les articles
+   * d'un ticket se vérifient un à un : la fiche de l'article en cours, ouverte, avec le formulaire de la carte (aucun autre), et une
+   * barre fixe en bas — « Ajouter cet article » et « Ajouter la photo de la pièce ». L'article ajouté sort de la liste : le suivant
+   * s'affiche, jamais deux fois le même. L'import de plusieurs pièces depuis une PHOTO ne change pas (liste, « Ajouter », « Tout ajouter »).
+   */
+  const parArticle = Boolean(ticket) && listeAffichee;
+  const articleEnCours = parArticle ? brouillons[0] : undefined;
+  const affiches = parArticle ? brouillons.slice(0, 1) : brouillons;
+  const toutAjouterVisible = listeAffichee && brouillons.length > 1 && !ticket;
+  const [sourcePhotoArticle, setSourcePhotoArticle] = useState(false);
 
   return (
     <div className="absolute inset-0 flex flex-col bg-cream">
@@ -431,7 +441,7 @@ export default function ImporterTenueScreen() {
         )}
       </div>
 
-      <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-[18px] pt-[6px] pb-[40px]" aria-busy={enCours || enAjout}>
+      <div className={"scrollarea flex-1 min-h-0 overflow-y-auto px-[18px] pt-[6px] " + (parArticle ? "pb-[190px]" : "pb-[40px]")} aria-busy={enCours || enAjout}>
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onFichier} className="hidden" />
         <input ref={galerieRef} type="file" accept="image/*" onChange={onFichier} className="hidden" />
         {/* La photo d'un article de ticket (06/11/2026) : prise ou choisie, pour la carte désignée par carteDeLaPhoto. */}
@@ -481,11 +491,14 @@ export default function ImporterTenueScreen() {
                 <p className="font-serif font-medium text-[22px] text-ink">{ticket ? (seul ? "1 article sur ton ticket" : `${nbRepere} articles sur ton ticket`) : seul ? "1 pièce détectée" : `${nbRepere} pièces détectées`}</p>
                 <p className="text-[12.5px] text-muted-3 mt-1">
                   {ticket
-                    ? isSupabaseConfigured
-                      ? "Vérifie chaque pièce : Capsela lui crée un visuel indicatif, à confirmer, ou ajoute ta photo."
-                      : "Vérifie chaque pièce avant de l'ajouter : une photo pourra s'ajouter ensuite depuis sa fiche."
+                    ? "Capsela a prérempli la fiche d'après ton ticket. Vérifie les informations avant d'ajouter l'article : une photo pourra s'ajouter ensuite depuis sa fiche."
                     : "Vérifie les vêtements avant de les ajouter à ton dressing."}
                 </p>
+                {ticket && nbRepere > 1 && brouillons.length > 0 && (
+                  <p className="t-label text-terracotta mt-[10px]">
+                    Article {Math.min(nbRepere - brouillons.length + 1, nbRepere)} sur {nbRepere}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -525,9 +538,10 @@ export default function ImporterTenueScreen() {
         {/* Les objets repérés. */}
         {(phase === "resultat" || phase === "ajout") && (
           <ul className="list-none p-0 mt-4 flex flex-col gap-2">
-            {brouillons.map((b) => {
+            {affiches.map((b) => {
               const manques = manquesDe(b);
-              const ouvert = ouverte === b.cle;
+              // Un article de ticket : sa fiche est toujours ouverte.
+              const ouvert = parArticle || ouverte === b.cle;
               const etatPlat = plat[b.cle];
               const peutAPlat = MISE_A_PLAT_DISPONIBLE && isSupabaseConfigured && Boolean(b.photoUrl) && !estPhotoMiseAPlat(b.photoUrl);
               // Le visuel indicatif d'un article de ticket (06/11/2026) : en cours, proposé, ou introuvable.
@@ -543,7 +557,7 @@ export default function ImporterTenueScreen() {
                       aria-expanded={ouvert}
                       aria-label={`Modifier ${b.nom || "la pièce"}`}
                       disabled={enAjout}
-                      onClick={() => setOuverte(ouvert ? null : b.cle)}
+                      onClick={() => (parArticle ? document.getElementById(`nom-${b.cle}`)?.focus() : setOuverte(ouvert ? null : b.cle))}
                       className="min-w-0 flex items-center gap-[8px] text-left cursor-pointer min-h-[44px]"
                     >
                       <span className="t-titre-carte text-ink truncate">{avecTraitsDUnion(b.nom || "Nouvelle pièce")}</span>
@@ -637,14 +651,17 @@ export default function ImporterTenueScreen() {
                             Mettre à plat
                           </button>
                         )}
-                        <button
-                          type="button"
-                          disabled={enAjout || !b.coche}
-                          onClick={() => (manques.length > 0 ? setOuverte(b.cle) : void valider([b]))}
-                          className="h-[40px] px-4 rounded-full bg-terracotta-deep text-on-terracotta text-[12.5px] font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50 flex items-center justify-center gap-[6px]"
-                        >
-                          <Coche couleur="currentColor" /> Ajouter
-                        </button>
+                        {/* Un article de ticket s'ajoute depuis la barre fixe du bas : un seul bouton d'ajout à l'écran. */}
+                        {!parArticle && (
+                          <button
+                            type="button"
+                            disabled={enAjout || !b.coche}
+                            onClick={() => (manques.length > 0 ? setOuverte(b.cle) : void valider([b]))}
+                            className="h-[40px] px-4 rounded-full bg-terracotta-deep text-on-terracotta text-[12.5px] font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50 flex items-center justify-center gap-[6px]"
+                          >
+                            <Coche couleur="currentColor" /> Ajouter
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -679,26 +696,31 @@ export default function ImporterTenueScreen() {
                             Recréer le visuel
                           </button>
                         )}
-                        <button
-                          type="button"
-                          disabled={enAjout || photoCarteEnvoi !== null}
-                          onClick={() => choisirPhotoCarte(b.cle, true)}
-                          className="h-[40px] px-4 rounded-full border border-border bg-cream text-ink text-[12.5px] font-semibold cursor-pointer disabled:opacity-50"
-                        >
-                          Prendre une photo
-                        </button>
-                        <button
-                          type="button"
-                          disabled={enAjout || photoCarteEnvoi !== null}
-                          onClick={() => choisirPhotoCarte(b.cle, false)}
-                          className="h-[40px] px-4 rounded-full border border-border bg-cream text-ink text-[12.5px] font-semibold cursor-pointer disabled:opacity-50"
-                        >
-                          Choisir dans la galerie
-                        </button>
+                        {/* La photo d'un article de ticket se met depuis la barre du bas (« Ajouter la photo de la pièce »). */}
+                        {!parArticle && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={enAjout || photoCarteEnvoi !== null}
+                              onClick={() => choisirPhotoCarte(b.cle, true)}
+                              className="h-[40px] px-4 rounded-full border border-border bg-cream text-ink text-[12.5px] font-semibold cursor-pointer disabled:opacity-50"
+                            >
+                              Prendre une photo
+                            </button>
+                            <button
+                              type="button"
+                              disabled={enAjout || photoCarteEnvoi !== null}
+                              onClick={() => choisirPhotoCarte(b.cle, false)}
+                              className="h-[40px] px-4 rounded-full border border-border bg-cream text-ink text-[12.5px] font-semibold cursor-pointer disabled:opacity-50"
+                            >
+                              Choisir dans la galerie
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
-                  {visuelRetenu && (
+                  {visuelRetenu && !parArticle && (
                     <div className="px-3 pb-3 -mt-1 flex flex-wrap items-center gap-2">
                       <span className="text-[12px] text-muted-3">Tu préfères ta photo ?</span>
                       <button type="button" disabled={enAjout || photoCarteEnvoi !== null} onClick={() => choisirPhotoCarte(b.cle, true)} className="text-[12.5px] font-semibold text-terracotta-deep cursor-pointer disabled:opacity-50">
@@ -720,7 +742,7 @@ export default function ImporterTenueScreen() {
                     <div className="px-3 pb-4 pt-1 flex flex-col gap-3 border-t border-border">
                       <label className="flex flex-col gap-1 mt-3">
                         <span className={EYEBROW}>Nom</span>
-                        <Input value={b.nom} onChange={(e) => modifier(b.cle, { nom: e.target.value })} onFocus={(e) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 250); }} />
+                        <Input id={`nom-${b.cle}`} value={b.nom} onChange={(e) => modifier(b.cle, { nom: e.target.value })} onFocus={(e) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 250); }} />
                       </label>
                       <ChampSelect
                         label="Catégorie"
@@ -852,7 +874,7 @@ export default function ImporterTenueScreen() {
               {nPieces(ajoutees.length)} {ajoutees.length > 1 ? "ajoutées" : "ajoutée"} à ton dressing
             </p>
             <div className="flex gap-2 mt-4 flex-wrap">
-              {ajoutees.map((u) => (
+              {ajoutees.filter(Boolean).map((u) => (
                 <span key={u} className="w-[64px] h-[64px] rounded-[14px] overflow-hidden flex items-center justify-center" style={{ background: "var(--color-warm-bg)" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={u} alt="" className="w-full h-full object-contain" />
@@ -863,9 +885,15 @@ export default function ImporterTenueScreen() {
               <Button variante="principal" onClick={actions.goWardrobe}>
                 Voir mon dressing
               </Button>
-              <Button variante="secondaire" onClick={recommencer}>
-                Importer une autre tenue
-              </Button>
+              {ticket ? (
+                <Button variante="secondaire" onClick={() => { fin.current = true; actions.go("add"); }}>
+                  Ajouter une autre pièce
+                </Button>
+              ) : (
+                <Button variante="secondaire" onClick={recommencer}>
+                  Importer une autre tenue
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -889,6 +917,70 @@ export default function ImporterTenueScreen() {
           </div>
         )}
       </div>
+
+      {/* LA BARRE FIXE D'UN ARTICLE DE TICKET (06/11/2026) : la même que « Ajouter une pièce » (fond crème, filet, zone système). */}
+      {parArticle && articleEnCours && (() => {
+        const b = articleEnCours;
+        const manques = manquesDe(b);
+        const photoReelle = Boolean(b.photoUrl) && !b.photoUrl.split("?")[0].includes("/visuel-");
+        return (
+          <div className="absolute left-0 right-0 bottom-0 bg-cream border-t border-border px-[18px] pt-3" style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom))" }}>
+            <button
+              type="button"
+              disabled={enAjout || !b.coche || photoCarteEnvoi !== null}
+              onClick={() => {
+                if (!manques.length) return void valider([b]);
+                // Une information manque : la page descend jusqu'au champ à préciser (un seul article affiché, ses libellés sont uniques).
+                const champ = { saisons: '[aria-label="Saisons"]', manches: '[aria-label="Manches"]' }[manques[0] as "saisons" | "manches"];
+                (champ ? document.querySelector(champ) : document.getElementById(`nom-${b.cle}`))?.scrollIntoView({ block: "center", behavior: "smooth" });
+              }}
+              aria-busy={enAjout}
+              className={
+                "w-full h-[52px] rounded-full flex items-center justify-center gap-[10px] text-[13.5px] font-semibold uppercase tracking-[.08em] " +
+                (manques.length > 0 || !b.coche ? "bg-[#E2C9A8] text-[#5C5648]" : "bg-terracotta-deep text-[#FBF3EA]") +
+                " cursor-pointer disabled:cursor-default"
+              }
+            >
+              {enAjout ? <SpinnerCintre /> : <Coche couleur="currentColor" taille={18} />}
+              {enAjout ? "Ajout en cours…" : "Ajouter cet article"}
+            </button>
+            <button
+              type="button"
+              disabled={enAjout || photoCarteEnvoi !== null}
+              onClick={() => setSourcePhotoArticle(true)}
+              className="w-full h-[48px] mt-2 rounded-full border border-border bg-cream text-ink text-[13.5px] font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+            >
+              <CameraIcon /> {photoReelle ? "Changer la photo de la pièce" : "Ajouter la photo de la pièce"}
+            </button>
+            <div className="text-center text-[12px] text-[#5C5648] mt-2 min-h-[16px]">
+              {!b.coche ? "Plus de place dans ton dressing gratuit." : manques.length > 0 ? phraseManque(manques) : "La photo est facultative : tout reste modifiable depuis ton dressing."}
+            </div>
+          </div>
+        );
+      })()}
+
+      <BottomSheet title="Ajouter la photo de la pièce" open={sourcePhotoArticle} onClose={() => setSourcePhotoArticle(false)}>
+        <div className="flex flex-col">
+          <button
+            onClick={() => {
+              setSourcePhotoArticle(false);
+              if (articleEnCours) choisirPhotoCarte(articleEnCours.cle, true);
+            }}
+            className="flex items-center gap-[13px] py-[15px] text-[14px] text-ink border-b border-border cursor-pointer text-left"
+          >
+            <CameraIcon /> Prendre une photo
+          </button>
+          <button
+            onClick={() => {
+              setSourcePhotoArticle(false);
+              if (articleEnCours) choisirPhotoCarte(articleEnCours.cle, false);
+            }}
+            className="flex items-center gap-[13px] py-[15px] text-[14px] text-ink cursor-pointer text-left"
+          >
+            <GalerieIcon /> Choisir dans la galerie
+          </button>
+        </div>
+      </BottomSheet>
 
       <BottomSheet title="Toutes les couleurs" open={couleurPour !== null} onClose={() => setCouleurPour(null)}>
         {(() => {

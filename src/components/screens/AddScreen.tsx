@@ -295,7 +295,7 @@ export default function AddScreen() {
       magasin: lu.magasin,
       articles: lu.articles.map((a) => {
         const c = a.couleur ? PALETTE.find(([n]) => n === a.couleur) : undefined;
-        return { nom: a.nom, categorie: a.categorie, taille: a.taille, couleur: c ? { nom: c[0], hex: c[1] } : null };
+        return { nom: a.nom, categorie: a.categorie, taille: a.taille, couleur: c ? { nom: c[0], hex: c[1] } : null, modele: a.modele, manches: a.manches, motif: a.motif, saisons: a.saisons };
       }),
     });
     actions.openImporterTenue();
