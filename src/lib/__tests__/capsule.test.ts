@@ -202,3 +202,29 @@ describe("Sport par étiquette de style (option C2, 31/10/2026)", () => {
     expect([...avant].sort()).toEqual(["Débardeur de sport", "Legging de sport", "Legging imprimé", "Sweat de sport"]);
   });
 });
+
+describe("Chaussures d'intérieur : la paire du style d'abord (06/11/2026)", () => {
+  const TOUS = "Minimaliste, Casual chic, Classique chic, Preppy, Bohème, Streetwear, Glamour, Romantique, Créatif";
+  const interieur = (id: number, name: string, styles: string, genre = "femme", couleur = "Gris") =>
+    item({ id, category: "chaussures", name, sous_type: "Chaussures d'intérieur", styles, genre, couleur_dominante: couleur, occasions: "cocooning", niveau_formalite: "decontracte", role_piece: "base" });
+  const pool = (...extra: CatalogItem[]) => [...catalogueSansRobes(), ...extra];
+  const paires = (c: CatalogItem[]) => c.filter((it) => it.cat === "chaussures" && it.shoeType === "Chaussures d'intérieur");
+
+  it("un profil Romantique reçoit le modèle Romantique, pas la paire générique", () => {
+    const capsule = computeDefaultCapsule(profile({ styles: ["romantique"] }), at(8), [], "Automne",
+      pool(interieur(9001, "Chaussures d'intérieur", TOUS), interieur(9002, "Chaussons en satin à nœud", "Romantique")));
+    expect(paires(capsule).map((it) => it.name)).toEqual(["Chaussons en satin à nœud"]);
+  });
+
+  it("sans modèle pour son style, la paire générique reste garantie", () => {
+    const capsule = computeDefaultCapsule(profile({ styles: ["minimaliste"] }), at(8), [], "Automne",
+      pool(interieur(9001, "Chaussures d'intérieur", TOUS), interieur(9002, "Chaussons en satin à nœud", "Romantique")));
+    expect(paires(capsule).map((it) => it.name)).toEqual(["Chaussures d'intérieur"]);
+  });
+
+  it("jamais le modèle de l'autre genre", () => {
+    const capsule = computeDefaultCapsule(profile({ gender: "homme", styles: ["preppy"] }), at(8), [], "Automne",
+      pool(interieur(9001, "Chaussures d'intérieur", TOUS, "homme"), interieur(9003, "Mocassins d'intérieur doublés", "Preppy", "femme")));
+    expect(paires(capsule).map((it) => it.name)).toEqual(["Chaussures d'intérieur"]);
+  });
+});

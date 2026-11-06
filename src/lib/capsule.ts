@@ -1142,17 +1142,30 @@ export function computeDefaultCapsule(
 
   // Garantit au moins une paire de chaussures d'intérieur, indépendamment du
   // style — sinon un look Cocooning (R-B12) n'aurait aucune chaussure éligible.
-  if (!out.some((it) => it.cat === "chaussures" && it.shoeType === "Chaussures d'intérieur")) {
-    const pool = sourcePool.filter(
-      (it) =>
-        it.cat === "chaussures" &&
-        it.shoeType === "Chaussures d'intérieur" &&
-        !excluded.has(it.id) &&
-        it.genre !== oppositeGenre
-    );
-    const fav = pool.filter((it) => favColors.includes(it.hex));
-    const pickFrom = fav.length ? fav : pool;
-    if (pickFrom.length) out = [...out, pickFrom[0]];
+  // LA PAIRE DU STYLE D'ABORD (06/11/2026, demandé : « pour les chaussons je veux couvrir chaque style », docs/capsules/chaussons/) :
+  // chaque style a désormais son modèle, à côté des paires génériques qui portent tous les styles (n° 481 femme, 520 homme). La
+  // garantie prenait la première paire venue — la générique — et les modèles de style ne sortaient jamais. Rang : une paire propre à
+  // un style du profil, la plus spécifique (le moins d'étiquettes de style), puis une couleur préférée. Une paire moins bien rangée déjà
+  // retenue par la sélection cède sa place : une seule paire d'intérieur, comme avant.
+  {
+    const estInterieur = (it: Item) => it.cat === "chaussures" && it.shoeType === "Chaussures d'intérieur";
+    const pool = sourcePool.filter((it) => estInterieur(it) && !excluded.has(it.id) && it.genre !== oppositeGenre);
+    const rang = (it: CatalogItem): number[] => [
+      styles.length && it.styleTags?.some((t) => styles.includes(t)) ? 0 : 1,
+      it.styleTags?.length || 99,
+      favColors.includes(it.hex) ? 0 : 1,
+    ];
+    const avant = (a: CatalogItem, b: CatalogItem) => {
+      const ra = rang(a), rb = rang(b);
+      for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
+      return 0;
+    };
+    const meilleure = [...pool].sort(avant)[0];
+    const retenue = out.find(estInterieur) as CatalogItem | undefined;
+    if (meilleure && !retenue) out = [...out, meilleure];
+    else if (meilleure && retenue && retenue.id !== meilleure.id && avant(meilleure, retenue) < 0) {
+      out = out.map((it) => (it.id === retenue.id ? meilleure : it));
+    }
   }
 
   // Garantit une paire de collants en Automne/Hiver pour un profil femme
