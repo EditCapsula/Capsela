@@ -252,6 +252,16 @@ body {
  * conteneur scrollable de tout écran dont le dernier élément doit rester
  * pleinement visible au-dessus de TabBar.
  */
+/*
+ * LE HAUT DE L'ÉCRAN SUR iPHONE (06/11/2026, signalé sur l'enregistrement TestFlight : « le haut des écrans est caché, il n'y a pas
+ * suffisamment de marges dans le header »). Sur iOS seulement, la page passe en viewport-fit=cover (viewportIos, App.tsx) : l'encoche
+ * et la barre d'état donnent alors leur hauteur à env(safe-area-inset-top), que la coque de l'app laisse libre. Ailleurs (Android,
+ * dont la page reste entre les barres système ; navigateur), la valeur vaut 0 : rien ne change.
+ */
+.pt-safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
 .pb-safe-nav {
   padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px);
 }

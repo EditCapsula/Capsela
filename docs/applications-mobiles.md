@@ -79,3 +79,11 @@ Sur iOS, la vidéo récompensée n'est pas proposée (`src/lib/publicite.ts` : A
 ## Ce qui n'a pas été vérifié
 
 Ni Xcode ni le SDK Android ne sont disponibles dans l'environnement où les projets ont été générés. Android compile dans son workflow depuis le 17/10/2026 ; iOS compile pour la première fois dans `ios-construire.yml` (05/11/2026). Aucun des deux n'a été ouvert dans Xcode ou Android Studio.
+
+## iOS : le haut de l'écran (06/11/2026)
+
+Signalé sur l'enregistrement TestFlight de la 1.9 : « le haut des écrans est caché, il n'y a pas suffisamment de marges dans le header ».
+La vue web d'iOS passe sous la barre d'état et l'encoche ; sans `viewport-fit=cover`, WebKit donne 0 à `env(safe-area-inset-*)`, donc
+rien ne laissait cette place. Correctif : sur iOS natif seulement, `viewport-fit=cover` est ajouté au chargement (App.tsx), et la coque de
+l'app reçoit `pt-safe-top` (globals.css). Android (page déjà entre les barres système) et le web ne changent pas. Le bas, qui utilisait
+déjà `env(safe-area-inset-bottom)`, laisse désormais aussi la place de la barre d'accueil de l'iPhone. À vérifier sur iPhone à chaque build.
