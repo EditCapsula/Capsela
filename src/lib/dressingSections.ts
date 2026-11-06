@@ -178,6 +178,14 @@ const ADJECTIFS_D_OUVERTURE = new Set([
   "beau", "bel", "belle", "nouveau", "nouvel", "nouvelle", "vieux", "vieil", "vieille", "gros", "grosse", "mini", "maxi", "vrai", "vraie",
 ]);
 
+/**
+ * LE H ASPIRÉ (06/11/2026, signalé : « et l'haut technique cela ne va pas ») : on dit « le haut », « la housse », jamais « l'haut ». Ces
+ * mots ne s'élident pas ; tout autre mot qui commence par une voyelle ou un h (muet : « l'imperméable », « l'habit ») s'élide.
+ */
+const H_ASPIRE = new Set(["haut", "hauts", "hoodie", "hoodies", "housse", "harnais", "havresac", "hotte"]);
+/** Vrai quand l'article s'élide devant ce mot (clé `cleMot`) : voyelle ou h muet. */
+const sElide = (mot: string) => /^[aeiouy]/.test(mot) || (mot.startsWith("h") && !H_ASPIRE.has(mot));
+
 function cleMot(mot: string): string {
   return mot.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z-]/g, "");
 }
@@ -189,7 +197,7 @@ export function articlePossessif(p: Item): "ton" | "ta" | "tes" | undefined {
     const genre = GENRE_DU_NOM[mot];
     if (genre === "p") return "tes";
     // « ton écharpe », « ton espadrille » : devant une voyelle ou un h muet, le possessif féminin prend la forme masculine.
-    if (genre === "f") return /^[aeiouyh]/.test(mot) ? "ton" : "ta";
+    if (genre === "f") return sElide(mot) ? "ton" : "ta";
     if (genre === "m") return "ton";
     if (!ADJECTIFS_D_OUVERTURE.has(mot)) break;
   }
@@ -207,7 +215,7 @@ export function designationPiece(p: Item): string {
 /** « le », « la », « l' » ou « les » selon le nom de la pièce (même lecture que `articlePossessif`) ; `undefined` quand rien ne permet de choisir. */
 export function articleDefini(p: Item): "le" | "la" | "l'" | "les" | undefined {
   const mots = p.name.trim().split(/\s+/).map(cleMot).filter(Boolean);
-  const elide = (mot: string) => /^[aeiouyh]/.test(mot);
+  const elide = sElide;
   for (const mot of mots.slice(0, 3)) {
     const genre = GENRE_DU_NOM[mot];
     if (genre === "p") return "les";

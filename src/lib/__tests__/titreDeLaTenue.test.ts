@@ -71,3 +71,12 @@ describe("nomCourtTitre (18/10/2026 : raccourcir sans perdre ce qui dit la pièc
     });
   });
 });
+
+describe("le h aspiré (06/11/2026, signalé : « et l'haut technique »)", () => {
+  it("« le haut », jamais « l'haut » ; le h muet s'élide toujours", () => {
+    expect(articleDefini(p("haut", "Haut technique"))).toBe("le");
+    expect(articleDefini(p("pull", "Hoodie gris"))).toBe("le");
+    expect(articleDefini(p("manteau", "Imperméable beige"))).toBe("l'");
+    expect(titreDeLaTenue([p("pantalon", "Legging de sport"), p("haut", "Haut technique")])).toEqual({ a: "Le legging de sport", b: "et le haut technique" });
+  });
+});
