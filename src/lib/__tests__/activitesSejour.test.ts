@@ -56,7 +56,7 @@ describe("sélection libre", () => {
 
   it("un mariage s'ajoute comme une visite, et devient une cérémonie pour le moteur", () => {
     const choix = ajouterLibelle([], "Mariage");
-    expect(choix[0]).toEqual({ libelle: "Mariage", activite: "evenement", source: "perso" });
+    expect(choix[0]).toEqual({ libelle: "Mariage", activite: "evenement", source: "perso", jours: [] });
     expect(programmeDesActivites(activitesDesChoix(choix), 5).map((p) => p.id)).toContain("ceremonie");
   });
 

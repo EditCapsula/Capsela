@@ -37,6 +37,12 @@ export interface ActiviteChoisie {
   /** L'activité du moteur à laquelle il correspond ; null quand aucune ne le décrit (il ne change alors rien aux tenues). */
   activite: ActiviteSejour | null;
   source: "idee" | "perso";
+  /**
+   * LES DATES DE L'ACTIVITÉ (06/11/2026, demandé : l'affectation des dates « dès la sélection des activités » ; plusieurs dates
+   * possibles ; une activité peut rester « À planifier »). Les jours du séjour choisis (AAAA-MM-JJ) ; [] : à planifier. Absent d'un
+   * choix fait avant : sa valise garde la répartition automatique (planningValise.ts, `planificationManuelle`).
+   */
+  jours?: string[];
 }
 
 export const LIBELLE_MAX = 60;
@@ -148,14 +154,14 @@ export const dejaChoisi = (choix: readonly ActiviteChoisie[], libelle: string): 
 export function ajouterLibelle(choix: readonly ActiviteChoisie[], brut: string): ActiviteChoisie[] {
   const libelle = libellePropre(brut);
   if (!cleLibelle(libelle) || dejaChoisi(choix, libelle)) return [...choix];
-  return [...choix, { libelle, activite: activiteDuLibelle(libelle), source: "perso" }];
+  return [...choix, { libelle, activite: activiteDuLibelle(libelle), source: "perso", jours: [] }];
 }
 
 /** Ajouter ou retirer une idée proposée. */
 export function basculerIdee(choix: readonly ActiviteChoisie[], idee: IdeeSejour): ActiviteChoisie[] {
   const cle = cleLibelle(idee.libelle);
   if (choix.some((c) => cleLibelle(c.libelle) === cle)) return choix.filter((c) => cleLibelle(c.libelle) !== cle);
-  return [...choix, { libelle: libellePropre(idee.libelle), activite: idee.activite, source: "idee" }];
+  return [...choix, { libelle: libellePropre(idee.libelle), activite: idee.activite, source: "idee", jours: [] }];
 }
 
 /**
@@ -209,4 +215,13 @@ export function destinationAvecPreposition(nom: string): string | null {
   if (!prep) return `à ${propre}`;
   const sansArticle = propre.replace(/^(les\s+|la\s+|le\s+|l['’]\s*)/i, "");
   return `${prep} ${sansArticle.charAt(0).toUpperCase()}${sansArticle.slice(1)}`;
+}
+
+/** Ajoute ou retire un jour d'une activité choisie ; les jours restent dans l'ordre du calendrier. */
+export function basculerJour(choix: readonly ActiviteChoisie[], index: number, jour: string): ActiviteChoisie[] {
+  return choix.map((c, i) => {
+    if (i !== index) return c;
+    const jours = c.jours ?? [];
+    return { ...c, jours: (jours.includes(jour) ? jours.filter((j) => j !== jour) : [...jours, jour]).sort() };
+  });
 }

@@ -1,5 +1,6 @@
 import { creneauDuMoment, evenementsDuSejour, libelleEvenement, sousIdEvenement, type EvenementValise, type MomentEvenement } from "./evenementsValise";
-import { elementProgramme, type Creneau, type ItemProgramme } from "./programmeValise";
+import { ACTIVITES, elementProgramme, type Creneau, type ItemProgramme } from "./programmeValise";
+import type { ActiviteChoisie } from "./activitesSejour";
 import type { LookValise, SituationValise } from "./valise";
 import type { ValiseGardee } from "./valises";
 
@@ -37,7 +38,47 @@ export interface CreneauPlanning {
   moment?: MomentEvenement;
   /** Vrai pour une activité répartie (ni trajet, ni événement daté) : la seule que la personne peut déplacer. */
   deplacable?: boolean;
+  /** Une activité DATÉE par la personne (planification manuelle) : son rang dans les choix de la valise. */
+  choix?: number;
 }
+
+/**
+ * LA PLANIFICATION MANUELLE (06/11/2026, demandé : les dates choisies « dès la sélection des activités », plusieurs dates possibles,
+ * une activité sans date reste « À planifier » : elle compte pour la valise, mais n'apparaît sur aucune journée, et Capsela ne lui
+ * attribue JAMAIS de date d'elle-même). Une valise dont les choix portent leurs jours (`jours`, même vides) est planifiée à la main ;
+ * une valise d'avant garde la répartition automatique.
+ */
+export const planificationManuelle = (choix: readonly ActiviteChoisie[] | undefined): boolean => Boolean(choix?.some((c) => Array.isArray(c.jours)));
+
+/** L'entrée du programme qui porte une activité du moteur : la première de ses retenues (Plage → plage, Ville → visites). */
+export function sousIdDeLActivite(activite: ActiviteChoisie["activite"]): string | null {
+  return ACTIVITES.find((a) => a.id === activite)?.retenues[0]?.[0] ?? null;
+}
+
+/** Une activité choisie, datée : son libellé à elle (« Plage de Cascais »), l'entrée du programme qui la porte, ses jours du séjour. */
+export interface ActiviteDatee {
+  choix: number;
+  libelle: string;
+  sousId: string;
+  jours: string[];
+}
+
+/** Les activités choisies qui ont au moins un jour DU SÉJOUR ; une activité sans correspondance dans le moteur n'a pas de tenue : écartée. */
+export function activitesDatees(choix: readonly ActiviteChoisie[], jours: readonly string[]): ActiviteDatee[] {
+  return choix.flatMap((c, i) => {
+    const sousId = sousIdDeLActivite(c.activite);
+    const leurs = (c.jours ?? []).filter((j) => jours.includes(j));
+    return sousId && leurs.length ? [{ choix: i, libelle: c.libelle, sousId, jours: leurs }] : [];
+  });
+}
+
+/** Les activités choisies « À planifier » : une correspondance dans le moteur, aucun jour du séjour. */
+export function activitesAPlanifier(choix: readonly ActiviteChoisie[], jours: readonly string[]): { choix: number; libelle: string }[] {
+  return choix.flatMap((c, i) => (sousIdDeLActivite(c.activite) && !(c.jours ?? []).some((j) => jours.includes(j)) ? [{ choix: i, libelle: c.libelle }] : []));
+}
+
+/** L'identité d'un créneau pour le déplacer : l'activité choisie (manuel) ou l'entrée du programme (réparti). */
+export const cleDeplacement = (c: Pick<CreneauPlanning, "choix" | "sousId">): string => (c.choix != null ? `choix:${c.choix}` : c.sousId);
 
 /** Les jours choisis par la personne pour ses activités réparties : l'id de l'activité → ses jours (AAAA-MM-JJ). */
 export type PlacementsPlanning = Record<string, string[]>;
@@ -80,11 +121,13 @@ export function planningDuProgramme(
   situations: readonly SituationValise[],
   looks: readonly LookValise[],
   evenements: readonly EvenementValise[] = [],
-  placements: PlacementsPlanning = {}
+  placements: PlacementsPlanning = {},
+  /** Planification manuelle : les activités datées remplacent l'étalement (rien n'est réparti). Absent : la répartition automatique. */
+  datees?: readonly ActiviteDatee[]
 ): CreneauPlanning[] {
   const nb = jours.length;
   if (!nb) return [];
-  const creneaux: { jourIdx: number; creneau: Creneau; sousId: string; libelle: string; evenement?: boolean; moment?: MomentEvenement; deplacable?: boolean }[] = [];
+  const creneaux: { jourIdx: number; creneau: Creneau; sousId: string; libelle: string; evenement?: boolean; moment?: MomentEvenement; deplacable?: boolean; choix?: number }[] = [];
   const chargeJour = new Array(nb).fill(0);
   const chargeSoir = new Array(nb).fill(0);
 
@@ -110,7 +153,17 @@ export function planningDuProgramme(
   // 3. Le reste. D'abord les activités que la personne a placées, à leurs jours ; puis les autres, les plus fréquentes d'abord,
   //    étalées sur les jours (ou les soirs) les moins chargés.
   const parFrequence = (a: { frequence: number }, b: { frequence: number }) => b.frequence - a.frequence;
-  for (const creneau of ["jour", "soir"] as const) {
+  if (datees) {
+    for (const a of datees) {
+      const e = elementProgramme(a.sousId);
+      if (!e || e.creneau === "trajet") continue;
+      for (const j of a.jours) {
+        const d = jours.indexOf(j);
+        if (d >= 0) creneaux.push({ jourIdx: d, creneau: e.creneau, sousId: e.id, libelle: a.libelle, deplacable: true, choix: a.choix });
+      }
+    }
+  }
+  for (const creneau of datees ? [] : (["jour", "soir"] as const)) {
     const charge = creneau === "soir" ? chargeSoir : chargeJour;
     const liste = elements.filter((x) => x.e.creneau === creneau).sort(parFrequence);
     const places = liste.map(({ e, frequence }) => joursGardes(placements[e.id], frequence, jours));
@@ -159,6 +212,7 @@ export function planningDuProgramme(
     look: choix[idx],
     ...(c.evenement ? { evenement: true, moment: c.moment } : {}),
     ...(c.deplacable ? { deplacable: true } : {}),
+    ...(c.choix != null ? { choix: c.choix } : {}),
   }));
 }
 
@@ -168,8 +222,8 @@ export function planningDuProgramme(
  * (un trajet, un événement daté, le même jour, ou un jour qui a déjà cette activité).
  */
 export function deplacerActivite(planning: readonly CreneauPlanning[], sousId: string, de: string, vers: string): PlacementsPlanning | null {
-  if (de === vers) return null;
-  const siens = planning.filter((c) => c.deplacable && c.sousId === sousId);
+  if (de === vers || sousId.startsWith("choix:")) return null;
+  const siens = planning.filter((c) => c.deplacable && c.choix == null && c.sousId === sousId);
   if (!siens.some((c) => c.jour === de) || siens.some((c) => c.jour === vers)) return null;
   const out: PlacementsPlanning = {};
   for (const c of planning) if (c.deplacable) (out[c.sousId] ??= []).push(c.sousId === sousId && c.jour === de ? vers : c.jour);
@@ -177,9 +231,16 @@ export function deplacerActivite(planning: readonly CreneauPlanning[], sousId: s
 }
 
 /** Les jours où une activité répartie peut aller : ceux du séjour qui ne l'ont pas déjà. */
-export function joursPossibles(planning: readonly CreneauPlanning[], sousId: string, jours: readonly string[]): string[] {
-  const pris = new Set(planning.filter((c) => c.deplacable && c.sousId === sousId).map((c) => c.jour));
+export function joursPossibles(planning: readonly CreneauPlanning[], cle: string, jours: readonly string[]): string[] {
+  const pris = new Set(planning.filter((c) => c.deplacable && cleDeplacement(c) === cle).map((c) => c.jour));
   return jours.filter((j) => !pris.has(j));
+}
+
+/** Déplacer une activité DATÉE (planification manuelle) : ses jours, celui de départ remplacé par celui d'arrivée ; null si impossible. */
+export function deplacerActiviteDatee(choix: readonly ActiviteChoisie[], index: number, de: string, vers: string): ActiviteChoisie[] | null {
+  const c = choix[index];
+  if (!c || de === vers || !c.jours?.includes(de) || c.jours.includes(vers)) return null;
+  return choix.map((x, i) => (i === index ? { ...x, jours: x.jours!.map((j) => (j === de ? vers : j)).sort() } : x));
 }
 
 /**
@@ -187,12 +248,13 @@ export function joursPossibles(planning: readonly CreneauPlanning[], sousId: str
  * valise composée avant le planning jour par jour (ni programme ni événement, ou des situations sans leurs occasions).
  */
 export function planningDeLaValise(
-  v: Pick<ValiseGardee, "programme" | "situations" | "evenements" | "placements">,
+  v: Pick<ValiseGardee, "programme" | "situations" | "evenements" | "placements" | "choix">,
   jours: readonly string[],
   looks: readonly LookValise[]
 ): CreneauPlanning[] {
   if (!(v.programme?.length || v.evenements?.length) || !v.situations.some((s) => s.sousIds?.length)) return [];
-  return planningDuProgramme(v.programme ?? [], jours, v.situations, looks, v.evenements ?? [], v.placements ?? {});
+  const manuelle = planificationManuelle(v.choix);
+  return planningDuProgramme(v.programme ?? [], jours, v.situations, looks, v.evenements ?? [], v.placements ?? {}, manuelle ? activitesDatees(v.choix ?? [], jours) : undefined);
 }
 
 /** La pièce la plus réutilisée de la valise, et combien de looks l'utilisent — pour « 1 pièce utilisée jusqu'à 4 fois » ; null s'il n'y en a pas d'au moins deux. */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { deplacerActivite, joursPossibles, pieceLaPlusUtilisee, planningDuProgramme } from "../planningValise";
+import { activitesAPlanifier, activitesDatees, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, pieceLaPlusUtilisee, planificationManuelle, planningDuProgramme } from "../planningValise";
+import { basculerJour } from "../activitesSejour";
 import { filtrerParContrainte } from "../programmeValise";
 import { groupesMeteo, situationsDuProgramme, situationsDuSejour, type MeteoJour } from "../valise";
 import type { Item } from "../types";
@@ -168,5 +169,48 @@ describe("déplacer une activité répartie (06/11/2026, glisser-déposer du pla
   });
   it("sans placements : le planning d'avant, à l'identique", () => {
     expect(planningDuProgramme(programme, JOURS, situations, [], [], {})).toEqual(auto);
+  });
+});
+
+describe("planification manuelle (06/11/2026) : les dates choisies à l'étape Activités", () => {
+  const programme = [
+    { id: "trajet", frequence: 2 },
+    { id: "plage", frequence: 2 },
+    { id: "visites", frequence: 3 },
+  ];
+  const situations = situationsDuProgramme(programme, meteos, ["quotidien"]);
+  const choix = [
+    { libelle: "Plage de Cascais", activite: "plage" as const, source: "idee" as const, jours: ["2026-10-21", "2026-10-23"] },
+    { libelle: "Visiter la ville", activite: "ville" as const, source: "idee" as const, jours: [] },
+    { libelle: "Atelier poterie", activite: null, source: "perso" as const, jours: ["2026-10-22"] },
+  ];
+
+  it("une valise dont les choix portent leurs jours est planifiée à la main ; une valise d'avant, non", () => {
+    expect(planificationManuelle(choix)).toBe(true);
+    expect(planificationManuelle([{ libelle: "Plage", activite: "plage", source: "idee" }])).toBe(false);
+    expect(planificationManuelle(undefined)).toBe(false);
+  });
+  it("seules les activités datées apparaissent, sous leur nom, à leurs jours ; rien n'est réparti", () => {
+    const p = planningDuProgramme(programme, JOURS, situations, [], [], {}, activitesDatees(choix, JOURS));
+    const hors = p.filter((c) => c.sousId !== "trajet");
+    expect(hors.map((c) => [c.jour, c.libelle, c.choix])).toEqual([
+      ["2026-10-21", "Plage de Cascais", 0],
+      ["2026-10-23", "Plage de Cascais", 0],
+    ]);
+    expect(p.filter((c) => c.sousId === "trajet").map((c) => c.jour)).toEqual(["2026-10-20", "2026-10-25"]);
+  });
+  it("« À planifier » : une activité du moteur sans jour du séjour ; une activité inconnue du moteur n'y est pas", () => {
+    expect(activitesAPlanifier(choix, JOURS)).toEqual([{ choix: 1, libelle: "Visiter la ville" }]);
+    expect(activitesAPlanifier([{ ...choix[0], jours: ["2027-01-01"] }], JOURS)).toEqual([{ choix: 0, libelle: "Plage de Cascais" }]);
+  });
+  it("déplacer une activité datée change ce jour-là seulement ; jamais sur un jour qu'elle a déjà", () => {
+    expect(deplacerActiviteDatee(choix, 0, "2026-10-21", "2026-10-24")?.[0].jours).toEqual(["2026-10-23", "2026-10-24"]);
+    expect(deplacerActiviteDatee(choix, 0, "2026-10-21", "2026-10-23")).toBeNull();
+    expect(cleDeplacement({ choix: 0, sousId: "plage" })).toBe("choix:0");
+  });
+  it("cocher et décocher un jour garde l'ordre du calendrier", () => {
+    const c = basculerJour(basculerJour(choix, 1, "2026-10-24"), 1, "2026-10-21");
+    expect(c[1].jours).toEqual(["2026-10-21", "2026-10-24"]);
+    expect(basculerJour(c, 1, "2026-10-21")[1].jours).toEqual(["2026-10-24"]);
   });
 });
