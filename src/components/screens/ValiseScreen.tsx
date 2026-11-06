@@ -520,11 +520,10 @@ function FeuilleJoursActivite({
   onClose: () => void;
 }) {
   return (
-    <BottomSheet title="Choisir les jours" open={libelle != null} onClose={onClose}>
+    <BottomSheet title="Indiquer les jours" open={libelle != null} onClose={onClose}>
       {libelle != null && (
         <>
           <div className="t-label text-muted">{libelle}</div>
-          <div className="text-[13px] text-muted leading-[1.5] mt-[4px]">Choisis un ou plusieurs jours. Sans date, l&apos;activité reste à planifier.</div>
           <div className="flex flex-col mt-2" role="group" aria-label={`Jours de ${libelle}`}>
             {jours.map((jour, i) => {
               const on = choisis.includes(jour);
@@ -773,7 +772,7 @@ function EtapeActivites({
                   <button
                     type="button"
                     onClick={() => setADater(i)}
-                    aria-label={`${c.libelle} : ${datesDeLActivite(c, jours) ?? "à planifier"}. Choisir les jours`}
+                    aria-label={`${c.libelle} : ${datesDeLActivite(c, jours) ?? "à planifier"}. Indiquer les jours`}
                     className="flex-1 min-w-0 text-left py-[8px] cursor-pointer"
                   >
                     <span className="block text-[13px] text-ink leading-[1.3]">{c.libelle}</span>
@@ -3241,15 +3240,13 @@ function Resultat({
                     {aPlanifier.map((a) => (
                       <button
                         key={a.choix}
+                        aria-label={`${a.libelle} : à planifier. Indiquer les jours`}
                         type="button"
                         onClick={() => setADater(a.choix)}
                         className="w-full flex items-center gap-3 py-[10px] min-h-[52px] border-t border-divider first:border-t-0 text-left cursor-pointer"
                       >
-                        <span className="flex-1 min-w-0">
-                          <span className="block text-[13px] text-ink leading-[1.3]">{a.libelle}</span>
-                          <span className="block text-[11.5px] text-muted mt-[2px]">Pas encore de date</span>
-                        </span>
-                        <span className="t-lien text-terracotta-deep flex-shrink-0">Planifier</span>
+                        <span className="flex-1 min-w-0 text-[13px] text-ink leading-[1.3]">{a.libelle}</span>
+                        <span aria-hidden="true" className="text-muted flex-shrink-0">{chevron("d")}</span>
                       </button>
                     ))}
                   </Card>
