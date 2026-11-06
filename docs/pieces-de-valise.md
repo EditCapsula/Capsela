@@ -53,3 +53,22 @@ réservée à la valise. `chaussuresDeRandonnee` choisit celle du genre du profi
 donne qu'aux journées de randonnée ; `poolDeRandonnee` en fait la seule chaussure de ces journées. Pour le moteur, une chaussure de
 sport (Baskets). Les affaires de voyage ne redemandent plus « Chaussures de randonnée » quand la paire est dans la valise (ni
 « Maillot de bain » quand le maillot ou le short de bain y est).
+
+### Randonnées sans look, trajets (06/11/2026)
+
+Signalé sur une valise pour le Cap-Vert : deux journées de randonnée « Aucun look de ta valise ne répond encore à cette occasion », et
+un look Voyage · trajet avec un blazer du dressing (« Il faut que ce soit plus décontracté »).
+
+- **Cause des randonnées sans look** (DÉMONTRÉ, test du même jour, même pool, seul ce levier changé) : les deux paires avaient été
+  créées en niveau « décontracté » ; une randonnée passe par les règles Sport du moteur, qui n'admettent que des chaussures de niveau
+  sport. 0 look sur 20 en « décontracté », 20 sur 20 en « sport ». Correction des données :
+  `docs/capsules/valise/chaussures-de-randonnee-niveau-sport.sql` (deux lignes, une colonne), à lancer à la main.
+- **Randonnée sans tenue de sport** : le moteur Sport demande aussi des vêtements et un sac de sport. Quand la valise n'en a pas, la
+  randonnée reçoit une tenue de marche décontractée (Quotidien, contrainte « marche »), toujours avec la paire de randonnée, dite
+  élargie (`generateurMoteur`). La tenue de sport reste le premier choix.
+- **Les trajets d'un séjour avec randonnée portent la paire** (demandé : « pour les trajets aller et retour pour limiter le poids dans
+  la valise ») : `situationsDuProgramme` marque ces trajets (`avecRandonnee`), `piecesPourLaSituation` et `poolDeRandonnee` leur
+  donnent la paire comme seule chaussure. Une valise enregistrée avant n'a pas la marque : elle la reçoit quand elle est refaite.
+- **Trajets et randonnées en tenue décontractée** (`poolDecontracte`) : jamais de blazer (exclu) ; une pièce business casual ou
+  habillée sort de sa catégorie quand il y reste une pièce décontractée — privilégier, pas exclure. ARBITRAGE ÉDITORIAL, à confirmer
+  sur de vrais voyages ; instruit sur le trajet et la randonnée seulement.

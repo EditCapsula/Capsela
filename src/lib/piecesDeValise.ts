@@ -1,3 +1,4 @@
+import { formalityOf } from "./attributes";
 import type { CatalogItem } from "./catalog";
 import { STYLE_ID_TO_CATALOG_LABEL, type Profile, type StyleId } from "./profile";
 import type { CategoryKey, Item } from "./types";
@@ -62,15 +63,46 @@ export function piecesReserveesDuProfil(catalogue: readonly CatalogItem[], profi
   return [...piecesDeBaignade(catalogue, profile, couleurs), ...chaussuresDeRandonnee(catalogue, profile)];
 }
 
-/** Les pièces réservées qui servent à CETTE situation : la tenue de bain à la baignade, la paire de randonnée à la randonnée. */
-export function piecesPourLaSituation<T extends Pick<Item, "subtype">>(pieces: readonly T[], s: { sousIds?: string[] }): T[] {
-  return pieces.filter((p) => (estBaignade(s) && !estChaussureDeRando(p)) || (estRandonnee(s) && estChaussureDeRando(p)));
+/**
+ * Un trajet d'un séjour qui compte une randonnée (06/11/2026, demandé : « Les chaussures de randonnée, si elles font partie de la
+ * valise car il y a des randonnées de prévues, doivent être proposées pour les trajets aller et retour pour limiter le poids dans la
+ * valise »). La paire se porte pendant le voyage au lieu de prendre de la place dans la valise.
+ */
+export const estTrajetAvecRandonnee = (s: { occasion?: string; avecRandonnee?: boolean }): boolean => s.occasion === "voyage" && Boolean(s.avecRandonnee);
+
+/** Les pièces réservées qui servent à CETTE situation : la tenue de bain à la baignade, la paire de randonnée à la randonnée et aux trajets de son séjour. */
+export function piecesPourLaSituation<T extends Pick<Item, "subtype">>(pieces: readonly T[], s: { sousIds?: string[]; occasion?: string; avecRandonnee?: boolean }): T[] {
+  return pieces.filter((p) => (estBaignade(s) && !estChaussureDeRando(p)) || ((estRandonnee(s) || estTrajetAvecRandonnee(s)) && estChaussureDeRando(p)));
 }
 
-/** Une journée de randonnée se marche en chaussures de randonnée : quand le pool en a une paire, les autres chaussures sortent. */
-export function poolDeRandonnee(pool: Item[], s: { sousIds?: string[] }): Item[] {
-  if (!estRandonnee(s) || !pool.some(estChaussureDeRando)) return pool;
+/**
+ * Une journée de randonnée se marche en chaussures de randonnée, et les trajets de son séjour les portent : quand le pool en a une
+ * paire, les autres chaussures sortent.
+ */
+export function poolDeRandonnee(pool: Item[], s: { sousIds?: string[]; occasion?: string; avecRandonnee?: boolean }): Item[] {
+  if (!(estRandonnee(s) || estTrajetAvecRandonnee(s)) || !pool.some(estChaussureDeRando)) return pool;
   return pool.filter((it) => it.cat !== "chaussures" || estChaussureDeRando(it));
+}
+
+/** Un blazer : lu sur le type ou le nom de la veste, rien n'est deviné. */
+export const estBlazer = (it: Pick<Item, "cat" | "name" | "subtype">): boolean => it.cat === "veste" && /blazer/i.test(`${it.name} ${it.subtype ?? ""}`);
+
+const VETEMENTS_DU_TRAJET: readonly CategoryKey[] = ["haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison", "veste", "manteau"];
+
+/**
+ * UN TRAJET SE FAIT EN TENUE DÉCONTRACTÉE (06/11/2026, signalé : un look Voyage · trajet avec un blazer du dressing — « Le blazer,
+ * bien qu'il fasse partie de mon dressing, ne doit pas être affiché pour un voyage. Il faut que ce soit plus décontracté »).
+ * Valise seulement, trajets et randonnées seulement :
+ *   · un blazer n'est jamais proposé (exclu, même s'il est la seule veste : la tenue s'en passe) ;
+ *   · une pièce business casual ou habillée (formalité 3 ou plus) sort de sa catégorie quand il y reste une pièce décontractée ou de
+ *     sport (formalité 1 au plus) — PRIVILÉGIER, pas exclure : sans alternative décontractée, elle reste. ARBITRAGE ÉDITORIAL.
+ */
+export function poolDecontracte(pool: Item[]): Item[] {
+  const sansBlazer = pool.filter((it) => !estBlazer(it));
+  const decontractee = (it: Item) => formalityOf(it) <= 1;
+  return sansBlazer.filter(
+    (it) => !VETEMENTS_DU_TRAJET.includes(it.cat) || decontractee(it) || !sansBlazer.some((x) => x.cat === it.cat && decontractee(x))
+  );
 }
 
 export const estBaignade = (s: { sousIds?: string[] }): boolean =>
