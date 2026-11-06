@@ -1,5 +1,5 @@
 import { sansBarre } from "./barre";
-import { OCCASIONS } from "./data";
+import { OCCASIONS, type Weather } from "./data";
 import type { Item, OccasionKey } from "./types";
 import type { MeteoJour, TypeSejour } from "./valise";
 
@@ -302,8 +302,24 @@ const CHAUSSURES_PAS_POUR_LA_MARCHE = ["Escarpins", "Sandales à talons", "Chaus
 const CHAUSSURES_DE_PLEIN_AIR = ["Baskets", "Bottines", "Bottes"];
 const CHAUSSURES_PAS_POUR_LA_CHALEUR = ["Bottes", "Bottines", "Chaussures d'intérieur"];
 
-export function filtrerParContrainte(pool: Item[], contrainte?: Contrainte): Item[] {
+/**
+ * LES CHAUSSURES D'UNE JOURNÉE DE MARCHE (06/11/2026, demandé : « le confort prime durant la journée » quand on visite ou marche
+ * beaucoup ; arbitré : « uniquement des chaussures plates et faites pour marcher » — baskets, bottines, bottes en hiver, sandales
+ * plates en été ; « pas de mocassins »). Plus d'escarpins, de ballerines, d'espadrilles ni de mocassins un jour de marche. La saison
+ * est celle du jour (sa météo) ; sans météo, bottes et sandales restent permises. Une chaussure sans type reste (rien n'est deviné).
+ */
+export function chaussuresDeMarche(saison?: Weather["season"]): string[] {
+  return ["Baskets", "Bottines", ...(saison !== "Printemps / Été" ? ["Bottes"] : []), ...(saison !== "Automne / Hiver" ? ["Sandales"] : [])];
+}
+
+export function filtrerParContrainte(pool: Item[], contrainte?: Contrainte, meteo?: Pick<Weather, "season">): Item[] {
   if (!contrainte) return pool;
+  if (contrainte === "marche") {
+    const permises = chaussuresDeMarche(meteo?.season);
+    const marche = pool.filter((it) => it.cat !== "chaussures" || !it.shoeType || permises.includes(it.shoeType));
+    // Aucune chaussure de marche dans la valise : la règle d'avant (ni talons, ni chaussons), plutôt qu'une journée sans tenue.
+    if (marche.some((it) => it.cat === "chaussures") || !pool.some((it) => it.cat === "chaussures")) return marche;
+  }
   return pool.filter((it) => {
     if (contrainte === "chaleur") {
       if (["manteau", "pull", "veste"].includes(it.cat)) return false;

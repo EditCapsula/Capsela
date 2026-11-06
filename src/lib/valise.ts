@@ -348,7 +348,7 @@ export function generateurMoteur(
     const avecBain = estBaignade(s) ? [...poolComplet, ...piecesValise.filter((p) => !poolComplet.some((q) => q.id === p.id))] : poolComplet;
     // La contrainte de la situation (chaleur, marche, outdoor) restreint le pool ; le moteur, lui, ne change pas. En baignade, la tenue
     // de bain et sa couverture tiennent lieu de vêtements (poolDeBaignade).
-    const pool = sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeBaignade(avecBain, s), s.contrainte), s.occasion);
+    const pool = sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeBaignade(avecBain, s), s.contrainte, s.meteo), s.occasion);
     if (!pool.length) return null;
     const r = generateOutfitWithFallback(pool, s.meteo, s.occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
