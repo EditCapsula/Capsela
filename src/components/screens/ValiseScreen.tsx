@@ -2819,10 +2819,11 @@ function Resultat({
                 <button
                   onClick={() => setADeplacer({ sousId: c.sousId, de: c.jour, libelle: c.libelle })}
                   aria-label={`Déplacer ${c.libelle} à un autre jour`}
-                  className="w-11 h-11 flex items-center justify-center text-muted flex-shrink-0 cursor-pointer rounded-full active:bg-sand"
+                  // Discrète (06/11/2026, demandé : « l'icône déplacer discret ») : le geste principal est l'appui long ; la cible garde 44 px.
+                  className="w-11 h-11 -mr-[10px] flex items-center justify-center text-placeholder flex-shrink-0 cursor-pointer rounded-full active:bg-sand"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M8 4v15M8 4L4.5 7.5M8 4l3.5 3.5M16 20V5M16 20l-3.5-3.5M16 20l3.5-3.5" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M8 4v15M8 4L4.5 7.5M8 4l3.5 3.5M16 20V5M16 20l-3.5-3.5M16 20l3.5-3.5" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
               )}
