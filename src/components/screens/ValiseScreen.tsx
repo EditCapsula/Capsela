@@ -2678,8 +2678,10 @@ function Resultat({
 
   // ── RÉSULTAT « TA VALISE » ──
 
-  // Dressing vide : rien à emporter — on le dit, avec l'action qui débloque.
-  if (!dressing.length) {
+  // Rien à emporter : ni pièce du dressing, ni suggestion de la capsule — on le dit, avec l'action qui débloque. Un dressing vide ne
+  // suffit plus (06/11/2026, signalé : une valise pour Bali, composée avec la capsule, affichait « Ton dressing est vide ») : depuis le
+  // 05/11/2026, la capsule complète la valise jusqu'au besoin entier, même sans aucune pièce au dressing.
+  if (!pieces.length) {
     return (
       <>
         <Surtitre>

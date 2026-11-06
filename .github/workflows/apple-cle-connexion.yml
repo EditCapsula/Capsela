@@ -6,7 +6,8 @@ name: Apple — renouveler la clé de connexion dans Supabase
 # jamais affiché : il est masqué dans les journaux et ne quitte pas l'exécution.
 #
 # Lancé à la main la première fois (« Run workflow »), puis de lui-même tous les 4 mois, avant l'expiration des 6 mois.
-# Secret du dépôt à créer une fois : APPLE_SIGNIN_P8 (contenu du fichier AuthKey_XHT6968DK9.p8).
+# Secrets du dépôt à créer une fois : APPLE_SIGNIN_P8 (contenu du fichier AuthKey_XHT6968DK9.p8) et SUPABASE_AUTH_TOKEN (jeton
+# Supabase qui peut modifier la configuration Auth du projet).
 
 on:
   workflow_dispatch: {}
@@ -30,7 +31,9 @@ jobs:
           APPLE_TEAM_ID: N6YKXJGW25
           APPLE_SERVICES_ID: app.capsela.connexion
           APPLE_CLIENT_IDS: app.capsela.connexion,app.capsela
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          # Un jeton Supabase autorisé à modifier la configuration Auth (permissions auth_config_write et project_admin_write) :
+          # celui du déploiement des fonctions ne l'est pas (« Missing required permission(s) », 403, 06/11/2026).
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_AUTH_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "$APPLE_SIGNIN_P8" ]; then
