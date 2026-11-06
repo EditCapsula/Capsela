@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pieceLaPlusUtilisee, planningDuProgramme } from "../planningValise";
+import { deplacerActivite, joursPossibles, pieceLaPlusUtilisee, planningDuProgramme } from "../planningValise";
 import { filtrerParContrainte } from "../programmeValise";
 import { groupesMeteo, situationsDuProgramme, situationsDuSejour, type MeteoJour } from "../valise";
 import type { Item } from "../types";
@@ -127,5 +127,46 @@ describe("pieceLaPlusUtilisee", () => {
   });
   it("aucune pièce réutilisée : null", () => {
     expect(pieceLaPlusUtilisee(new Map([[1, 1], [2, 1]]))).toBeNull();
+  });
+});
+
+describe("déplacer une activité répartie (06/11/2026, glisser-déposer du planning)", () => {
+  const programme = [
+    { id: "trajet", frequence: 2 },
+    { id: "visites", frequence: 3 },
+    { id: "plage", frequence: 2 },
+    { id: "restaurant", frequence: 2 },
+  ];
+  const situations = situationsDuProgramme(programme, meteos, ["quotidien"]);
+  const auto = planningDuProgramme(programme, JOURS, situations, []);
+  const joursDe = (p: typeof auto, id: string) => p.filter((c) => c.sousId === id).map((c) => c.jour);
+
+  it("seules les activités réparties sont déplaçables : pas le trajet", () => {
+    expect(auto.filter((c) => c.sousId === "trajet").every((c) => !c.deplacable)).toBe(true);
+    expect(auto.filter((c) => c.sousId === "plage").every((c) => c.deplacable)).toBe(true);
+  });
+  it("le déplacement change ce seul jour, et rien d'autre ne bouge", () => {
+    const de = joursDe(auto, "plage")[0];
+    const vers = joursPossibles(auto, "plage", JOURS)[0];
+    const placements = deplacerActivite(auto, "plage", de, vers)!;
+    const apres = planningDuProgramme(programme, JOURS, situations, [], [], placements);
+    expect(joursDe(apres, "plage").sort()).toEqual([...joursDe(auto, "plage").filter((j) => j !== de), vers].sort());
+    for (const id of ["visites", "restaurant", "trajet"]) expect(joursDe(apres, id)).toEqual(joursDe(auto, id));
+  });
+  it("impossible : le même jour, un jour qui a déjà l'activité, un trajet", () => {
+    const [a, b] = joursDe(auto, "plage");
+    expect(deplacerActivite(auto, "plage", a, a)).toBeNull();
+    expect(deplacerActivite(auto, "plage", a, b)).toBeNull();
+    expect(deplacerActivite(auto, "trajet", JOURS[0], JOURS[2])).toBeNull();
+    expect(joursPossibles(auto, "plage", JOURS)).not.toContain(a);
+  });
+  it("des jours gardés qui ne valent plus (hors séjour, fréquence changée) : la répartition automatique reprend", () => {
+    const horsSejour = planningDuProgramme(programme, JOURS, situations, [], [], { plage: ["2026-10-20", "2026-12-01"] });
+    expect(joursDe(horsSejour, "plage")).toEqual(joursDe(auto, "plage"));
+    const tropPeu = planningDuProgramme(programme, JOURS, situations, [], [], { plage: ["2026-10-20"] });
+    expect(joursDe(tropPeu, "plage")).toEqual(joursDe(auto, "plage"));
+  });
+  it("sans placements : le planning d'avant, à l'identique", () => {
+    expect(planningDuProgramme(programme, JOURS, situations, [], [], {})).toEqual(auto);
   });
 });
