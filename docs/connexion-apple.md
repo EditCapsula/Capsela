@@ -37,5 +37,5 @@ fabrique (`scripts/apple-client-secret.mjs`, Team ID N6YKXJGW25, Services ID `ap
 configuration Auth du projet par l'API de gestion Supabase (`external_apple_secret`, jeton `SUPABASE_ACCESS_TOKEN`). Il se relance seul
 le 1er janvier, mai et septembre ; le jeton n'apparaît jamais dans les journaux.
 
-Secrets du dépôt à créer une fois : `APPLE_SIGNIN_P8` (contenu du fichier `AuthKey_XXXXXXXXXX.p8`) et `APPLE_SIGNIN_KEY_ID` (son Key ID).
+Secret du dépôt à créer une fois : `APPLE_SIGNIN_P8` (contenu du fichier `AuthKey_XHT6968DK9.p8`). Le Key ID (`XHT6968DK9`), qui n'est pas secret, est écrit dans le workflow.
 Dans Supabase, les Client IDs restent `app.capsela.connexion,app.capsela`.

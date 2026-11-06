@@ -6,7 +6,7 @@ name: Apple — renouveler la clé de connexion dans Supabase
 # jamais affiché : il est masqué dans les journaux et ne quitte pas l'exécution.
 #
 # Lancé à la main la première fois (« Run workflow »), puis de lui-même tous les 4 mois, avant l'expiration des 6 mois.
-# Secrets du dépôt à créer une fois : APPLE_SIGNIN_P8 (contenu du fichier AuthKey_XXXXXXXXXX.p8) et APPLE_SIGNIN_KEY_ID (son Key ID).
+# Secret du dépôt à créer une fois : APPLE_SIGNIN_P8 (contenu du fichier AuthKey_XHT6968DK9.p8).
 
 on:
   workflow_dispatch: {}
@@ -25,14 +25,15 @@ jobs:
       - name: Fabriquer le jeton et l'enregistrer dans Supabase
         env:
           APPLE_SIGNIN_P8: ${{ secrets.APPLE_SIGNIN_P8 }}
-          APPLE_SIGNIN_KEY_ID: ${{ secrets.APPLE_SIGNIN_KEY_ID }}
+          # Le Key ID de la clé « Sign in with Apple » (pas un secret : il ne permet rien sans la clé).
+          APPLE_SIGNIN_KEY_ID: XHT6968DK9
           APPLE_TEAM_ID: N6YKXJGW25
           APPLE_SERVICES_ID: app.capsela.connexion
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "$APPLE_SIGNIN_P8" ] || [ -z "$APPLE_SIGNIN_KEY_ID" ]; then
-            echo "::error::Secrets APPLE_SIGNIN_P8 et APPLE_SIGNIN_KEY_ID absents (Settings → Secrets and variables → Actions)."
+          if [ -z "$APPLE_SIGNIN_P8" ]; then
+            echo "::error::Secret APPLE_SIGNIN_P8 absent (Settings → Secrets and variables → Actions)."
             exit 1
           fi
           JETON=$(node scripts/apple-client-secret.mjs)
