@@ -260,6 +260,8 @@ Pas de repli sur le pool complet : si le pool filtré ne permet aucune tenue, la
 
 **Planning jour par jour** (`planningValise.ts`) : calculé à l'affichage, jamais stocké. Trajets : premier et dernier jour. Éléments « jour » et « soir » étalés sur les jours les moins chargés ; pour chaque créneau, le look de la valise qui répond à la situation correspondante, le moins utilisé d'abord. Aucun look adapté : le créneau le dit (« Aucun look de ta valise ne répond encore à cette occasion. »), rien n'est inventé.
 
+**Déplacer une activité** (06/11/2026, demandé : « L'utilisateur devrait pouvoir les modifier avec un glisser déposer » ; seules les activités réparties automatiquement se déplacent, arbitré le même jour). Dans « Tes tenues jour par jour », un appui long sur une activité la saisit et la fait glisser vers un autre jour (`GlisserVersJour.tsx` ; un geste plus court reste un défilement). Le bouton « Déplacer » de chaque ligne fait la même chose sans geste. Trajets et événements datés gardent leur jour. Le déplacement garde le jour de TOUTES les activités réparties telles qu'affichées (`deplacerActivite`), pour que rien d'autre ne bouge ; il est enregistré dans `placements` (dans `calcul`, jsonb : aucune migration). Le look du créneau est choisi de nouveau pour la météo du jour d'arrivée, parmi les looks de la valise ; la tenue du jour pendant le séjour suit. Des jours gardés qui ne valent plus (dates ou fréquence changées) retrouvent la répartition automatique ; « Rétablir la répartition automatique » efface les placements.
+
 **Résultat à onglets** : Ensemble, Looks (jour par jour), Pièces, Accessoires (Sacs, Bijoux & accessoires). « Ensemble » plutôt que « Vue d'ensemble » : quatre segments ne portent pas le libellé complet à 320 px ; `SegmentedControl` reçoit une option `serre` pour ce cas.
 
 **Limite** : le planning n'existe que pour les valises générées avec ce code (les situations doivent porter des `sousIds`) ; une valise plus ancienne garde l'affichage précédent.
@@ -422,3 +424,20 @@ Demandé : « une valise devrait être entièrement faite si besoin avec les pi�
 - **« Ton dressing d'abord » ne bloque plus** : l'écran ne s'affiche que si la capsule est vide elle aussi (cas théorique).
 - **Inchangé** : « Uniquement mon dressing » garde la valise aux seules pièces possédées ; les suggestions restent marquées « à ajouter à ton dressing » et comptent dans le volume ; jamais au-delà de la capacité.
 - **NON vérifié en rendu réel** au moment de l'écriture : le parcours complet avec un dressing vide ou très court.
+
+## Rappels contextuels (06/11/2026)
+
+Brief « Évolution UX – Rappels contextuels des valises ». Une seule source, `src/lib/rappelsValise.ts` (pure, testée), calculée à l'affichage depuis `state.valises` et la date du jour : rien n'est stocké, une valise supprimée ou des dates changées mettent les rappels à jour d'elles-mêmes.
+
+- **Fenêtre** : départ dans 1 à 7 jours (J-7 à J-1). Le jour du départ, l'accueil passe en mode séjour (`valiseDuJour.ts`) : plus de rappel. Voyage lointain, en cours ou terminé : rien. Plusieurs voyages : le départ le plus proche.
+- **Messages** : J-7 à J-4 « Ton départ approche, ta valise t'attend. » ; J-3 et J-2 « Plus que n jours avant le départ ! » ; J-1 « Demain, c'est le départ. » (+ « Ta valise est prête ? » seulement si son état n'est pas connu). État : pièces suggérées à ajouter (`suggestionIds`) → « Il te reste quelques pièces à ajouter à ta valise. » ; des tenues, rien à ajouter, aucune situation sans tenue → « Ta valise est prête pour le départ ! » ; sinon rien n'est affirmé.
+- **Points de contact** (`src/components/RappelValise.tsx`) : la carte « Ton prochain départ » de l'accueil (sous le jour et la météo, avant la tenue, aujourd'hui seulement) ; le même point terracotta sur l'icône du calendrier de l'en-tête et sur l'onglet Planifier ; dans « Mon planning », une valise sous le jour de CHAQUE départ (légende « Voyage ») et, ce jour choisi, la carte « Départ en vacances ». Chaque carte ouvre directement sa valise (`ouvrirValise(id)`).
+- **Pas de notification push** pour l'instant : l'app programme déjà la tenue du jour en notification locale, mais aucun rappel de valise n'y est ajouté (facultatif dans le brief).
+
+## Dates des activités, dès l'étape Activités (06/11/2026)
+
+Demandé : l'affectation des dates « dès la sélection des activités, dans le parcours initial », sans nouvelle étape ; plusieurs dates possibles ; une activité peut rester « À planifier » ; modifiable ensuite ; l'appui long de l'onglet Tenues reste.
+
+- **Étape Activités** : sous chaque activité de « Ton programme », « À planifier » ou ses dates (« Mar. 17 nov. · Jeu. 19 nov. »). Un toucher ouvre « Indiquer les jours » (`FeuilleJoursActivite`) : les journées du séjour (date et jour de la semaine), ce qui est déjà prévu chacune (autres activités, événements), à cocher. Une activité que le moteur ne connaît pas (aucune tenue) ne se date pas. Le bouton reste « Préparer ma valise ».
+- **Modèle** : `ActiviteChoisie.jours` (dans `choix`, `calcul` jsonb : aucune migration). Une valise dont les choix portent leurs jours est **planifiée à la main** (`planificationManuelle`) : le planning ne montre que les trajets, les événements datés et les activités datées — sous leur propre nom, à chacun de leurs jours. Capsela n'attribue JAMAIS de date d'elle-même. Une activité sans date compte pour la valise (programme, pièces, tenues), mais n'apparaît sur aucune journée ; l'onglet Tenues la liste dans « À planifier », d'où elle se date. Rouvrir l'étape d'une valise d'avant la fait passer à la planification manuelle ; sans cela, une valise d'avant garde la répartition automatique.
+- **Après génération** : l'appui long et « Déplacer » déplacent une activité datée d'un jour à l'autre (ses `jours` changent). « Rétablir la répartition automatique » n'existe que pour une valise répartie automatiquement.

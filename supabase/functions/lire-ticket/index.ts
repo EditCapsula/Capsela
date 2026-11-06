@@ -74,7 +74,8 @@ Deno.serve(async (req) => {
         store: false,
         temperature: 0,
         response_format: { type: "json_object" },
-        max_tokens: 1500,
+        // Plus de champs par article depuis le 06/11/2026 (modèle, manches, motif, saisons) : de quoi rendre un long ticket entier.
+        max_tokens: 4000,
         messages: [
           {
             role: "user",

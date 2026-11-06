@@ -5,6 +5,7 @@ import type { TenuePlanifiee } from "./planifier";
 import type { OccasionKey } from "./types";
 import type { EtatAffaires } from "./affairesVoyage";
 import type { EvenementValise } from "./evenementsValise";
+import type { PlacementsPlanning } from "./planningValise";
 import type { ActiviteChoisie } from "./activitesSejour";
 import type { EtapeSejour } from "./etapesSejour";
 import type { ActiviteSejour, ItemProgramme } from "./programmeValise";
@@ -108,6 +109,11 @@ export interface ValiseGardee {
    * (jsonb) : aucune migration. Absent des valises qui n'en ont pas.
    */
   evenements?: EvenementValise[];
+  /**
+   * Les jours que la personne a choisis pour ses activités réparties (06/11/2026, glisser-déposer du planning, planningValise.ts) :
+   * l'id de l'activité → ses jours. Dans `calcul` (jsonb) : aucune migration. Absent tant que rien n'a été déplacé.
+   */
+  placements?: PlacementsPlanning;
 }
 
 let compteur = 0;
@@ -224,7 +230,7 @@ interface ValiseRow {
   sejour: string | null;
   occasions: string[];
   piece_ids: (number | string)[];
-  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "uniquementDressing" | "activites" | "choix" | "etapes" | "lieu" | "cochees" | "affaires" | "programme" | "evenements">;
+  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "uniquementDressing" | "activites" | "choix" | "etapes" | "lieu" | "cochees" | "affaires" | "programme" | "evenements" | "placements">;
 }
 
 const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Number);
@@ -254,6 +260,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     ...(r.calcul?.affaires ? { affaires: r.calcul.affaires } : {}),
     ...(r.calcul?.programme?.length ? { programme: r.calcul.programme } : {}),
     ...(r.calcul?.evenements?.length ? { evenements: r.calcul.evenements } : {}),
+    ...(r.calcul?.placements && Object.keys(r.calcul.placements).length ? { placements: r.calcul.placements } : {}),
     // bigint[] revient parfois en chaînes côté PostgREST.
     pieceIds: nombres(r.piece_ids),
   };
@@ -284,6 +291,7 @@ export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
       ...(v.affaires ? { affaires: v.affaires } : {}),
       ...(v.programme?.length ? { programme: v.programme } : {}),
       ...(v.evenements?.length ? { evenements: v.evenements } : {}),
+      ...(v.placements && Object.keys(v.placements).length ? { placements: v.placements } : {}),
     },
   };
 }

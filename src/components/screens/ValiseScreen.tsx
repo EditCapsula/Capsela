@@ -79,6 +79,7 @@ import {
   activitesDesChoix,
   ajouterLibelle,
   basculerIdee,
+  basculerJour,
   choixDeLaValise,
   cleLibelle,
   dejaChoisi,
@@ -93,7 +94,8 @@ import { ideesGardees, ideesPourDestination } from "@/lib/ideesSejour";
 import { appliquerPeriode, arriveeAuMilieu, destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, periodeValide, periodesDesDestinations, ETAPES_MAX, type EtapeSejour, type Periode } from "@/lib/etapesSejour";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
-import { pieceLaPlusUtilisee, planningDeLaValise, type CreneauPlanning } from "@/lib/planningValise";
+import { activitesAPlanifier, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, pieceLaPlusUtilisee, planificationManuelle, planningDeLaValise, sousIdDeLActivite, type CreneauPlanning, type PlacementsPlanning } from "@/lib/planningValise";
+import { FantomeSaisie, useGlisserVersJour } from "@/components/GlisserVersJour";
 import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
 import {
   evenementsDuSejour,
@@ -496,6 +498,76 @@ const FAMILLES_POUR_FILTRES = 3;
  * son libellé et porte l'activité du moteur qu'il évoque (activitesSejour.ts) ; seule celle-ci part vers le programme. Les événements
  * datés d'une valise d'avant restent avec leur jour : ils figurent au programme et se retirent de la même façon.
  */
+/**
+ * LES JOURNÉES D'UNE ACTIVITÉ (06/11/2026, demandé : « En touchant cette activité, l'utilisateur ouvre une feuille basse présentant les
+ * différentes journées du séjour » ; les dates et les jours de la semaine, les activités déjà prévues chaque jour, plusieurs dates
+ * possibles, et l'activité peut rester « À planifier »). Partagée par l'étape Activités et l'onglet Tenues (« À planifier »).
+ */
+function FeuilleJoursActivite({
+  libelle,
+  jours,
+  choisis,
+  occupation,
+  onBasculer,
+  onClose,
+}: {
+  libelle: string | null;
+  jours: readonly string[];
+  choisis: readonly string[];
+  /** Ce qui est déjà prévu ce jour-là (autres activités, événements). */
+  occupation: (jour: string) => string[];
+  onBasculer: (jour: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <BottomSheet title="Indiquer les jours" open={libelle != null} onClose={onClose}>
+      {libelle != null && (
+        <>
+          <div className="t-label text-muted">{libelle}</div>
+          <div className="flex flex-col mt-2" role="group" aria-label={`Jours de ${libelle}`}>
+            {jours.map((jour, i) => {
+              const on = choisis.includes(jour);
+              const deja = occupation(jour);
+              return (
+                <button
+                  key={jour}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={on}
+                  onClick={() => onBasculer(jour)}
+                  className="flex items-center gap-3 py-[10px] min-h-[52px] border-t border-divider first:border-t-0 text-left cursor-pointer"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={"w-[22px] h-[22px] flex-shrink-0 rounded-full flex items-center justify-center border " + (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "border-border")}
+                  >
+                    {on && G_COCHE(12, "currentColor")}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block t-label text-terracotta">
+                      Jour {i + 1} · {dateCourte(jour)}
+                    </span>
+                    {deja.length > 0 && <span className="block text-[12px] text-muted-3 mt-[2px] truncate">{deja.join(" · ")}</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <Button variante="principal" className="mt-4" onClick={onClose}>
+            Valider
+          </Button>
+        </>
+      )}
+    </BottomSheet>
+  );
+}
+
+/** « À planifier », ou les dates choisies (« Sam. 21 nov. · Lun. 23 nov. ») d'une activité. */
+const datesDeLActivite = (c: ActiviteChoisie, jours: readonly string[]): string | null => {
+  const leurs = (c.jours ?? []).filter((j) => jours.includes(j));
+  return leurs.length ? leurs.map(dateCourte).join(" · ") : null;
+};
+
 function EtapeActivites({
   requete,
   jours,
@@ -563,6 +635,13 @@ function EtapeActivites({
   const [confirmerEffacer, setConfirmerEffacer] = useState(false);
 
   const glyphe = (activite: ActiviteSejour | null) => (activite ? GLYPHES_ACTIVITE[activite] : GLYPHES_ACTIVITE.ville);
+  /** L'activité dont on choisit les jours (son rang dans les choix). */
+  const [aDater, setADater] = useState<number | null>(null);
+  /** Ce qui est déjà prévu un jour : les autres activités datées ce jour-là, les événements de ce jour. */
+  const occupation = (jour: string) => [
+    ...choix.filter((c, i) => i !== aDater && (c.jours ?? []).includes(jour)).map((c) => c.libelle),
+    ...evtsDuSejour.filter((e) => e.jour === jour).map(libelleEvenement),
+  ];
 
   return (
     <>
@@ -684,10 +763,26 @@ function EtapeActivites({
             )}
           </div>
           <ul className="flex flex-col gap-2 mt-3">
-            {choix.map((c) => (
+            {choix.map((c, i) => (
               <li key={c.libelle} className="flex items-center gap-[10px] bg-card border border-border rounded-tuile pl-[14px] pr-[2px]" style={{ minHeight: 48 }}>
                 <span className="flex-shrink-0 text-terracotta-deep">{glyphe(c.activite)}</span>
-                <span className="flex-1 min-w-0 text-[13px] text-ink leading-[1.3] py-[8px]">{c.libelle}</span>
+                {/* Une activité qui a sa tenue se date d'un toucher : « À planifier » tant qu'elle n'a pas de jour (06/11/2026). Une
+                    activité que le moteur ne connaît pas ne change rien aux tenues : elle ne se date pas. */}
+                {sousIdDeLActivite(c.activite) ? (
+                  <button
+                    type="button"
+                    onClick={() => setADater(i)}
+                    aria-label={`${c.libelle} : ${datesDeLActivite(c, jours) ?? "à planifier"}. Indiquer les jours`}
+                    className="flex-1 min-w-0 text-left py-[8px] cursor-pointer"
+                  >
+                    <span className="block text-[13px] text-ink leading-[1.3]">{c.libelle}</span>
+                    <span className={"block text-[11.5px] mt-[2px] " + (datesDeLActivite(c, jours) ? "text-terracotta" : "text-muted")}>
+                      {datesDeLActivite(c, jours) ?? "À planifier"}
+                    </span>
+                  </button>
+                ) : (
+                  <span className="flex-1 min-w-0 text-[13px] text-ink leading-[1.3] py-[8px]">{c.libelle}</span>
+                )}
                 <button
                   type="button"
                   onClick={() => setChoix((l) => l.filter((x) => x.libelle !== c.libelle))}
@@ -720,6 +815,15 @@ function EtapeActivites({
           </ul>
         </section>
       )}
+
+      <FeuilleJoursActivite
+        libelle={aDater != null ? (choix[aDater]?.libelle ?? null) : null}
+        jours={jours}
+        choisis={aDater != null ? (choix[aDater]?.jours ?? []) : []}
+        occupation={occupation}
+        onBasculer={(jour) => aDater != null && setChoix((l) => basculerJour(l, aDater, jour))}
+        onClose={() => setADater(null)}
+      />
 
       <BottomSheet title="Effacer ton programme ?" open={confirmerEffacer} onClose={() => setConfirmerEffacer(false)}>
         <div className="text-[13px] text-muted-3 leading-[1.5]">
@@ -1176,6 +1280,9 @@ export default function ValiseScreen() {
       ...(cochees.length ? { cochees } : {}),
       // Les affaires de voyage de la personne (cochées, ajoutées, masquées) suivent la valise recomposée.
       ...(ancienne?.affaires ? { affaires: ancienne.affaires } : {}),
+      // Les activités déplacées par la personne (06/11/2026) suivent aussi : celles qui ne valent plus (dates ou fréquence changées)
+      // retrouvent d'elles-mêmes la répartition automatique (planningDuProgramme).
+      ...(ancienne?.placements ? { placements: ancienne.placements } : {}),
       meteos,
       situations,
       ...r,
@@ -1257,6 +1364,16 @@ export default function ValiseScreen() {
    */
   const changerBagage = (t: TailleBagage) => valise && sauver({ ...valise, bagage: t });
   /** Les affaires de voyage : ce que la personne coche, ajoute ou masque est gardé avec la valise (appareil et compte). */
+  /** Les jours choisis pour les activités réparties (06/11/2026) ; undefined rend la répartition automatique. */
+  /** Les choix de la valise (leurs dates), modifiés depuis l'onglet Tenues (06/11/2026). */
+  const majChoix = (choix: ActiviteChoisie[]) => {
+    if (!valise) return;
+    sauver({ ...valise, choix });
+  };
+  const majPlacements = (p?: PlacementsPlanning) => {
+    if (!valise) return;
+    sauver({ ...valise, placements: p && Object.keys(p).length ? p : undefined });
+  };
   const majAffaires = (f: (e: EtatAffaires) => EtatAffaires) => {
     if (!valise) return;
     const e = f(valise.affaires ?? {});
@@ -1319,7 +1436,8 @@ export default function ValiseScreen() {
     setRetour(valise.retour);
     setBagage(valise.bagage);
     // Les activités qu'évoque le programme gardé ; une valise d'avant la refonte n'a que ses occasions mères.
-    setChoix(choixDeLaValise(valise.choix, valise.activites ?? activitesDuProgramme(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1))));
+    // Rouvrir l'étape fait passer la valise à la planification manuelle (06/11/2026) : chaque activité montre ses dates, ou « À planifier ».
+    setChoix(choixDeLaValise(valise.choix, valise.activites ?? activitesDuProgramme(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1))).map((c) => ({ ...c, jours: c.jours ?? [] })));
     setEvenements(valise.evenements ?? []);
     setIdEnModification(valise.id);
     setVue({ nom: "etape" });
@@ -1648,6 +1766,8 @@ export default function ValiseScreen() {
             changerBagage={changerBagage}
             cocherPiece={cocherPiece}
             majAffaires={majAffaires}
+            majPlacements={majPlacements}
+            majChoix={majChoix}
             enregistrerLook={actions.enregistrerIdeeLook}
             ajouterAuDressing={actions.openAddEtRevenir}
             ajouterCategorie={actions.openAddForCategory}
@@ -1719,6 +1839,8 @@ function Resultat({
   changerBagage,
   cocherPiece,
   majAffaires,
+  majPlacements,
+  majChoix,
   enregistrerLook,
   ajouterAuDressing,
   ajouterCategorie,
@@ -1743,6 +1865,8 @@ function Resultat({
   changerBagage: (t: TailleBagage) => void;
   cocherPiece: (id: number) => void;
   majAffaires: (f: (e: EtatAffaires) => EtatAffaires) => void;
+  majPlacements: (p?: PlacementsPlanning) => void;
+  majChoix: (choix: ActiviteChoisie[]) => void;
   enregistrerLook: (ids: number[], occasion: OccasionKey) => void;
   ajouterAuDressing: () => void;
   ajouterCategorie: (c: CategoryKey) => void;
@@ -1768,6 +1892,28 @@ function Resultat({
   // Un look de valise a toujours chaussures et sac (lookAChaussuresEtSac) : les valises gardées avant cette règle ne montrent plus
   // les looks qui n'en ont pas — « Recomposer » en refait avec.
   const looks = valise.looks.filter((l) => l.ids.every((id) => ids.includes(id)) && lookAChaussuresEtSac(l.ids, pieces));
+  // Le planning jour par jour est calculé ICI, avant les vues d'une pièce ou d'un look : le glisser-déposer (06/11/2026) a besoin de
+  // ses crochets à chaque rendu (règles des hooks).
+  const joursDuSejourValise = joursDuSejour(valise.depart, valise.retour);
+  const planning: CreneauPlanning[] = planningDeLaValise(valise, joursDuSejourValise, looks);
+  const aPlanning = planning.length > 0;
+  /** Déplacer une activité répartie vers un autre jour (06/11/2026) : seule l'activité bouge, le reste du planning est gardé tel quel. */
+  const manuelle = planificationManuelle(valise.choix);
+  const deplacer = (cle: string, de: string, vers: string) => {
+    // Une activité datée par la personne : ses dates changent. Une activité répartie : les placements.
+    if (cle.startsWith("choix:")) {
+      const c = deplacerActiviteDatee(valise.choix ?? [], Number(cle.slice(6)), de, vers);
+      if (c) majChoix(c);
+      return;
+    }
+    const p = deplacerActivite(planning, cle, de, vers);
+    if (p) majPlacements(p);
+  };
+  /** Planification manuelle : les activités sans date (« À planifier »), et celle dont on choisit les jours. */
+  const aPlanifier = manuelle ? activitesAPlanifier(valise.choix ?? [], joursDuSejourValise) : [];
+  const [aDater, setADater] = useState<number | null>(null);
+  const { saisie, poignee } = useGlisserVersJour(deplacer);
+  const [aDeplacer, setADeplacer] = useState<{ sousId: string; de: string; libelle: string } | null>(null);
   const parPiece = looksParPiece(looks);
   const couvertes = occasionsCouvertes(looks, valise.situations);
   const volume = volumeDe(pieces);
@@ -2580,12 +2726,10 @@ function Resultat({
    * (planningDuProgramme, pur et déterministe — recalculé ici, jamais stocké). Il n'existe que pour une valise préparée avec
    * un programme ET dont les situations portent leurs occasions ; sinon, les looks s'affichent en carrousel, comme avant.
    */
-  const joursDuSejourValise = joursDuSejour(valise.depart, valise.retour);
-  const planning: CreneauPlanning[] = planningDeLaValise(valise, joursDuSejourValise, looks);
-  const aPlanning = planning.length > 0;
   const planningParJour = joursDuSejourValise
     .map((jour, i) => ({ jour, numero: i + 1, creneaux: planning.filter((c) => c.jour === jour) }))
-    .filter((j) => j.creneaux.length > 0);
+    // Pendant un glisser (06/11/2026), les jours libres s'affichent aussi : on peut y déposer une activité.
+    .filter((j) => j.creneaux.length > 0 || saisie != null);
   const plusUtilisee = pieceLaPlusUtilisee(parPiece);
   /**
    * LES CARTES DE TENUES DE L'APERÇU (30/10/2026) : le jour et l'occasion de chaque créneau qui a sa tenue, d'après le planning ; sans
@@ -2732,20 +2876,32 @@ function Resultat({
   const pieceReutilisee = plusUtilisee ? pieces.find((p) => p.id === plusUtilisee.id) : undefined;
   /** Une journée du planning : ses créneaux, chacun avec le look de la valise qui lui répond. */
   const carteJour = (j: (typeof planningParJour)[number]) => (
-    <Card key={j.jour} rayon="carte" className="px-[14px] pt-[12px] pb-[6px]">
+    <Card
+      key={j.jour}
+      rayon="carte"
+      data-jour-planning={j.jour}
+      className={
+        "px-[14px] pt-[12px] pb-[6px] transition-shadow " +
+        (saisie && saisie.cible === j.jour && saisie.cible !== saisie.de && joursPossibles(planning, saisie.sousId, joursDuSejourValise).includes(j.jour)
+          ? "ring-2 ring-terracotta"
+          : "")
+      }
+    >
       <div className="t-label text-terracotta">
         Jour {j.numero} · {dateCourte(j.jour)}
       </div>
       <div className="flex flex-col">
+        {j.creneaux.length === 0 && <div className="py-[10px] min-h-[44px] text-[12px] text-muted-3">Journée libre</div>}
         {j.creneaux.map((c) => {
           const lk = c.look != null ? looks[c.look] : null;
           const items = lk ? piecesDuLook(lk) : [];
-          return lk ? (
+          const saisi = saisie?.sousId === cleDeplacement(c) && saisie.de === c.jour;
+          const ligne = lk ? (
             <button
-              key={c.creneau + c.sousId}
+              key={c.creneau + c.sousId + (c.choix ?? "")}
               onClick={() => setVue({ nom: "look", index: c.look as number })}
               aria-label={`${libelleCreneau(c)} : voir le look ${numero(c.look as number)}`}
-              className="flex items-center gap-3 py-[8px] text-left cursor-pointer min-h-[60px] border-t border-divider first:border-t-0 transition-opacity active:opacity-70"
+              className="flex-1 min-w-0 flex items-center gap-3 py-[8px] text-left cursor-pointer min-h-[60px] transition-opacity active:opacity-70"
             >
               {/* Les vraies pièces du look, trois au plus, en miniatures plus grandes (19/10/2026, refonte). */}
               <span className="flex gap-[3px] flex-shrink-0">
@@ -2760,7 +2916,7 @@ function Resultat({
               <span aria-hidden="true" className="text-muted flex-shrink-0">{chevron("d")}</span>
             </button>
           ) : (
-            <div key={c.creneau + c.sousId} className="py-[10px] border-t border-divider first:border-t-0 min-h-[52px]">
+            <div key={c.creneau + c.sousId + (c.choix ?? "")} className="flex-1 min-w-0 py-[10px] min-h-[52px]">
               <span className={"block t-label " + (c.evenement ? "text-terracotta" : "text-muted")}>{libelleCreneau(c)}</span>
               {/* Mariage, cérémonie (06/11/2026, demandé : « on peut dire qu'il n'y a pas de tenues dans le dressing pour cette occasion
                   s'il n'y en a pas ») : une tenue habillée qui tient compte de la morphologie, de la colorimétrie et du style ne s'invente
@@ -2770,6 +2926,29 @@ function Resultat({
                   ? "Ton dressing n'a pas encore de tenue pour un mariage ou une cérémonie."
                   : "Aucun look de ta valise ne répond encore à cette occasion."}
               </span>
+            </div>
+          );
+          // Une activité répartie se déplace (06/11/2026) : appui long pour la glisser, ou le bouton « Déplacer ». Trajets et
+          // événements datés gardent leur jour.
+          return (
+            <div
+              key={c.creneau + c.sousId + (c.choix ?? "")}
+              className={"flex items-center gap-1 border-t border-divider first:border-t-0 " + (c.deplacable ? "select-none [-webkit-touch-callout:none] " : "") + (saisi ? "opacity-40" : "")}
+              {...(c.deplacable ? poignee(cleDeplacement(c), c.jour, c.libelle) : {})}
+            >
+              {ligne}
+              {c.deplacable && (
+                <button
+                  onClick={() => setADeplacer({ sousId: cleDeplacement(c), de: c.jour, libelle: c.libelle })}
+                  aria-label={`Déplacer ${c.libelle} à un autre jour`}
+                  // Discrète (06/11/2026, demandé : « l'icône déplacer discret ») : le geste principal est l'appui long ; la cible garde 44 px.
+                  className="w-11 h-11 -mr-[10px] flex items-center justify-center text-placeholder flex-shrink-0 cursor-pointer rounded-full active:bg-sand"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M8 4v15M8 4L4.5 7.5M8 4l3.5 3.5M16 20V5M16 20l-3.5-3.5M16 20l3.5-3.5" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              )}
             </div>
           );
         })}
@@ -3049,7 +3228,77 @@ function Resultat({
                 <span className="text-[12px] text-muted flex-shrink-0">{looks.length} {looks.length > 1 ? "tenues" : "tenue"}</span>
               </div>
               <div className="t-chapeau text-muted-3 mt-[4px]">Chaque journée, et chaque soir, avec une tenue de ta valise.</div>
+              {planning.some((c) => c.deplacable) && (
+                <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]">Appuie longuement sur une activité pour la glisser vers un autre jour.</div>
+              )}
               <div className="flex flex-col gap-2 mt-3">{planningParJour.map(carteJour)}</div>
+              {/* À PLANIFIER (06/11/2026) : les activités sans date comptent pour la valise, sur aucune journée ; un toucher les date. */}
+              {aPlanifier.length > 0 && (
+                <section className="mt-4" aria-labelledby="a-planifier">
+                  <div id="a-planifier" className="t-surtitre text-muted">À planifier</div>
+                  <Card rayon="carte" className="mt-2 px-[14px] py-[2px]">
+                    {aPlanifier.map((a) => (
+                      <button
+                        key={a.choix}
+                        aria-label={`${a.libelle} : à planifier. Indiquer les jours`}
+                        type="button"
+                        onClick={() => setADater(a.choix)}
+                        className="w-full flex items-center gap-3 py-[10px] min-h-[52px] border-t border-divider first:border-t-0 text-left cursor-pointer"
+                      >
+                        <span className="flex-1 min-w-0 text-[13px] text-ink leading-[1.3]">{a.libelle}</span>
+                        <span aria-hidden="true" className="text-muted flex-shrink-0">{chevron("d")}</span>
+                      </button>
+                    ))}
+                  </Card>
+                </section>
+              )}
+              <FeuilleJoursActivite
+                libelle={aDater != null ? (valise.choix?.[aDater]?.libelle ?? null) : null}
+                jours={joursDuSejourValise}
+                choisis={aDater != null ? (valise.choix?.[aDater]?.jours ?? []) : []}
+                occupation={(jour) => planning.filter((c) => c.jour === jour && c.choix !== aDater).map(libelleCreneau)}
+                onBasculer={(jour) => aDater != null && majChoix(basculerJour(valise.choix ?? [], aDater, jour))}
+                onClose={() => setADater(null)}
+              />
+              {valise.placements && !manuelle && (
+                <button onClick={() => majPlacements(undefined)} className="block mx-auto mt-3 text-[13px] text-terracotta underline underline-offset-2 cursor-pointer min-h-[44px]">
+                  Rétablir la répartition automatique
+                </button>
+              )}
+              {saisie && <FantomeSaisie saisie={saisie} />}
+              <BottomSheet title="Déplacer l'activité" open={aDeplacer != null} onClose={() => setADeplacer(null)}>
+                {aDeplacer && (
+                  <>
+                    <div className="t-label text-muted">
+                      {aDeplacer.libelle} · Jour {joursDuSejourValise.indexOf(aDeplacer.de) + 1} · {dateCourte(aDeplacer.de)}
+                    </div>
+                    <div className="text-[13px] text-muted leading-[1.5] mt-[4px]">Choisis un autre jour.</div>
+                    <div className="flex flex-col mt-2">
+                      {joursPossibles(planning, aDeplacer.sousId, joursDuSejourValise).map((jour) => {
+                        const deja = planning.filter((c) => c.jour === jour).map(libelleCreneau);
+                        return (
+                          <button
+                            key={jour}
+                            onClick={() => {
+                              deplacer(aDeplacer.sousId, aDeplacer.de, jour);
+                              setADeplacer(null);
+                            }}
+                            className="flex items-center gap-3 py-[10px] min-h-[52px] border-t border-divider first:border-t-0 text-left cursor-pointer active:opacity-70"
+                          >
+                            <span className="flex-1 min-w-0">
+                              <span className="block t-label text-terracotta">
+                                Jour {joursDuSejourValise.indexOf(jour) + 1} · {dateCourte(jour)}
+                              </span>
+                              {deja.length > 0 && <span className="block text-[12px] text-muted-3 mt-[2px] truncate">{deja.join(" · ")}</span>}
+                            </span>
+                            <span aria-hidden="true" className="text-muted flex-shrink-0">{chevron("d")}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </BottomSheet>
               {piecesRepetees && (
                 <div className="text-[12px] text-muted-3 leading-[1.5] text-center mt-3">
                   Certaines pièces sont pensées pour être portées plusieurs fois et combinées différemment.
