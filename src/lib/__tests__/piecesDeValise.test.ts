@@ -164,30 +164,30 @@ describe("randonnée et trajets (06/11/2026, signalé : randonnées sans look, b
       expect(noms(t?.ids, pieces)).not.toContain("Blazer en laine");
       expect(noms(t?.ids, pieces)).toContain("Chaussures de randonnée en nubuck");
     }
-    // Sans randonnée au programme : la paire est possible, parmi les autres chaussures ; les deux sont tirées.
-    const portees = new Set<string>();
-    for (const t of tirages(40, () => gen(dressing, trajet(false)))) {
+    for (const t of tirages(20, () => gen(dressing, trajet(false)))) {
       expect(noms(t?.ids, pieces)).not.toContain("Blazer en laine");
-      for (const n of noms(t?.ids, pieces)) if (n) portees.add(n);
+      expect(noms(t?.ids, pieces)).not.toContain("Chaussures de randonnée en nubuck");
     }
-    expect(portees.has("Baskets blanches") || portees.has("Chaussures de randonnée en nubuck")).toBe(true);
   });
 
-  it("le programme marque les trajets d'un séjour avec randonnée, et eux seuls", () => {
+  it("le programme marque les trajets et journées de marche d'un séjour avec randonnée, et eux seuls", () => {
     const meteos = ["2026-11-23", "2026-11-24", "2026-11-25"].map((jour) => ({ jour, temp: 26, label: "Ensoleillé", prevue: true }));
     const avec = situationsDuProgramme([{ id: "randonnee", frequence: 2 }, { id: "visites", frequence: 1 }, { id: "restaurant", frequence: 1 }, { id: "trajet", frequence: 2 }], meteos, []);
-    expect(avec.filter((x) => x.avecRandonnee).map((x) => x.sousIds)).toEqual([["trajet"]]);
+    expect(avec.filter((x) => x.avecRandonnee).map((x) => x.sousIds)).toEqual([["visites"], ["trajet"]]);
     const sans = situationsDuProgramme([{ id: "visites", frequence: 2 }, { id: "trajet", frequence: 2 }], meteos, []);
     expect(sans.some((x) => x.avecRandonnee)).toBe(false);
   });
 
-  it("aux journées de marche et aux trajets, randonnée au programme ou non, la paire est proposée parmi les autres chaussures, avec une tenue ordinaire", () => {
-    const visites: SituationValise = { occasion: "quotidien", meteo, jours: ["2026-11-26"], contrainte: "marche", sousIds: ["visites"] };
+  it("séjour avec randonnée : la paire est proposée aux trajets et journées de marche, parmi les autres chaussures, avec une tenue ordinaire ; sans randonnée, jamais", () => {
+    const visites: SituationValise = { occasion: "quotidien", meteo, jours: ["2026-11-26"], contrainte: "marche", sousIds: ["visites"], avecRandonnee: true };
     expect(piecesPourLaSituation([paire("sport")], visites)).toHaveLength(1);
-    expect(piecesPourLaSituation([paire("sport")], { occasion: "quotidien", contrainte: "marche", sousIds: ["balade"] })).toHaveLength(1);
-    expect(piecesPourLaSituation([paire("sport")], trajet(false))).toHaveLength(1);
+    expect(piecesPourLaSituation([paire("sport")], { occasion: "quotidien", contrainte: "marche", sousIds: ["balade"], avecRandonnee: true })).toHaveLength(1);
+    expect(piecesPourLaSituation([paire("sport")], trajet(true))).toHaveLength(1);
     expect(piecesPourLaSituation([paire("sport")], { occasion: "soiree", sousIds: ["restaurant"] })).toEqual([]);
-    expect(piecesPourLaSituation([paire("sport")], { occasion: "quotidien", sousIds: ["shopping"] })).toEqual([]);
+    // Sans randonnée au programme : ni aux visites, ni à la balade, ni au trajet.
+    expect(piecesPourLaSituation([paire("sport")], { occasion: "quotidien", contrainte: "marche", sousIds: ["visites"] })).toEqual([]);
+    expect(piecesPourLaSituation([paire("sport")], { occasion: "quotidien", contrainte: "marche", sousIds: ["balade"] })).toEqual([]);
+    expect(piecesPourLaSituation([paire("sport")], trajet(false))).toEqual([]);
     expect(poolDeRandonnee([baskets, paire("sport")], visites)).toHaveLength(2);
     const legging = item({ id: 41, category: "pantalons", name: "Legging de sport", sous_type: "Legging", couleur_dominante: "Noir", niveau_formalite: "sport", occasions: "sport,quotidien", saison_capsule: T });
     expect(sansTenueDeSport([legging, pantalon, paire("sport")]).map((p) => p.name)).toEqual(["Pantalon large", "Chaussures de randonnée en nubuck"]);

@@ -227,7 +227,7 @@ export interface SituationValise {
   contrainte?: Contrainte;
   /** Les occasions du programme que ce look-type sert : plage et piscine partagent une situation, pas deux tenues. */
   sousIds?: string[];
-  /** Un trajet d'un séjour qui compte une randonnée : la paire de randonnée s'y porte (06/11/2026, piecesDeValise.ts). */
+  /** Un trajet ou une journée de marche d'un séjour qui compte une randonnée : la paire de randonnée y est proposée (06/11/2026, piecesDeValise.ts). */
   avecRandonnee?: true;
 }
 
@@ -295,7 +295,7 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
         jours: m.jours,
         ...(g.contrainte ? { contrainte: g.contrainte } : {}),
         sousIds: g.sousIds,
-        ...(g.trajet && randonnee ? { avecRandonnee: true as const } : {}),
+        ...((g.trajet || g.contrainte === "marche") && randonnee ? { avecRandonnee: true as const } : {}),
       });
     }
   }

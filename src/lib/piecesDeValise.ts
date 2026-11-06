@@ -75,14 +75,19 @@ type SituationPieces = { sousIds?: string[]; occasion?: string; contrainte?: str
 /**
  * Les journées où la paire de randonnée peut être proposée, avec une tenue ordinaire (06/11/2026, précisé : « la paire de chaussures
  * de randonnée peut être proposée lors d'un trajet, lors de balades longues, lors d'activités entraînant beaucoup de marche, sans tenue
- * de sport et avec une tenue ordinaire ») : les trajets et les journées de marche (visites, balade, excursion), randonnée au programme
- * ou non. Une paire parmi les autres, sauf au trajet d'un séjour avec randonnée (poolDeRandonnee).
+ * de sport et avec une tenue ordinaire ») : les trajets et les journées de marche (visites, balade, excursion).
  */
 export const estJourneeDeMarche = (s: SituationPieces): boolean => s.occasion === "voyage" || s.contrainte === "marche";
 
-/** Les pièces réservées qui servent à CETTE situation : la tenue de bain à la baignade ; la paire de randonnée à la randonnée, aux trajets et aux journées de marche. */
+/**
+ * Les pièces réservées qui servent à CETTE situation : la tenue de bain à la baignade ; la paire de randonnée à la randonnée, et aux
+ * trajets et journées de marche d'un séjour QUI COMPTE UNE RANDONNÉE seulement (`avecRandonnee`, 06/11/2026 : « la paire de chaussures
+ * de randonnée ne doit pas être proposée dans une valise si le séjour n'inclut pas une activité de randonnée »).
+ */
 export function piecesPourLaSituation<T extends Pick<Item, "subtype">>(pieces: readonly T[], s: SituationPieces): T[] {
-  return pieces.filter((p) => (estBaignade(s) && !estChaussureDeRando(p)) || ((estRandonnee(s) || estJourneeDeMarche(s)) && estChaussureDeRando(p)));
+  return pieces.filter(
+    (p) => (estBaignade(s) && !estChaussureDeRando(p)) || ((estRandonnee(s) || (estJourneeDeMarche(s) && Boolean(s.avecRandonnee))) && estChaussureDeRando(p))
+  );
 }
 
 /**

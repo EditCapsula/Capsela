@@ -83,8 +83,10 @@ un look Voyage · trajet avec un blazer du dressing (« Il faut que ce soit plus
   sort désormais. La longueur de la marche n'est pas connue de l'app : rien n'en est déduit (NON DÉMONTRÉ qu'il faille distinguer
   visites et excursion).
 - **La paire de randonnée hors randonnée** (précisé le même jour : « peut être proposée lors d'un trajet, lors de balades longues,
-  lors d'activités entraînant beaucoup de marche, sans tenue de sport et avec une tenue ordinaire ») : trajets et journées de marche
-  (visites, balade, excursion) la reçoivent, randonnée au programme ou non (`estJourneeDeMarche`), parmi les autres chaussures. Seul
-  le trajet d'un séjour avec randonnée la porte d'office. Comme toute pièce de capsule, elle passe après les chaussures du dressing.
+  lors d'activités entraînant beaucoup de marche, sans tenue de sport et avec une tenue ordinaire », puis : « ne doit pas être
+  proposée dans une valise si le séjour n'inclut pas une activité de randonnée ») : seulement dans un séjour qui compte une randonnée,
+  les trajets et journées de marche (visites, balade, excursion) la reçoivent (`avecRandonnee`, `estJourneeDeMarche`), parmi les
+  autres chaussures ; le trajet la porte d'office. Sans randonnée au programme, la paire n'entre dans aucun look ni aucune valise.
+- **Jours sans activité** : aucun look n'y est ajouté (arbitré le 06/11/2026 : « Non »).
 - **La paire de randonnée sans tenue de sport hors randonnée** (demandé le même jour) : aux trajets et aux journées de marche, un
   vêtement de sport sort de sa catégorie quand il y reste un vêtement ordinaire (`sansTenueDeSport`).
