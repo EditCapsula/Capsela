@@ -16,7 +16,7 @@ import { CATLABEL, CATS, isBag } from "@/lib/data";
 import { enSaisons, pourLaSaison, saisonPourIdees, saisonsDe } from "@/lib/saisons";
 import { composeWardrobePool } from "@/lib/selectors";
 import { avecTirageDeterministe, graineIdees } from "@/lib/looks";
-import { FAMILLES_LOOK, cleLook, decrireLooks, ideesDressingDAbord, ordonnerLooks, titreCommentPorter, type FamilleLook, type LookNumerote } from "@/lib/ideesLooks";
+import { FAMILLES_LOOK, cleLook, decrireLooks, fusionnerAvecOuSansVeste, ideesDressingDAbord, ordonnerLooks, titreCommentPorter, type FamilleLook, type LookNumerote } from "@/lib/ideesLooks";
 import type { ItemOutfitVariation } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur, type ColorimetrieMoteur } from "@/lib/colorimetrieMoteur";
@@ -180,7 +180,9 @@ export default function ItemOutfitsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pivot?.id]);
 
-  const looks = useMemo(() => ordonnerLooks(variations, state.items), [variations, state.items]);
+  // Un look qui ne change que par sa veste n'est montré qu'une fois, « Avec ou sans veste » (06/11/2026).
+  const fusion = useMemo(() => fusionnerAvecOuSansVeste(variations, pool, pivot?.id ?? -1), [variations, pool, pivot]);
+  const looks = useMemo(() => ordonnerLooks(fusion.variations, state.items), [fusion, state.items]);
   const insights = useMemo(() => (pivot ? decrireLooks(variations, pool, pivot.id) : new Map()), [variations, pool, pivot]);
   if (!pivot) return null;
 
@@ -211,7 +213,7 @@ export default function ItemOutfitsScreen() {
     return state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cle);
   };
   const ouvrir = (look: LookNumerote, position: number) =>
-    actions.openIdeeLook(pivot.id, variations, familleActive, { ids: look.variation.ids, occasion: look.variation.occasion, numero: position });
+    actions.openIdeeLook(pivot.id, fusion.variations, familleActive, { ids: look.variation.ids, occasion: look.variation.occasion, numero: position });
 
   const choisir = (f: FamilleLook | null) => setFamille(f);
   const pastille = (actif: boolean) =>
@@ -352,6 +354,7 @@ export default function ItemOutfitsScreen() {
               onOpen={() => ouvrir(look, i + 1)}
               onCoeur={() => actions.basculerIdeeLook(look.variation.ids, look.variation.occasion)}
               colonnes={colonnesCarrousel}
+              avecOuSansVeste={fusion.vesteFacultative.has(cleLook(look.variation.ids))}
             />
           ))}
         />
