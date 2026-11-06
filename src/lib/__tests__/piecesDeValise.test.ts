@@ -71,3 +71,12 @@ describe("pendant le séjour, jamais en tenue du jour (06/11/2026)", () => {
     expect(piecesDeLaValisePourLeJour(v, pool).map((p) => p.name)).toEqual(["T-shirt"]);
   });
 });
+
+describe("le look de vacances, tenue du jour le jour de son activité (06/11/2026)", () => {
+  it("plage, piscine, spa et randonnée seulement", async () => {
+    const { estActiviteDeVacances } = await import("../piecesDeValise");
+    expect(["plage", "piscine", "spa", "randonnee"].every(estActiviteDeVacances)).toBe(true);
+    expect(estActiviteDeVacances("visites")).toBe(false);
+    expect(estActiviteDeVacances(null)).toBe(false);
+  });
+});

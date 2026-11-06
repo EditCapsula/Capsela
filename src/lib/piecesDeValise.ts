@@ -28,6 +28,14 @@ const estCouverture = (it: Pick<Item, "subtype">) =>
 export const SOUS_OCCASIONS_BAIGNADE = ["plage", "piscine", "spa"] as const;
 const PLEIN_AIR = ["plage", "piscine"];
 
+/**
+ * Les activités dont le look peut porter des pièces réservées ET devenir la tenue du jour, le jour où le programme les prévoit
+ * (06/11/2026, arbitré : « Look de plage ou de rando ou de spa… »). La randonnée y est déjà, pour ses pièces à venir.
+ */
+export const ACTIVITES_DE_VACANCES = ["plage", "piscine", "spa", "randonnee"] as const;
+export const estActiviteDeVacances = (sousId: string | null | undefined): boolean =>
+  Boolean(sousId) && (ACTIVITES_DE_VACANCES as readonly string[]).includes(sousId as string);
+
 export const estBaignade = (s: { sousIds?: string[] }): boolean =>
   (s.sousIds ?? []).some((id) => (SOUS_OCCASIONS_BAIGNADE as readonly string[]).includes(id));
 

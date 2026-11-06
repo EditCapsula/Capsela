@@ -5,7 +5,7 @@ import { elementProgramme } from "./programmeValise";
 import { joursDuSejour, lookAChaussuresEtSac, type LookValise } from "./valise";
 import type { ValiseGardee } from "./valises";
 import type { Item } from "./types";
-import { estPieceDeValise } from "./piecesDeValise";
+import { estActiviteDeVacances, estPieceDeValise } from "./piecesDeValise";
 
 /*
  * LA VALISE FAIT LA TENUE DU JOUR PENDANT LE SÉJOUR (20/10/2026, demandé : « faire le lien entre les looks de valise et la tenue du jour »).
@@ -56,11 +56,14 @@ export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly 
   const looks = looksVisibles(v, pool);
   // Une valise composée avant le planning jour par jour n'en a pas : aucun look attribué, la tenue du jour se tire dans ses pièces.
   const planning = planningDeLaValise(v, jours, looks);
-  // Un look de baignade (maillot, surchemise de plage… piecesDeValise.ts, 06/11/2026, demandé : « ces pièces ne doivent pas être
-  // proposées dans les tenues recommandées, planifiées, du jour ») reste dans la valise, jamais en tenue du jour ni dans « Autre tenue ».
+  // Les pièces réservées à la valise (maillot, surchemise de plage… piecesDeValise.ts, 06/11/2026) : « ces pièces ne doivent pas être
+  // proposées dans les tenues recommandées, planifiées, du jour » — SAUF le jour où le programme prévoit leur activité (arbitré le même
+  // jour : « Look de plage ou de rando ou de spa… ») : ce jour-là, le look de plage est la tenue du jour. Jamais dans « Autre tenue ».
   const reservees = new Set(pool.filter(estPieceDeValise).map((i) => i.id));
   const deBaignade = (ids: readonly number[]) => ids.some((id) => reservees.has(id));
-  const duJour = planning.filter((c) => c.jour === jour && c.look != null && !deBaignade(looks[c.look].ids));
+  const duJour = planning.filter(
+    (c) => c.jour === jour && c.look != null && (!deBaignade(looks[c.look].ids) || estActiviteDeVacances(c.sousId))
+  );
   const virtuel = (moment: TenuePlanifiee["moment"], c: (typeof duJour)[number] | undefined): TenuePlanifiee | null => {
     if (!c || c.look == null) return null;
     const look = looks[c.look];

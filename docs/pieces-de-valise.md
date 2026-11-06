@@ -26,6 +26,12 @@ pièces ne sont visibles que dans la valise et propres à chaque style » ; pér
   la plage et à la piscine, la surchemise est ajoutée au maillot (`ajouterCouverture`), le moteur ne superposant pas un haut à une
   pièce entière.
 
+## Pendant le séjour
+
+La tenue du jour vient de la valise (valiseDuJour.ts). Un look qui porte une pièce réservée n'est la tenue du jour que **le jour où
+le programme prévoit son activité** (plage, piscine, spa, randonnée ; arbitré le 06/11/2026). Jamais les autres jours, jamais dans
+« Autre tenue », et jamais hors séjour : tenue du jour, tenues planifiées et idées passent par la capsule, qui les écarte.
+
 ## Limites
 
 - Un seul modèle par style : la morphologie ne départage pas ces pièces ; la couleur de la palette, quand elle existe, si.
