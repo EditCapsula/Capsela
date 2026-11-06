@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { composerSlides, slideDeLOccasion, slidesDuJour, typeDeJour } from "../carrousel";
+import { composerSlides, slideDeLOccasion, slidesDuJour, slidesDuSejour, typeDeJour } from "../carrousel";
 
 const propositions = { travail: [1, 2, 3], quotidien: [4, 5, 6], soiree: [7, 8, 9] };
 
@@ -84,7 +84,7 @@ describe("composerSlides", () => {
   it("l'ordre du jour : travail d'abord en semaine, jamais le week-end ni en congés (17/10/2026)", () => {
     expect(slidesDuJour("travail")).toEqual(["travail", "quotidien", "soiree", "date", "sport", "voyage", "cocooning", "ceremonie"]);
     expect(slidesDuJour("repos")).toEqual(["quotidien", "sport", "soiree", "date", "cocooning", "voyage", "ceremonie"]);
-    expect(slidesDuJour("conges")).toEqual(["quotidien", "cocooning", "sport", "soiree", "date", "voyage", "ceremonie"]);
+    // Depuis le 06/11/2026 : ni voyage ni cérémonie en congés à la maison (bloc « vacances » plus bas).
   });
 
   it("un samedi : quotidien, sport, soirée, puis les slides tirées en défilant", () => {
@@ -111,5 +111,31 @@ describe("composerSlides", () => {
     const s = composerSlides({ tenueDuJour: [10, 11], occasion: "travail_formel", planAujourdhui: false, propositions: { sport: [12], soiree: [7] }, jour: "repos" });
     expect(s.map((x) => x.id)).toEqual(["travail", "sport", "soiree"]);
     expect(s[0].source).toBe("jour");
+  });
+});
+
+describe("vacances (06/11/2026)", () => {
+  it("en congés à la maison : ni travail, ni voyage, ni cérémonie", () => {
+    expect(slidesDuJour("conges")).toEqual(["quotidien", "cocooning", "sport", "soiree", "date"]);
+  });
+
+  it("pendant un séjour : la journée, le soir, puis les looks de la valise, dits par leur activité", () => {
+    const slides = slidesDuSejour({
+      tenueDuJour: [1, 2],
+      occasion: "quotidien",
+      libelleJournee: "Plage",
+      soir: { ids: [3, 4], occasion: "soiree", libelle: "Dîner" },
+      looks: [
+        { ids: [2, 1], occasion: "quotidien", libelle: "Plage" },
+        { ids: [5, 6], occasion: "quotidien", libelle: "Visites / découverte" },
+        { ids: [7, 8], occasion: "voyage", libelle: null },
+      ],
+    });
+    expect(slides.map((s) => s.surtitre)).toEqual(["Aujourd'hui · Plage", "Ce soir · Dîner", "Visites / découverte", "Pour ton voyage"]);
+    expect(slides[0].source).toBe("jour");
+  });
+
+  it("sans tenue du jour, pas de carrousel", () => {
+    expect(slidesDuSejour({ tenueDuJour: [], occasion: "quotidien", looks: [{ ids: [1], occasion: "quotidien" }] })).toEqual([]);
   });
 });

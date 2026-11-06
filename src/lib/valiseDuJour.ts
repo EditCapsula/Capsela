@@ -47,7 +47,10 @@ export interface ValiseDuJourConsulte {
    * Tous les looks de la valise (ceux que son écran montre), avec leur occasion — la première de ses situations — et TOUTES celles
    * qu'il sert : « Autre tenue » les parcourt pendant le séjour, dans l'occasion de la tenue affichée (lookSuivantConforme).
    */
-  looks: { ids: number[]; occasion: TenuePlanifiee["occasion"]; occasions: TenuePlanifiee["occasion"][] }[];
+  looks: { ids: number[]; occasion: TenuePlanifiee["occasion"]; occasions: TenuePlanifiee["occasion"][]; libelle: string | null }[];
+  /** L'activité du programme servie par le look de la journée, et par celui du soir (carrousel du séjour, 06/11/2026). */
+  libelleJournee: string | null;
+  libelleSoir: string | null;
 }
 
 export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly Item[]): ValiseDuJourConsulte {
@@ -83,15 +86,20 @@ export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly 
       weatherLabel: null,
     };
   };
+  const celluleJournee = duJour.find((c) => c.creneau === "jour") ?? duJour.find((c) => c.creneau === "trajet");
+  const celluleSoir = duJour.find((c) => c.creneau === "soir");
   return {
     valise: v,
     numero,
     looks: looks.filter((l) => !deBaignade(l.ids)).map((l) => {
       const occasions = [...new Set(l.situations.map((i) => v.situations[i]?.occasion).filter((o): o is TenuePlanifiee["occasion"] => !!o))];
-      return { ids: [...l.ids], occasion: occasions[0] ?? "quotidien", occasions: occasions.length ? occasions : ["quotidien"] };
+      const sousId = l.situations.map((i) => v.situations[i]?.sousIds?.[0]).find((x): x is string => !!x);
+      return { ids: [...l.ids], occasion: occasions[0] ?? "quotidien", occasions: occasions.length ? occasions : ["quotidien"], libelle: sousId ? elementProgramme(sousId)?.libelle ?? null : null };
     }),
-    journee: virtuel("Toute la journée", duJour.find((c) => c.creneau === "jour") ?? duJour.find((c) => c.creneau === "trajet")),
-    soir: virtuel("Soirée", duJour.find((c) => c.creneau === "soir")),
+    journee: virtuel("Toute la journée", celluleJournee),
+    soir: virtuel("Soirée", celluleSoir),
+    libelleJournee: celluleJournee?.libelle ?? null,
+    libelleSoir: celluleSoir?.libelle ?? null,
   };
 }
 
