@@ -1,4 +1,5 @@
 import { sansBarre } from "./barre";
+import { formalityOf } from "./attributes";
 import { OCCASIONS, type Weather } from "./data";
 import type { Item, OccasionKey } from "./types";
 import type { MeteoJour, TypeSejour } from "./valise";
@@ -312,13 +313,27 @@ export function chaussuresDeMarche(saison?: Weather["season"]): string[] {
   return ["Baskets", "Bottines", ...(saison !== "Printemps / Été" ? ["Bottes"] : []), ...(saison !== "Automne / Hiver" ? ["Sandales"] : [])];
 }
 
+/**
+ * LES VÊTEMENTS D'UNE JOURNÉE DE MARCHE (06/11/2026, arbitré : « Privilégie le confort dans le style et la morphologie de
+ * l'utilisateur »). Peu confortable pour marcher : une pièce habillée (formalité 4), une coupe serrée, une jupe crayon ou une
+ * mini-jupe. PRIVILÉGIER, pas exclure : dans chaque catégorie, ces pièces sortent seulement s'il en reste une confortable ; sinon elles
+ * restent. Le moteur choisit ensuite comme toujours, avec le style et la morphologie du profil.
+ */
+export const peuConfortablePourMarcher = (it: Item): boolean =>
+  it.cat !== "chaussures" && (formalityOf(it) >= 4 || it.coupe === "Serré" || (it.cat === "jupe" && /^(crayon|mini)$/i.test((it.subtype ?? "").trim())));
+
+export function privilegierLeConfort(pool: Item[]): Item[] {
+  return pool.filter((it) => !peuConfortablePourMarcher(it) || !pool.some((x) => x.cat === it.cat && !peuConfortablePourMarcher(x)));
+}
+
 export function filtrerParContrainte(pool: Item[], contrainte?: Contrainte, meteo?: Pick<Weather, "season">): Item[] {
   if (!contrainte) return pool;
   if (contrainte === "marche") {
     const permises = chaussuresDeMarche(meteo?.season);
-    const marche = pool.filter((it) => it.cat !== "chaussures" || !it.shoeType || permises.includes(it.shoeType));
+    const marche = privilegierLeConfort(pool.filter((it) => it.cat !== "chaussures" || !it.shoeType || permises.includes(it.shoeType)));
     // Aucune chaussure de marche dans la valise : la règle d'avant (ni talons, ni chaussons), plutôt qu'une journée sans tenue.
     if (marche.some((it) => it.cat === "chaussures") || !pool.some((it) => it.cat === "chaussures")) return marche;
+    return privilegierLeConfort(pool.filter((it) => it.cat !== "chaussures" || !it.shoeType || !CHAUSSURES_PAS_POUR_LA_MARCHE.includes(it.shoeType)));
   }
   return pool.filter((it) => {
     if (contrainte === "chaleur") {
@@ -328,7 +343,6 @@ export function filtrerParContrainte(pool: Item[], contrainte?: Contrainte, mete
       return true;
     }
     if (it.cat !== "chaussures" || !it.shoeType) return true;
-    if (contrainte === "marche") return !CHAUSSURES_PAS_POUR_LA_MARCHE.includes(it.shoeType);
     return CHAUSSURES_DE_PLEIN_AIR.includes(it.shoeType); // outdoor
   });
 }
