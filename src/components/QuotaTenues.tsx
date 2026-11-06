@@ -9,7 +9,6 @@ import { fournisseurVideo, peutProposerVideo } from "@/lib/videoRecompense";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import Badge from "@/components/Badge";
-import { I_COURONNE, Icone } from "@/components/ProfilUI";
 
 /**
  * QUOTA DES TENUES ET SON GATE — sortis de TenuesScreen le 26/09/2026 pour
@@ -229,9 +228,12 @@ export function useQuotaTenues() {
             {/* PREMIUM, plus valorisé que la vidéo : son encart sur fond beige et le bouton principal. */}
             <div className="mt-3 bg-warm-bg rounded-tuile px-4 py-[14px]">
               <div className="flex items-center gap-3">
-                {/* La couronne de Premium, la même que « Mon abonnement » (ProfilUI, I_COURONNE). */}
-                <span className="w-11 h-11 flex-shrink-0 rounded-full bg-card text-terracotta-deep flex items-center justify-center" aria-hidden="true">
-                  <Icone taille={20}>{I_COURONNE}</Icone>
+                {/* L'étoile de Premium (✦, celle du badge Premium), dessinée comme partout en SVG (onglet `sparkle`, TabBar) ; pas la
+                    couronne (06/11/2026, demandé : « Reprendre l'icône habituelle et pas la couronne »). */}
+                <span className="w-11 h-11 flex-shrink-0 rounded-full bg-card text-terracotta flex items-center justify-center" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ display: "block" }}>
+                    <path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3z" />
+                  </svg>
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block t-surtitre text-terracotta">Envie de plus de liberté ?</span>
