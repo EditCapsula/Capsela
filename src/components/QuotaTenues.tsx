@@ -8,6 +8,7 @@ import { useCapsela } from "@/lib/store";
 import { fournisseurVideo, peutProposerVideo } from "@/lib/videoRecompense";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+import Badge from "@/components/Badge";
 
 /**
  * QUOTA DES TENUES ET SON GATE — sortis de TenuesScreen le 26/09/2026 pour
@@ -126,6 +127,8 @@ export function useQuotaTenues() {
   };
 
   const videoProposable = !videoVue && peutProposerVideo(fournisseurVideo(), (dernierQuota?.bonus ?? 0) > 0);
+  /** Un fournisseur existe (Android) et le bonus du jour reste à prendre, mais sa vidéo n'est pas encore chargée : on le dit. */
+  const videoEnAttente = !videoVue && !videoProposable && fournisseurVideo() !== null && (dernierQuota?.bonus ?? 0) === 0;
 
   const feuille = (
     <>
@@ -142,51 +145,51 @@ export function useQuotaTenues() {
 
             Le compteur 2/2 est écrit à partir de la constante partagée avec
             l'écran Premium, pas recopié. */}
-        <BottomSheet title="Tu as fait le tour pour aujourd'hui" open={quotaAtteint} onClose={() => setQuotaAtteint(false)}>
+        {/* LA FEUILLE DE FIN DE QUOTA (06/11/2026, brief « Écran de limite des alternatives quotidiennes ») : le message, le compteur
+            RÉEL (celui que la base vient de rendre), la vidéo récompensée (Android seulement, arbitré le même jour : « on garde la pub que
+            dans l'application google »), puis Premium, plus valorisé, et « Plus tard ». La mécanique ne change pas : la vidéo passe par
+            le fournisseur AdMob, la tenue n'est accordée que par la base après la confirmation de Google (vérification serveur). */}
+        <BottomSheet title="C'est tout pour aujourd'hui" open={quotaAtteint} onClose={() => setQuotaAtteint(false)}>
           <div className="flex flex-col">
             <div className="text-[13px] text-muted-3 leading-[1.5]" style={{ textWrap: "pretty" }}>
-              Tu as utilisé tes {limiteDuJour} alternatives gratuites du jour. Ta tenue reste là,
-              et de nouvelles propositions arrivent demain matin.
+              Tu as découvert tes {limiteDuJour} alternatives gratuites du jour. Ta tenue reste disponible et de nouvelles propositions
+              arrivent demain matin.
             </div>
-            <div className="flex items-center gap-[10px] mt-4 bg-warm-bg rounded-bloc px-[14px] py-3">
-              <span className="t-surtitre text-terracotta">
-                {limiteDuJour} / {limiteDuJour}
+            <div className="flex items-center gap-[12px] mt-4 bg-warm-bg rounded-bloc px-[16px] py-3">
+              <span className="text-[15px] font-semibold text-terracotta tabular-nums flex-shrink-0">
+                {dernierQuota?.utilisees ?? limiteDuJour} / {limiteDuJour}
               </span>
-              <span className="flex-1 min-w-0 text-[12px] text-muted-3 leading-[1.45]">
-                Avec Premium, autant de tenues que tu veux.
-              </span>
+              <span aria-hidden="true" className="w-px self-stretch bg-border" />
+              <span className="flex-1 min-w-0 text-[12.5px] text-muted-3">Tes alternatives du jour</span>
             </div>
 
-            {/* LA CARTE VIDÉO N'EXISTE QUE SI UNE VIDÉO EXISTE.
-                `peutProposerVideo` est faux tant qu'aucun fournisseur n'est
-                enregistré (AdMob, Android seulement, 02/11/2026) ou que sa vidéo
-                n'est pas déjà chargée. Un bouton « Regarder une vidéo » qui n'ouvre
-                aucune vidéo est exactement la promesse qu'on ne peut pas afficher.
-
-                Elle disparaît aussi quand le bonus du jour est déjà pris : c'est
-                ce que la maquette décrit — « seul Premium reste proposé ».
-
-                Et elle disparaît APRÈS UN ÉCHEC. La maquette demande « pas de
-                nouvel essai en boucle » ; laisser la carte sous le message
-                d'échec reviendrait à inviter à retaper sur un fournisseur qui
-                vient de ne pas répondre. Rouvrir la feuille la ramène — ce
-                n'est pas une porte fermée, c'est une relance qui ne se fait pas
-                toute seule. */}
+            {/* LA VIDÉO. Elle n'existe que là où un fournisseur existe (Android, compte gratuit, consentement) ; ailleurs, aucune carte.
+                Prête : la carte se touche. Pas encore chargée : elle le dit, sans bouton qui n'aboutirait pas. Déjà vue aujourd'hui (bonus
+                pris ou vue dans la session) : elle disparaît, seul Premium reste. */}
             {videoProposable && tempsVideo === "propose" && (
               <button
                 onClick={regarderVideo}
-                className="w-full flex items-center gap-[11px] text-left mt-3 bg-card border border-border rounded-tuile px-[14px] py-[13px] cursor-pointer"
+                className="w-full flex items-center gap-3 text-left mt-3 bg-card border border-border rounded-tuile px-[14px] py-[14px] cursor-pointer active:opacity-80"
               >
+                <span className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center" aria-hidden="true">
+                  <IconeVideo />
+                </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-[13px] font-medium text-ink">Regarder une vidéo</span>
-                  <span className="block text-[11px] text-muted leading-[1.45] mt-[2px]">
-                    Environ 30 secondes, une seule fois par jour.
+                  <span className="block t-surtitre text-terracotta">Envie d&apos;une tenue supplémentaire ?</span>
+                  <span className="flex items-center gap-2 mt-[4px]">
+                    <span className="t-titre-ligne text-ink">Regarder une vidéo</span>
+                    <Badge tone="doux">Gratuit</Badge>
                   </span>
+                  <span className="block text-[12px] text-muted leading-[1.45] mt-[2px]">Débloque 1 nouvelle tenue dès maintenant.</span>
                 </span>
-                <span className="flex-shrink-0 t-surtitre text-terracotta bg-warm-bg rounded-full px-[9px] py-[4px]">
-                  +1 tenue
-                </span>
+                <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
               </button>
+            )}
+            {videoEnAttente && tempsVideo === "propose" && (
+              <Card rayon="tuile" className="mt-3 px-[14px] py-[13px]" aria-live="polite">
+                <div className="text-[13px] font-medium text-ink">Aucune vidéo disponible pour le moment</div>
+                <div className="text-[11px] text-muted leading-[1.45] mt-[2px]">Rouvre cette fenêtre dans quelques instants pour en regarder une.</div>
+              </Card>
             )}
 
             {/* Deuxième temps. La feuille reste ouverte : revenir sur une feuille
@@ -221,17 +224,33 @@ export function useQuotaTenues() {
                 </div>
               </Card>
             )}
-            <Button variante="principal" className="mt-4"
-              onClick={() => {
-                setQuotaAtteint(false);
-                actions.goPremium();
-              }}
-            >
-              Découvrir Premium
-            </Button>
+
+            {/* PREMIUM, plus valorisé que la vidéo : son encart sur fond beige et le bouton principal. */}
+            <div className="mt-3 bg-warm-bg rounded-tuile px-[14px] pt-[14px] pb-[14px]">
+              <div className="flex items-center gap-3">
+                <span className="w-11 h-11 flex-shrink-0 rounded-full bg-card text-terracotta flex items-center justify-center text-[18px]" aria-hidden="true">
+                  ✦
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block t-surtitre text-terracotta">Envie de plus de liberté ?</span>
+                  <span className="block font-serif font-medium text-[20px] text-ink leading-[1.2] mt-[4px]">Passer à Premium</span>
+                  <span className="block text-[12px] text-muted leading-[1.45] mt-[2px]">Explore autant de tenues que tu le souhaites.</span>
+                </span>
+              </div>
+              <Button
+                variante="principal"
+                className="mt-3"
+                onClick={() => {
+                  setQuotaAtteint(false);
+                  actions.goPremium();
+                }}
+              >
+                Découvrir Premium
+              </Button>
+            </div>
             <button
               onClick={() => setQuotaAtteint(false)}
-              className="w-full rounded-full text-[12px] text-muted-3 cursor-pointer mt-1"
+              className="w-full rounded-full text-[13px] text-muted-3 cursor-pointer mt-2"
               style={{ minHeight: 44 }}
             >
               Plus tard
@@ -242,4 +261,14 @@ export function useQuotaTenues() {
   );
 
   return { demander, tirageEnCours, feuille };
+}
+
+/** Une vidéo : un écran et le triangle de lecture, au trait. */
+function IconeVideo() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="3" />
+      <path d="M10.5 9.5v5l4-2.5-4-2.5z" />
+    </svg>
+  );
 }

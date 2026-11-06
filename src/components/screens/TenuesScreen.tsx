@@ -191,7 +191,7 @@ export default function TenuesScreen() {
   const { decalage, date: dateConsultee } = jourConsulte;
   const quand = quandPhrase(decalage, dateConsultee);
 
-  // Limite de générations et Gate « Tu as fait le tour pour aujourd'hui » :
+  // Limite de générations et Gate « C'est tout pour aujourd'hui » :
   // partagés avec « Pas pour moi » de l'accueil (recette du 26/09/2026), cf.
   // QuotaTenues.tsx — un seul quota, un seul Gate.
   const quota = useQuotaTenues();
