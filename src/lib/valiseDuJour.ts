@@ -5,6 +5,7 @@ import { elementProgramme } from "./programmeValise";
 import { joursDuSejour, lookAChaussuresEtSac, type LookValise } from "./valise";
 import type { ValiseGardee } from "./valises";
 import type { Item } from "./types";
+import { estActiviteDeVacances, estPieceDeValise } from "./piecesDeValise";
 
 /*
  * LA VALISE FAIT LA TENUE DU JOUR PENDANT LE SÉJOUR (20/10/2026, demandé : « faire le lien entre les looks de valise et la tenue du jour »).
@@ -46,7 +47,10 @@ export interface ValiseDuJourConsulte {
    * Tous les looks de la valise (ceux que son écran montre), avec leur occasion — la première de ses situations — et TOUTES celles
    * qu'il sert : « Autre tenue » les parcourt pendant le séjour, dans l'occasion de la tenue affichée (lookSuivantConforme).
    */
-  looks: { ids: number[]; occasion: TenuePlanifiee["occasion"]; occasions: TenuePlanifiee["occasion"][] }[];
+  looks: { ids: number[]; occasion: TenuePlanifiee["occasion"]; occasions: TenuePlanifiee["occasion"][]; libelle: string | null }[];
+  /** L'activité du programme servie par le look de la journée, et par celui du soir (carrousel du séjour, 06/11/2026). */
+  libelleJournee: string | null;
+  libelleSoir: string | null;
 }
 
 export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly Item[]): ValiseDuJourConsulte {
@@ -55,7 +59,14 @@ export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly 
   const looks = looksVisibles(v, pool);
   // Une valise composée avant le planning jour par jour n'en a pas : aucun look attribué, la tenue du jour se tire dans ses pièces.
   const planning = planningDeLaValise(v, jours, looks);
-  const duJour = planning.filter((c) => c.jour === jour && c.look != null);
+  // Les pièces réservées à la valise (maillot, surchemise de plage… piecesDeValise.ts, 06/11/2026) : « ces pièces ne doivent pas être
+  // proposées dans les tenues recommandées, planifiées, du jour » — SAUF le jour où le programme prévoit leur activité (arbitré le même
+  // jour : « Look de plage ou de rando ou de spa… ») : ce jour-là, le look de plage est la tenue du jour. Jamais dans « Autre tenue ».
+  const reservees = new Set(pool.filter(estPieceDeValise).map((i) => i.id));
+  const deBaignade = (ids: readonly number[]) => ids.some((id) => reservees.has(id));
+  const duJour = planning.filter(
+    (c) => c.jour === jour && c.look != null && (!deBaignade(looks[c.look].ids) || estActiviteDeVacances(c.sousId))
+  );
   const virtuel = (moment: TenuePlanifiee["moment"], c: (typeof duJour)[number] | undefined): TenuePlanifiee | null => {
     if (!c || c.look == null) return null;
     const look = looks[c.look];
@@ -75,21 +86,30 @@ export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly 
       weatherLabel: null,
     };
   };
+  const celluleJournee = duJour.find((c) => c.creneau === "jour") ?? duJour.find((c) => c.creneau === "trajet");
+  const celluleSoir = duJour.find((c) => c.creneau === "soir");
   return {
     valise: v,
     numero,
-    looks: looks.map((l) => {
+    looks: looks.filter((l) => !deBaignade(l.ids)).map((l) => {
       const occasions = [...new Set(l.situations.map((i) => v.situations[i]?.occasion).filter((o): o is TenuePlanifiee["occasion"] => !!o))];
-      return { ids: [...l.ids], occasion: occasions[0] ?? "quotidien", occasions: occasions.length ? occasions : ["quotidien"] };
+      const sousId = l.situations.map((i) => v.situations[i]?.sousIds?.[0]).find((x): x is string => !!x);
+      return { ids: [...l.ids], occasion: occasions[0] ?? "quotidien", occasions: occasions.length ? occasions : ["quotidien"], libelle: sousId ? elementProgramme(sousId)?.libelle ?? null : null };
     }),
-    journee: virtuel("Toute la journée", duJour.find((c) => c.creneau === "jour") ?? duJour.find((c) => c.creneau === "trajet")),
-    soir: virtuel("Soirée", duJour.find((c) => c.creneau === "soir")),
+    journee: virtuel("Toute la journée", celluleJournee),
+    soir: virtuel("Soirée", celluleSoir),
+    libelleJournee: celluleJournee?.libelle ?? null,
+    libelleSoir: celluleSoir?.libelle ?? null,
   };
 }
 
 /** Les pièces de la valise, résolues : le vivier de « Autre tenue » pendant le séjour — jamais une pièce restée à la maison. */
 export const piecesDeLaValise = (v: ValiseGardee, pool: readonly Item[]): Item[] =>
   v.pieceIds.map((id) => pool.find((i) => i.id === id)).filter((i): i is Item => !!i);
+
+/** Le vivier de la tenue du jour pendant le séjour : les pièces de la valise, sans les pièces réservées à la baignade (06/11/2026). */
+export const piecesDeLaValisePourLeJour = (v: ValiseGardee, pool: readonly Item[]): Item[] =>
+  piecesDeLaValise(v, pool).filter((i) => !estPieceDeValise(i));
 
 /**
  * UNE VALISE QUI PEUT HABILLER (30/10/2026, signalé : « On prépare ta première tenue — ton dressing et ta capsule ne couvrent pas encore

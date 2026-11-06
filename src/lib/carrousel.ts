@@ -43,7 +43,9 @@ export function typeDeJour(occasionParDefaut: OccasionKey): TypeDeJour {
  */
 export function slidesDuJour(type: TypeDeJour): readonly SlideId[] {
   if (type === "travail") return ["travail", "quotidien", "soiree", "date", "sport", "voyage", "cocooning", "ceremonie"];
-  if (type === "conges") return ["quotidien", "cocooning", "sport", "soiree", "date", "voyage", "ceremonie"];
+  // Congés à la maison (06/11/2026, demandé : « pendant la période de congés […] le carrousel affiche les occasions liées aux vacances ») :
+  // ni travail, ni voyage (on est chez soi), ni cérémonie — une cérémonie planifiée ce jour-là garde sa slide (composerSlides).
+  if (type === "conges") return ["quotidien", "cocooning", "sport", "soiree", "date"];
   return ["quotidien", "sport", "soiree", "date", "cocooning", "voyage", "ceremonie"];
 }
 
@@ -57,7 +59,8 @@ export function slideDeLOccasion(occasion: OccasionKey | null | undefined): Slid
 export type SourceSlide = "plan" | "jour" | "proposition";
 
 export interface SlideCarrousel {
-  id: SlideId;
+  /** Une occasion (SlideId) ; pendant un séjour, `sejour-N` (slidesDuSejour). */
+  id: SlideId | `sejour-${number}`;
   occasion: OccasionKey;
   surtitre: string;
   ids: number[];
@@ -113,5 +116,42 @@ export function composerSlides({ tenueDuJour, occasion, planAujourdhui, proposit
   // occasionParDefaut) ou celle choisie : c'est elle qui ouvre le carrousel — Quotidien le samedi, Travail en semaine.
   const i = slides.findIndex((x) => x.source !== "proposition");
   if (i > 0) slides.unshift(...slides.splice(i, 1));
+  return slides;
+}
+
+/** Un look de la valise pour le carrousel du séjour : ses pièces, son occasion, l'activité du programme qu'il sert. */
+export interface LookDuSejour {
+  ids: number[];
+  occasion: OccasionKey;
+  libelle?: string | null;
+}
+
+export const NB_SLIDES_SEJOUR = 6;
+
+/**
+ * LE CARROUSEL D'UN SÉJOUR (06/11/2026, demandé : « pendant la période de congés et de voyage, le carrousel de la home est mis à jour
+ * pour afficher les occasions liées aux vacances »). Pendant un séjour, la tenue du jour est le look du programme pour ce jour
+ * (valiseDuJour.ts) : elle reste en tête, dite par son activité (« Aujourd'hui · Plage ») ; puis le look du soir (« Ce soir · Dîner »),
+ * puis les autres looks de la valise, chacun dit par son activité. Rien qui ne soit dans la valise ; jamais deux fois la même tenue.
+ */
+export function slidesDuSejour(e: {
+  tenueDuJour: number[];
+  occasion: OccasionKey;
+  libelleJournee?: string | null;
+  soir?: LookDuSejour | null;
+  looks: readonly LookDuSejour[];
+}): SlideCarrousel[] {
+  if (!e.tenueDuJour.length) return [];
+  const slides: SlideCarrousel[] = [
+    { id: "sejour-0", occasion: e.occasion, surtitre: e.libelleJournee ? `Aujourd'hui · ${e.libelleJournee}` : "Ta journée", ids: [...e.tenueDuJour], source: "jour" },
+  ];
+  const vues = new Set([cleTenue(e.tenueDuJour)]);
+  const ajouter = (l: LookDuSejour, surtitre: string) => {
+    if (slides.length >= NB_SLIDES_SEJOUR || !l.ids.length || vues.has(cleTenue(l.ids))) return;
+    vues.add(cleTenue(l.ids));
+    slides.push({ id: `sejour-${slides.length}`, occasion: l.occasion, surtitre, ids: [...l.ids], source: "proposition" });
+  };
+  if (e.soir) ajouter(e.soir, e.soir.libelle ? `Ce soir · ${e.soir.libelle}` : "Ce soir");
+  for (const l of e.looks) ajouter(l, l.libelle ?? SLIDES.find((d) => d.occasion === l.occasion)?.surtitre ?? "Ta valise");
   return slides;
 }

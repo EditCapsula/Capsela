@@ -19,22 +19,22 @@ select setval(pg_get_serial_sequence('vestiaire_universel', 'id'), (select max(i
 
 -- 2. Les nouvelles pièces.
 insert into vestiaire_universel (name, category, genre, styles, saison_capsule, sous_type, matiere, couleur_dominante, hex, manches, occasions, niveau_formalite, role_piece, est_basique_capsule, statement, image_status, frozen) values
-  ('Mules d''intérieur en maille côtelée', 'chaussures', 'femme', 'Casual chic', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Maille', 'Beige', '#CDBBA2', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Charentaises en feutre', 'chaussures', 'homme', 'Casual chic', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Feutre', 'Gris', '#9B968F', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Chaussons ballerines en velours', 'chaussures', 'femme', 'Classique chic', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Velours', 'Marine', '#3A4152', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Mocassins d''intérieur en daim', 'chaussures', 'homme', 'Classique chic', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Daim', 'Marine', '#3A4152', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Chaussons en satin à nœud', 'chaussures', 'femme', 'Romantique', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Satin', 'Rose poudré', '#D3AE9F', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Babouches en cuir brodées', 'chaussures', 'unisexe', 'Bohème', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Cuir', 'Camel', '#C08A5E', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Claquettes d''intérieur matelassées', 'chaussures', 'unisexe', 'Streetwear', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Nylon matelassé', 'Noir', '#2A2724', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Mocassins d''intérieur doublés', 'chaussures', 'femme', 'Preppy', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Daim', 'Bordeaux', '#6E3B3A', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Chaussons en velours à écusson', 'chaussures', 'homme', 'Preppy', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Velours', 'Bordeaux', '#6E3B3A', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Mules d''intérieur en velours à plumes', 'chaussures', 'femme', 'Glamour', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Velours', 'Champagne', '#E8D9B5', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Chaussons en feutre color-block moutarde et vert', 'chaussures', 'femme', 'Créatif', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Feutre', 'Moutarde', '#C39A50', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false),
-  ('Chaussons en feutre color-block gris et terracotta', 'chaussures', 'homme', 'Créatif', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Feutre', 'Gris', '#9B968F', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false);
+  ('Mules d''intérieur en maille côtelée', 'chaussures', 'femme', 'Casual chic', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Maille', 'Beige', '#CDBBA2', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Charentaises en feutre', 'chaussures', 'homme', 'Casual chic', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Feutre', 'Gris', '#9B968F', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Chaussons ballerines en velours', 'chaussures', 'femme', 'Classique chic', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Velours', 'Marine', '#3A4152', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Mocassins d''intérieur en daim', 'chaussures', 'homme', 'Classique chic', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Daim', 'Marine', '#3A4152', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Chaussons en satin à nœud', 'chaussures', 'femme', 'Romantique', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Satin', 'Rose poudré', '#D3AE9F', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Babouches en cuir brodées', 'chaussures', 'unisexe', 'Bohème', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Cuir', 'Camel', '#C08A5E', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Claquettes d''intérieur matelassées', 'chaussures', 'unisexe', 'Streetwear', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Nylon matelassé', 'Noir', '#2A2724', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Mocassins d''intérieur doublés', 'chaussures', 'femme', 'Preppy', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Daim', 'Bordeaux', '#6E3B3A', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Chaussons en velours à écusson', 'chaussures', 'homme', 'Preppy', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Velours', 'Bordeaux', '#6E3B3A', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Mules d''intérieur en velours à plumes', 'chaussures', 'femme', 'Glamour', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Velours', 'Champagne', '#E8D9B5', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Chaussons en feutre color-block moutarde et vert', 'chaussures', 'femme', 'Créatif', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Feutre', 'Moutarde', '#C39A50', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false),
+  ('Chaussons en feutre color-block gris et terracotta', 'chaussures', 'homme', 'Créatif', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Feutre', 'Gris', '#9B968F', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false);
 
 -- 3. Minimaliste homme : seulement s'il n'existe aucune chaussure d'intérieur Minimaliste pour l'homme (ou unisexe).
 insert into vestiaire_universel (name, category, genre, styles, saison_capsule, sous_type, matiere, couleur_dominante, hex, manches, occasions, niveau_formalite, role_piece, est_basique_capsule, statement, image_status, frozen)
-select 'Mules d''intérieur en feutre', 'chaussures', 'homme', 'Minimaliste', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Feutre', 'Gris anthracite', '#4B4A47', null, 'cocooning', 'decontracte', 'base', false, false, 'missing', false
+select 'Mules d''intérieur en feutre', 'chaussures', 'homme', 'Minimaliste', 'Printemps, Été, Automne, Hiver', 'Chaussures d''intérieur', 'Feutre', 'Gris anthracite', '#4B4A47', null, 'cocooning,travail_formel', 'decontracte', 'base', false, false, 'missing', false
  where not exists (
    select 1 from vestiaire_universel
     where category = 'chaussures'
@@ -52,7 +52,7 @@ select id, name, genre, styles, image_status
 
 -- Annulation (retour arrière seulement, avant toute utilisation) :
 -- delete from vestiaire_universel
---  where category = 'chaussures' and sous_type = 'Chaussures d''intérieur' and occasions = 'cocooning'
+--  where category = 'chaussures' and sous_type = 'Chaussures d''intérieur' and occasions like 'cocooning%'
 --    and name in ('Mules d''intérieur en maille côtelée', 'Charentaises en feutre', 'Chaussons ballerines en velours',
 --                 'Mocassins d''intérieur en daim', 'Chaussons en satin à nœud', 'Babouches en cuir brodées',
 --                 'Claquettes d''intérieur matelassées', 'Mocassins d''intérieur doublés', 'Chaussons en velours à écusson',

@@ -26,7 +26,7 @@ import Button from "@/components/Button";
 import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/components/CarrouselHero";
 import PourLExterieur from "@/components/PourLExterieur";
 import { separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
-import { composerSlides, cleTenue as cleSlide, typeDeJour, type SlideCarrousel } from "@/lib/carrousel";
+import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
 import { titreDeLaTenue } from "@/lib/dressingSections";
 
 /** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
@@ -320,8 +320,21 @@ export default function HomeScreen() {
    * l'avis, le quota, le plan appliqué) occupe la slide de son occasion — la première si c'est un plan —, les autres sont des propositions
    * du moteur (store : `carrousel`). Un autre jour, une tenue passée, le chargement ou l'absence de tenue gardent la carte seule d'avant.
    */
+  // PENDANT UN SÉJOUR (06/11/2026, slidesDuSejour) : le carrousel est celui du voyage — les looks de la valise, dits par l'activité du
+  // programme qu'ils servent ; rien qui ne soit dans la valise.
+  const enSejour = Boolean(valiseConsultee);
   const slides: SlideCarrousel[] =
-    hasOutfit && !passee && jourConsulte.decalage === 0
+    hasOutfit && !passee && jourConsulte.decalage === 0 && valiseConsultee
+      ? slidesDuSejour({
+          tenueDuJour: state.outfit,
+          occasion: occasionKey ?? "quotidien",
+          libelleJournee: valiseConsultee.libelleJournee,
+          soir: valiseConsultee.soir
+            ? { ids: valiseConsultee.soir.pieceIds, occasion: valiseConsultee.soir.occasion, libelle: valiseConsultee.libelleSoir }
+            : null,
+          looks: valiseConsultee.looks,
+        })
+      : hasOutfit && !passee && jourConsulte.decalage === 0
       ? composerSlides({
           tenueDuJour: state.outfit,
           occasion: occasionKey,
@@ -393,8 +406,12 @@ export default function HomeScreen() {
           if (duJour) return actions.setOutfitFeedback("adore", sansExterieur);
           if (!dejaSauvegardee(idsDuLook)) actions.enregistrerIdeeLook(idsDuLook, slide.occasion);
         }}
-        onAutre={() => (duJour ? pasPourMoi() : quota.demander(() => actions.autreIdeeSlide(slide.id)))}
-        autreDesactive={quota.tirageEnCours}
+        // Pendant un séjour, une slide est un look de la valise : pas d'autre tirage (il sortirait de la valise) — on fait défiler.
+        onAutre={() => {
+          if (duJour) return pasPourMoi();
+          if (!enSejour) quota.demander(() => actions.autreIdeeSlide(slide.id as SlideId));
+        }}
+        autreDesactive={quota.tirageEnCours || (enSejour && !duJour)}
         pied={
           blocSlide || (duJour && planApplique?.alerte) ? (
             <>
