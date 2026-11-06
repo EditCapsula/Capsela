@@ -37,6 +37,7 @@ import { placesRestantes } from "@/lib/premium";
 import { QUATRE_SAISONS } from "@/lib/saisons";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { useCapsela } from "@/lib/store";
+import { visuelArticle } from "@/lib/visuelArticle";
 import type { CapsuleSeason, CategoryKey } from "@/lib/types";
 
 type Phase = "choix" | "analyse" | "resultat" | "ajout" | "termine" | "vide" | "echec";
@@ -82,7 +83,7 @@ const MESSAGE_ECHEC_DETOURAGE: Record<CodeMiseAPlat, string> = {
  */
 export default function ImporterTenueScreen() {
   const { state, actions, etatPremium } = useCapsela();
-  const { userId } = useAuth();
+  const { userId, profile } = useAuth();
   const cameraRef = useRef<HTMLInputElement>(null);
   const galerieRef = useRef<HTMLInputElement>(null);
   const fichierRef = useRef<File | null>(null);
@@ -106,6 +107,21 @@ export default function ImporterTenueScreen() {
   const [progression, setProgression] = useState({ fait: 0, total: 0 });
   const [ajoutees, setAjoutees] = useState<string[]>([]);
   const [erreurAjout, setErreurAjout] = useState<string | null>(null);
+  /*
+   * LE VISUEL D'UN ARTICLE DE TICKET (06/11/2026, visuelArticle.ts, docs/visuel-ticket.md). Le ticket ne donne pas de photo : Capsela
+   * crée un visuel INDICATIF de chaque article dès que la liste s'affiche (deux à la fois), dans le style du catalogue. Il n'est associé
+   * à la pièce qu'une fois confirmé (« Confirmer ce visuel ») ; l'utilisatrice peut toujours prendre ou choisir sa photo. Une catégorie
+   * encore à choisir attend : le visuel en dépend. `desc` : la description qui a servi, pour proposer de le recréer si elle change.
+   */
+  const [visuels, setVisuels] = useState<Record<number, { etat: "cours" | "propose" | "echec"; url?: string; desc?: string }>>({});
+  const visuelsLances = useRef(new Set<number>());
+  // Les fichiers de visuels créés et non retenus : supprimés en quittant l'écran.
+  const visuelsCrees = useRef(new Set<string>());
+  // La carte à qui ira la photo choisie (« Prendre une photo », « Choisir dans la galerie »).
+  const carteDeLaPhoto = useRef<number | null>(null);
+  const photoCarteAppareilRef = useRef<HTMLInputElement>(null);
+  const photoCarteGalerieRef = useRef<HTMLInputElement>(null);
+  const [photoCarteEnvoi, setPhotoCarteEnvoi] = useState<number | null>(null);
   const [couleurPour, setCouleurPour] = useState<number | null>(null);
   // Chemins des fichiers créés pour cet import : à supprimer s'ils ne servent à aucune pièce.
   const fichiers = useRef<{ source: string | null; tenue: string | null; objets: Map<number, string> }>({ source: null, tenue: null, objets: new Map() });
@@ -122,6 +138,73 @@ export default function ImporterTenueScreen() {
   useEffect(() => () => {
     if (!fin.current) purger(tout());
   }, []);
+  // Les visuels créés que personne n'a retenus.
+  useEffect(() => () => purger([...visuelsCrees.current]), []);
+
+  const descriptionVisuel = (b: BrouillonPiece) => ({
+    nom: b.nom,
+    categorie: b.cat,
+    couleur: b.couleurLue ? b.couleur.nom : null,
+    genre: profile.gender === "femme" || profile.gender === "homme" ? profile.gender : null,
+  });
+  const cleDescription = (b: BrouillonPiece) => JSON.stringify(descriptionVisuel(b));
+  // Les visuels à créer : articles de ticket sans photo, catégorie choisie, deux à la fois.
+  useEffect(() => {
+    if (!ticket || !isSupabaseConfigured || (phase !== "resultat" && phase !== "ajout")) return;
+    const actifs = Object.values(visuels).filter((v) => v.etat === "cours").length;
+    const aCreer = brouillons.filter((b) => !b.photoUrl && !b.categorieAConfirmer && b.nom.trim() && !visuelsLances.current.has(b.cle));
+    for (const b of aCreer.slice(0, Math.max(0, 2 - actifs))) {
+      visuelsLances.current.add(b.cle);
+      const desc = cleDescription(b);
+      setVisuels((v) => ({ ...v, [b.cle]: { etat: "cours", desc } }));
+      void visuelArticle(descriptionVisuel(b)).then((url) => {
+        const chemin = dressingPhotoPath(url);
+        if (chemin) visuelsCrees.current.add(chemin);
+        setVisuels((v) => ({ ...v, [b.cle]: url ? { etat: "propose", url, desc } : { etat: "echec", desc } }));
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket, phase, brouillons, visuels]);
+
+  const confirmerVisuel = (cle: number, url: string) => {
+    const chemin = dressingPhotoPath(url);
+    if (chemin) {
+      visuelsCrees.current.delete(chemin);
+      fichiers.current.objets.set(cle, chemin);
+    }
+    modifier(cle, { photoUrl: url });
+  };
+  const recreerVisuel = (cle: number) => {
+    visuelsLances.current.delete(cle);
+    setVisuels(({ [cle]: _ancien, ...reste }) => {
+      void _ancien;
+      return reste;
+    });
+  };
+  const choisirPhotoCarte = (cle: number, appareil: boolean) => {
+    carteDeLaPhoto.current = cle;
+    (appareil ? photoCarteAppareilRef : photoCarteGalerieRef).current?.click();
+  };
+  const onPhotoCarte = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fichier = e.target.files?.[0];
+    e.target.value = "";
+    const cle = carteDeLaPhoto.current;
+    if (!fichier || cle == null || !userId) return;
+    setPhotoCarteEnvoi(cle);
+    try {
+      const url = await uploadDressingPhoto(userId, fichier);
+      const ancien = fichiers.current.objets.get(cle);
+      const chemin = dressingPhotoPath(url);
+      if (chemin) fichiers.current.objets.set(cle, chemin);
+      // Un visuel confirmé puis remplacé redevient un fichier à supprimer.
+      if (ancien && ancien !== chemin) purger([ancien]);
+      modifier(cle, { photoUrl: url });
+    } catch {
+      setErreurAjout("La photo n'a pas pu être envoyée. Réessaie, ou ajoute la pièce sans photo.");
+    } finally {
+      setPhotoCarteEnvoi(null);
+    }
+  };
 
   const lancer = async (file: File, urlDejaEnvoyee?: string) => {
     fichierRef.current = file;
@@ -351,6 +434,9 @@ export default function ImporterTenueScreen() {
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-[18px] pt-[6px] pb-[40px]" aria-busy={enCours || enAjout}>
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onFichier} className="hidden" />
         <input ref={galerieRef} type="file" accept="image/*" onChange={onFichier} className="hidden" />
+        {/* La photo d'un article de ticket (06/11/2026) : prise ou choisie, pour la carte désignée par carteDeLaPhoto. */}
+        <input ref={photoCarteAppareilRef} type="file" accept="image/*" capture="environment" onChange={(e) => void onPhotoCarte(e)} className="hidden" />
+        <input ref={photoCarteGalerieRef} type="file" accept="image/*" onChange={(e) => void onPhotoCarte(e)} className="hidden" />
 
         {/* Zone image : même hauteur à tous les états (ratio 1,3), sauf sur la liste des pièces, qui montre une photo par pièce. */}
         {listeAffichee ? null : phase === "choix" || phase === "echec" || phase === "vide" ? (
@@ -394,7 +480,11 @@ export default function ImporterTenueScreen() {
               <div className="min-w-0">
                 <p className="font-serif font-medium text-[22px] text-ink">{ticket ? (seul ? "1 article sur ton ticket" : `${nbRepere} articles sur ton ticket`) : seul ? "1 pièce détectée" : `${nbRepere} pièces détectées`}</p>
                 <p className="text-[12.5px] text-muted-3 mt-1">
-                  {ticket ? "Vérifie chaque pièce avant de l'ajouter : une photo pourra s'ajouter ensuite depuis sa fiche." : "Vérifie les vêtements avant de les ajouter à ton dressing."}
+                  {ticket
+                    ? isSupabaseConfigured
+                      ? "Vérifie chaque pièce : Capsela lui crée un visuel indicatif, à confirmer, ou ajoute ta photo."
+                      : "Vérifie chaque pièce avant de l'ajouter : une photo pourra s'ajouter ensuite depuis sa fiche."
+                    : "Vérifie les vêtements avant de les ajouter à ton dressing."}
                 </p>
               </div>
             </div>
@@ -440,6 +530,10 @@ export default function ImporterTenueScreen() {
               const ouvert = ouverte === b.cle;
               const etatPlat = plat[b.cle];
               const peutAPlat = MISE_A_PLAT_DISPONIBLE && isSupabaseConfigured && Boolean(b.photoUrl) && !estPhotoMiseAPlat(b.photoUrl);
+              // Le visuel indicatif d'un article de ticket (06/11/2026) : en cours, proposé, ou introuvable.
+              const visuel = ticket && !b.photoUrl ? visuels[b.cle] : undefined;
+              const visuelRetenu = Boolean(ticket && b.photoUrl && b.photoUrl.split("?")[0].includes("/visuel-"));
+              const descriptionChangee = visuel?.etat === "propose" && visuel.desc !== cleDescription(b);
               return (
                 <li key={b.cle}>
                   {/* Le nom, à modifier (crayon), et la corbeille (30/10/2026, sur le modèle de la capture partagée). */}
@@ -478,9 +572,28 @@ export default function ImporterTenueScreen() {
                       {b.photoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={b.photoUrl} alt="" className="w-full h-full object-contain" />
+                      ) : visuel?.etat === "propose" && visuel.url ? (
+                        // Le visuel proposé, pas encore associé à la pièce.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={visuel.url} alt={`Visuel indicatif : ${b.nom}`} className="w-full h-full object-contain" />
+                      ) : visuel?.etat === "cours" ? (
+                        <span className="flex flex-col items-center gap-2 px-2 text-center" role="status">
+                          <SpinnerCintre sombre />
+                          <span className="text-[11px] text-muted-3 leading-[1.3]">Création du visuel…</span>
+                        </span>
                       ) : (
                         // Article de ticket : pas de photo, la couleur de la pièce à la place (jamais une image inventée).
                         <span aria-hidden="true" className="w-[56%] aspect-square rounded-full" style={{ background: b.couleur.hex, border: "1px solid rgba(29,26,22,.12)" }} />
+                      )}
+                      {(visuel?.etat === "propose" || visuelRetenu) && (
+                        <span className="absolute left-[8px] bottom-[8px] rounded-full bg-card/90 px-[8px] py-[3px] text-[10.5px] text-muted-3">
+                          Visuel indicatif
+                        </span>
+                      )}
+                      {photoCarteEnvoi === b.cle && (
+                        <span className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(243,238,229,.7)" }} role="status" aria-label="Envoi de la photo">
+                          <SpinnerCintre sombre />
+                        </span>
                       )}
                       {etatPlat?.etat === "cours" && (
                         <span className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(243,238,229,.7)" }} role="status" aria-label="Mise à plat en cours">
@@ -535,6 +648,68 @@ export default function ImporterTenueScreen() {
                       </div>
                     </div>
                   </div>
+                  {/* LE VISUEL D'UN ARTICLE DE TICKET : le confirmer, ou mettre sa photo. Jamais associé sans un geste de l'utilisatrice. */}
+                  {ticket && !b.photoUrl && visuel?.etat !== "cours" && (
+                    <div className="px-3 pb-3 -mt-1">
+                      <p className="text-[12px] text-muted-3 leading-[1.45]">
+                        {visuel?.etat === "propose"
+                          ? "Un visuel indicatif, créé par Capsela d'après ton ticket : ce n'est pas la photo de ton article."
+                          : b.categorieAConfirmer
+                            ? "Choisis la catégorie : Capsela créera un visuel indicatif, ou ajoute ta photo."
+                            : "Pas de visuel pour cet article : ajoute ta photo, ou garde la couleur."}
+                      </p>
+                      <div className="mt-[10px] flex flex-wrap gap-2">
+                        {visuel?.etat === "propose" && visuel.url && !descriptionChangee && (
+                          <button
+                            type="button"
+                            disabled={enAjout}
+                            onClick={() => confirmerVisuel(b.cle, visuel.url!)}
+                            className="h-[40px] px-4 rounded-full bg-terracotta-deep text-on-terracotta text-[12.5px] font-semibold cursor-pointer disabled:opacity-50"
+                          >
+                            Confirmer ce visuel
+                          </button>
+                        )}
+                        {descriptionChangee && (
+                          <button
+                            type="button"
+                            disabled={enAjout}
+                            onClick={() => recreerVisuel(b.cle)}
+                            className="h-[40px] px-4 rounded-full border border-border bg-cream text-ink text-[12.5px] font-semibold cursor-pointer disabled:opacity-50"
+                          >
+                            Recréer le visuel
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={enAjout || photoCarteEnvoi !== null}
+                          onClick={() => choisirPhotoCarte(b.cle, true)}
+                          className="h-[40px] px-4 rounded-full border border-border bg-cream text-ink text-[12.5px] font-semibold cursor-pointer disabled:opacity-50"
+                        >
+                          Prendre une photo
+                        </button>
+                        <button
+                          type="button"
+                          disabled={enAjout || photoCarteEnvoi !== null}
+                          onClick={() => choisirPhotoCarte(b.cle, false)}
+                          className="h-[40px] px-4 rounded-full border border-border bg-cream text-ink text-[12.5px] font-semibold cursor-pointer disabled:opacity-50"
+                        >
+                          Choisir dans la galerie
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {visuelRetenu && (
+                    <div className="px-3 pb-3 -mt-1 flex flex-wrap items-center gap-2">
+                      <span className="text-[12px] text-muted-3">Tu préfères ta photo ?</span>
+                      <button type="button" disabled={enAjout || photoCarteEnvoi !== null} onClick={() => choisirPhotoCarte(b.cle, true)} className="text-[12.5px] font-semibold text-terracotta-deep cursor-pointer disabled:opacity-50">
+                        Prendre une photo
+                      </button>
+                      <span aria-hidden="true" className="text-placeholder">·</span>
+                      <button type="button" disabled={enAjout || photoCarteEnvoi !== null} onClick={() => choisirPhotoCarte(b.cle, false)} className="text-[12.5px] font-semibold text-terracotta-deep cursor-pointer disabled:opacity-50">
+                        Galerie
+                      </button>
+                    </div>
+                  )}
                   {etatPlat?.etat === "erreur" && (
                     <p role="alert" className="px-3 pb-3 -mt-1 text-[12px] text-muted-3">
                       {etatPlat.message} Ta photo est inchangée.

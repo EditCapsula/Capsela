@@ -38,6 +38,7 @@ import Card from "@/components/Card";
 import OptionRow from "@/components/OptionRow";
 import { aTraduire, anglaisOuvert, choisirLangue, langue, t, type Langue } from "@/lib/langue";
 import { demanderVisite } from "@/lib/memoireVisites";
+import { oublierContexte } from "@/lib/memoireEcrans";
 import { VISITES, type Visite } from "@/lib/visites";
 import { VERSION_APP } from "@/lib/versionApp";
 
@@ -158,6 +159,9 @@ export default function PreferencesScreen() {
   const revoir = (v: Visite) => {
     setTutorielOuvert(false);
     demanderVisite(v.id);
+    // L'écran s'ouvre à neuf, comme depuis la barre du bas (06/11/2026) : repris sur un autre onglet (Capsule → Explorer), il
+    // n'aurait pas les cibles de la visite, et ses étapes seraient sautées.
+    oublierContexte(v.ecran);
     if (v.ecran === "home") actions.goHome();
     else if (v.ecran === "wardrobe") actions.goWardrobe();
     else if (v.ecran === "capsule") actions.goCapsule();

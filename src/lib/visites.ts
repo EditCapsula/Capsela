@@ -13,6 +13,16 @@ export type IdVisite = "accueil" | "dressing" | "capsule";
 export interface EtapeVisite {
   /** La valeur de l'attribut `data-tour` de l'élément mis en évidence. */
   cible: string;
+  /**
+   * Le côté de l'élément où poser l'infobulle (option native `popover.side` de Driver.js) ; sans, Driver.js choisit. À fixer quand
+   * l'infobulle masquerait ce qu'elle désigne ou ce qu'il faut toucher ensuite.
+   */
+  cote?: "top" | "bottom" | "left" | "right";
+  /**
+   * L'élément mis en évidence ne réagit pas au toucher pendant l'étape (option native `disableActiveInteraction`) : pour un bouton
+   * dont l'action ne doit pas partir pendant la visite (« Autre tenue » générerait une tenue et consommerait le quota).
+   */
+  inactif?: boolean;
   titre: string;
   texte: string;
 }
@@ -35,17 +45,22 @@ export const VISITES: readonly Visite[] = [
       {
         cible: "accueil-tenue",
         titre: aTraduire("Ta tenue du jour"),
-        texte: aTraduire("Composée chaque matin avec tes pièces, selon la météo et ton programme. Fais glisser pour voir d'autres idées."),
+        // Deux paragraphes (06/11/2026) : le retour à la ligne est rendu par la feuille de style des infobulles (white-space: pre-line).
+        texte: aTraduire(
+          "Chaque matin, découvre une tenue composée à partir de tes pièces, de la météo et de ton programme.\nFais glisser pour découvrir d'autres propositions."
+        ),
       },
       {
         cible: "accueil-autre-tenue",
+        inactif: true,
         titre: aTraduire("Envie d'autre chose ?"),
-        texte: aTraduire("Demande une autre tenue : elle respecte toujours la météo et ton occasion."),
+        texte: aTraduire("Découvre une nouvelle proposition, toujours adaptée à ton profil, à la météo et à ton occasion."),
       },
       {
+        // La ligne entière (flèches, jour, ville, météo) : le texte lie les flèches aux prévisions.
         cible: "jour-meteo",
-        titre: aTraduire("Prépare les jours suivants"),
-        texte: aTraduire("Les flèches te montrent la tenue des prochains jours, avec leur météo."),
+        titre: aTraduire("Anticipe tes prochaines tenues"),
+        texte: aTraduire("Utilise les flèches pour découvrir les tenues proposées pour les prochains jours et consulter la météo associée."),
       },
     ],
   },
@@ -74,17 +89,20 @@ export const VISITES: readonly Visite[] = [
       {
         cible: "capsule-saison",
         titre: aTraduire("Ta capsule de saison"),
-        texte: aTraduire("Touche la saison pour découvrir la capsule d'une autre saison."),
+        texte: aTraduire("Change de saison pour découvrir les pièces sélectionnées pour une autre période de l'année."),
       },
       {
         cible: "capsule-onglets",
-        titre: aTraduire("Quatre façons de la parcourir"),
-        texte: aTraduire("Compose une tenue, explore les pièces, découvre les pièces clés et les détails de ta capsule."),
+        titre: aTraduire("Quatre façons de découvrir ta capsule"),
+        texte: aTraduire("Compose une tenue, explore ta sélection, retrouve tes pièces clés et découvre les détails de ta capsule."),
       },
       {
-        cible: "capsule-planche",
+        // Les catégories sous la planche (06/11/2026) : l'étape désignait la planche alors que le texte parle des catégories.
+        // L'infobulle se pose au-dessus de la rangée, sur la planche, pour laisser les catégories visibles et touchables.
+        cible: "capsule-categories",
+        cote: "top",
         titre: aTraduire("Compose ta tenue"),
-        texte: aTraduire("Choisis une catégorie, puis fais défiler ses pièces avec les flèches ou d'un glissement."),
+        texte: aTraduire("Choisis une catégorie pour découvrir les pièces de ta capsule, puis sélectionne celles qui composeront ton look."),
       },
     ],
   },

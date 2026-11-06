@@ -29,3 +29,12 @@ describe("visites guidées", () => {
     expect(vuesReunies(undefined, [])).toEqual([]);
   });
 });
+
+describe("visite de la Capsule (06/11/2026)", () => {
+  it("la 3e étape désigne les catégories, infobulle au-dessus pour les laisser visibles", () => {
+    const capsule = VISITES.find((v) => v.id === "capsule")!;
+    expect(capsule.etapes.map((e) => e.cible)).toEqual(["capsule-saison", "capsule-onglets", "capsule-categories"]);
+    expect(capsule.etapes[2].cote).toBe("top");
+    expect(capsule.etapes[0].cote).toBeUndefined();
+  });
+});

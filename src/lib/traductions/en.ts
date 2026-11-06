@@ -210,26 +210,28 @@ export const EN: Record<string, string> = {
   "Découvrir ton Dressing": "Discover your Wardrobe",
   "Découvrir ta Capsule": "Discover your Capsule",
   "Ta tenue du jour": "Your outfit of the day",
-  "Composée chaque matin avec tes pièces, selon la météo et ton programme. Fais glisser pour voir d'autres idées.":
-    "Put together every morning with your pieces, based on the weather and your plans. Swipe to see more ideas.",
+  "Chaque matin, découvre une tenue composée à partir de tes pièces, de la météo et de ton programme.\nFais glisser pour découvrir d'autres propositions.":
+    "Every morning, discover an outfit put together from your pieces, the weather and your plans.\nSwipe to see other suggestions.",
+  "Découvre une nouvelle proposition, toujours adaptée à ton profil, à la météo et à ton occasion.":
+    "Discover a new suggestion, always suited to your profile, the weather and your occasion.",
+  "Anticipe tes prochaines tenues": "Plan your next outfits",
+  "Utilise les flèches pour découvrir les tenues proposées pour les prochains jours et consulter la météo associée.":
+    "Use the arrows to discover the outfits suggested for the coming days and check their weather.",
   "Envie d'autre chose ?": "Fancy something else?",
-  "Demande une autre tenue : elle respecte toujours la météo et ton occasion.":
-    "Ask for another outfit: it always fits the weather and your occasion.",
-  "Prépare les jours suivants": "Plan the days ahead",
-  "Les flèches te montrent la tenue des prochains jours, avec leur météo.": "The arrows show the outfit for the coming days, with their weather.",
   "Ajoute tes pièces": "Add your pieces",
   "Une photo suffit : Capsela reconnaît la catégorie, la couleur de la pièce puis la détoure.":
     "One photo is enough: Capsela recognises the piece's category and colour, then cuts it out.",
   "Retrouve tout, vite": "Find everything, fast",
   "Cherche, filtre par catégorie ou trie ton dressing.": "Search, filter by category or sort your wardrobe.",
   "Ta capsule de saison": "Your seasonal capsule",
-  "Touche la saison pour découvrir la capsule d'une autre saison.": "Tap the season to discover the capsule for another season.",
-  "Quatre façons de la parcourir": "Four ways to browse it",
-  "Compose une tenue, explore les pièces, découvre les pièces clés et les détails de ta capsule.":
-    "Put together an outfit, explore the pieces, discover the key pieces and the details of your capsule.",
+  "Change de saison pour découvrir les pièces sélectionnées pour une autre période de l'année.":
+    "Switch seasons to discover the pieces selected for another time of year.",
+  "Quatre façons de découvrir ta capsule": "Four ways to discover your capsule",
+  "Compose une tenue, explore ta sélection, retrouve tes pièces clés et découvre les détails de ta capsule.":
+    "Put together an outfit, explore your selection, find your key pieces and discover the details of your capsule.",
   "Compose ta tenue": "Put together your outfit",
-  "Choisis une catégorie, puis fais défiler ses pièces avec les flèches ou d'un glissement.":
-    "Choose a category, then browse its pieces with the arrows or a swipe.",
+  "Choisis une catégorie pour découvrir les pièces de ta capsule, puis sélectionne celles qui composeront ton look.":
+    "Choose a category to discover the pieces in your capsule, then select the ones that will make up your look.",
 
   // --- Réglages Capsela : Aide & Support (05/11/2026) ---
   "Aide & Support": "Help & Support",
@@ -251,6 +253,8 @@ export const EN: Record<string, string> = {
   "Plus tu ajoutes de pièces à ton dressing, plus tes tenues te ressemblent.": "The more pieces you add to your wardrobe, the more your outfits look like you.",
   "Une photo suffit pour ajouter une pièce : Capsela reconnaît sa catégorie et sa couleur, puis la détoure.":
     "One photo is all it takes to add a piece: Capsela recognises its category and colour, then cuts it out.",
+  "Avec Premium, photographie ton ticket de caisse : Capsela prépare une fiche pour chaque vêtement acheté.":
+    "With Premium, snap your receipt: Capsela prepares a card for each item of clothing you bought.",
   "Tu pars bientôt ? Capsela prépare ta valise : les pièces à emporter et les looks de ton séjour.":
     "Leaving soon? Capsela packs your suitcase: the pieces to bring and the looks for your trip.",
   "Un dîner, un rendez-vous ? Planifie ta tenue à l'avance : elle suit la météo du jour prévu.":

@@ -8,7 +8,7 @@ import { aTraduire } from "./langue";
  * Une astuce par ouverture, jamais la même deux fois de suite (la dernière montrée est gardée sur l'appareil). Chaque phrase
  * décrit une fonction qui existe, à l'endroit où elle se trouve : en déplaçant ou en retirant une fonction, relire l'astuce qui
  * en parle. Six astuces validées par la propriétaire le 05/11/2026 (deux retirées : la navigation par date, la saison de la
- * capsule).
+ * capsule) ; le ticket de caisse ajouté le 06/11/2026 (demandé : « dans les astuces on peut aussi parler du ticket de caisse »).
  */
 
 export const ASTUCES: readonly string[] = [
@@ -18,6 +18,8 @@ export const ASTUCES: readonly string[] = [
   aTraduire("Plus tu ajoutes de pièces à ton dressing, plus tes tenues te ressemblent."),
   // analyze-dressing-photo, detourer-photo.
   aTraduire("Une photo suffit pour ajouter une pièce : Capsela reconnaît sa catégorie et sa couleur, puis la détoure."),
+  // Ajouter → ticket de caisse (lectureTicket.ts) : une fiche préremplie par article. Fonction Premium (LIRE_TICKET) : l'astuce le dit.
+  aTraduire("Avec Premium, photographie ton ticket de caisse : Capsela prépare une fiche pour chaque vêtement acheté."),
   // Valise (valise.ts) : pièces du dressing, complétées par la capsule, puis les looks du séjour.
   aTraduire("Tu pars bientôt ? Capsela prépare ta valise : les pièces à emporter et les looks de ton séjour."),
   // Planifier : tenue pour une date, un moment et un lieu.

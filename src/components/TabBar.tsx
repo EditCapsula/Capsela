@@ -141,6 +141,8 @@ export default function TabBar() {
       // au-dessus des icônes passe de 11 à 13 tout en ne rendant la barre
       // que 6px plus haute — « légèrement », pas « plus imposante ».
       className="absolute left-0 right-0 bottom-0 z-20 bg-cream border-t border-border flex items-center justify-around px-0.5 pt-[8px]"
+      // Repère de la visite guidée (VisiteGuidee.tsx) : une cible qui passe dessous est remontée avant d'être mise en évidence.
+      data-barre-du-bas
       // pb (correctif 20/08/2026, contenu masqué par la navigation basse) :
       // étend la nav elle-même dans la safe-area (encoche/barre de gestes)
       // au lieu de laisser son padding de confort (22px) s'arrêter avant —

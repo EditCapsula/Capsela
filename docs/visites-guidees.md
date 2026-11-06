@@ -9,7 +9,7 @@ progressive et non intrusive — une courte visite par écran clé, à la premi�
 | --- | --- | --- |
 | Découvrir Aujourd'hui | Accueil | `accueil-tenue` · `accueil-autre-tenue` · `jour-meteo` |
 | Découvrir ton Dressing | Dressing | `dressing-ajouter` · `dressing-filtres` |
-| Découvrir ta Capsule | Capsule | `capsule-saison` · `capsule-onglets` · `capsule-planche` |
+| Découvrir ta Capsule | Capsule | `capsule-saison` · `capsule-onglets` · `capsule-categories` (infobulle au-dessus) |
 
 Les textes sont dans `src/lib/visites.ts` (traduits par `src/lib/traductions/en.ts`). Boutons : « Suivant », « Retour »,
 « C'est parti » (dernière étape), « Passer » (à tout moment).
