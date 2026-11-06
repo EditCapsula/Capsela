@@ -109,6 +109,7 @@ export default function VisiteGuidee() {
       const steps: DriveStep[] = etapes.map((e, i) => ({
         element: selecteurCible(e.cible),
         onHighlightStarted: degagerDeLaBarre,
+        ...(e.inactif ? { disableActiveInteraction: true } : {}),
         popover: {
           ...(e.cote ? { side: e.cote, align: "center" as const } : {}),
           title: t(e.titre),

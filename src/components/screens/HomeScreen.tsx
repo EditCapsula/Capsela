@@ -450,6 +450,8 @@ export default function HomeScreen() {
       // 14/10/2026 : l'accueil, puis Tenue le même jour ; les autres hero gardent --color-hero-background). Texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
       // jour passé, aucune tenue possible, la tenue qui se compose, la tenue. Seul, quand le carrousel n'a pas lieu d'être.
       <div
+        // data-tour : la tenue du jour sans carrousel (une seule proposition) est aussi la cible de la visite (lib/visites.ts).
+        data-tour="accueil-tenue"
         className="mx-4 mt-3 rounded-hero grid gap-2"
         // 358 × 307 px sur 390 (calibrage du 08/10/2026) : la marge du hero est de 16 px, 8 px de moins que la gouttière du reste de
         // l'écran. La colonne de la composition fait 181 px (zone 181 × 203), moins sur un écran étroit : le texte garde sa place.

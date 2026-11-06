@@ -495,6 +495,8 @@ input.capin[type="date"]::-webkit-date-and-time-value {
   color: var(--color-muted-3);
   margin-top: 6px;
   text-wrap: pretty;
+  /* Un « \n » dans le texte d'une étape fait un second paragraphe (visite de l'accueil, 06/11/2026). */
+  white-space: pre-line;
 }
 .driver-popover.capsela-visite .driver-popover-close-btn {
   width: auto;
