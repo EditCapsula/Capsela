@@ -34,7 +34,8 @@ accepté ; la feuille native d'Apple, plus fluide, demandera un plugin Capacitor
 Supabase demande un jeton (JWT ES256) signé avec la clé .p8, pas la clé elle-même (« Secret key should be a JWT »), et Apple le limite
 à 6 mois. Le workflow **« Apple — renouveler la clé de connexion dans Supabase »** (`.github/workflows/apple-cle-connexion.yml`) le
 fabrique (`scripts/apple-client-secret.mjs`, Team ID N6YKXJGW25, Services ID `app.capsela.connexion`, 180 jours) et l'écrit dans la
-configuration Auth du projet par l'API de gestion Supabase (`external_apple_secret`, jeton `SUPABASE_ACCESS_TOKEN`). Il se relance seul
+configuration Auth du projet par l'API de gestion Supabase avec l'activation et les Client IDs (`external_apple_enabled`,
+`external_apple_client_id`, `external_apple_secret`, jeton `SUPABASE_ACCESS_TOKEN`) : rien à saisir dans le tableau de bord. Il se relance seul
 le 1er janvier, mai et septembre ; le jeton n'apparaît jamais dans les journaux.
 
 Secret du dépôt à créer une fois : `APPLE_SIGNIN_P8` (contenu du fichier `AuthKey_XHT6968DK9.p8`). Le Key ID (`XHT6968DK9`), qui n'est pas secret, est écrit dans le workflow.

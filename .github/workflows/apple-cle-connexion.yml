@@ -29,6 +29,7 @@ jobs:
           APPLE_SIGNIN_KEY_ID: XHT6968DK9
           APPLE_TEAM_ID: N6YKXJGW25
           APPLE_SERVICES_ID: app.capsela.connexion
+          APPLE_CLIENT_IDS: app.capsela.connexion,app.capsela
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
@@ -38,7 +39,9 @@ jobs:
           fi
           JETON=$(node scripts/apple-client-secret.mjs)
           echo "::add-mask::$JETON"
-          CORPS=$(node -e 'process.stdout.write(JSON.stringify({ external_apple_secret: process.argv[1] }))' "$JETON")
+          # Le fournisseur Apple entier : activé, ses identifiants (Services ID pour le navigateur, identifiant de l'app pour iOS), et le
+          # jeton. Rien n'est à saisir dans le tableau de bord de Supabase.
+          CORPS=$(node -e 'process.stdout.write(JSON.stringify({ external_apple_enabled: true, external_apple_client_id: process.env.APPLE_CLIENT_IDS, external_apple_secret: process.argv[1] }))' "$JETON")
           CODE=$(curl -sS -o reponse.json -w "%{http_code}" -X PATCH \
             "https://api.supabase.com/v1/projects/tkrbzrazejrxavtfspll/config/auth" \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
