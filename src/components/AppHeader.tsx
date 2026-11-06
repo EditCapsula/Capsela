@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 import LogoCapsela from "@/components/LogoCapsela";
+import { PointRappel, useRappelValise } from "@/components/RappelValise";
 
 /**
  * Bandeau de marque : logo Capsela centré, avatar profil à
@@ -47,6 +48,8 @@ export default function AppHeader({
   // ou d'avant-connexion garde sa gouttière.
   const calendrierParDefaut = !onBack && gauche === undefined && !action && showAvatar && !dark;
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
+  // Un départ dans les sept jours (rappelsValise.ts) : un point sur le calendrier, le même que sur l'onglet Planifier.
+  const rappelValise = useRappelValise();
 
   return (
     <div className="flex items-center justify-between mb-[10px]">
@@ -65,13 +68,20 @@ export default function AppHeader({
         )}
         {!onBack && gauche}
         {calendrierParDefaut && (
-          <button onClick={actions.goCalendrier} aria-label="Ouvrir mon calendrier" className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70">
+          <button
+            onClick={actions.goCalendrier}
+            aria-label={rappelValise ? "Ouvrir mon calendrier, un départ approche" : "Ouvrir mon calendrier"}
+            className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70"
+          >
+            <span className="relative block">
             <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
               <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
                 <path d="M3.5 10h17M8 3.5v4M16 3.5v4" />
               </g>
             </svg>
+            {rappelValise && <PointRappel />}
+            </span>
           </button>
         )}
       </div>

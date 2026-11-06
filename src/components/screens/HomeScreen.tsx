@@ -16,6 +16,7 @@ import { libelleStyles, paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BarreDuJour from "@/components/BarreDuJour";
+import { CarteProchainDepart, useRappelValise } from "@/components/RappelValise";
 import BadgePremium from "@/components/BadgePremium";
 import { retourPrecedent, retourSuivant, retoursAvecTenue, tenuePassee } from "@/lib/retro";
 import { dateDuJour } from "@/lib/jourConsulte";
@@ -114,6 +115,7 @@ const AUCUN_FANTOME: CategoryKey[] = [];
 
 export default function HomeScreen() {
   const { state, geoLoading, vestiairePool, wardrobePool, meteoDuJour, jourConsulte, valiseConsultee, actions, weather, sourceMeteo } = useCapsela();
+  const rappelValise = useRappelValise();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
@@ -455,6 +457,9 @@ export default function HomeScreen() {
         />
         {/* Ce qui est planifié ce jour-là (Planifier) : un rappel qui mène à la fiche du plan. Rien sans plan. */}
         {retroActif === 0 && <PlansDuJour depuis="home" className="mt-3" />}
+        {/* LE PROCHAIN DÉPART (06/11/2026, rappelsValise.ts) : de J-7 à J-1, sous le jour et sa météo, avant la tenue — compacte, elle ne
+            lui dispute pas la place. Seulement pour aujourd'hui : un autre jour consulté n'est pas « maintenant ». */}
+        {rappelValise && retroActif === 0 && state.jourDecalage === 0 && <CarteProchainDepart rappel={rappelValise} className="mt-3" />}
       </div>
 
       {carrouselActif ? (

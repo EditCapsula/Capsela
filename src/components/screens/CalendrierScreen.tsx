@@ -5,6 +5,8 @@ import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
 import { IconeTuile } from "@/components/PlanifierUI";
 import SegmentedControl from "@/components/SegmentedControl";
+import { IconeValise } from "@/components/RappelValise";
+import { departsParJour, periodeEnLettres } from "@/lib/rappelsValise";
 import { resolveItemImage } from "@/lib/catalogImages";
 import {
   dateMoyenne,
@@ -155,6 +157,19 @@ function Pastille({ statut, claire = false }: { statut: TenueDuCalendrier["statu
   );
 }
 
+/** Les marqueurs d'un jour : la pastille de sa tenue, et la valise d'un départ (06/11/2026). Même hauteur avec ou sans marqueur. */
+function Marqueurs({ statut, voyage, claire = false }: { statut: TenueDuCalendrier["statut"] | null; voyage: boolean; claire?: boolean }) {
+  if (!voyage) return <Pastille statut={statut} claire={claire} />;
+  return (
+    <span className="flex items-center gap-[3px] h-[7px]">
+      {statut && <Pastille statut={statut} claire={claire} />}
+      <span style={{ color: claire ? "var(--color-cream)" : "var(--color-terracotta)" }}>
+        <IconeValise taille={10} />
+      </span>
+    </span>
+  );
+}
+
 function PastilleMeteo({ temp, label }: { temp: number; label: string | null }) {
   const soleil = !!label && /soleil|dégagé|clair|ensoleill/i.test(label);
   return (
@@ -187,6 +202,9 @@ export default function CalendrierScreen() {
   const piecesDe = (t: TenueDuCalendrier) =>
     t.pieceIds.map((id) => pool.find((i) => i.id === id)).filter((i): i is Item => !!i);
   const tenue = (jour: string) => tenueDuCalendrier(jour, aujourdhui, state.history, state.tenuesPlanifiees, proposee);
+  // LES DÉPARTS EN VOYAGE (06/11/2026, rappelsValise.ts) : chaque valise à sa date de départ, un pictogramme sous le jour.
+  const departs = useMemo(() => departsParJour(state.valises), [state.valises]);
+  const departsDe = (jour: string) => departs.get(jour) ?? [];
 
   // La vue Liste est COURTE (08/10/2026) : les prochaines tenues (dix jours), les quatre dernières passées — le reste vit dans « Voir toutes mes tenues ».
   const vl = useMemo(() => vueListe(aujourdhui, state.history, state.tenuesPlanifiees, proposee), [aujourdhui, state.history, state.tenuesPlanifiees, proposee]);
@@ -245,7 +263,7 @@ export default function CalendrierScreen() {
       <button
         onClick={() => setSelection(jour)}
         aria-pressed={choisie}
-        aria-label={`${libelleLong(jour)}${estAujourdhui ? ", aujourd'hui" : ""}${t ? `, ${NOM_STATUT[t.statut].toLowerCase()}` : ""}`}
+        aria-label={`${libelleLong(jour)}${estAujourdhui ? ", aujourd'hui" : ""}${t ? `, ${NOM_STATUT[t.statut].toLowerCase()}` : ""}${departsDe(jour).length ? ", départ en voyage" : ""}`}
         // Plus bas (02/11/2026, demandé : « le planning moins haut ») : 44 px par jour, la cible tactile minimale, au lieu de 56.
         className="flex flex-col items-center justify-center gap-[3px] min-h-[44px] py-[2px] cursor-pointer"
       >
@@ -260,7 +278,7 @@ export default function CalendrierScreen() {
         >
           {num}
         </span>
-        <Pastille statut={t?.statut ?? null} />
+        <Marqueurs statut={t?.statut ?? null} voyage={departsDe(jour).length > 0} />
       </button>
     );
   };
@@ -301,6 +319,27 @@ export default function CalendrierScreen() {
       </button>
     </li>
   );
+
+  /** Le départ du jour choisi (un par valise) : la carte ouvre CETTE valise. */
+  const cartesDeparts = departsDe(selection).map((v) => (
+    <button
+      key={v.id}
+      type="button"
+      onClick={() => void actions.ouvrirValise(v.id)}
+      className="mt-5 w-full flex items-start gap-3 rounded-carte bg-card border border-border p-5 text-left cursor-pointer active:opacity-80"
+    >
+      <span className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
+        <IconeValise />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block t-titre-ligne text-ink">Départ en vacances</span>
+        <span className="block text-[12.5px] text-muted mt-[2px]">
+          {v.destination} · {periodeEnLettres(v.depart, v.retour)}
+        </span>
+        <span className="block t-lien text-terracotta-deep mt-[6px]">Voir ma valise →</span>
+      </span>
+    </button>
+  ));
 
   /** La carte du jour choisi. Un jour PASSÉ sans tenue n'a pas de carte. */
   const panneau =
@@ -459,11 +498,13 @@ export default function CalendrierScreen() {
                 </div>
               ))}
             </div>
-            <div className="flex items-center justify-center gap-5 mt-2 text-[12px] text-muted">
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mt-2 text-[12px] text-muted">
               <span className="flex items-center gap-[6px]"><Pastille statut="porte" /> Portée</span>
               <span className="flex items-center gap-[6px]"><Pastille statut="planifiee" /> Planifiée</span>
+              <span className="flex items-center gap-[6px]"><span className="text-terracotta"><IconeValise taille={11} /></span> Voyage</span>
               <span className="flex items-center gap-[6px]"><span aria-hidden="true" className="w-[12px] h-[12px] rounded-full" style={{ border: "1.5px solid var(--color-terracotta)" }} /> Aujourd’hui</span>
             </div>
+            {cartesDeparts}
             {panneau}
           </>
         )}
@@ -487,7 +528,7 @@ export default function CalendrierScreen() {
                     key={j}
                     onClick={() => setSelection(j)}
                     aria-pressed={choisie}
-                    aria-label={`${libelleLong(j)}${auj ? ", aujourd'hui" : ""}${t ? `, ${NOM_STATUT[t.statut].toLowerCase()}` : ""}`}
+                    aria-label={`${libelleLong(j)}${auj ? ", aujourd'hui" : ""}${t ? `, ${NOM_STATUT[t.statut].toLowerCase()}` : ""}${departsDe(j).length ? ", départ en voyage" : ""}`}
                     className="flex flex-col items-center justify-center gap-[3px] min-h-[64px] rounded-champ cursor-pointer"
                     style={{
                       background: choisie ? "var(--color-terracotta-deep)" : "var(--color-card)",
@@ -497,11 +538,12 @@ export default function CalendrierScreen() {
                   >
                     <span className="text-[10px]" style={{ color: choisie ? "var(--color-cream)" : "var(--color-muted)" }}>{jourAbrege(j)}</span>
                     <span className="text-[16px] font-semibold tabular-nums leading-none">{dateDe(j).getDate()}</span>
-                    <Pastille statut={t?.statut ?? null} claire={choisie} />
+                    <Marqueurs statut={t?.statut ?? null} voyage={departsDe(j).length > 0} claire={choisie} />
                   </button>
                 );
               })}
             </div>
+            {cartesDeparts}
             {panneau}
           </>
         )}

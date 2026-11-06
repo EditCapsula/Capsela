@@ -424,3 +424,12 @@ Demandé : « une valise devrait être entièrement faite si besoin avec les pi�
 - **« Ton dressing d'abord » ne bloque plus** : l'écran ne s'affiche que si la capsule est vide elle aussi (cas théorique).
 - **Inchangé** : « Uniquement mon dressing » garde la valise aux seules pièces possédées ; les suggestions restent marquées « à ajouter à ton dressing » et comptent dans le volume ; jamais au-delà de la capacité.
 - **NON vérifié en rendu réel** au moment de l'écriture : le parcours complet avec un dressing vide ou très court.
+
+## Rappels contextuels (06/11/2026)
+
+Brief « Évolution UX – Rappels contextuels des valises ». Une seule source, `src/lib/rappelsValise.ts` (pure, testée), calculée à l'affichage depuis `state.valises` et la date du jour : rien n'est stocké, une valise supprimée ou des dates changées mettent les rappels à jour d'elles-mêmes.
+
+- **Fenêtre** : départ dans 1 à 7 jours (J-7 à J-1). Le jour du départ, l'accueil passe en mode séjour (`valiseDuJour.ts`) : plus de rappel. Voyage lointain, en cours ou terminé : rien. Plusieurs voyages : le départ le plus proche.
+- **Messages** : J-7 à J-4 « Ton départ approche, ta valise t'attend. » ; J-3 et J-2 « Plus que n jours avant le départ ! » ; J-1 « Demain, c'est le départ. » (+ « Ta valise est prête ? » seulement si son état n'est pas connu). État : pièces suggérées à ajouter (`suggestionIds`) → « Il te reste quelques pièces à ajouter à ta valise. » ; des tenues, rien à ajouter, aucune situation sans tenue → « Ta valise est prête pour le départ ! » ; sinon rien n'est affirmé.
+- **Points de contact** (`src/components/RappelValise.tsx`) : la carte « Ton prochain départ » de l'accueil (sous le jour et la météo, avant la tenue, aujourd'hui seulement) ; le même point terracotta sur l'icône du calendrier de l'en-tête et sur l'onglet Planifier ; dans « Mon planning », une valise sous le jour de CHAQUE départ (légende « Voyage ») et, ce jour choisi, la carte « Départ en vacances ». Chaque carte ouvre directement sa valise (`ouvrirValise(id)`).
+- **Pas de notification push** pour l'instant : l'app programme déjà la tenue du jour en notification locale, mais aucun rappel de valise n'y est ajouté (facultatif dans le brief).

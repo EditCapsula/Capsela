@@ -2,6 +2,7 @@
 
 import { oublierContexte } from "@/lib/memoireEcrans";
 import { useCapsela } from "@/lib/store";
+import { PointRappel, useRappelValise } from "@/components/RappelValise";
 import type { Screen } from "@/lib/types";
 import { aTraduire, t } from "@/lib/langue";
 
@@ -124,6 +125,7 @@ function ongletDOrigine(state: ReturnType<typeof useCapsela>["state"]): Screen |
 
 export default function TabBar() {
   const { state, actions } = useCapsela();
+  const rappelValise = useRappelValise();
 
   return (
     <div
@@ -196,7 +198,11 @@ export default function TabBar() {
                 background: "transparent",
               }}
             >
-              <TabIcon name={tab.icon} actif={active} />
+              {/* Le point d'un départ proche (rappelsValise.ts), le même que sur l'icône du calendrier de l'en-tête. */}
+              <span className="relative block">
+                <TabIcon name={tab.icon} actif={active} />
+                {tab.screen === "planifier" && rappelValise && <PointRappel />}
+              </span>
             </span>
             <span
               // `max-w-full overflow-hidden text-ellipsis` : un filet, pas une
