@@ -204,6 +204,7 @@ export function SlideIdeeLook({
   onOpen,
   onCoeur,
   colonnes,
+  avecOuSansVeste = false,
 }: {
   look: LookNumerote;
   /** La place du look dans la série affichée (1…total) : « Look 02 / 05 ». */
@@ -217,6 +218,8 @@ export function SlideIdeeLook({
   enregistre: boolean;
   onOpen: () => void;
   onCoeur: () => void;
+  /** Le même look se porte avec ou sans sa veste (fusionnerAvecOuSansVeste, 06/11/2026) : on le dit. */
+  avecOuSansVeste?: boolean;
   /** Le nombre de colonnes de miniatures commun aux slides du carrousel (colonnesMiniatures du look le plus fourni). */
   colonnes?: number;
 }) {
@@ -234,10 +237,19 @@ export function SlideIdeeLook({
         >
           <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id)).join(",")} />
         </button>
-        {occasion && (
-          <Badge tone="carte" taille="s" className="absolute top-[10px] left-[10px] pointer-events-none">
-            {occasion}
-          </Badge>
+        {(occasion || avecOuSansVeste) && (
+          <span className="absolute top-[10px] left-[10px] right-[52px] flex flex-wrap gap-[6px] pointer-events-none">
+            {occasion && (
+              <Badge tone="carte" taille="s">
+                {occasion}
+              </Badge>
+            )}
+            {avecOuSansVeste && (
+              <Badge tone="carte" taille="s">
+                Avec ou sans veste
+              </Badge>
+            )}
+          </span>
         )}
         <button
           type="button"

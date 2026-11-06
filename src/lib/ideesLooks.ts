@@ -185,3 +185,24 @@ export function decrireLooks(variations: ItemOutfitVariation[], pool: Item[], pi
   }
   return resultat;
 }
+
+/**
+ * AVEC OU SANS VESTE (06/11/2026, demandé : « Si un look change avec ou sans veste il faut les fusionner en un seul look et juste
+ * indiquer avec ou sans veste »). Deux idées dont les pièces ne diffèrent que par une veste sont le même look : on garde celle AVEC
+ * la veste (la plus complète, à sa place dans l'ordre), on retire celle sans, et la gardée est marquée « Avec ou sans veste ». La
+ * pièce choisie (le pivot) ne compte jamais comme une veste facultative : un look de blazer n'existe pas sans le blazer.
+ */
+export function fusionnerAvecOuSansVeste(
+  variations: ItemOutfitVariation[],
+  pool: readonly Pick<Item, "id" | "cat">[],
+  pivotId: number
+): { variations: ItemOutfitVariation[]; vesteFacultative: Set<string> } {
+  const estVeste = (id: number) => id !== pivotId && pool.find((p) => p.id === id)?.cat === "veste";
+  const sansVeste = (ids: number[]) => cleLook([...ids.filter((id) => !estVeste(id))].sort((a, b) => a - b));
+  const avecVeste = new Set(variations.filter((v) => v.ids.some(estVeste)).map((v) => sansVeste(v.ids)));
+  const retirees = new Set(variations.filter((v) => !v.ids.some(estVeste) && avecVeste.has(sansVeste(v.ids))).map((v) => sansVeste(v.ids)));
+  return {
+    variations: variations.filter((v) => v.ids.some(estVeste) || !retirees.has(sansVeste(v.ids))),
+    vesteFacultative: new Set(variations.filter((v) => v.ids.some(estVeste) && retirees.has(sansVeste(v.ids))).map((v) => cleLook(v.ids))),
+  };
+}

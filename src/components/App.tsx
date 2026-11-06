@@ -5,6 +5,18 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { decisionRetour, lirePage } from "@/lib/retourSysteme";
+
+/*
+ * iOS : LA PAGE PREND TOUT L'ÉCRAN, ET LA COQUE LAISSE LA PLACE DE L'ENCOCHE (06/11/2026, signalé sur l'enregistrement TestFlight :
+ * « le haut des écrans est caché »). Sans viewport-fit=cover, WebKit donne 0 à env(safe-area-inset-*) alors que la vue web passe sous
+ * la barre d'état : l'en-tête se retrouvait sous l'heure et l'encoche. Posé dès le chargement de ce module (client seulement,
+ * AppLoader), sur iOS natif seulement : Android garde sa page entre les barres système, le web ne change pas. La coque applique
+ * ensuite `pt-safe-top` (globals.css) ; le bas utilisait déjà env(safe-area-inset-bottom).
+ */
+if (typeof document !== "undefined" && Capacitor.getPlatform() === "ios") {
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (meta && !/viewport-fit/.test(meta.content)) meta.setAttribute("content", `${meta.content}, viewport-fit=cover`);
+}
 import { arreterPublicite, demarrerPublicite } from "@/lib/publicite";
 import { synchroniserNotifications } from "@/lib/notifications";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -194,8 +206,10 @@ function Screens() {
   // ouvre ne doit mener nulle part avant que le mot de passe soit choisi.
   if (ready && auth.recuperation !== "aucune") {
     return (
-      <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden">
-        <NouveauMotDePasseScreen />
+      <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden pt-safe-top">
+        <div className="relative flex-1 min-h-0">
+          <NouveauMotDePasseScreen />
+        </div>
       </div>
     );
   }
@@ -206,15 +220,17 @@ function Screens() {
   // de refus affiché après la suppression du compte, qui ferme la session.
   if (ready && (refusAge || doitDemanderNaissance({ signedIn, profileLoaded: auth.profileLoaded, birthdate: auth.profile.birthdate, completed: profileCompleted }))) {
     return (
-      <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden">
-        <DateNaissanceScreen
-          refus={refusAge}
-          onRefus={setRefusAge}
-          onQuitter={() => {
-            setRefusAge(null);
-            actions.goWelcome();
-          }}
-        />
+      <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden pt-safe-top">
+        <div className="relative flex-1 min-h-0">
+          <DateNaissanceScreen
+            refus={refusAge}
+            onRefus={setRefusAge}
+            onQuitter={() => {
+              setRefusAge(null);
+              actions.goWelcome();
+            }}
+          />
+        </div>
         <LegalDocOverlay />
       </div>
     );
@@ -224,15 +240,15 @@ function Screens() {
   if (!ready) return <ChargementApp />;
 
   return (
-    <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden">
+    <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden pt-safe-top">
       {/* Bandeau de diagnostic temporaire (correctif 22/08/2026, signalé :
           pièces ajoutées au dressing non conservées) — affiche l'erreur
           Supabase réelle sur mobile, où la console développeur n'est pas
           accessible. À retirer une fois la cause identifiée et corrigée. */}
       {state.dressingError && (
         <div
-          className="absolute top-0 left-0 right-0 z-50 px-4 py-3 text-[12px] leading-[1.4]"
-          style={{ background: "#B3261E", color: "#FFF" }}
+          className="absolute left-0 right-0 z-50 px-4 py-3 text-[12px] leading-[1.4]"
+          style={{ top: "env(safe-area-inset-top)", background: "#B3261E", color: "#FFF" }}
         >
           <div className="flex items-start gap-2">
             <span className="flex-1 break-words">{state.dressingError}</span>
