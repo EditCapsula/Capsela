@@ -62,3 +62,12 @@ describe("pièces réservées à la valise", () => {
     expect(noms).not.toContain("Short en jean");
   });
 });
+
+describe("pendant le séjour, jamais en tenue du jour (06/11/2026)", () => {
+  it("le vivier de la tenue du jour écarte les pièces de baignade", async () => {
+    const { piecesDeLaValisePourLeJour } = await import("../valiseDuJour");
+    const pool = [maillot(1, "Bohème"), item({ id: 10, category: "hauts", name: "T-shirt" })];
+    const v = { pieceIds: pool.map((p) => p.id) } as unknown as Parameters<typeof piecesDeLaValisePourLeJour>[0];
+    expect(piecesDeLaValisePourLeJour(v, pool).map((p) => p.name)).toEqual(["T-shirt"]);
+  });
+});

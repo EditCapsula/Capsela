@@ -8,7 +8,7 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import type { Humeur } from "./humeur";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsuleDuJour, CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
-import { estPlanValise, looksValiseDuJour, lookSuivantConforme, piecesDeLaValise, valisePeutHabiller, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
+import { estPlanValise, looksValiseDuJour, lookSuivantConforme, piecesDeLaValisePourLeJour, valisePeutHabiller, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
 import { previsionPour, type MeteoMoment, type MomentJournee, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
 import { clePlanApplique, doitAppliquerPlan, planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
@@ -1284,7 +1284,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     const v = valiseDuJour(state.valises, jourConsulteIso);
     const pool = [...state.items, ...vestiairePool];
     // Une valise qui ne peut composer aucune tenue ne prend pas la main sur la tenue du jour (valisePeutHabiller).
-    return v && valisePeutHabiller(piecesDeLaValise(v, pool)) ? looksValiseDuJour(v, jourConsulteIso, pool) : null;
+    return v && valisePeutHabiller(piecesDeLaValisePourLeJour(v, pool)) ? looksValiseDuJour(v, jourConsulteIso, pool) : null;
   }, [state.valises, jourConsulteIso, state.items, vestiairePool]);
   // LA CAPSULE DU JOUR CONSULTÉ (22/10/2026, demandé : « pioche dans les bonnes capsules » quand il fait chaud) : `defaultCapsule` est
   // bâtie sur la météo d'AUJOURD'HUI ; la tenue d'un autre jour reçoit la capsule de SA météo et de SA saison (saisonCapsuleDuJour),
@@ -1300,7 +1300,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const wardrobePool = useMemo(
     () =>
       valiseConsultee
-        ? composeWardrobePool(piecesDeLaValise(valiseConsultee.valise, [...state.items, ...vestiairePool]), [], CAT_KEYS)
+        ? composeWardrobePool(piecesDeLaValisePourLeJour(valiseConsultee.valise, [...state.items, ...vestiairePool]), [], CAT_KEYS)
         : composeWardrobePool(state.items, capsuleDuJourConsulte, CAT_KEYS),
     [valiseConsultee, state.items, vestiairePool, capsuleDuJourConsulte, CAT_KEYS]
   );
@@ -1320,7 +1320,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const capsuleRef = useRef<Item[]>(defaultCapsule);
   /** Les pièces réelles où l'on tire : le dressing, ou les seules pièces de la valise pendant un séjour (20/10/2026, valiseDuJour.ts). */
   const itemsGeneration = useMemo(
-    () => (valiseConsultee ? piecesDeLaValise(valiseConsultee.valise, [...state.items, ...vestiairePool]) : state.items),
+    () => (valiseConsultee ? piecesDeLaValisePourLeJour(valiseConsultee.valise, [...state.items, ...vestiairePool]) : state.items),
     [valiseConsultee, state.items, vestiairePool]
   );
   const itemsGenerationRef = useRef<Item[]>(itemsGeneration);
