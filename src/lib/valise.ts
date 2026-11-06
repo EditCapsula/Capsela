@@ -233,11 +233,20 @@ export interface SituationValise {
  * condition) ne font qu'une situation par occasion : cinq jours de 20° au
  * soleil n'appellent pas cinq tenues de soirée différentes pour être couverts.
  */
-/** Les jours de même météo, regroupés (saison de date, température à 3° près, condition). */
+/**
+ * Les jours de même météo, regroupés (saison du jour, température à 3° près, condition).
+ *
+ * LA SAISON D'UN JOUR DU SÉJOUR SUIT SA TEMPÉRATURE (06/11/2026, signalé : une valise pour Pékin fin novembre, -3° à 6° habituels,
+ * recevait des pièces d'automne — « il faut adapter la capsule saisonnière et choisir des pièces hiver »). La saison du CALENDRIER
+ * entrait d'office dans les saisons admises du jour (weatherForDay) : l'Automne à 2°. C'est désormais celle de la capsule du séjour
+ * (saisonCapsuleDuJour : la température, bornée par le calendrier sous la vraie chaleur), si bien qu'un jour dont la température
+ * contredit le calendrier n'admet que la saison de sa température (Hiver à 2° en novembre, Été à 28° en janvier) ; un jour qui
+ * s'accorde au calendrier est inchangé. Valise seulement : la tenue du jour chez soi garde la règle du 30/09/2026.
+ */
 export function groupesMeteo(meteos: MeteoJour[]): { meteo: Weather; jours: string[] }[] {
   const groupes = new Map<string, { meteo: Weather; jours: string[] }>();
   for (const m of meteos) {
-    const saison = saisonCalendairePour(dateDe(m.jour));
+    const saison = saisonCapsuleDuJour(m.temp, saisonCalendairePour(dateDe(m.jour)));
     const cle = `${saison}|${Math.round(m.temp / 3)}|${m.label}`;
     const g = groupes.get(cle);
     if (g) g.jours.push(m.jour);
