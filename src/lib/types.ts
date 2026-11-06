@@ -133,6 +133,8 @@ export type ImageSource = "generated" | "manual" | "affiliate" | "user";
 export interface Item {
   id: number;
   name: string;
+  /** Le nom anglais d'une pièce du catalogue (06/11/2026, colonne `name_en`, migration 0060). Affiché en anglais seulement (nomAffiche) ; le moteur lit `name`. */
+  nameEn?: string;
   cat: CategoryKey;
   color: string;
   hex: string;

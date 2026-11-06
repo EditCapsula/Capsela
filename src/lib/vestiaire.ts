@@ -81,6 +81,8 @@ export function isVestiaireId(id: number): boolean {
 
 export interface VestiaireRow {
   id: number;
+  /** Migration 0060 — le nom anglais, facultatif ; absent de la ligne tant qu'elle n'est pas exécutée. */
+  name_en?: string | null;
   category: string | null;
   url_image: string | null;
   /** Migration 0049 — visuel « hero » (flat lay), absent de la ligne tant qu'elle n'est pas exécutée. */
@@ -367,6 +369,7 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     shoeType: cat === "chaussures" ? SHOE_TYPE_MAP[(row.sous_type || "").trim().toLowerCase()] : undefined,
     matiere: mapMatiere(row.matiere),
     matiereBrute: row.matiere?.trim() || undefined,
+    ...(row.name_en?.trim() ? { nameEn: sansBarre(row.name_en.trim()) } : {}),
     coupe: mapCoupe(row.coupe),
     sacType: cat === "sac" ? detectSacType(name) || undefined : undefined,
     bijouType: cat === "bijou" ? detectBijouType(name) || undefined : undefined,

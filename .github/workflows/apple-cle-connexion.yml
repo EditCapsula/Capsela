@@ -1,0 +1,57 @@
+name: Apple — renouveler la clé de connexion dans Supabase
+
+# La connexion avec Apple (docs/connexion-apple.md) demande à Supabase un « client secret » : un jeton signé avec la clé .p8 d'Apple,
+# valable 6 mois au plus. Ce workflow le fabrique (scripts/apple-client-secret.mjs) et l'enregistre directement dans la configuration
+# Auth du projet Supabase (API de gestion, jeton SUPABASE_ACCESS_TOKEN déjà utilisé par le déploiement des fonctions). Le jeton n'est
+# jamais affiché : il est masqué dans les journaux et ne quitte pas l'exécution.
+#
+# Lancé à la main la première fois (« Run workflow »), puis de lui-même tous les 4 mois, avant l'expiration des 6 mois.
+# Secret du dépôt à créer une fois : APPLE_SIGNIN_P8 (contenu du fichier AuthKey_XHT6968DK9.p8).
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Le 1er janvier, mai et septembre, 7 h 17 UTC.
+    - cron: "17 7 1 1,5,9 *"
+
+jobs:
+  renouveler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fabriquer le jeton et l'enregistrer dans Supabase
+        env:
+          APPLE_SIGNIN_P8: ${{ secrets.APPLE_SIGNIN_P8 }}
+          # Le Key ID de la clé « Sign in with Apple » (pas un secret : il ne permet rien sans la clé).
+          APPLE_SIGNIN_KEY_ID: XHT6968DK9
+          APPLE_TEAM_ID: N6YKXJGW25
+          APPLE_SERVICES_ID: app.capsela.connexion
+          APPLE_CLIENT_IDS: app.capsela.connexion,app.capsela
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APPLE_SIGNIN_P8" ]; then
+            echo "::error::Secret APPLE_SIGNIN_P8 absent (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          JETON=$(node scripts/apple-client-secret.mjs)
+          echo "::add-mask::$JETON"
+          # Le fournisseur Apple entier : activé, ses identifiants (Services ID pour le navigateur, identifiant de l'app pour iOS), et le
+          # jeton. Rien n'est à saisir dans le tableau de bord de Supabase.
+          CORPS=$(node -e 'process.stdout.write(JSON.stringify({ external_apple_enabled: true, external_apple_client_id: process.env.APPLE_CLIENT_IDS, external_apple_secret: process.argv[1] }))' "$JETON")
+          CODE=$(curl -sS -o reponse.json -w "%{http_code}" -X PATCH \
+            "https://api.supabase.com/v1/projects/tkrbzrazejrxavtfspll/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$CORPS")
+          if [ "$CODE" -ge 300 ]; then
+            echo "::error::Supabase a refusé la mise à jour (HTTP $CODE)."
+            # La réponse ne contient pas le jeton envoyé ; seul son message d'erreur est utile.
+            node -e 'const r=require("./reponse.json"); console.log(r.message || r.error || "réponse sans message")' || true
+            exit 1
+          fi
+          rm -f reponse.json
+          echo "Clé de connexion Apple renouvelée dans Supabase (valable 180 jours)."

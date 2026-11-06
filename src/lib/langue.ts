@@ -102,3 +102,12 @@ export function tn(n: number, un: string, plusieurs: string, vars?: Record<strin
 
 /** Marque un texte d'une constante de module, traduit plus tard par `t()` au rendu. Rend le texte tel quel. */
 export const aTraduire = (fr: string): string => fr;
+
+/**
+ * LE NOM AFFICHÉ D'UNE PIÈCE (06/11/2026, lot « Catalogue » de docs/traduction.md). En anglais, le nom anglais du catalogue quand il
+ * existe (`nameEn`, colonne name_en) ; sinon, et toujours en français, le nom tel qu'il est. Une pièce du dressing garde le nom que la
+ * personne lui a donné. Pour l'AFFICHAGE seulement : le moteur et ses accords lisent `name`.
+ */
+export function nomAffiche(piece: { name: string; nameEn?: string }): string {
+  return courante === "en" && piece.nameEn ? piece.nameEn : piece.name;
+}
