@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { langueDeDepart, poserLangue, t, tn } from "../langue";
+import { langueDeDepart, poserLangue, t, tn, nomAffiche } from "../langue";
+import { rowToCatalogItem, type VestiaireRow } from "../vestiaire";
 import { EN } from "../traductions/en";
 
 afterEach(() => poserLangue("fr"));
@@ -62,5 +63,20 @@ describe("couverture de la table anglaise", () => {
       }
     }
     expect(absents).toEqual([]);
+  });
+});
+
+describe("nomAffiche (06/11/2026) : le nom anglais du catalogue, en anglais seulement", () => {
+  it("en anglais, le nom anglais quand il existe ; sinon le nom tel qu'il est ; en français, toujours le nom français", () => {
+    poserLangue("en");
+    expect(nomAffiche({ name: "Blouson cuir ceinturé", nameEn: "Belted leather jacket" })).toBe("Belted leather jacket");
+    expect(nomAffiche({ name: "Ma veste préférée" })).toBe("Ma veste préférée");
+    poserLangue("fr");
+    expect(nomAffiche({ name: "Blouson cuir ceinturé", nameEn: "Belted leather jacket" })).toBe("Blouson cuir ceinturé");
+  });
+  it("la colonne name_en est lue au chargement du catalogue ; absente (avant la migration), rien ne change", () => {
+    const base = { id: 1, category: "vestes_blazers", name: "Blouson cuir ceinturé", url_image: null, styles: null } as unknown as VestiaireRow;
+    expect(rowToCatalogItem({ ...base, name_en: "Belted leather jacket" })?.nameEn).toBe("Belted leather jacket");
+    expect(rowToCatalogItem(base)?.nameEn).toBeUndefined();
   });
 });

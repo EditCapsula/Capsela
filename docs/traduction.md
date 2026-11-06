@@ -35,6 +35,6 @@ par une personne de langue maternelle anglaise avant l'ouverture.
 | Navigation | barre du bas | fait |
 | Écrans | un par un, du parcours d'arrivée aux écrans secondaires | en cours |
 | Phrases du moteur | `src/lib` (raisons, explications, occasions, accords) | à faire |
-| Catalogue | noms des pièces, couleurs, catégories, styles (colonne anglaise : migration à valider) | à faire |
+| Catalogue | noms des pièces : colonne `name_en` (migration 0060), lue au chargement, affichée par `nomAffiche` en anglais seulement ; noms à traduire depuis un export du catalogue, puis un SQL de mise à jour relu. Couleurs, catégories, sous-types et styles : tables du code (lot Phrases du moteur) | en cours |
 | Serveur | fonctions Edge, e-mails Supabase, notifications | à faire |
 | Légal et stores | CGU, confidentialité (relecture juridique), fiches Play et App Store | à faire |
