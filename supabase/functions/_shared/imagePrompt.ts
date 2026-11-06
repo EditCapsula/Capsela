@@ -574,7 +574,9 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   // génération) : la catégorie "pulls_gilets"/pull n'est jamais utilisée
   // dans les données réelles, les cardigans sont systématiquement stockés
   // en category="hauts" -> canonCategory="haut".
-  haut: ["top", "shirt", "blouse", "tank top", "bodysuit", "turtleneck", "polo", "sweatshirt", "cardigan", "sweater"],
+  // « kimono » (06/11/2026) : le kimono de plage, pièce réservée à la valise, est rangé en hauts ; son sujet (« beach kimono
+  // cover-up ») ne contenait aucun de ces mots — refusé avant tout appel.
+  haut: ["top", "shirt", "blouse", "tank top", "bodysuit", "turtleneck", "polo", "sweatshirt", "cardigan", "sweater", "kimono"],
   // « sleeveless vest » (08/10/2026) : le gilet sans manches est rangé en pulls_gilets, et son sujet (« gilet sans manches »)
   // ne contenait aucun de ces mots — quatre pièces (885, 902, 917, 922) étaient refusées en 422 avant tout appel API.
   pull: ["sweater", "cardigan", "sweatshirt", "sleeveless vest"],
@@ -583,7 +585,8 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   jupe: ["skirt"],
   short: ["shorts"],
   robe: ["dress"],
-  combinaison: ["jumpsuit", "playsuit", "dungarees"],
+  // « swimsuit » (06/11/2026) : le maillot une pièce, réservé à la valise, est rangé en combinaisons (neuf pièces refusées).
+  combinaison: ["jumpsuit", "playsuit", "dungarees", "swimsuit"],
   // "overshirt" ajouté (correctif 28/08/2026, trouvé pendant l'audit des
   // visuels au sujet faux) : les surchemises sont stockées tantôt en
   // category="hauts", tantôt en "vestes_blazers". Côté haut elles passaient
@@ -752,7 +755,10 @@ export function buildImagePrompt(row: VestiaireRow, trend?: TrendRule | null): B
   // Sujet structurel — jamais affecté par override/tendance (garde-fou
   // "un blazer doit rester un blazer" du brief 19/08/2026).
   const ok = (CATEGORY_KEYWORDS[canonCategory] || []).some((kw) => noun.includes(kw));
-  const composition = CATEGORY_COMPOSITION[canonCategory] || "Single fashion item, fully visible.";
+  // Un maillot une pièce est rangé en combinaisons : sa composition ne doit pas demander « jumpsuit » (06/11/2026).
+  const composition = noun.includes("swimsuit")
+    ? "Complete one-piece swimsuit, front view, laid flat."
+    : CATEGORY_COMPOSITION[canonCategory] || "Single fashion item, fully visible.";
   // Une exclusion ne doit jamais viser le produit demandé : la catégorie
   // "veste" interdit "shirt" pour empêcher qu'une veste soit dessinée en
   // chemise, mais une surchemise ("overshirt") contient ce mot — le prompt

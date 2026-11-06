@@ -100,3 +100,17 @@ describe("buildImagePrompt — garde-fous structurels", () => {
     expect(built.ok).toBe(true);
   });
 });
+
+describe("pièces de valise (06/11/2026) : maillot une pièce et kimono de plage générables", () => {
+  it("le maillot une pièce, rangé en combinaisons, passe la validation et n'est pas dessiné en combinaison", () => {
+    const built = buildImagePrompt(item({ id: 1321, category: "combinaisons", name: "Maillot une pièce échancré", sous_type: "Maillot de bain" }));
+    expect(built.ok).toBe(true);
+    expect(built.prompt).toMatch(/one-piece swimsuit/);
+    expect(built.prompt).not.toMatch(/Complete jumpsuit/);
+  });
+  it("le kimono de plage, rangé en hauts, passe la validation", () => {
+    const built = buildImagePrompt(item({ id: 1334, category: "hauts", name: "Kimono de plage imprimé", sous_type: "Kimono de plage" }));
+    expect(built.ok).toBe(true);
+    expect(built.prompt).toMatch(/kimono/);
+  });
+});
