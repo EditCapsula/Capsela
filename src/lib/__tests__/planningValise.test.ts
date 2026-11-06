@@ -55,8 +55,8 @@ describe("filtrerParContrainte — un filtre du pool, jamais une règle du moteu
   it("sans contrainte, rien n'est filtré", () => {
     expect(ids(filtrerParContrainte(pool))).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
-  it("chaleur : ni manteau, ni pull, ni pièce d'automne-hiver, ni bottes", () => {
-    expect(ids(filtrerParContrainte(pool, "chaleur"))).toEqual([1, 5, 7, 8, 9]);
+  it("chaleur : ni manteau, ni pull, ni pièce d'automne-hiver, ni bottes, ni talons (06/11/2026 : escarpins écartés de la plage)", () => {
+    expect(ids(filtrerParContrainte(pool, "chaleur"))).toEqual([1, 5, 8, 9]);
   });
   it("marche : pas d'escarpins ; une chaussure sans type reste", () => {
     expect(ids(filtrerParContrainte(pool, "marche"))).toEqual([1, 2, 3, 4, 5, 6, 8, 9]);

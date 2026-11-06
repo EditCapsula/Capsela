@@ -1,6 +1,6 @@
 import { previsionPour, type Prevision } from "./prevision";
 import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
-import { ajouterCouverture, estRandonnee, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee } from "./piecesDeValise";
+import { ajouterCouverture, estRandonnee, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee, sansTenueDeSport } from "./piecesDeValise";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, saisonCapsuleDuJour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -227,7 +227,7 @@ export interface SituationValise {
   contrainte?: Contrainte;
   /** Les occasions du programme que ce look-type sert : plage et piscine partagent une situation, pas deux tenues. */
   sousIds?: string[];
-  /** Un trajet d'un séjour qui compte une randonnée : la paire de randonnée s'y porte (06/11/2026, piecesDeValise.ts). */
+  /** Un trajet ou une journée de marche d'un séjour qui compte une randonnée : la paire de randonnée s'y porte (06/11/2026, piecesDeValise.ts). */
   avecRandonnee?: true;
 }
 
@@ -295,7 +295,7 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
         jours: m.jours,
         ...(g.contrainte ? { contrainte: g.contrainte } : {}),
         sousIds: g.sousIds,
-        ...(g.trajet && randonnee ? { avecRandonnee: true as const } : {}),
+        ...((g.trajet || g.contrainte === "marche") && randonnee ? { avecRandonnee: true as const } : {}),
       });
     }
   }
@@ -361,7 +361,9 @@ export function generateurMoteur(
     // de bain et sa couverture tiennent lieu de vêtements (poolDeBaignade).
     const brut = sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeRandonnee(poolDeBaignade(avecBain, s), s), s.contrainte, s.meteo), s.occasion);
     // Un trajet, une randonnée : une tenue décontractée, jamais de blazer (06/11/2026, poolDecontracte).
-    const pool = s.occasion === "voyage" || estRandonnee(s) ? poolDecontracte(brut) : brut;
+    const decontracte = s.occasion === "voyage" || estRandonnee(s) ? poolDecontracte(brut) : brut;
+    // Hors randonnée, la paire de randonnée se porte avec des vêtements ordinaires (06/11/2026, sansTenueDeSport).
+    const pool = s.avecRandonnee && !estRandonnee(s) ? sansTenueDeSport(decontracte) : decontracte;
     const t = composer(pool, s.occasion, s.meteo, s);
     if (t || !estRandonnee(s)) return t;
     // UNE RANDONNÉE SANS TENUE DE SPORT (06/11/2026, signalé : deux journées de randonnée « Aucun look de ta valise ne répond encore à

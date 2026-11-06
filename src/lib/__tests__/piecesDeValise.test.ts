@@ -3,8 +3,9 @@ import { computeDefaultCapsule } from "../capsule";
 import type { CatalogItem } from "../catalog";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 import type { Item } from "../types";
-import { ajouterCouverture, chaussuresDeRandonnee, estBaignade, estBlazer, estPieceDeValise, piecesDeBaignade, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee } from "../piecesDeValise";
+import { ajouterCouverture, chaussuresDeRandonnee, estBaignade, estBlazer, sansTenueDeSport, estPieceDeValise, piecesDeBaignade, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee } from "../piecesDeValise";
 import { generateurMoteur, situationsDuProgramme, type SituationValise } from "../valise";
+import { filtrerParContrainte } from "../programmeValise";
 import { at, item } from "./fixtures";
 
 /** LES PIÈCES RÉSERVÉES À LA VALISE (06/11/2026) : plage, piscine, spa. */
@@ -169,11 +170,39 @@ describe("randonnée et trajets (06/11/2026, signalé : randonnées sans look, b
     }
   });
 
-  it("le programme marque les trajets d'un séjour avec randonnée, et eux seuls", () => {
+  it("le programme marque les trajets et les journées de marche d'un séjour avec randonnée, et eux seuls", () => {
     const meteos = ["2026-11-23", "2026-11-24", "2026-11-25"].map((jour) => ({ jour, temp: 26, label: "Ensoleillé", prevue: true }));
-    const avec = situationsDuProgramme([{ id: "randonnee", frequence: 2 }, { id: "trajet", frequence: 2 }], meteos, []);
-    expect(avec.filter((x) => x.avecRandonnee).map((x) => x.occasion)).toEqual(["voyage"]);
+    const avec = situationsDuProgramme([{ id: "randonnee", frequence: 2 }, { id: "visites", frequence: 1 }, { id: "restaurant", frequence: 1 }, { id: "trajet", frequence: 2 }], meteos, []);
+    expect(avec.filter((x) => x.avecRandonnee).map((x) => x.sousIds)).toEqual([["visites"], ["trajet"]]);
     const sans = situationsDuProgramme([{ id: "visites", frequence: 2 }, { id: "trajet", frequence: 2 }], meteos, []);
     expect(sans.some((x) => x.avecRandonnee)).toBe(false);
+  });
+
+  it("aux visites d'un séjour avec randonnée, la paire est proposée parmi les autres chaussures ; jamais avec une tenue de sport quand il y a mieux", () => {
+    const visites: SituationValise = { occasion: "quotidien", meteo, jours: ["2026-11-26"], contrainte: "marche", sousIds: ["visites"], avecRandonnee: true };
+    expect(piecesPourLaSituation([paire("sport")], visites)).toHaveLength(1);
+    expect(poolDeRandonnee([baskets, paire("sport")], visites)).toHaveLength(2);
+    const legging = item({ id: 41, category: "pantalons", name: "Legging de sport", sous_type: "Legging", couleur_dominante: "Noir", niveau_formalite: "sport", occasions: "sport,quotidien", saison_capsule: T });
+    expect(sansTenueDeSport([legging, pantalon, paire("sport")]).map((p) => p.name)).toEqual(["Pantalon large", "Chaussures de randonnée en nubuck"]);
+    expect(sansTenueDeSport([legging]).map((p) => p.name)).toEqual(["Legging de sport"]);
+    const pieces = [...dressing, legging, paire("sport")];
+    const gen = generateurMoteur([], "femme", null, [paire("sport")]);
+    for (const t of tirages(20, () => gen([...dressing, legging], visites))) expect(noms(t?.ids, pieces)).not.toContain("Legging de sport");
+  });
+});
+
+describe("pas de talons à la plage ni aux visites (06/11/2026, signalé : des slingbacks à talons pour la plage)", () => {
+  const T = "Printemps, Été";
+  const slingbacks = item({ id: 50, category: "chaussures", name: "Slingbacks à talons", sous_type: "Slingbacks", couleur_dominante: "Noir", saison_capsule: T });
+  const petitTalon = item({ id: 51, category: "chaussures", name: "Sandales à petit talon", sous_type: "Sandales", couleur_dominante: "Camel", saison_capsule: T });
+  const plates = item({ id: 52, category: "chaussures", name: "Sandales plates", sous_type: "Sandales", couleur_dominante: "Camel", saison_capsule: T });
+  const baskets = item({ id: 53, category: "chaussures", name: "Baskets blanches", sous_type: "Baskets", couleur_dominante: "Blanc", saison_capsule: T });
+  const pool = [slingbacks, petitTalon, plates, baskets];
+  const ete = at(28, "Printemps / Été");
+  it("plage et piscine : aucune paire à talon", () => {
+    expect(filtrerParContrainte(pool, "chaleur", ete).map((p) => p.name)).toEqual(["Sandales plates", "Baskets blanches"]);
+  });
+  it("visites : baskets et sandales plates par temps chaud, jamais de talon", () => {
+    expect(filtrerParContrainte(pool, "marche", ete).map((p) => p.name)).toEqual(["Sandales plates", "Baskets blanches"]);
   });
 });

@@ -72,3 +72,15 @@ un look Voyage · trajet avec un blazer du dressing (« Il faut que ce soit plus
 - **Trajets et randonnées en tenue décontractée** (`poolDecontracte`) : jamais de blazer (exclu) ; une pièce business casual ou
   habillée sort de sa catégorie quand il y reste une pièce décontractée — privilégier, pas exclure. ARBITRAGE ÉDITORIAL, à confirmer
   sur de vrais voyages ; instruit sur le trajet et la randonnée seulement.
+
+### Talons, visites, paire de randonnée hors randonnée (06/11/2026)
+
+- **Plage et piscine : jamais de talons** (signalé : des slingbacks à talons pour la plage). `aTalon` (`programmeValise.ts`) :
+  escarpins, sandales à talons, slingbacks, ou un talon écrit dans le nom ; la contrainte « chaleur » les écarte.
+- **Visites, balade, excursion** (rappelé : « en fonction de la température une paire de baskets, une paire de sandales sans talons
+  si la marche n'est pas longue ou des chaussures de randonnées si elles sont bien dans la valise ») : la règle des chaussures de marche
+  reste celle de la saison du jour (baskets, bottines ; bottes au froid ; sandales au chaud), et une sandale « à talon » dans son nom
+  sort désormais. La longueur de la marche n'est pas connue de l'app : rien n'en est déduit (NON DÉMONTRÉ qu'il faille distinguer
+  visites et excursion). Quand le séjour compte une randonnée, ces journées reçoivent aussi la paire de randonnée, parmi les autres.
+- **La paire de randonnée sans tenue de sport hors randonnée** (demandé le même jour) : aux trajets et aux journées de marche d'un
+  séjour avec randonnée, un vêtement de sport sort de sa catégorie quand il y reste un vêtement ordinaire (`sansTenueDeSport`).
