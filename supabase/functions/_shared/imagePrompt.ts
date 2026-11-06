@@ -191,6 +191,12 @@ const SUBTYPE_EN: Record<string, string> = {
   chemise: "button-up shirt",
   chemisier: "blouse",
   surchemise: "overshirt",
+  // Pièces réservées à la valise (06/11/2026, src/lib/piecesDeValise.ts) : la phrase entière d'abord, avant les mots seuls.
+  "maillot de bain": "one-piece swimsuit",
+  "short de bain": "swim shorts",
+  "surchemise de plage": "lightweight beach cover-up shirt",
+  "chemise de plage": "short-sleeved beach shirt",
+  "kimono de plage": "lightweight beach kimono cover-up",
   blouse: "blouse",
   débardeur: "tank top",
   body: "bodysuit",

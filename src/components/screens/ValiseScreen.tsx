@@ -131,6 +131,7 @@ import LigneInterrupteur from "@/components/LigneInterrupteur";
 import EmptyState from "@/components/EmptyState";
 import Card from "@/components/Card";
 import { degres } from "@/lib/unites";
+import { estBaignade, piecesDeBaignade } from "@/lib/piecesDeValise";
 
 /**
  * PRÉPARER SA VALISE (docs/valise.md).
@@ -905,10 +906,18 @@ export default function ValiseScreen() {
   const { state, weather, defaultCapsule, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
   /** La capsule du séjour : bâtie sur la météo du séjour, pas sur celle d'aujourd'hui à la maison (capsuleDuSejour, 22/10/2026). */
-  const capsuleDe = (situations: SituationValise[]): Item[] =>
-    capsuleDuSejour(situations, (meteo, saison) => computeDefaultCapsule(profile, meteo, state.suggestedExcluded, saison, vestiairePool));
+  // Les pièces de baignade du profil, réservées à la valise (06/11/2026, piecesDeValise.ts) : jamais dans une capsule, ajoutées à
+  // celle du séjour quand il compte plage, piscine ou spa (elles comptent alors comme ses suggestions, et le moteur les reçoit).
+  const piecesValise = useMemo(() => piecesDeBaignade(vestiairePool, profile, paletteHexes(profile)), [vestiairePool, profile]);
+  const capsuleDe = (situations: SituationValise[]): Item[] => {
+    const capsule = capsuleDuSejour(situations, (meteo, saison) => computeDefaultCapsule(profile, meteo, state.suggestedExcluded, saison, vestiairePool));
+    return situations.some(estBaignade) ? [...capsule, ...piecesValise.filter((p) => !capsule.some((c) => c.id === p.id))] : capsule;
+  };
   const dressing = state.items;
-  const generer = useMemo(() => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie)), [profile]);
+  const generer = useMemo(
+    () => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie), piecesValise),
+    [profile, piecesValise]
+  );
 
   const [vue, setVue] = useState<Vue>({ nom: "etape" });
   const [etape, setEtape] = useState(1);
@@ -2753,7 +2762,14 @@ function Resultat({
           ) : (
             <div key={c.creneau + c.sousId} className="py-[10px] border-t border-divider first:border-t-0 min-h-[52px]">
               <span className={"block t-label " + (c.evenement ? "text-terracotta" : "text-muted")}>{libelleCreneau(c)}</span>
-              <span className="block text-[12px] text-muted-3 leading-[1.4] mt-[2px]">Aucun look de ta valise ne répond encore à cette occasion.</span>
+              {/* Mariage, cérémonie (06/11/2026, demandé : « on peut dire qu'il n'y a pas de tenues dans le dressing pour cette occasion
+                  s'il n'y en a pas ») : une tenue habillée qui tient compte de la morphologie, de la colorimétrie et du style ne s'invente
+                  pas — la valise ne la complète pas, elle le dit. */}
+              <span className="block text-[12px] text-muted-3 leading-[1.4] mt-[2px]">
+                {c.sousId === "ceremonie"
+                  ? "Ton dressing n'a pas encore de tenue pour un mariage ou une cérémonie."
+                  : "Aucun look de ta valise ne répond encore à cette occasion."}
+              </span>
             </div>
           );
         })}

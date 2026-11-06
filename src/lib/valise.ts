@@ -1,5 +1,6 @@
 import { previsionPour, type Prevision } from "./prevision";
 import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
+import { ajouterCouverture, estBaignade, poolDeBaignade } from "./piecesDeValise";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, saisonCapsuleDuJour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -335,17 +336,25 @@ export function generateurMoteur(
   couleurs: string[],
   genre: "femme" | "homme" | null,
   /** Colorimétrie du profil (30/09/2026) — cf. generateOutfit. */
-  colorimetrie: ColorimetrieMoteur | null = null
+  colorimetrie: ColorimetrieMoteur | null = null,
+  /**
+   * Les pièces de baignade du profil, réservées à la valise (06/11/2026, piecesDeValise.ts). Ajoutées au pool des seules situations
+   * de plage, piscine ou spa : le pool de la valise, reconstitué catégorie par catégorie, les perdrait sinon au profit d'un short ou
+   * d'un haut du dressing.
+   */
+  piecesValise: Item[] = []
 ): Generateur {
   return (poolComplet, s) => {
-    // La contrainte de la situation (chaleur, marche, outdoor) restreint le pool ; le moteur, lui, ne change pas.
-    const pool = sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolComplet, s.contrainte), s.occasion);
+    const avecBain = estBaignade(s) ? [...poolComplet, ...piecesValise.filter((p) => !poolComplet.some((q) => q.id === p.id))] : poolComplet;
+    // La contrainte de la situation (chaleur, marche, outdoor) restreint le pool ; le moteur, lui, ne change pas. En baignade, la tenue
+    // de bain et sa couverture tiennent lieu de vêtements (poolDeBaignade).
+    const pool = sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeBaignade(avecBain, s), s.contrainte), s.occasion);
     if (!pool.length) return null;
     const r = generateOutfitWithFallback(pool, s.meteo, s.occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
     // Les chaussures et le sac ajoutés suivent les règles du moteur (météo, occasion, couleur, saison) : 12/10/2026, demandé « tenir compte des règles du moteur ».
     const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion: s.occasion, meteo: s.meteo });
-    return ids ? { ids, elargie: r.occasionRelachee } : null;
+    return ids ? { ids: ajouterCouverture(ids, pool, s), elargie: r.occasionRelachee } : null;
   };
 }
 

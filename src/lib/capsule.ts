@@ -13,6 +13,7 @@ import {
   type StyleId,
 } from "./profile";
 import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, OccasionKey, Season, Tons } from "./types";
+import { estPieceDeValise } from "./piecesDeValise";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
 export function weatherSeasonBucket(temp: number): Season {
@@ -881,6 +882,9 @@ export function computeDefaultCapsule(
   /** Couture d'audit — cf. SelectionStrategy. La production ne renseigne jamais ce paramètre. */
   strategy: SelectionStrategy = STRATEGIE_PRODUCTION
 ): CatalogItem[] {
+  // Les pièces réservées à la valise (maillots, surchemises de plage, 06/11/2026, piecesDeValise.ts) n'entrent dans aucune capsule :
+  // écartées ici, à la source, elles ne reviennent pas non plus par les filets de sécurité qui repiochent dans `sourcePool`.
+  sourcePool = sourcePool.filter((it) => !estPieceDeValise(it));
   const excluded = new Set(excludedIds);
   let base = sourcePool.filter((it) => !excluded.has(it.id));
 
