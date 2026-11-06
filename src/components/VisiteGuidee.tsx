@@ -27,6 +27,25 @@ const DELAI_AVANT_VISITE = 900;
 /** Le temps maximal d'attente de la première cible. */
 const ATTENTE_MAX_CIBLE = 4000;
 
+/**
+ * Remonte la cible si la barre du bas, posée par-dessus le contenu, la recouvre (06/11/2026 : sur 360 × 640, les catégories de la
+ * Capsule passaient à moitié dessous). Driver.js ne fait défiler que vers une cible hors de l'écran : il ignore la barre. Seule la
+ * zone de défilement qui contient la cible bouge, et seulement de ce qui manque.
+ */
+function degagerDeLaBarre(element: Element | undefined): void {
+  const barre = document.querySelector("[data-barre-du-bas]");
+  if (!element || !barre) return;
+  const manque = element.getBoundingClientRect().bottom + 16 - barre.getBoundingClientRect().top;
+  if (manque <= 0) return;
+  for (let zone = element.parentElement; zone; zone = zone.parentElement) {
+    // Le contenu dépasse : c'est la zone qui défile. Son `overflow` ne dit rien ici, Driver.js le passe à `hidden` pendant la visite.
+    if (zone.scrollHeight > zone.clientHeight + 1) {
+      zone.scrollTop += manque;
+      return;
+    }
+  }
+}
+
 function attendreCible(selecteur: string, max: number, signal: { annule: boolean }): Promise<boolean> {
   return new Promise((resolve) => {
     const debut = Date.now();
@@ -89,7 +108,9 @@ export default function VisiteGuidee() {
       if (signal.annule) return;
       const steps: DriveStep[] = etapes.map((e, i) => ({
         element: selecteurCible(e.cible),
+        onHighlightStarted: degagerDeLaBarre,
         popover: {
+          ...(e.cote ? { side: e.cote, align: "center" as const } : {}),
           title: t(e.titre),
           description: t(e.texte),
           showButtons: i === 0 ? ["next", "close"] : ["next", "previous", "close"],

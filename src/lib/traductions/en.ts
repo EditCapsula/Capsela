@@ -223,13 +223,14 @@ export const EN: Record<string, string> = {
   "Retrouve tout, vite": "Find everything, fast",
   "Cherche, filtre par catégorie ou trie ton dressing.": "Search, filter by category or sort your wardrobe.",
   "Ta capsule de saison": "Your seasonal capsule",
-  "Touche la saison pour découvrir la capsule d'une autre saison.": "Tap the season to discover the capsule for another season.",
-  "Quatre façons de la parcourir": "Four ways to browse it",
-  "Compose une tenue, explore les pièces, découvre les pièces clés et les détails de ta capsule.":
-    "Put together an outfit, explore the pieces, discover the key pieces and the details of your capsule.",
+  "Change de saison pour découvrir les pièces sélectionnées pour une autre période de l'année.":
+    "Switch seasons to discover the pieces selected for another time of year.",
+  "Quatre façons de découvrir ta capsule": "Four ways to discover your capsule",
+  "Compose une tenue, explore ta sélection, retrouve tes pièces clés et découvre les détails de ta capsule.":
+    "Put together an outfit, explore your selection, find your key pieces and discover the details of your capsule.",
   "Compose ta tenue": "Put together your outfit",
-  "Choisis une catégorie, puis fais défiler ses pièces avec les flèches ou d'un glissement.":
-    "Choose a category, then browse its pieces with the arrows or a swipe.",
+  "Choisis une catégorie pour découvrir les pièces de ta capsule, puis sélectionne celles qui composeront ton look.":
+    "Choose a category to discover the pieces in your capsule, then select the ones that will make up your look.",
 
   // --- Réglages Capsela : Aide & Support (05/11/2026) ---
   "Aide & Support": "Help & Support",

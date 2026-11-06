@@ -13,6 +13,11 @@ export type IdVisite = "accueil" | "dressing" | "capsule";
 export interface EtapeVisite {
   /** La valeur de l'attribut `data-tour` de l'élément mis en évidence. */
   cible: string;
+  /**
+   * Le côté de l'élément où poser l'infobulle (option native `popover.side` de Driver.js) ; sans, Driver.js choisit. À fixer quand
+   * l'infobulle masquerait ce qu'elle désigne ou ce qu'il faut toucher ensuite.
+   */
+  cote?: "top" | "bottom" | "left" | "right";
   titre: string;
   texte: string;
 }
@@ -74,17 +79,20 @@ export const VISITES: readonly Visite[] = [
       {
         cible: "capsule-saison",
         titre: aTraduire("Ta capsule de saison"),
-        texte: aTraduire("Touche la saison pour découvrir la capsule d'une autre saison."),
+        texte: aTraduire("Change de saison pour découvrir les pièces sélectionnées pour une autre période de l'année."),
       },
       {
         cible: "capsule-onglets",
-        titre: aTraduire("Quatre façons de la parcourir"),
-        texte: aTraduire("Compose une tenue, explore les pièces, découvre les pièces clés et les détails de ta capsule."),
+        titre: aTraduire("Quatre façons de découvrir ta capsule"),
+        texte: aTraduire("Compose une tenue, explore ta sélection, retrouve tes pièces clés et découvre les détails de ta capsule."),
       },
       {
-        cible: "capsule-planche",
+        // Les catégories sous la planche (06/11/2026) : l'étape désignait la planche alors que le texte parle des catégories.
+        // L'infobulle se pose au-dessus de la rangée, sur la planche, pour laisser les catégories visibles et touchables.
+        cible: "capsule-categories",
+        cote: "top",
         titre: aTraduire("Compose ta tenue"),
-        texte: aTraduire("Choisis une catégorie, puis fais défiler ses pièces avec les flèches ou d'un glissement."),
+        texte: aTraduire("Choisis une catégorie pour découvrir les pièces de ta capsule, puis sélectionne celles qui composeront ton look."),
       },
     ],
   },

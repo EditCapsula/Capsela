@@ -738,7 +738,6 @@ export default function CapsuleScreen() {
               flèches et le glissement ne changent que la pièce de l'emplacement choisi dessous (brief, 3.2).
             */}
             <div
-              data-tour="capsule-planche"
               className="relative rounded-feuille overflow-hidden"
               style={{ aspectRatio: "100 / 100", background: "var(--color-hero-background)", touchAction: "pan-y" }}
               onTouchStart={(e) => (toucher.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
@@ -817,7 +816,13 @@ export default function CapsuleScreen() {
             </div>
 
             {/* Les emplacements : le choisi en terracotta, sa position discrète dessous (« 3 / 11 », « Sans » pour un emplacement vide). */}
-            <div className="scrollarea -mx-6 px-6 flex gap-[8px] overflow-x-auto mt-[12px] pb-[2px]" role="tablist" aria-label="Pièce à faire varier">
+            {/* data-tour : la 3e étape de la visite guidée de la Capsule (lib/visites.ts). */}
+            <div
+              data-tour="capsule-categories"
+              className="scrollarea -mx-6 px-6 flex gap-[8px] overflow-x-auto mt-[12px] pb-[2px]"
+              role="tablist"
+              aria-label="Pièce à faire varier"
+            >
               {presents.map((e) => {
                 const n = groupes[e.cle].length;
                 const p = position(selection, e.cle, n);
