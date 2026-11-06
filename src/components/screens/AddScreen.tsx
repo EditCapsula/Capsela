@@ -10,6 +10,7 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import { decisionAcces } from "@/lib/autorisations";
 import { lireTicket } from "@/lib/lectureTicket";
 import BadgePremium from "@/components/BadgePremium";
+import Rangee from "@/components/Rangee";
 import { useEffect, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -525,28 +526,84 @@ export default function AddScreen() {
               <span className="w-[64px] h-[64px] rounded-full flex items-center justify-center text-terracotta-deep" style={{ background: "rgba(158,91,67,.12)" }} aria-hidden="true">
                 <CameraIcon taille={28} />
               </span>
-              <div className="font-serif font-medium text-[22px] text-ink mt-[14px]">Photographier ma pièce</div>
+              {/* LES QUATRE FAÇONS D'AJOUTER (06/11/2026, brief « Refonte UX – Page Ajouter une pièce ») : à l'état initial, une seule carte
+                  « Ajouter une pièce » — photo, import, saisie sans photo, ticket. Une fois la saisie manuelle ouverte (ou en modification),
+                  la carte redevient l'invitation à ajouter une photo d'avant : le parcours de saisie ne change pas. */}
+              <div className="font-serif font-medium text-[22px] text-ink mt-[14px]">{etat === "initial" ? "Ajouter une pièce" : "Photographier ma pièce"}</div>
               <div className="text-[12.5px] text-[#5C5648] mt-1 leading-[1.45]">
-                Sur un fond uni, à la lumière du jour.
-                <br />
-                Tu peux photographier plusieurs vêtements en même temps.
+                {etat === "initial" ? (
+                  "Choisis comment tu souhaites ajouter un vêtement à ton dressing."
+                ) : (
+                  <>
+                    Sur un fond uni, à la lumière du jour.
+                    <br />
+                    Tu peux photographier plusieurs vêtements en même temps.
+                  </>
+                )}
               </div>
               <div className="flex flex-col gap-2 w-full mt-[20px]">
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="h-[48px] rounded-full bg-terracotta-deep text-[#FBF3EA] text-[13.5px] font-semibold cursor-pointer"
+                  className="h-[48px] rounded-full bg-terracotta-deep text-[#FBF3EA] text-[13.5px] font-semibold cursor-pointer flex items-center justify-center gap-2"
                 >
+                  <CameraIcon />
                   Prendre une photo
                 </button>
                 <button
                   type="button"
                   onClick={() => galerieInputRef.current?.click()}
-                  className="h-[48px] rounded-full border border-border bg-cream text-ink text-[13.5px] font-semibold cursor-pointer"
+                  className="h-[48px] rounded-full border border-border bg-cream text-ink text-[13.5px] font-semibold cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Importer
+                  <GalerieIcon />
+                  {etat === "initial" ? "Importer une photo" : "Importer"}
                 </button>
               </div>
+              {etat === "initial" && (
+                <div className="w-full mt-[18px] border-t border-border text-left">
+                  <Rangee onClick={() => setSaisieManuelle(true)} className="px-0 py-[12px] min-h-[56px]">
+                    <span className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3zM14.5 7.5l3 3" />
+                      </svg>
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block t-titre-ligne text-ink">Saisir sans photo</span>
+                      <span className="block text-[12px] text-[#5C5648] leading-[1.35] mt-[2px]">Ajouter manuellement les informations</span>
+                    </span>
+                    <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
+                  </Rangee>
+                  {creation && (
+                    <Rangee
+                      onClick={() => void choisirTicket()}
+                      disabled={lectureTicket === "en_cours" || lectureTicket === "verification"}
+                      className="px-0 py-[12px] min-h-[56px] disabled:opacity-60"
+                    >
+                      <span className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center" aria-hidden="true">
+                        {lectureTicket === "en_cours" ? (
+                          <LoadingSpinner size={14} />
+                        ) : (
+                          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L6 21V3zM9 8h6M9 12h6M9 16h3" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="t-titre-ligne text-ink">Ajouter depuis un ticket de caisse</span>
+                          {/* Le badge reste pendant la phase de test (01/11/2026) : la fonctionnalité sera Premium au lancement, cf. autorisations.ts.
+                              L'accès passe toujours par choisirTicket (decisionAcces « LIRE_TICKET ») : l'affichage ne décide de rien. */}
+                          <BadgePremium />
+                        </span>
+                        <span className="block text-[12px] text-[#5C5648] leading-[1.35] mt-[2px]">
+                          {lectureTicket === "en_cours" ? "Lecture du ticket…" : "Importer un ticket pour retrouver tes achats"}
+                        </span>
+                      </span>
+                      <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
+                    </Rangee>
+                  )}
+                </div>
+              )}
             </div>
             {etat === "initial" && (
               <section className="mt-[22px]" aria-labelledby="ajout-conseils">
@@ -625,31 +682,6 @@ export default function AddScreen() {
           </div>
         )}
 
-        {etat === "initial" && (
-          <button type="button" onClick={() => setSaisieManuelle(true)} className="mt-4 min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer">
-            Saisir la pièce sans photo
-          </button>
-        )}
-        {etat === "initial" && creation && (
-          <button
-            type="button"
-            onClick={() => void choisirTicket()}
-            disabled={lectureTicket === "en_cours" || lectureTicket === "verification"}
-            className="mt-1 min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer flex items-center gap-2 disabled:opacity-60"
-          >
-            {lectureTicket === "en_cours" ? (
-              <>
-                <LoadingSpinner size={14} /> Lecture du ticket…
-              </>
-            ) : (
-              <>
-                Ajouter depuis un ticket de caisse
-                {/* Le badge reste pendant la phase de test (01/11/2026) : la fonctionnalité sera Premium au lancement, cf. autorisations.ts. */}
-                <BadgePremium />
-              </>
-            )}
-          </button>
-        )}
         {(lectureTicket === "echec" || lectureTicket === "vide") && (
           <div role="alert" className="mt-[10px] rounded-tuile bg-warm-bg border border-sand-border px-4 py-[12px]">
             <div className="text-[13px] text-ink font-medium leading-[1.35]">
