@@ -93,6 +93,7 @@ const SUBTYPE_EN: Record<string, string> = {
   "surchemise de plage": "lightweight beach cover-up shirt",
   "chemise de plage": "short-sleeved beach shirt",
   "kimono de plage": "lightweight beach kimono cover-up",
+  "chaussures de randonnée": "hiking boots",
   blouse: "blouse",
   débardeur: "tank top",
   body: "bodysuit",

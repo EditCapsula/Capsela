@@ -14,7 +14,16 @@ import type { CategoryKey, Item } from "./types";
  * situations de baignade.
  */
 
-export const SOUS_TYPES_RESERVES_VALISE = ["Maillot de bain", "Short de bain", "Surchemise de plage", "Chemise de plage", "Kimono de plage"] as const;
+export const SOUS_TYPES_RESERVES_VALISE = [
+  "Maillot de bain",
+  "Short de bain",
+  "Surchemise de plage",
+  "Chemise de plage",
+  "Kimono de plage",
+  // 06/11/2026, demandé : « Pour des randos dans les tenues vacances il faut intégrer une paire de chaussures de randonnée pour femme
+  // et homme. » Une paire par genre, sans style ; seulement pour les journées de randonnée.
+  "Chaussures de randonnée",
+] as const;
 
 /** Une pièce réservée à la valise : jamais proposée ailleurs. */
 export const estPieceDeValise = (it: Pick<Item, "subtype">): boolean =>
@@ -35,6 +44,34 @@ const PLEIN_AIR = ["plage", "piscine"];
 export const ACTIVITES_DE_VACANCES = ["plage", "piscine", "spa", "randonnee"] as const;
 export const estActiviteDeVacances = (sousId: string | null | undefined): boolean =>
   Boolean(sousId) && (ACTIVITES_DE_VACANCES as readonly string[]).includes(sousId as string);
+
+/** Une journée de randonnée au programme. */
+export const estRandonnee = (s: { sousIds?: string[] }): boolean => (s.sousIds ?? []).includes("randonnee");
+const estChaussureDeRando = (it: Pick<Item, "subtype">) => it.subtype === "Chaussures de randonnée";
+
+/** La paire de randonnée de CE profil : celle de son genre d'abord, puis une paire unisexe ; jamais celle de l'autre genre. */
+export function chaussuresDeRandonnee(catalogue: readonly CatalogItem[], profile: Pick<Profile, "gender">): CatalogItem[] {
+  const autreGenre = profile.gender === "homme" ? "femme" : "homme";
+  const paires = catalogue.filter((it) => estChaussureDeRando(it) && it.genre !== autreGenre);
+  const sienne = paires.find((it) => it.genre === profile.gender) ?? paires[0];
+  return sienne ? [sienne] : [];
+}
+
+/** Toutes les pièces réservées de ce profil : baignade et randonnée. */
+export function piecesReserveesDuProfil(catalogue: readonly CatalogItem[], profile: Pick<Profile, "gender" | "styles">, couleurs: readonly string[]): CatalogItem[] {
+  return [...piecesDeBaignade(catalogue, profile, couleurs), ...chaussuresDeRandonnee(catalogue, profile)];
+}
+
+/** Les pièces réservées qui servent à CETTE situation : la tenue de bain à la baignade, la paire de randonnée à la randonnée. */
+export function piecesPourLaSituation<T extends Pick<Item, "subtype">>(pieces: readonly T[], s: { sousIds?: string[] }): T[] {
+  return pieces.filter((p) => (estBaignade(s) && !estChaussureDeRando(p)) || (estRandonnee(s) && estChaussureDeRando(p)));
+}
+
+/** Une journée de randonnée se marche en chaussures de randonnée : quand le pool en a une paire, les autres chaussures sortent. */
+export function poolDeRandonnee(pool: Item[], s: { sousIds?: string[] }): Item[] {
+  if (!estRandonnee(s) || !pool.some(estChaussureDeRando)) return pool;
+  return pool.filter((it) => it.cat !== "chaussures" || estChaussureDeRando(it));
+}
 
 export const estBaignade = (s: { sousIds?: string[] }): boolean =>
   (s.sousIds ?? []).some((id) => (SOUS_OCCASIONS_BAIGNADE as readonly string[]).includes(id));

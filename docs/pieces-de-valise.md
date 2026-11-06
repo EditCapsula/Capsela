@@ -44,3 +44,12 @@ même activité, en ne piochant que dans les pièces de la valise (le vivier de 
 piecesDeLaValisePourLeJour) — deux hauts et deux bas, ou une robe, suffisent à varier. Quota (arbitré le 06/11/2026) : le même que
 « Autre tenue », 2 par jour sans abonnement, aucun pour Premium (déjà le cas). La valise deviendra une fonctionnalité Premium : le
 quota ne s'y appliquera alors plus, de fait.
+
+## Chaussures de randonnée (06/11/2026)
+
+Demandé : « Pour des randos dans les tenues vacances il faut intégrer une paire de chaussures de randonnée pour femme et homme. »
+Une paire par genre, sans style (`docs/capsules/valise/chaussures-de-randonnee.sql`), sous_type « Chaussures de randonnée »,
+réservée à la valise. `chaussuresDeRandonnee` choisit celle du genre du profil (jamais l'autre) ; `piecesPourLaSituation` ne la
+donne qu'aux journées de randonnée ; `poolDeRandonnee` en fait la seule chaussure de ces journées. Pour le moteur, une chaussure de
+sport (Baskets). Les affaires de voyage ne redemandent plus « Chaussures de randonnée » quand la paire est dans la valise (ni
+« Maillot de bain » quand le maillot ou le short de bain y est).

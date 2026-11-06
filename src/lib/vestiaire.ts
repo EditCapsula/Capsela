@@ -330,6 +330,8 @@ const SHOE_TYPE_MAP: Record<string, ShoeType> = {
   slingbacks: "Slingbacks",
   derbies: "Derbies",
   "chaussures d'intérieur": "Chaussures d'intérieur",
+  // Réservée à la valise (06/11/2026, piecesDeValise.ts) : une chaussure de sport pour le moteur ; son type exact reste le sous_type.
+  "chaussures de randonnée": "Baskets",
 };
 
 export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {

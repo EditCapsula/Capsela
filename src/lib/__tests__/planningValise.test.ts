@@ -61,6 +61,35 @@ describe("filtrerParContrainte — un filtre du pool, jamais une règle du moteu
   it("marche : pas d'escarpins ; une chaussure sans type reste", () => {
     expect(ids(filtrerParContrainte(pool, "marche"))).toEqual([1, 2, 3, 4, 5, 6, 8, 9]);
   });
+  it("marche (06/11/2026) : baskets, bottines, bottes en hiver, sandales en été ; ni mocassins, ni ballerines, ni espadrilles", () => {
+    const p = [
+      piece(10, "chaussures", { shoeType: "Mocassins" }),
+      piece(11, "chaussures", { shoeType: "Ballerines" }),
+      piece(12, "chaussures", { shoeType: "Espadrilles" }),
+      piece(13, "chaussures", { shoeType: "Bottines" }),
+      piece(5, "chaussures", { shoeType: "Sandales" }),
+      piece(6, "chaussures", { shoeType: "Bottes" }),
+      piece(8, "chaussures", { shoeType: "Baskets" }),
+    ];
+    expect(ids(filtrerParContrainte(p, "marche", { season: "Automne / Hiver" }))).toEqual([13, 6, 8]);
+    expect(ids(filtrerParContrainte(p, "marche", { season: "Printemps / Été" }))).toEqual([13, 5, 8]);
+  });
+  it("marche : le confort d'abord, sans rien exclure quand rien d'autre n'existe dans la catégorie", () => {
+    const p = [
+      piece(20, "jupe", { subtype: "Crayon" }),
+      piece(21, "jupe", { subtype: "Midi" }),
+      piece(22, "robe", { niveauFormalite: 4 }),
+      piece(23, "pantalon", { coupe: "Serré" }),
+      piece(24, "pantalon", { coupe: "Ample" }),
+      piece(8, "chaussures", { shoeType: "Baskets" }),
+    ];
+    // La jupe crayon et le pantalon serré sortent (une autre jupe, un autre pantalon restent) ; la robe habillée reste, seule de sa catégorie.
+    expect(ids(filtrerParContrainte(p, "marche", { season: "Printemps / Été" }))).toEqual([21, 22, 24, 8]);
+  });
+  it("marche, sans aucune chaussure de marche : la règle d'avant (ni talons), plutôt qu'une journée sans tenue", () => {
+    const p = [piece(1, "haut"), piece(10, "chaussures", { shoeType: "Mocassins" }), piece(7, "chaussures", { shoeType: "Escarpins" })];
+    expect(ids(filtrerParContrainte(p, "marche", { season: "Printemps / Été" }))).toEqual([1, 10]);
+  });
   it("outdoor : baskets, bottines, bottes seulement parmi les chaussures typées ; sans type, elle reste", () => {
     expect(ids(filtrerParContrainte(pool, "outdoor"))).toEqual([1, 2, 3, 4, 6, 8, 9]);
   });

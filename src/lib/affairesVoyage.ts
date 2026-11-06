@@ -45,6 +45,11 @@ export interface AffaireVoyage {
 export interface ContexteSejour {
   programme: readonly ItemProgramme[];
   meteos: readonly MeteoJour[];
+  /**
+   * Les types des pièces de la valise (06/11/2026) : une pièce réservée déjà dans la valise (maillot, chaussures de randonnée) n'est
+   * pas redemandée parmi les affaires.
+   */
+  sousTypes?: readonly string[];
 }
 
 const au = (programme: readonly ItemProgramme[], ...ids: string[]) => ids.find((id) => programme.some((p) => p.id === id));
@@ -98,7 +103,7 @@ export function affairesDuSejour(ctx: ContexteSejour): AffaireVoyage[] {
   const eau = au(programme, "plage", "piscine");
   if (eau) {
     const raison = `${LIBELLE_PROGRAMME[eau]} au programme`;
-    out.push({ id: "maillot", libelle: "Maillot de bain", groupe: "equipement", raison });
+    if (!ctx.sousTypes?.some((t) => t === "Maillot de bain" || t === "Short de bain")) out.push({ id: "maillot", libelle: "Maillot de bain", groupe: "equipement", raison });
     out.push({ id: "serviette", libelle: "Serviette de plage", groupe: "equipement", raison });
     out.push({ id: "tongs", libelle: "Tongs ou sandales de plage", groupe: "equipement", raison });
     out.push({ id: "sac_plage", libelle: "Sac de plage", groupe: "equipement", raison });
@@ -113,7 +118,8 @@ export function affairesDuSejour(ctx: ContexteSejour): AffaireVoyage[] {
   else if (max !== null && max >= SEUIL_CHALEUR) out.push({ id: "creme_solaire", libelle: "Crème solaire", groupe: "sante", raison: `Chaleur attendue (jusqu'à ${max}°)` });
 
   if (au(programme, "randonnee")) {
-    out.push({ id: "chaussures_rando", libelle: "Chaussures de randonnée", groupe: "equipement", raison: "Randonnée au programme" });
+    if (!ctx.sousTypes?.includes("Chaussures de randonnée"))
+      out.push({ id: "chaussures_rando", libelle: "Chaussures de randonnée", groupe: "equipement", raison: "Randonnée au programme" });
     out.push({ id: "gourde", libelle: "Gourde", groupe: "equipement", raison: "Randonnée au programme" });
   }
   if (au(programme, "trajet")) {

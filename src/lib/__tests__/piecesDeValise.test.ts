@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeDefaultCapsule } from "../capsule";
 import type { CatalogItem } from "../catalog";
 import { EMPTY_PROFILE, type Profile } from "../profile";
-import { ajouterCouverture, estBaignade, estPieceDeValise, piecesDeBaignade, poolDeBaignade } from "../piecesDeValise";
+import { ajouterCouverture, chaussuresDeRandonnee, estBaignade, estPieceDeValise, piecesDeBaignade, piecesPourLaSituation, poolDeBaignade, poolDeRandonnee } from "../piecesDeValise";
 import { generateurMoteur, type SituationValise } from "../valise";
 import { at, item } from "./fixtures";
 
@@ -78,5 +78,34 @@ describe("le look de vacances, tenue du jour le jour de son activité (06/11/202
     expect(["plage", "piscine", "spa", "randonnee"].every(estActiviteDeVacances)).toBe(true);
     expect(estActiviteDeVacances("visites")).toBe(false);
     expect(estActiviteDeVacances(null)).toBe(false);
+  });
+});
+
+describe("chaussures de randonnée (06/11/2026) : une paire par genre, pour les seules journées de randonnée", () => {
+  const rando = (id: number, genre: string) =>
+    item({ id, category: "chaussures", name: `Rando ${genre}`, sous_type: "Chaussures de randonnée", genre, saison_capsule: "Printemps, Été, Automne, Hiver", occasions: "sport" });
+  const catalogue: CatalogItem[] = [rando(1, "femme"), rando(2, "homme"), maillot(3, "Minimaliste")];
+
+  it("réservées à la valise, chaussure de sport pour le moteur", () => {
+    expect(estPieceDeValise(catalogue[0])).toBe(true);
+    expect(catalogue[0].shoeType).toBe("Baskets");
+  });
+  it("la paire du genre du profil, jamais celle de l'autre", () => {
+    expect(chaussuresDeRandonnee(catalogue, { gender: "femme" }).map((p) => p.name)).toEqual(["Rando femme"]);
+    expect(chaussuresDeRandonnee(catalogue, { gender: "homme" }).map((p) => p.name)).toEqual(["Rando homme"]);
+    expect(chaussuresDeRandonnee([rando(4, "unisexe")], { gender: "homme" }).map((p) => p.name)).toEqual(["Rando unisexe"]);
+  });
+  it("une situation reçoit ses pièces : la paire à la randonnée, le maillot à la plage", () => {
+    const pieces = [catalogue[0], catalogue[2]];
+    expect(piecesPourLaSituation(pieces, { sousIds: ["randonnee"] }).map((p) => p.name)).toEqual(["Rando femme"]);
+    expect(piecesPourLaSituation(pieces, { sousIds: ["plage"] }).map((p) => p.name)).toEqual(["Maillot Minimaliste"]);
+    expect(piecesPourLaSituation(pieces, { sousIds: ["visites"] })).toEqual([]);
+  });
+  it("à la randonnée, la paire de randonnée remplace les autres chaussures ; ailleurs, rien ne change", () => {
+    const baskets = item({ id: 11, category: "chaussures", name: "Baskets", sous_type: "Baskets" });
+    const haut = item({ id: 10, category: "hauts", name: "T-shirt", sous_type: "T-shirt" });
+    const pool = [haut, baskets, catalogue[0]];
+    expect(poolDeRandonnee(pool, { sousIds: ["randonnee"] }).map((p) => p.name)).toEqual(["T-shirt", "Rando femme"]);
+    expect(poolDeRandonnee(pool, { sousIds: ["visites"] })).toEqual(pool);
   });
 });
