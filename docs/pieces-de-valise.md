@@ -36,3 +36,10 @@ le programme prévoit son activité** (plage, piscine, spa, randonnée ; arbitr�
 
 - Un seul modèle par style : la morphologie ne départage pas ces pièces ; la couleur de la palette, quand elle existe, si.
 - À lancer **après** la mise en ligne du code : avant, ces pièces entreraient dans les capsules.
+
+## Piste à instruire (06/11/2026, proposée par la propriétaire)
+
+« Autre tenue » sur les slides du carrousel d'un séjour (désactivé depuis le 06/11/2026, slidesDuSejour) : recomposer un look pour la
+même activité, en ne piochant que dans les pièces de la valise (le vivier de la tenue du jour pendant un séjour,
+piecesDeLaValisePourLeJour) — deux hauts et deux bas, ou une robe, suffisent à varier. À trancher : le tirage consomme-t-il le quota
+« Autre tenue » (2 par jour), ou reste-t-il libre pendant le voyage, puisqu'il ne réorganise que les pièces emportées ?
