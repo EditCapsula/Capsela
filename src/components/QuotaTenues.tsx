@@ -9,6 +9,7 @@ import { fournisseurVideo, peutProposerVideo } from "@/lib/videoRecompense";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import Badge from "@/components/Badge";
+import { I_COURONNE, Icone } from "@/components/ProfilUI";
 
 /**
  * QUOTA DES TENUES ET SON GATE — sortis de TenuesScreen le 26/09/2026 pour
@@ -151,16 +152,16 @@ export function useQuotaTenues() {
             le fournisseur AdMob, la tenue n'est accordée que par la base après la confirmation de Google (vérification serveur). */}
         <BottomSheet title="C'est tout pour aujourd'hui" open={quotaAtteint} onClose={() => setQuotaAtteint(false)}>
           <div className="flex flex-col">
-            <div className="text-[13px] text-muted-3 leading-[1.5]" style={{ textWrap: "pretty" }}>
+            <div className="t-chapeau text-muted-3" style={{ textWrap: "pretty" }}>
               Tu as découvert tes {limiteDuJour} alternatives gratuites du jour. Ta tenue reste disponible et de nouvelles propositions
               arrivent demain matin.
             </div>
-            <div className="flex items-center gap-[12px] mt-4 bg-warm-bg rounded-bloc px-[16px] py-3">
+            <div className="flex items-center gap-3 mt-4 bg-warm-bg rounded-tuile px-4 py-3">
               <span className="text-[15px] font-semibold text-terracotta tabular-nums flex-shrink-0">
                 {dernierQuota?.utilisees ?? limiteDuJour} / {limiteDuJour}
               </span>
               <span aria-hidden="true" className="w-px self-stretch bg-border" />
-              <span className="flex-1 min-w-0 text-[12.5px] text-muted-3">Tes alternatives du jour</span>
+              <span className="flex-1 min-w-0 text-[12.5px] text-muted leading-[1.45]">Tes alternatives du jour</span>
             </div>
 
             {/* LA VIDÉO. Elle n'existe que là où un fournisseur existe (Android, compte gratuit, consentement) ; ailleurs, aucune carte.
@@ -169,35 +170,35 @@ export function useQuotaTenues() {
             {videoProposable && tempsVideo === "propose" && (
               <button
                 onClick={regarderVideo}
-                className="w-full flex items-center gap-3 text-left mt-3 bg-card border border-border rounded-tuile px-[14px] py-[14px] cursor-pointer active:opacity-80"
+                className="w-full flex items-center gap-3 text-left mt-3 bg-card border border-border rounded-tuile px-4 py-[14px] cursor-pointer active:opacity-80"
               >
                 <span className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center" aria-hidden="true">
                   <IconeVideo />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block t-surtitre text-terracotta">Envie d&apos;une tenue supplémentaire ?</span>
+                  <span className="block t-surtitre text-terracotta">Envie d&apos;une tenue supplémentaire ?</span>
                   <span className="flex items-center gap-2 mt-[4px]">
                     <span className="t-titre-ligne text-ink">Regarder une vidéo</span>
                     <Badge tone="doux">Gratuit</Badge>
                   </span>
-                  <span className="block text-[12px] text-muted leading-[1.45] mt-[2px]">Débloque 1 nouvelle tenue dès maintenant.</span>
+                  <span className="block text-[12.5px] text-muted leading-[1.45] mt-[2px]">Débloque 1 nouvelle tenue dès maintenant.</span>
                 </span>
                 <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
               </button>
             )}
             {videoEnAttente && tempsVideo === "propose" && (
-              <Card rayon="tuile" className="mt-3 px-[14px] py-[13px]" aria-live="polite">
-                <div className="text-[13px] font-medium text-ink">Aucune vidéo disponible pour le moment</div>
-                <div className="text-[11px] text-muted leading-[1.45] mt-[2px]">Rouvre cette fenêtre dans quelques instants pour en regarder une.</div>
+              <Card rayon="tuile" className="mt-3 px-4 py-[14px]" aria-live="polite">
+                <div className="t-titre-ligne text-ink">Aucune vidéo disponible pour le moment</div>
+                <div className="text-[12.5px] text-muted leading-[1.45] mt-[2px]">Rouvre cette fenêtre dans quelques instants pour en regarder une.</div>
               </Card>
             )}
 
             {/* Deuxième temps. La feuille reste ouverte : revenir sur une feuille
                 fermée puis rouverte ferait clignoter l'écran. */}
             {tempsVideo === "lecture" && (
-              <Card rayon="tuile" className="mt-3 px-[14px] py-[13px]" aria-live="polite">
-                <div className="text-[13px] font-medium text-ink">Vidéo en cours…</div>
-                <div className="text-[11px] text-muted leading-[1.45] mt-[2px]">
+              <Card rayon="tuile" className="mt-3 px-4 py-[14px]" aria-live="polite">
+                <div className="t-titre-ligne text-ink">Vidéo en cours…</div>
+                <div className="text-[12.5px] text-muted leading-[1.45] mt-[2px]">
                   Encore quelques secondes avant ta nouvelle tenue.
                 </div>
               </Card>
@@ -206,16 +207,16 @@ export function useQuotaTenues() {
             {/* Troisième temps, cas d'échec. Dit UNE fois, sans perte — la tenue
                 et le quota sont intacts — et sans nouvel essai automatique. */}
             {tempsVideo === "verification" && (
-              <Card rayon="tuile" className="mt-3 px-[14px] py-[13px]" aria-live="polite">
-                <div className="text-[13px] font-medium text-ink">Vérification de la vidéo…</div>
-                <div className="text-[11px] text-muted leading-[1.45] mt-[2px]">
+              <Card rayon="tuile" className="mt-3 px-4 py-[14px]" aria-live="polite">
+                <div className="t-titre-ligne text-ink">Vérification de la vidéo…</div>
+                <div className="text-[12.5px] text-muted leading-[1.45] mt-[2px]">
                   Google confirme le visionnage, cela peut prendre quelques secondes.
                 </div>
               </Card>
             )}
             {(tempsVideo === "echec" || tempsVideo === "interrompue" || tempsVideo === "nonConfirmee") && (
-              <Card rayon="tuile" className="mt-3 px-[14px] py-[13px]" aria-live="polite">
-                <div className="text-[12px] text-muted-3 leading-[1.45]">
+              <Card rayon="tuile" className="mt-3 px-4 py-[14px]" aria-live="polite">
+                <div className="text-[12.5px] text-muted leading-[1.45]">
                   {tempsVideo === "echec" && "La vidéo n'a pas pu se charger. Rien n'est perdu : ta tenue et tes tirages du jour sont intacts."}
                   {tempsVideo === "interrompue" &&
                     "La vidéo s'est arrêtée avant la fin, la tenue de plus n'est donc pas accordée. Ta tenue et tes tirages du jour sont intacts."}
@@ -226,20 +227,21 @@ export function useQuotaTenues() {
             )}
 
             {/* PREMIUM, plus valorisé que la vidéo : son encart sur fond beige et le bouton principal. */}
-            <div className="mt-3 bg-warm-bg rounded-tuile px-[14px] pt-[14px] pb-[14px]">
+            <div className="mt-3 bg-warm-bg rounded-tuile px-4 py-[14px]">
               <div className="flex items-center gap-3">
-                <span className="w-11 h-11 flex-shrink-0 rounded-full bg-card text-terracotta flex items-center justify-center text-[18px]" aria-hidden="true">
-                  ✦
+                {/* La couronne de Premium, la même que « Mon abonnement » (ProfilUI, I_COURONNE). */}
+                <span className="w-11 h-11 flex-shrink-0 rounded-full bg-card text-terracotta-deep flex items-center justify-center" aria-hidden="true">
+                  <Icone taille={20}>{I_COURONNE}</Icone>
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block t-surtitre text-terracotta">Envie de plus de liberté ?</span>
-                  <span className="block font-serif font-medium text-[20px] text-ink leading-[1.2] mt-[4px]">Passer à Premium</span>
-                  <span className="block text-[12px] text-muted leading-[1.45] mt-[2px]">Explore autant de tenues que tu le souhaites.</span>
+                  <span className="block t-surtitre text-terracotta">Envie de plus de liberté ?</span>
+                  <span className="block t-titre-ligne text-ink mt-[4px]">Passer à Premium</span>
+                  <span className="block text-[12.5px] text-muted leading-[1.45] mt-[2px]">Explore autant de tenues que tu le souhaites.</span>
                 </span>
               </div>
               <Button
                 variante="principal"
-                className="mt-3"
+                className="mt-[14px]"
                 onClick={() => {
                   setQuotaAtteint(false);
                   actions.goPremium();
@@ -250,7 +252,7 @@ export function useQuotaTenues() {
             </div>
             <button
               onClick={() => setQuotaAtteint(false)}
-              className="w-full rounded-full text-[13px] text-muted-3 cursor-pointer mt-2"
+              className="w-full rounded-full text-[13px] text-muted cursor-pointer mt-2"
               style={{ minHeight: 44 }}
             >
               Plus tard
