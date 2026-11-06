@@ -673,7 +673,7 @@ export default function ImporterTenueScreen() {
                           ? "Un visuel indicatif, créé par Capsela d'après ton ticket : ce n'est pas la photo de ton article."
                           : b.categorieAConfirmer
                             ? "Choisis la catégorie : Capsela créera un visuel indicatif, ou ajoute ta photo."
-                            : "Pas de visuel pour cet article : ajoute ta photo, ou garde la couleur."}
+                            : "Pas de visuel pour cet article : ajoute ta photo."}
                       </p>
                       <div className="mt-[10px] flex flex-wrap gap-2">
                         {visuel?.etat === "propose" && visuel.url && !descriptionChangee && (
@@ -952,9 +952,10 @@ export default function ImporterTenueScreen() {
             >
               <CameraIcon /> {photoReelle ? "Changer la photo de la pièce" : "Ajouter la photo de la pièce"}
             </button>
-            <div className="text-center text-[12px] text-[#5C5648] mt-2 min-h-[16px]">
-              {!b.coche ? "Plus de place dans ton dressing gratuit." : manques.length > 0 ? phraseManque(manques) : "La photo est facultative : tout reste modifiable depuis ton dressing."}
-            </div>
+            {/* Seulement ce qui empêche l'ajout (06/11/2026, demandé : « Supprime la phrase la photo est facultative »). */}
+            {(!b.coche || manques.length > 0) && (
+              <div className="text-center text-[12px] text-[#5C5648] mt-2">{!b.coche ? "Plus de place dans ton dressing gratuit." : phraseManque(manques)}</div>
+            )}
           </div>
         );
       })()}
