@@ -16,6 +16,14 @@ const ctx = (programme: string[], meteos = [m(18)]): ContexteSejour => ({ progra
 const ids = (c: ContexteSejour) => affairesDuSejour(c).map((a) => a.id);
 
 describe("affairesDuSejour — liées à des données réelles, jamais devinées", () => {
+  it("un seul maillot pour la plage, la piscine et le spa, qui nomme ses activités (07/11/2026)", () => {
+    const maillots = (p: string[]) => affairesDuSejour(ctx(p)).filter((a) => /maillot/i.test(a.libelle));
+    expect(maillots(["plage", "piscine", "spa"]).map((a) => a.raison)).toEqual(["Plage, Piscine, Spa au programme"]);
+    expect(maillots(["spa"]).map((a) => a.raison)).toEqual(["Spa au programme"]);
+    expect(maillots(["visites"])).toEqual([]);
+    expect(affairesDuSejour({ ...ctx(["plage", "spa"]), sousTypes: ["Maillot de bain"] }).filter((a) => /maillot/i.test(a.libelle))).toEqual([]);
+  });
+
   it("étoffé le 19/10/2026 : linge, toilette, trousse de secours, électronique en essentiels", () => {
     const a = ids(ctx(["visites"]));
     for (const id of ["sous_vetements", "chaussettes", "pyjama", "sac_linge", "gel_douche", "trousse_secours", "batterie", "carte_vitale"]) expect(a).toContain(id);
