@@ -16,7 +16,7 @@ insert into vestiaire_universel (name, category, genre, styles, saison_capsule, 
   ('Claquettes de plage', 'chaussures', 'homme', null, 'Printemps, Été, Automne, Hiver', 'Claquettes', null, 'Noir', '#2A2724', null, 'quotidien,cocooning,vacances,plage,piscine,spa', 'decontracte', 'base', false, false, 'missing', false),
   ('Robe de plage en coton', 'robes', 'femme', null, 'Printemps, Été', 'Robe de plage', 'Coton', 'Blanc', '#F2EEE6', 'sans', 'quotidien,vacances,plage,piscine', 'decontracte', 'piece_unique', false, false, 'missing', false),
   ('Veste imperméable légère', 'vestes_blazers', 'femme', null, 'Printemps, Été, Automne, Hiver', 'Veste imperméable', 'Nylon', 'Marine', '#3A4152', 'longues', 'quotidien,voyage,vacances', 'decontracte', 'calque', false, false, 'missing', false),
-  ('Veste imperméable légère', 'vestes_blazers', 'homme', null, 'Printemps, Été, Automne, Hiver', 'Veste imperméable', 'Nylon', 'Kaki', '#5B5E3C', 'longues', 'quotidien,voyage,vacances', 'decontracte', 'calque', false, false, 'missing', false);
+  ('Veste imperméable légère', 'vestes_blazers', 'homme', null, 'Printemps, Été, Automne, Hiver', 'Veste imperméable', 'Nylon', 'Vert olive', '#5B5E3C', 'longues', 'quotidien,voyage,vacances', 'decontracte', 'calque', false, false, 'missing', false);
 
 -- 2. Contrôle : les cinq pièces.
 select id, name, genre, category, sous_type, occasions, image_status
@@ -27,3 +27,8 @@ select id, name, genre, category, sous_type, occasions, image_status
 -- Annulation (retour arrière seulement, avant toute utilisation) :
 -- delete from vestiaire_universel where sous_type in ('Claquettes', 'Robe de plage', 'Veste imperméable')
 --    and name in ('Claquettes de plage', 'Robe de plage en coton', 'Veste imperméable légère');
+
+-- Correctif du 07/11/2026 (id 1359, veste homme) : « Kaki » se décrit « khaki », que le visuel a rendu beige sable ; la couleur de la
+-- fiche est un vert olive (#5B5E3C). Couleur renommée « Vert olive » (« olive green ») et visuel remis à générer, avec accord :
+-- update vestiaire_universel set couleur_dominante = 'Vert olive', url_image = null, image_status = 'missing'
+--  where id = 1359 and name = 'Veste imperméable légère';
