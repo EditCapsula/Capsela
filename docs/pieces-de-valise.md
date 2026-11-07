@@ -90,3 +90,11 @@ un look Voyage · trajet avec un blazer du dressing (« Il faut que ce soit plus
 - **Jours sans activité** : aucun look n'y est ajouté (arbitré le 06/11/2026 : « Non »).
 - **La paire de randonnée sans tenue de sport hors randonnée** (demandé le même jour) : aux trajets et aux journées de marche, un
   vêtement de sport sort de sa catégorie quand il y reste un vêtement ordinaire (`sansTenueDeSport`).
+
+### Le spa sans look (07/11/2026)
+
+Signalé : les journées « Spa · détente » d'une valise pour Pékin, toujours « Aucun look ». Cause (DÉMONTRÉ, 0 look sur 20, avec ou
+sans maillot) : le spa passe par Cocooning, où le moteur refuse tout sac (R-B14) et n'admet que des chaussures d'intérieur (R-B13) ;
+la valise exigeait pourtant un sac dans chaque look. Correctif : `completerChaussuresEtSac` n'ajoute pas de sac à un look « chez soi »,
+et `lookAChaussuresEtSac` accepte un look sans sac quand ses chaussures sont des chaussures d'intérieur (20 sur 20 après). Sans
+chaussures d'intérieur dans la valise ni la capsule, le spa reste sans look : la règle R-B13 n'est pas touchée.

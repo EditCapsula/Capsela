@@ -4,7 +4,7 @@ import { ajouterCouverture, estJourneeDeMarche, estRandonnee, piecesPourLaSituat
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, saisonCapsuleDuJour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
-import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, generateOutfitWithFallback } from "./logic";
+import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, estContexteMaison, generateOutfitWithFallback } from "./logic";
 import { composeWardrobePool } from "./selectors";
 import type { CapsuleSeason, CategoryKey, Item, OccasionKey, ShoeType } from "./types";
 
@@ -407,6 +407,9 @@ export function completerChaussuresEtSac(
   const sortie = [...ids];
   for (const cat of ["chaussures", "sac"] as const) {
     if (sortie.some((id) => pool.find((p) => p.id === id)?.cat === cat)) continue;
+    // Pas de sac pour un look « chez soi » (Cocooning : le spa du séjour), R-B14 du moteur (07/11/2026, signalé : les journées de spa
+    // d'une valise toujours sans look — la valise exigeait un sac que le moteur refuse à cette occasion).
+    if (cat === "sac" && moteur && estContexteMaison(moteur.occasion)) continue;
     const dejaLa = pool.filter((p) => sortie.includes(p.id));
     const candidats = moteur
       ? candidatsDeRemplacement(dejaLa, pool.filter((p) => !sortie.includes(p.id)), -1, cat, moteur.occasion, "Présentiel", "Verre", moteur.meteo).filter((p) => p.cat === cat)
@@ -417,9 +420,16 @@ export function completerChaussuresEtSac(
   return sortie;
 }
 
-/** Une tenue qui a des chaussures ET un sac — la règle des looks de valise (valises gardées avant le 04/10/2026 comprises). */
-export const lookAChaussuresEtSac = (ids: number[], pieces: Item[]): boolean =>
-  (["chaussures", "sac"] as const).every((cat) => ids.some((id) => pieces.find((p) => p.id === id)?.cat === cat));
+/**
+ * Une tenue qui a des chaussures ET un sac — la règle des looks de valise (valises gardées avant le 04/10/2026 comprises). Exception
+ * (07/11/2026) : un look « chez soi » (spa), reconnu à ses chaussures d'intérieur (R-B13), n'a pas de sac (R-B14).
+ */
+export const lookAChaussuresEtSac = (ids: number[], pieces: Item[]): boolean => {
+  const portees = ids.map((id) => pieces.find((p) => p.id === id)).filter((p): p is Item => !!p);
+  const chaussures = portees.filter((p) => p.cat === "chaussures");
+  if (!chaussures.length) return false;
+  return portees.some((p) => p.cat === "sac") || chaussures.every((p) => p.shoeType === "Chaussures d'intérieur");
+};
 
 export interface LookValise {
   ids: number[];
