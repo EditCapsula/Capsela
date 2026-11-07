@@ -97,4 +97,7 @@ Signalé : les journées « Spa · détente » d'une valise pour Pékin, toujour
 sans maillot) : le spa passe par Cocooning, où le moteur refuse tout sac (R-B14) et n'admet que des chaussures d'intérieur (R-B13) ;
 la valise exigeait pourtant un sac dans chaque look. Correctif : `completerChaussuresEtSac` n'ajoute pas de sac à un look « chez soi »,
 et `lookAChaussuresEtSac` accepte un look sans sac quand ses chaussures sont des chaussures d'intérieur (20 sur 20 après). Sans
-chaussures d'intérieur dans la valise ni la capsule, le spa reste sans look : la règle R-B13 n'est pas touchée.
+chaussures d'intérieur dans la valise ni la capsule, le spa restait sans look ; arbitré le même jour : « pour le spa les tongs
+suffisent même si ce n'est pas obligatoire ». Un look « chez soi » n'exige plus de chaussures : chaussures d'intérieur si le moteur en
+trouve, sinon des tongs ou claquettes au spa (`estTong`, lues sur le nom ou le type : l'app n'a pas de type « Tongs »), sinon aucune.
+L'affichage reconnaît ces looks à leurs situations (`lookChezSoi`). R-B13 reste entière hors du spa.

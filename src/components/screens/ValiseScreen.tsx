@@ -45,6 +45,7 @@ import {
   joursDuSejour,
   libelleDuree,
   lookAChaussuresEtSac,
+  lookChezSoi,
   looksDeLaValise,
   looksParPiece,
   SEUIL_POLYVALENTE,
@@ -1894,7 +1895,7 @@ function Resultat({
   const ids = pieces.map((p) => p.id);
   // Un look de valise a toujours chaussures et sac (lookAChaussuresEtSac) : les valises gardées avant cette règle ne montrent plus
   // les looks qui n'en ont pas — « Recomposer » en refait avec.
-  const looks = valise.looks.filter((l) => l.ids.every((id) => ids.includes(id)) && lookAChaussuresEtSac(l.ids, pieces));
+  const looks = valise.looks.filter((l) => l.ids.every((id) => ids.includes(id)) && lookAChaussuresEtSac(l.ids, pieces, lookChezSoi(l, valise.situations)));
   // Le planning jour par jour est calculé ICI, avant les vues d'une pièce ou d'un look : le glisser-déposer (06/11/2026) a besoin de
   // ses crochets à chaque rendu (règles des hooks).
   const joursDuSejourValise = joursDuSejour(valise.depart, valise.retour);

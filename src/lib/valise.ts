@@ -379,7 +379,7 @@ export function generateurMoteur(
     const r = generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
     // Les chaussures et le sac ajoutés suivent les règles du moteur (météo, occasion, couleur, saison) : 12/10/2026, demandé « tenir compte des règles du moteur ».
-    const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion, meteo });
+    const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion, meteo }, (s.sousIds ?? []).includes("spa"));
     return ids ? { ids: ajouterCouverture(ids, pool, s), elargie: r.occasionRelachee } : null;
   }
 }
@@ -402,29 +402,43 @@ export function completerChaussuresEtSac(
    * sac du pool — qui pouvait être des sandales sous la pluie ou des baskets avec une tenue habillée. Aucune candidate acceptée : pas de look.
    * Sans contexte, comportement d'origine.
    */
-  moteur?: { occasion: OccasionKey; meteo: Weather }
+  moteur?: { occasion: OccasionKey; meteo: Weather },
+  /** Une journée de spa : des tongs ou des claquettes conviennent aussi (07/11/2026, estTong). */
+  spa = false
 ): number[] | null {
   const sortie = [...ids];
+  // UN LOOK « CHEZ SOI » (Cocooning : le spa du séjour, 07/11/2026, signalé : les journées de spa d'une valise toujours sans look — la
+  // valise exigeait un sac que le moteur y refuse, R-B14). Ni sac, ni chaussures obligatoires (arbitré : « pour le spa les tongs
+  // suffisent même si ce n'est pas obligatoire ») : des chaussures d'intérieur, des tongs au spa, sinon pieds nus.
+  const chezSoi = Boolean(moteur && estContexteMaison(moteur.occasion));
   for (const cat of ["chaussures", "sac"] as const) {
     if (sortie.some((id) => pool.find((p) => p.id === id)?.cat === cat)) continue;
-    // Pas de sac pour un look « chez soi » (Cocooning : le spa du séjour), R-B14 du moteur (07/11/2026, signalé : les journées de spa
-    // d'une valise toujours sans look — la valise exigeait un sac que le moteur refuse à cette occasion).
-    if (cat === "sac" && moteur && estContexteMaison(moteur.occasion)) continue;
+    if (cat === "sac" && chezSoi) continue;
     const dejaLa = pool.filter((p) => sortie.includes(p.id));
-    const candidats = moteur
+    const acceptes = moteur
       ? candidatsDeRemplacement(dejaLa, pool.filter((p) => !sortie.includes(p.id)), -1, cat, moteur.occasion, "Présentiel", "Verre", moteur.meteo).filter((p) => p.cat === cat)
       : pool.filter((p) => p.cat === cat && !sortie.includes(p.id));
+    const candidats = cat === "chaussures" && chezSoi && spa ? [...acceptes, ...pool.filter((p) => estTong(p) && !acceptes.includes(p) && !sortie.includes(p.id))] : acceptes;
+    if (!candidats.length && chezSoi) continue;
     if (!candidats.length) return null;
     sortie.push(candidats[Math.min(candidats.length - 1, Math.floor(hasard() * candidats.length))].id);
   }
   return sortie;
 }
 
+/** Des tongs ou des claquettes, lues sur le nom ou le type (l'app n'a pas de type « Tongs ») : rien n'est deviné. */
+export const estTong = (it: Pick<Item, "cat" | "name" | "subtype">): boolean => it.cat === "chaussures" && /\b(tongs?|claquettes?)\b/i.test(`${it.name} ${it.subtype ?? ""}`);
+
+/** Un look qui ne sert que des situations « chez soi » (Cocooning : le spa du séjour). */
+export const lookChezSoi = (l: Pick<LookValise, "situations">, situations: readonly Pick<SituationValise, "occasion">[]): boolean =>
+  l.situations.length > 0 && l.situations.every((i) => situations[i] != null && estContexteMaison(situations[i].occasion));
+
 /**
  * Une tenue qui a des chaussures ET un sac — la règle des looks de valise (valises gardées avant le 04/10/2026 comprises). Exception
- * (07/11/2026) : un look « chez soi » (spa), reconnu à ses chaussures d'intérieur (R-B13), n'a pas de sac (R-B14).
+ * (07/11/2026) : un look « chez soi » (spa) n'a besoin ni de sac (R-B14) ni de chaussures (`chezSoi`, ou des chaussures d'intérieur).
  */
-export const lookAChaussuresEtSac = (ids: number[], pieces: Item[]): boolean => {
+export const lookAChaussuresEtSac = (ids: number[], pieces: Item[], chezSoi = false): boolean => {
+  if (chezSoi) return true;
   const portees = ids.map((id) => pieces.find((p) => p.id === id)).filter((p): p is Item => !!p);
   const chaussures = portees.filter((p) => p.cat === "chaussures");
   if (!chaussures.length) return false;

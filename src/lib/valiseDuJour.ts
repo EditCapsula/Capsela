@@ -2,7 +2,7 @@ import { planningDeLaValise } from "./planningValise";
 import { destinationDuJour } from "./etapesSejour";
 import type { TenuePlanifiee } from "./planifier";
 import { elementProgramme } from "./programmeValise";
-import { joursDuSejour, lookAChaussuresEtSac, type LookValise } from "./valise";
+import { joursDuSejour, lookAChaussuresEtSac, lookChezSoi, type LookValise } from "./valise";
 import type { ValiseGardee } from "./valises";
 import type { Item } from "./types";
 import { estActiviteDeVacances, estPieceDeValise } from "./piecesDeValise";
@@ -32,7 +32,7 @@ export function valiseDuJour(valises: readonly ValiseGardee[], jour: string): Va
 export function looksVisibles(v: ValiseGardee, pool: readonly Item[]): LookValise[] {
   const pieces = v.pieceIds.map((id) => pool.find((i) => i.id === id)).filter((i): i is Item => !!i);
   const ids = pieces.map((p) => p.id);
-  return v.looks.filter((l) => l.ids.every((id) => ids.includes(id)) && lookAChaussuresEtSac(l.ids, pieces));
+  return v.looks.filter((l) => l.ids.every((id) => ids.includes(id)) && lookAChaussuresEtSac(l.ids, pieces, lookChezSoi(l, v.situations)));
 }
 
 export interface ValiseDuJourConsulte {

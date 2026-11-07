@@ -4,7 +4,7 @@ import type { CatalogItem } from "../catalog";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 import type { Item } from "../types";
 import { ajouterCouverture, chaussuresDeRandonnee, estBaignade, estBlazer, sansTenueDeSport, estPieceDeValise, piecesDeBaignade, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee } from "../piecesDeValise";
-import { generateurMoteur, lookAChaussuresEtSac, situationsDuProgramme, type SituationValise } from "../valise";
+import { generateurMoteur, lookAChaussuresEtSac, lookChezSoi, situationsDuProgramme, type SituationValise } from "../valise";
 import { filtrerParContrainte } from "../programmeValise";
 import { at, item } from "./fixtures";
 
@@ -214,7 +214,7 @@ describe("pas de talons à la plage ni aux visites (06/11/2026, signalé : des s
   });
 });
 
-describe("le spa a un look, sans sac (07/11/2026, signalé : journées de spa toujours sans look)", () => {
+describe("le spa a un look, sans sac, en chaussons, en tongs ou pieds nus (07/11/2026, signalé : journées de spa toujours sans look)", () => {
   const T = "Printemps, Été, Automne, Hiver";
   const maillotSpa = item({ id: 1, category: "combinaisons", name: "Maillot une pièce", sous_type: "Maillot de bain", genre: "femme", saison_capsule: T, occasions: "quotidien,cocooning", niveau_formalite: "decontracte", role_piece: "piece_unique", couleur_dominante: "Noir" });
   const chaussons = item({ id: 12, category: "chaussures", name: "Chaussons en laine", sous_type: "Chaussures d'intérieur", couleur_dominante: "Gris", niveau_formalite: "decontracte", occasions: "cocooning", saison_capsule: T });
@@ -237,6 +237,25 @@ describe("le spa a un look, sans sac (07/11/2026, signalé : journées de spa to
         expect(lookAChaussuresEtSac(t!.ids, [...pool, maillotSpa])).toBe(true);
       }
     }
+  });
+
+  it("au spa, des tongs conviennent ; sans chaussures d'intérieur ni tongs, le look se passe de chaussures", () => {
+    const tongs = item({ id: 15, category: "chaussures", name: "Tongs en caoutchouc", sous_type: "Tongs", couleur_dominante: "Noir", saison_capsule: T });
+    const baskets = item({ id: 16, category: "chaussures", name: "Baskets blanches", sous_type: "Baskets", couleur_dominante: "Blanc", saison_capsule: T });
+    const sansChaussons = pool.filter((p) => p.id !== chaussons.id);
+    const gen = generateurMoteur([], "femme", null, [maillotSpa]);
+    for (let k = 0; k < 20; k++) {
+      const t = gen([...sansChaussons, tongs, baskets], spa);
+      const noms = [...sansChaussons, tongs, baskets, maillotSpa].filter((p) => t!.ids.includes(p.id)).map((p) => p.name);
+      expect(noms).toContain("Tongs en caoutchouc");
+      expect(noms).not.toContain("Baskets blanches");
+      const nu = gen(sansChaussons, spa);
+      expect(nu).not.toBeNull();
+      expect([...sansChaussons, maillotSpa].filter((p) => nu!.ids.includes(p.id)).some((p) => p.cat === "chaussures" || p.cat === "sac")).toBe(false);
+    }
+    // Le look de spa reste affiché : il ne sert qu'une situation « chez soi ».
+    expect(lookChezSoi({ situations: [0] }, [spa])).toBe(true);
+    expect(lookChezSoi({ situations: [0, 1] }, [spa, { occasion: "quotidien" }])).toBe(false);
   });
 
   it("hors de chez soi, un look sans sac n'est toujours pas un look de valise", () => {
