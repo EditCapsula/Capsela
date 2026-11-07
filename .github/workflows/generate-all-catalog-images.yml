@@ -10,7 +10,14 @@ name: Générer toutes les images du catalogue (admin)
 # serveur GitHub.
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      ids:
+        # 07/11/2026 : limiter la génération à des pièces précises (ex. « 1355,1356 »), pour ne lancer que les visuels validés.
+        # Vide : tout le catalogue sans visuel, comme avant.
+        description: "Identifiants à générer, séparés par des virgules (vide : tout le catalogue sans visuel)"
+        required: false
+        default: ""
 
 jobs:
   generate:
@@ -25,3 +32,4 @@ jobs:
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
           SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
+          IDS: ${{ inputs.ids }}

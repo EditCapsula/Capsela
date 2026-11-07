@@ -46,12 +46,15 @@ async function main() {
   // vaut NULL/inconnu, pas TRUE, donc la ligne ne passe pas le filtre —
   // correctif 20/08/2026, trouvé sur un article ajouté/renommé manuellement
   // dont image_status n'avait jamais été explicitement mis à 'missing'.
-  const { data: rows, error } = await supabase
+  // IDS (07/11/2026) : seulement ces pièces, quand la génération a été validée pièce par pièce. Vide : tout le catalogue sans visuel.
+  const ids = (process.env.IDS || "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n > 0);
+  let requete = supabase
     .from("vestiaire_universel")
     .select("id, name")
     .is("url_image", null)
-    .or("image_status.is.null,image_status.neq.invalid")
-    .order("id", { ascending: true });
+    .or("image_status.is.null,image_status.neq.invalid");
+  if (ids.length) requete = requete.in("id", ids);
+  const { data: rows, error } = await requete.order("id", { ascending: true });
 
   if (error) {
     console.error(`Erreur de lecture du catalogue : ${error.message}`);
