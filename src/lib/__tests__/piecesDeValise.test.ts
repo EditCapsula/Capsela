@@ -6,6 +6,7 @@ import type { Item } from "../types";
 import { ajouterCouverture, chaussuresDeRandonnee, estBaignade, estBlazer, sansTenueDeSport, estPieceDeValise, piecesDeBaignade, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee } from "../piecesDeValise";
 import { generateurMoteur, lookAChaussuresEtSac, lookChezSoi, situationsDuProgramme, type SituationValise } from "../valise";
 import { filtrerParContrainte } from "../programmeValise";
+import { mapVacances } from "../vestiaire";
 import { at, item } from "./fixtures";
 
 /** LES PIÈCES RÉSERVÉES À LA VALISE (06/11/2026) : plage, piscine, spa. */
@@ -263,5 +264,24 @@ describe("le spa a un look, sans sac, en chaussons, en tongs ou pieds nus (07/11
     const [pull, bas, , cabas] = pool.map((p) => p.id);
     expect(lookAChaussuresEtSac([pull, bas, baskets.id], [...pool, baskets])).toBe(false);
     expect(lookAChaussuresEtSac([pull, bas, baskets.id, cabas], [...pool, baskets])).toBe(true);
+  });
+});
+
+describe("l'étiquette « vacances » du catalogue (07/11/2026)", () => {
+  it("lue dans la colonne occasions, avec les activités qu'elle nomme ; absente, rien ne change", () => {
+    expect(mapVacances("quotidien,vacances,plage,piscine")).toEqual(["plage", "piscine"]);
+    expect(mapVacances("vacances")).toEqual([]);
+    expect(mapVacances("quotidien,cocooning")).toBeUndefined();
+    expect(mapVacances(null)).toBeUndefined();
+  });
+  it("une pièce étiquetée est réservée à la valise et n'entre dans aucune capsule ; ses occasions restent lues", () => {
+    const robe = item({ id: 1, category: "robes", name: "Robe de plage en coton", sous_type: "Robe de plage", genre: "femme", occasions: "quotidien,vacances,plage", couleur_dominante: "Blanc", saison_capsule: "Printemps, Été" });
+    expect(robe.vacances).toEqual(["plage"]);
+    expect(robe.occasion).toEqual(["quotidien"]);
+    expect(estPieceDeValise(robe)).toBe(true);
+    const catalogue: CatalogItem[] = [robe];
+    for (let k = 0; k < 40; k++) catalogue.push(item({ id: 100 + k, category: ["hauts", "pantalons", "chaussures", "accessoires"][k % 4], name: `Pièce ${k}`, couleur_dominante: "Noir", niveau_formalite: "decontracte", role_piece: "base", styles: "Bohème" }));
+    const capsule = computeDefaultCapsule(profil({ styles: ["boheme"] }), at(28, "Printemps / Été"), [], "Été", catalogue);
+    expect(capsule.some((p) => p.name === "Robe de plage en coton")).toBe(false);
   });
 });

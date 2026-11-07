@@ -155,6 +155,12 @@ export interface Item {
   photoUrl?: string;
   /** Occasions déclarées à l'ajout — plusieurs choix possibles. */
   occasion?: OccasionKey[];
+  /**
+   * PIÈCE DE VACANCES (07/11/2026, étiquette « vacances » de la colonne `occasions` du catalogue) : les activités de séjour qu'elle sert
+   * (plage, piscine, spa, randonnee…), [] quand l'étiquette n'en nomme aucune ; absent hors étiquette. Une pièce de vacances n'entre que
+   * dans la valise (piecesDeValise.ts). Lue au catalogue seulement : jamais écrite dans le dressing.
+   */
+  vacances?: string[];
   /** Type de chaussure — obligatoire si cat === "chaussures" (nécessaire à R-B6). */
   shoeType?: ShoeType;
   /** Matière et coupe — pré-suggérées à la saisie du nom, jamais bloquantes. */

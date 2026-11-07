@@ -26,9 +26,12 @@ export const SOUS_TYPES_RESERVES_VALISE = [
   "Chaussures de randonnée",
 ] as const;
 
-/** Une pièce réservée à la valise : jamais proposée ailleurs. */
-export const estPieceDeValise = (it: Pick<Item, "subtype">): boolean =>
-  Boolean(it.subtype) && (SOUS_TYPES_RESERVES_VALISE as readonly string[]).includes(it.subtype as string);
+/**
+ * Une pièce réservée à la valise : jamais proposée ailleurs. Reconnue à son étiquette « vacances » (07/11/2026, colonne `occasions`),
+ * ou, pour les pièces d'avant l'étiquette, à son type : les deux tant que le SQL de l'étiquette n'est pas lancé, sans rien changer.
+ */
+export const estPieceDeValise = (it: Pick<Item, "subtype" | "vacances">): boolean =>
+  it.vacances !== undefined || (Boolean(it.subtype) && (SOUS_TYPES_RESERVES_VALISE as readonly string[]).includes(it.subtype as string));
 
 const estTenueDeBain = (it: Pick<Item, "subtype">) => it.subtype === "Maillot de bain" || it.subtype === "Short de bain";
 const estCouverture = (it: Pick<Item, "subtype">) =>
