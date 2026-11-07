@@ -24,6 +24,11 @@ export const SOUS_TYPES_RESERVES_VALISE = [
   // 06/11/2026, demandé : « Pour des randos dans les tenues vacances il faut intégrer une paire de chaussures de randonnée pour femme
   // et homme. » Une paire par genre, sans style ; seulement pour les journées de randonnée.
   "Chaussures de randonnée",
+  // 07/11/2026, brief « Vacances », validé : une paire de claquettes par genre (plage, piscine, spa), une robe de plage (femme), une
+  // veste imperméable par genre (seulement quand une pluie est prévue). Sans style ; aussi reconnues à leur étiquette « vacances ».
+  "Claquettes",
+  "Robe de plage",
+  "Veste imperméable",
 ] as const;
 
 /**
@@ -53,17 +58,38 @@ export const estActiviteDeVacances = (sousId: string | null | undefined): boolea
 export const estRandonnee = (s: { sousIds?: string[] }): boolean => (s.sousIds ?? []).includes("randonnee");
 const estChaussureDeRando = (it: Pick<Item, "subtype">) => it.subtype === "Chaussures de randonnée";
 
-/** La paire de randonnée de CE profil : celle de son genre d'abord, puis une paire unisexe ; jamais celle de l'autre genre. */
-export function chaussuresDeRandonnee(catalogue: readonly CatalogItem[], profile: Pick<Profile, "gender">): CatalogItem[] {
+/** La pièce sans style de CE profil pour un type : celle de son genre d'abord, puis une pièce unisexe ; jamais celle de l'autre genre. */
+function pieceDuGenre(catalogue: readonly CatalogItem[], profile: Pick<Profile, "gender">, est: (it: CatalogItem) => boolean): CatalogItem[] {
   const autreGenre = profile.gender === "homme" ? "femme" : "homme";
-  const paires = catalogue.filter((it) => estChaussureDeRando(it) && it.genre !== autreGenre);
-  const sienne = paires.find((it) => it.genre === profile.gender) ?? paires[0];
+  const pieces = catalogue.filter((it) => est(it) && it.genre !== autreGenre);
+  const sienne = pieces.find((it) => it.genre === profile.gender) ?? pieces[0];
   return sienne ? [sienne] : [];
 }
 
-/** Toutes les pièces réservées de ce profil : baignade et randonnée. */
+/** La paire de randonnée de CE profil : celle de son genre d'abord, puis une paire unisexe ; jamais celle de l'autre genre. */
+export const chaussuresDeRandonnee = (catalogue: readonly CatalogItem[], profile: Pick<Profile, "gender">): CatalogItem[] => pieceDuGenre(catalogue, profile, estChaussureDeRando);
+
+export const estClaquettes = (it: Pick<Item, "subtype">): boolean => it.subtype === "Claquettes";
+export const estRobeDePlage = (it: Pick<Item, "subtype">): boolean => it.subtype === "Robe de plage";
+export const estImpermeableDeValise = (it: Pick<Item, "subtype">): boolean => it.subtype === "Veste imperméable";
+
+/**
+ * Une veste ou un manteau de pluie, lu sur le nom ou le type (imperméable, k-way, coupe-vent, ciré) : rien n'est deviné d'une veste sans
+ * ces mots. Celle du dressing passe devant la veste imperméable de la valise (07/11/2026, validé : « si une veste adaptée existe déjà
+ * dans le dressing, la privilégier »).
+ */
+export const estVesteDePluie = (it: Pick<Item, "cat" | "name" | "subtype">): boolean =>
+  (it.cat === "veste" || it.cat === "manteau") && /imperm|k-?way|coupe[- ]?vent|\bcir[ée]\b|raincoat|de pluie/i.test(`${it.name} ${it.subtype ?? ""}`);
+
+/** Toutes les pièces réservées de ce profil : baignade, randonnée, claquettes, robe de plage, veste imperméable. */
 export function piecesReserveesDuProfil(catalogue: readonly CatalogItem[], profile: Pick<Profile, "gender" | "styles">, couleurs: readonly string[]): CatalogItem[] {
-  return [...piecesDeBaignade(catalogue, profile, couleurs), ...chaussuresDeRandonnee(catalogue, profile)];
+  return [
+    ...piecesDeBaignade(catalogue, profile, couleurs),
+    ...chaussuresDeRandonnee(catalogue, profile),
+    ...pieceDuGenre(catalogue, profile, estClaquettes),
+    ...pieceDuGenre(catalogue, profile, estRobeDePlage),
+    ...pieceDuGenre(catalogue, profile, estImpermeableDeValise),
+  ];
 }
 
 /**
@@ -73,7 +99,7 @@ export function piecesReserveesDuProfil(catalogue: readonly CatalogItem[], profi
  */
 export const estTrajetAvecRandonnee = (s: { occasion?: string; avecRandonnee?: boolean }): boolean => s.occasion === "voyage" && Boolean(s.avecRandonnee);
 
-type SituationPieces = { sousIds?: string[]; occasion?: string; contrainte?: string; avecRandonnee?: boolean };
+type SituationPieces = { sousIds?: string[]; occasion?: string; contrainte?: string; avecRandonnee?: boolean; pluiePrevue?: boolean };
 
 /**
  * Les journées où la paire de randonnée peut être proposée, avec une tenue ordinaire (06/11/2026, précisé : « la paire de chaussures
@@ -87,10 +113,17 @@ export const estJourneeDeMarche = (s: SituationPieces): boolean => s.occasion ==
  * trajets et journées de marche d'un séjour QUI COMPTE UNE RANDONNÉE seulement (`avecRandonnee`, 06/11/2026 : « la paire de chaussures
  * de randonnée ne doit pas être proposée dans une valise si le séjour n'inclut pas une activité de randonnée »).
  */
-export function piecesPourLaSituation<T extends Pick<Item, "subtype">>(pieces: readonly T[], s: SituationPieces): T[] {
-  return pieces.filter(
-    (p) => (estBaignade(s) && !estChaussureDeRando(p)) || ((estRandonnee(s) || (estJourneeDeMarche(s) && Boolean(s.avecRandonnee))) && estChaussureDeRando(p))
-  );
+export function piecesPourLaSituation<T extends Pick<Item, "subtype"> & { vacances?: string[] }>(pieces: readonly T[], s: SituationPieces): T[] {
+  return pieces.filter((p) => {
+    if (estChaussureDeRando(p)) return estRandonnee(s) || (estJourneeDeMarche(s) && Boolean(s.avecRandonnee));
+    // La veste imperméable de la valise : seulement sous une pluie PRÉVUE (07/11/2026, validé : « uniquement si une pluie est annoncée
+    // et que le départ est dans les 4 jours » — une prévision n'existe que dans cet horizon), jamais chez soi (spa, détente).
+    if (estImpermeableDeValise(p)) return Boolean(s.pluiePrevue) && s.occasion !== "cocooning";
+    // Une pièce étiquetée « vacances » qui nomme ses activités : seulement à celles-ci (claquettes : plage, piscine, spa ; robe de
+    // plage : plage, piscine). Sinon, la règle d'avant l'étiquette : la baignade.
+    if (p.vacances?.length) return (s.sousIds ?? []).some((id) => p.vacances!.includes(id));
+    return estBaignade(s);
+  });
 }
 
 /**
@@ -174,10 +207,26 @@ export function poolDeBaignade(pool: Item[], s: { sousIds?: string[] }): Item[] 
  * À la plage ou à la piscine, un maillot de bain se porte avec sa surchemise : le moteur ne superpose pas un haut à une pièce
  * entière, la couverture est donc ajoutée au look quand le pool en a une. Jamais au spa (chez soi, R-B13 : chaussures d'intérieur).
  */
-export function ajouterCouverture(ids: number[], pool: Item[], s: { sousIds?: string[] }): number[] {
+export function ajouterCouverture(ids: number[], pool: Item[], s: { sousIds?: string[] }, hasard: () => number = Math.random): number[] {
   if (!(s.sousIds ?? []).some((id) => PLEIN_AIR.includes(id))) return ids;
   const portees = pool.filter((it) => ids.includes(it.id));
-  if (!portees.some((it) => it.subtype === "Maillot de bain") || portees.some(estCouverture)) return ids;
-  const couverture = pool.find(estCouverture);
-  return couverture ? [...ids, couverture.id] : ids;
+  const couvre = (it: Item) => estCouverture(it) || estRobeDePlage(it);
+  if (!portees.some((it) => it.subtype === "Maillot de bain") || portees.some(couvre)) return ids;
+  // La robe de plage est une couverture comme la surchemise (07/11/2026) : l'une ou l'autre, au hasard, pour varier les looks.
+  const couvertures = pool.filter(couvre);
+  if (!couvertures.length) return ids;
+  return [...ids, couvertures[Math.min(couvertures.length - 1, Math.floor(hasard() * couvertures.length))].id];
+}
+
+/**
+ * SOUS UNE PLUIE PRÉVUE, UNE VESTE DE PLUIE (07/11/2026, validé). Le look qui n'a ni veste ni manteau reçoit une veste de pluie du
+ * pool, celle du dressing d'abord, sinon la veste imperméable de la valise. Un look qui porte déjà une veste ou un manteau est gardé tel
+ * quel : on ne superpose pas une veste de pluie à un manteau. Jamais chez soi (spa, détente), jamais sans pluie prévue.
+ */
+export function ajouterVesteDePluie(ids: number[], pool: Item[], s: { pluiePrevue?: boolean; occasion?: string }): number[] {
+  if (!s.pluiePrevue || s.occasion === "cocooning") return ids;
+  const portees = pool.filter((it) => ids.includes(it.id));
+  if (portees.some((it) => it.cat === "veste" || it.cat === "manteau")) return ids;
+  const veste = pool.find((it) => estVesteDePluie(it) && !estImpermeableDeValise(it)) ?? pool.find(estImpermeableDeValise);
+  return veste ? [...ids, veste.id] : ids;
 }

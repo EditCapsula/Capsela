@@ -1,6 +1,6 @@
 import { previsionPour, type Prevision } from "./prevision";
 import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
-import { ajouterCouverture, estJourneeDeMarche, estRandonnee, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee, sansTenueDeSport } from "./piecesDeValise";
+import { ajouterCouverture, ajouterVesteDePluie, estImpermeableDeValise, estJourneeDeMarche, estPieceDeValise, estRandonnee, estRobeDePlage, estVesteDePluie, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee, sansTenueDeSport } from "./piecesDeValise";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, saisonCapsuleDuJour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -229,6 +229,11 @@ export interface SituationValise {
   sousIds?: string[];
   /** Un trajet ou une journée de marche d'un séjour qui compte une randonnée : la paire de randonnée y est proposée (06/11/2026, piecesDeValise.ts). */
   avecRandonnee?: true;
+  /**
+   * Une pluie PRÉVUE sur l'un de ses jours (07/11/2026) : une vraie prévision, jamais les températures habituelles ni la météo
+   * d'aujourd'hui. La veste de pluie n'est proposée qu'alors (piecesDeValise.ts, ajouterVesteDePluie).
+   */
+  pluiePrevue?: true;
 }
 
 /**
@@ -286,6 +291,7 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
     else parGroupe.set(cle, { mere: e.mere, contrainte: e.contrainte, trajet: e.creneau === "trajet", sousIds: [e.id] });
   }
   const randonnee = elements.some((e) => e.id === "randonnee");
+  const pluvieux = new Set(tries.filter((m) => pluieAnnoncee([m])).map((m) => m.jour));
   const out: SituationValise[] = [];
   for (const g of parGroupe.values()) {
     for (const m of groupesMeteo(g.trajet ? extremes : tries)) {
@@ -296,6 +302,7 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
         ...(g.contrainte ? { contrainte: g.contrainte } : {}),
         sousIds: g.sousIds,
         ...((g.trajet || g.contrainte === "marche") && randonnee ? { avecRandonnee: true as const } : {}),
+        ...(m.jours.some((j) => pluvieux.has(j)) ? { pluiePrevue: true as const } : {}),
       });
     }
   }
@@ -355,8 +362,13 @@ export function generateurMoteur(
   piecesValise: Item[] = []
 ): Generateur {
   return (poolComplet, s) => {
-    // Les pièces réservées de cette situation seulement (baignade, randonnée) : piecesPourLaSituation.
-    const avecBain = [...poolComplet, ...piecesPourLaSituation(piecesValise, s).filter((p) => !poolComplet.some((q) => q.id === p.id))];
+    // Les pièces réservées de cette situation seulement (baignade, randonnée, pluie) : piecesPourLaSituation. Une veste de pluie du
+    // dressing passe devant la veste imperméable de la valise, qui n'entre alors pas (07/11/2026).
+    const vesteDePluieAuDressing = poolComplet.some((p) => estVesteDePluie(p) && !estPieceDeValise(p));
+    const reservees = piecesPourLaSituation(piecesValise, s).filter((p) => !(vesteDePluieAuDressing && estImpermeableDeValise(p)));
+    const avecBain = [...poolComplet, ...reservees.filter((p) => !poolComplet.some((q) => q.id === p.id))];
+    // La robe de plage ne passe pas par le moteur (une pièce entière, elle remplacerait le maillot) : elle couvre le maillot ensuite.
+    const robes = avecBain.filter(estRobeDePlage);
     // La contrainte de la situation (chaleur, marche, outdoor) restreint le pool ; le moteur, lui, ne change pas. En baignade, la tenue
     // de bain et sa couverture tiennent lieu de vêtements (poolDeBaignade).
     const brut = sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeRandonnee(poolDeBaignade(avecBain, s), s), s.contrainte, s.meteo), s.occasion);
@@ -364,23 +376,26 @@ export function generateurMoteur(
     const decontracte = s.occasion === "voyage" || estRandonnee(s) ? poolDecontracte(brut) : brut;
     // Hors randonnée, la paire de randonnée se porte avec des vêtements ordinaires (06/11/2026, sansTenueDeSport).
     const pool = estJourneeDeMarche(s) && !estRandonnee(s) ? sansTenueDeSport(decontracte) : decontracte;
-    const t = composer(pool, s.occasion, s.meteo, s);
+    const t = composer(pool, s.occasion, s.meteo, s, robes);
     if (t || !estRandonnee(s)) return t;
     // UNE RANDONNÉE SANS TENUE DE SPORT (06/11/2026, signalé : deux journées de randonnée « Aucun look de ta valise ne répond encore à
     // cette occasion »). Le moteur Sport n'admet que des vêtements et un sac de sport ; une valise qui n'en a pas reçoit une tenue de
     // marche décontractée, toujours avec la paire de randonnée (poolDeRandonnee), dite élargie. Le premier choix reste la tenue de sport.
     const marche = poolDecontracte(sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeRandonnee(avecBain, s), "marche", s.meteo), "quotidien"));
-    const repli = composer(marche, "quotidien", s.meteo, s);
+    const repli = composer(marche, "quotidien", s.meteo, s, []);
     return repli ? { ...repli, elargie: true } : null;
   };
 
-  function composer(pool: Item[], occasion: OccasionKey, meteo: Weather, s: SituationValise): TenueMoteur | null {
+  function composer(poolBrut: Item[], occasion: OccasionKey, meteo: Weather, s: SituationValise, robes: Item[]): TenueMoteur | null {
+    const pool = poolBrut.filter((p) => !estRobeDePlage(p));
     if (!pool.length) return null;
     const r = generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
     // Les chaussures et le sac ajoutés suivent les règles du moteur (météo, occasion, couleur, saison) : 12/10/2026, demandé « tenir compte des règles du moteur ».
     const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion, meteo }, (s.sousIds ?? []).includes("spa"));
-    return ids ? { ids: ajouterCouverture(ids, pool, s), elargie: r.occasionRelachee } : null;
+    if (!ids) return null;
+    const couvert = ajouterCouverture(ids, [...pool, ...robes.filter((r) => !pool.some((p) => p.id === r.id))], s);
+    return { ids: ajouterVesteDePluie(couvert, pool, s), elargie: r.occasionRelachee };
   }
 }
 

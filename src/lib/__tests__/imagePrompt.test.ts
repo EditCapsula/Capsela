@@ -114,3 +114,15 @@ describe("pièces de valise (06/11/2026) : maillot une pièce et kimono de plage
     expect(built.prompt).toMatch(/kimono/);
   });
 });
+
+describe("pièces de vacances (07/11/2026) : claquettes, robe de plage, veste imperméable générables", () => {
+  it.each([
+    ["chaussures", "Claquettes de plage", "Claquettes", /slide sandals/],
+    ["robes", "Robe de plage en coton", "Robe de plage", /beach dress/],
+    ["vestes_blazers", "Veste imperméable légère", "Veste imperméable", /rain jacket/],
+  ])("%s · %s passe la validation", (category, name, sous_type, attendu) => {
+    const built = buildImagePrompt(item({ id: 9000, category, name, sous_type }));
+    expect(built.ok).toBe(true);
+    expect(built.prompt).toMatch(attendu);
+  });
+});

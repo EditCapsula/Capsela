@@ -345,6 +345,8 @@ const SHOE_TYPE_MAP: Record<string, ShoeType> = {
   "chaussures d'intérieur": "Chaussures d'intérieur",
   // Réservée à la valise (06/11/2026, piecesDeValise.ts) : une chaussure de sport pour le moteur ; son type exact reste le sous_type.
   "chaussures de randonnée": "Baskets",
+  // 07/11/2026 : les claquettes de la valise sont des sandales plates pour le moteur (plage, piscine) ; au spa, estTong les reconnaît.
+  claquettes: "Sandales",
 };
 
 export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {

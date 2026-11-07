@@ -3,7 +3,7 @@ import { computeDefaultCapsule } from "../capsule";
 import type { CatalogItem } from "../catalog";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 import type { Item } from "../types";
-import { ajouterCouverture, chaussuresDeRandonnee, estBaignade, estBlazer, sansTenueDeSport, estPieceDeValise, piecesDeBaignade, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee } from "../piecesDeValise";
+import { ajouterCouverture, ajouterVesteDePluie, chaussuresDeRandonnee, estBaignade, estBlazer, estVesteDePluie, piecesReserveesDuProfil, sansTenueDeSport, estPieceDeValise, piecesDeBaignade, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee } from "../piecesDeValise";
 import { generateurMoteur, lookAChaussuresEtSac, lookChezSoi, situationsDuProgramme, type SituationValise } from "../valise";
 import { filtrerParContrainte } from "../programmeValise";
 import { mapVacances } from "../vestiaire";
@@ -283,5 +283,71 @@ describe("l'étiquette « vacances » du catalogue (07/11/2026)", () => {
     for (let k = 0; k < 40; k++) catalogue.push(item({ id: 100 + k, category: ["hauts", "pantalons", "chaussures", "accessoires"][k % 4], name: `Pièce ${k}`, couleur_dominante: "Noir", niveau_formalite: "decontracte", role_piece: "base", styles: "Bohème" }));
     const capsule = computeDefaultCapsule(profil({ styles: ["boheme"] }), at(28, "Printemps / Été"), [], "Été", catalogue);
     expect(capsule.some((p) => p.name === "Robe de plage en coton")).toBe(false);
+  });
+});
+
+describe("claquettes, robe de plage, veste imperméable (07/11/2026, décisions validées)", () => {
+  const T = "Printemps, Été, Automne, Hiver";
+  const claquettes = item({ id: 1, category: "chaussures", name: "Claquettes de plage", sous_type: "Claquettes", genre: "femme", saison_capsule: T, occasions: "quotidien,cocooning,vacances,plage,piscine,spa", couleur_dominante: "Sable" });
+  const robePlage = item({ id: 2, category: "robes", name: "Robe de plage en coton", sous_type: "Robe de plage", genre: "femme", saison_capsule: "Printemps, Été", occasions: "quotidien,vacances,plage,piscine", couleur_dominante: "Blanc", manches: "sans" });
+  const impermeable = item({ id: 3, category: "vestes_blazers", name: "Veste imperméable légère", sous_type: "Veste imperméable", genre: "femme", saison_capsule: T, occasions: "quotidien,voyage,vacances", couleur_dominante: "Marine", manches: "longues" });
+  const maillotF = item({ id: 4, category: "combinaisons", name: "Maillot une pièce", sous_type: "Maillot de bain", genre: "femme", saison_capsule: T, occasions: "quotidien,cocooning,vacances,plage,piscine,spa", niveau_formalite: "decontracte", role_piece: "piece_unique", couleur_dominante: "Noir" });
+  const surchemiseF = item({ id: 5, category: "hauts", name: "Surchemise en lin", sous_type: "Surchemise de plage", genre: "femme", saison_capsule: "Printemps, Été", occasions: "quotidien,vacances,plage,piscine", couleur_dominante: "Blanc", manches: "longues" });
+  const reservees = [claquettes, robePlage, impermeable];
+
+  it("chaque pièce va à ses activités : claquettes plage, piscine, spa ; robe plage, piscine ; veste sous une pluie prévue, jamais chez soi", () => {
+    const noms = (s: Parameters<typeof piecesPourLaSituation>[1]) => piecesPourLaSituation(reservees, s).map((p) => p.name);
+    expect(noms({ occasion: "quotidien", sousIds: ["plage"] })).toEqual(["Claquettes de plage", "Robe de plage en coton"]);
+    expect(noms({ occasion: "cocooning", sousIds: ["spa"] })).toEqual(["Claquettes de plage"]);
+    expect(noms({ occasion: "quotidien", contrainte: "marche", sousIds: ["visites"] })).toEqual([]);
+    expect(noms({ occasion: "quotidien", contrainte: "marche", sousIds: ["visites"], pluiePrevue: true })).toEqual(["Veste imperméable légère"]);
+    expect(noms({ occasion: "cocooning", sousIds: ["spa"], pluiePrevue: true })).toEqual(["Claquettes de plage"]);
+    expect(claquettes.shoeType).toBe("Sandales");
+  });
+
+  it("une seule de chaque pour le profil, de son genre", () => {
+    const homme = item({ id: 6, category: "chaussures", name: "Claquettes de plage", sous_type: "Claquettes", genre: "homme", saison_capsule: T, occasions: "vacances,plage", couleur_dominante: "Noir" });
+    const femme = piecesReserveesDuProfil([...reservees, homme], { gender: "femme", styles: [] }, []).map((p) => `${p.name} ${p.genre}`);
+    expect(femme).toEqual(["Claquettes de plage femme", "Robe de plage en coton femme", "Veste imperméable légère femme"]);
+    expect(piecesReserveesDuProfil([...reservees, homme], { gender: "homme", styles: [] }, []).map((p) => `${p.name} ${p.genre}`)).toEqual(["Claquettes de plage homme"]);
+  });
+
+  it("la robe de plage couvre le maillot, au même titre que la surchemise ; jamais à la place du maillot", () => {
+    const pool = [maillotF, surchemiseF, robePlage];
+    expect(ajouterCouverture([maillotF.id], pool, { sousIds: ["plage"] }, () => 0.99)).toEqual([maillotF.id, robePlage.id]);
+    expect(ajouterCouverture([maillotF.id], pool, { sousIds: ["plage"] }, () => 0)).toEqual([maillotF.id, surchemiseF.id]);
+    const sac = item({ id: 7, category: "sacs", name: "Cabas en paille", sous_type: "Cabas", couleur_dominante: "Sable", saison_capsule: "Printemps, Été" });
+    const gen = generateurMoteur([], "femme", null, [maillotF, robePlage, claquettes]);
+    const plage: SituationValise = { occasion: "quotidien", meteo: at(28, "Printemps / Été"), jours: ["2026-07-10"], contrainte: "chaleur", sousIds: ["plage"] };
+    const vues = new Set<string>();
+    for (let k = 0; k < 30; k++) {
+      const t = gen([sac], plage);
+      const portees = [maillotF, robePlage, claquettes, sac].filter((p) => t!.ids.includes(p.id)).map((p) => p.name);
+      expect(portees).toContain("Maillot une pièce");
+      portees.forEach((n) => vues.add(n));
+    }
+    expect(vues.has("Robe de plage en coton")).toBe(true);
+    expect(vues.has("Claquettes de plage")).toBe(true);
+  });
+
+  it("sous une pluie prévue, le look reçoit une veste de pluie, celle du dressing d'abord ; pas sur un manteau ; jamais sans pluie prévue", () => {
+    const sienne = item({ id: 8, category: "vestes_blazers", name: "K-way rouge", sous_type: "Coupe-vent", couleur_dominante: "Rouge", saison_capsule: T });
+    const manteau = item({ id: 9, category: "manteaux_exterieurs", name: "Manteau en laine", sous_type: "Manteau", couleur_dominante: "Camel", saison_capsule: "Automne, Hiver" });
+    const haut = item({ id: 10, category: "hauts", name: "T-shirt", sous_type: "T-shirt", couleur_dominante: "Blanc" });
+    const s = { pluiePrevue: true, occasion: "quotidien" };
+    expect(ajouterVesteDePluie([haut.id], [haut, impermeable, sienne], s)).toEqual([haut.id, sienne.id]);
+    expect(ajouterVesteDePluie([haut.id], [haut, impermeable], s)).toEqual([haut.id, impermeable.id]);
+    expect(ajouterVesteDePluie([haut.id, manteau.id], [haut, manteau, impermeable], s)).toEqual([haut.id, manteau.id]);
+    expect(ajouterVesteDePluie([haut.id], [haut, impermeable], { occasion: "quotidien" })).toEqual([haut.id]);
+    expect(estVesteDePluie(sienne)).toBe(true);
+    expect(estVesteDePluie(manteau)).toBe(false);
+  });
+
+  it("la pluie n'est prévue que sur une vraie prévision : les températures habituelles « Pluvieux » ne comptent pas", () => {
+    const programme = [{ id: "visites", frequence: 2 }];
+    const prevue = situationsDuProgramme(programme, [{ jour: "2026-11-10", temp: 14, label: "Pluie", prevue: true }], []);
+    expect(prevue.every((x) => x.pluiePrevue)).toBe(true);
+    const habituelle = situationsDuProgramme(programme, [{ jour: "2026-12-10", temp: 14, label: "Pluvieux", prevue: false, habituelle: true }], []);
+    expect(habituelle.some((x) => x.pluiePrevue)).toBe(false);
   });
 });

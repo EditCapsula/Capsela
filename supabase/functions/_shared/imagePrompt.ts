@@ -198,6 +198,10 @@ const SUBTYPE_EN: Record<string, string> = {
   "chemise de plage": "short-sleeved beach shirt",
   "kimono de plage": "lightweight beach kimono cover-up",
   "chaussures de randonnée": "hiking boots",
+  // 07/11/2026 : les nouvelles pièces de la valise (claquettes, robe de plage, veste imperméable).
+  claquettes: "slide sandals",
+  "robe de plage": "lightweight beach dress",
+  "veste imperméable": "lightweight waterproof rain jacket",
   blouse: "blouse",
   débardeur: "tank top",
   body: "bodysuit",

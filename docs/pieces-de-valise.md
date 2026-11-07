@@ -101,3 +101,19 @@ chaussures d'intérieur dans la valise ni la capsule, le spa restait sans look ;
 suffisent même si ce n'est pas obligatoire ». Un look « chez soi » n'exige plus de chaussures : chaussures d'intérieur si le moteur en
 trouve, sinon des tongs ou claquettes au spa (`estTong`, lues sur le nom ou le type : l'app n'a pas de type « Tongs »), sinon aucune.
 L'affichage reconnaît ces looks à leurs situations (`lookChezSoi`). R-B13 reste entière hors du spa.
+
+### Claquettes, robe de plage, veste imperméable (07/11/2026)
+
+Brief « Vacances », décisions validées le même jour. Cinq lignes au catalogue (`docs/capsules/valise/nouvelles-pieces-vacances.sql`),
+sans style, étiquetées « vacances » ; visuels générés plus tard, avec accord.
+
+- **Claquettes** (une paire par genre) : plage, piscine, spa. Pour le moteur, des sandales (plage, piscine) ; au spa, `estTong`.
+- **Robe de plage** (femme) : plage, piscine. Elle ne passe pas par le moteur (pièce entière, elle remplacerait le maillot) : comme
+  la surchemise, elle couvre le maillot après coup (`ajouterCouverture`, l'une ou l'autre au hasard).
+- **Veste imperméable** (une par genre) : seulement sous une pluie PRÉVUE (`SituationValise.pluiePrevue`, posée par
+  `situationsDuProgramme` sur une vraie prévision : les températures habituelles « Pluvieux » ne comptent pas ; une prévision n'existe
+  que dans l'horizon de 4 jours). Jamais chez soi. Une veste de pluie du dressing (imperméable, k-way, coupe-vent, ciré, lus sur le nom
+  ou le type) passe devant et la veste de la valise n'entre pas. `ajouterVesteDePluie` la pose sur un look qui n'a ni veste ni manteau ;
+  un look qui porte déjà un manteau est gardé tel quel.
+- L'aiguillage des pièces réservées suit leur étiquette (`piecesPourLaSituation`) : une pièce qui nomme ses activités ne sert qu'à
+  celles-ci ; sans activité nommée, la règle d'avant (la baignade).
