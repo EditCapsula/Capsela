@@ -69,22 +69,68 @@ const sous = (id: string, libelle: string, mere: OccasionKey, creneau: Creneau, 
   generique: false,
 });
 
+/*
+ * LES SOUS-OCCASIONS VACANCES (07/11/2026, brief « Création de l'occasion Vacances » ; arbitré : pas de onzième occasion du moteur, un
+ * regroupement « Vacances » dans la valise). Les libellés sont ceux du brief ; les identifiants ne changent pas (les valises gardées
+ * restent lisibles), et chaque sous-occasion garde sa mère et sa contrainte : le moteur, ses règles et son score sont inchangés.
+ * Visites et Balade se lisent toutes deux « Balade & visite », Restaurant, Dîner et Sortie « Restaurant & soirée ». Deux sous-occasions
+ * nouvelles portent les occasions génériques du séjour : Activité sportive (Sport) et Détente & cocooning (Cocooning).
+ */
 export const SOUS_OCCASIONS: ElementProgramme[] = [
-  sous("visites", "Visites / découverte", "quotidien", "jour", "marche"),
-  sous("balade", "Balade / promenade", "quotidien", "jour", "marche"),
+  sous("visites", "Balade & visite", "quotidien", "jour", "marche"),
+  sous("balade", "Balade & visite", "quotidien", "jour", "marche"),
   sous("shopping", "Shopping", "quotidien", "jour"),
   sous("excursion", "Excursion", "quotidien", "jour", "marche"),
   sous("plage", "Plage", "quotidien", "jour", "chaleur"),
   sous("piscine", "Piscine", "quotidien", "jour", "chaleur"),
-  sous("spa", "Spa / détente", "cocooning", "jour"),
-  sous("randonnee", "Randonnée", "sport", "jour", "outdoor"),
-  sous("restaurant", "Restaurant", "soiree", "soir"),
-  sous("diner", "Dîner", "soiree", "soir"),
-  sous("sortie_vacances", "Sortie en vacances", "soiree", "soir"),
+  sous("spa", "Spa & bien-être", "cocooning", "jour"),
+  sous("randonnee", "Randonnée & marche", "sport", "jour", "outdoor"),
+  sous("restaurant", "Restaurant & soirée", "soiree", "soir"),
+  sous("diner", "Restaurant & soirée", "soiree", "soir"),
+  sous("sortie_vacances", "Restaurant & soirée", "soiree", "soir"),
+  sous("activite_sportive", "Activité sportive", "sport", "jour"),
+  sous("detente", "Détente & cocooning", "cocooning", "jour"),
   sous("travail_reunion", "Travail / réunion", "travail_formel", "jour"),
   sous("ceremonie", "Mariage / cérémonie", "evenement_perso", "jour"),
   sous("trajet", "Voyage / trajet", "voyage", "trajet"),
 ];
+
+/** Les dix sous-occasions Vacances, dans l'ordre du brief : leur libellé et l'entrée du programme qui les porte. */
+export const SOUS_OCCASIONS_VACANCES: { id: string; libelle: string; description: string }[] = [
+  { id: "visites", libelle: "Balade & visite", description: "Visites touristiques, monuments, musées, découverte de quartiers" },
+  { id: "randonnee", libelle: "Randonnée & marche", description: "Randonnées, sentiers, longues marches" },
+  { id: "plage", libelle: "Plage", description: "Journées à la plage, bord de mer" },
+  { id: "piscine", libelle: "Piscine", description: "Baignade et journées piscine" },
+  { id: "spa", libelle: "Spa & bien-être", description: "Spa, hammam, massages" },
+  { id: "shopping", libelle: "Shopping", description: "Marchés, boutiques, centres commerciaux" },
+  { id: "excursion", libelle: "Excursion", description: "Sorties en bateau, excursions et activités touristiques" },
+  { id: "restaurant", libelle: "Restaurant & soirée", description: "Restaurants, dîners, spectacles, soirées" },
+  { id: "activite_sportive", libelle: "Activité sportive", description: "Vélo, sport et activités physiques" },
+  { id: "detente", libelle: "Détente & cocooning", description: "Journées de repos, détente à l'hébergement" },
+];
+
+/**
+ * La part des jours (ou des soirs) du séjour qu'une sous-occasion reçoit quand ses activités ne sont pas datées : celle que les activités
+ * lui donnaient déjà (ACTIVITES), et pour les deux nouvelles, celle des activités Sport et Détente. ARBITRAGE ÉDITORIAL (11/10/2026),
+ * inchangé. Une activité concrète compte toujours au moins pour un jour, et ses jours datés priment (programmeDesChoix).
+ */
+export const PART_DES_JOURS: Record<string, number> = {
+  visites: 0.4,
+  balade: 0.3,
+  shopping: 0.15,
+  excursion: 0.15,
+  plage: 0.3,
+  piscine: 0.15,
+  spa: 0.25,
+  randonnee: 0.3,
+  restaurant: 0.25,
+  diner: 0.2,
+  sortie_vacances: 0.3,
+  activite_sportive: 0.3,
+  detente: 0.25,
+  travail_reunion: 0.5,
+  ceremonie: 0.15,
+};
 
 export const TOUS_LES_ELEMENTS: ElementProgramme[] = [...SOUS_OCCASIONS, ...GENERIQUES];
 
@@ -206,6 +252,36 @@ export function programmeDesActivites(activites: readonly ActiviteSejour[], nbJo
   }
   const trajet = elementProgramme("trajet");
   if (trajet) out.push({ id: "trajet", frequence: borneFrequence(2, trajet.creneau, nbJours) });
+  return out;
+}
+
+/**
+ * LE PROGRAMME DES ACTIVITÉS CONCRÈTES (07/11/2026, brief « Vacances » : « une activité concrète doit pouvoir être associée
+ * automatiquement à une sous-occasion vestimentaire » ; « plusieurs activités peuvent partager la même sous-occasion »). Chaque activité
+ * donne UNE sous-occasion (activitesSejour.ts, sousOccasionDuChoix) ; une entrée par sous-occasion, jamais une par activité. Sa fréquence :
+ * la plus grande de sa part des jours du séjour, du nombre de ses activités, et de ses jours datés — bornée par le séjour. Plus le trajet,
+ * comme tout voyage. Aucune activité rattachée : le repli d'avant (le quotidien).
+ */
+export function programmeDesChoix(choix: readonly { sousId: string | null; jours?: readonly string[] }[], nbJours: number): ItemProgramme[] {
+  const groupes = new Map<string, { n: number; jours: Set<string> }>();
+  for (const c of choix) {
+    if (!c.sousId || !elementProgramme(c.sousId)) continue;
+    const g = groupes.get(c.sousId) ?? { n: 0, jours: new Set<string>() };
+    g.n++;
+    for (const j of c.jours ?? []) g.jours.add(j);
+    groupes.set(c.sousId, g);
+  }
+  if (groupes.size === 0) return programmeParDefaut(null, nbJours).filter((p) => p.id !== "trajet");
+  const out: ItemProgramme[] = [];
+  for (const [id, g] of groupes) {
+    const e = elementProgramme(id)!;
+    const brut = Math.max(Math.round((PART_DES_JOURS[id] ?? 0.2) * nbJours), g.n, g.jours.size);
+    out.push({ id, frequence: borneFrequence(brut, e.creneau, nbJours) });
+  }
+  if (!groupes.has("trajet")) {
+    const trajet = elementProgramme("trajet");
+    if (trajet) out.push({ id: "trajet", frequence: borneFrequence(2, trajet.creneau, nbJours) });
+  }
   return out;
 }
 

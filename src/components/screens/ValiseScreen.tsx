@@ -96,7 +96,7 @@ import { ideesGardees, ideesPourDestination } from "@/lib/ideesSejour";
 import { appliquerPeriode, arriveeAuMilieu, destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, periodeValide, periodesDesDestinations, ETAPES_MAX, type EtapeSejour, type Periode } from "@/lib/etapesSejour";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
-import { activitesAPlanifier, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, pieceLaPlusUtilisee, planificationManuelle, planningDeLaValise, sousIdDeLActivite, type CreneauPlanning, type PlacementsPlanning } from "@/lib/planningValise";
+import { activitesAPlanifier, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, pieceLaPlusUtilisee, planificationManuelle, planningDeLaValise, sousIdDuChoix, type CreneauPlanning, type PlacementsPlanning } from "@/lib/planningValise";
 import { FantomeSaisie, useGlisserVersJour } from "@/components/GlisserVersJour";
 import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
 import {
@@ -123,7 +123,7 @@ import {
   elementProgramme,
   occasionsDuProgramme,
   programmeDepuisOccasions,
-  programmeDesActivites,
+  programmeDesChoix,
   type ActiviteSejour,
   type ItemProgramme,
 } from "@/lib/programmeValise";
@@ -770,7 +770,7 @@ function EtapeActivites({
                 <span className="flex-shrink-0 text-terracotta-deep">{glyphe(c.activite)}</span>
                 {/* Une activité qui a sa tenue se date d'un toucher : « À planifier » tant qu'elle n'a pas de jour (06/11/2026). Une
                     activité que le moteur ne connaît pas ne change rien aux tenues : elle ne se date pas. */}
-                {sousIdDeLActivite(c.activite) ? (
+                {sousIdDuChoix(c) ? (
                   <button
                     type="button"
                     onClick={() => setADater(i)}
@@ -1094,7 +1094,11 @@ export default function ValiseScreen() {
     autresEtapes.every((e) => e.destination.trim() && etapes.includes(e)) &&
     // Chaque destination a des dates complètes et dans l'ordre (30/10/2026, une destination, ses dates).
     (autresEtapes.length === 0 || periodesDesDestinations(depart, retour, autresEtapes.map((e) => e.arrivee)).every(periodeValide));
-  const programme: ItemProgramme[] = programmeDesActivites(activites, jours.length || 1);
+  // Une sous-occasion par activité concrète (07/11/2026, brief « Vacances ») : programmeDesChoix, plus programmeDesActivites.
+  const programme: ItemProgramme[] = programmeDesChoix(
+    choix.map((c) => ({ sousId: sousIdDuChoix(c), jours: (c.jours ?? []).filter((j) => jours.includes(j)) })),
+    jours.length || 1
+  );
 
   /**
    * LA MÉTÉO SUR PLACE, DÈS L'ÉTAPE 1 — seulement quand la prévision peut la

@@ -118,6 +118,55 @@ export function activiteDuLibelle(libelle: string): ActiviteSejour | null {
   return MOTS.find(([re]) => re.test(cle))?.[1] ?? null;
 }
 
+/**
+ * LA SOUS-OCCASION D'UNE ACTIVITÉ CONCRÈTE (07/11/2026, brief « Vacances » : « Visiter le Palais d'Été » → Balade & visite, « Se promener
+ * sur la Grande Muraille » → Randonnée & marche, « Assister à un spectacle d'opéra » → Restaurant & soirée, « Se détendre dans un spa
+ * traditionnel » → Spa & bien-être, « Marché de rue » → Shopping, « Balade en bateau » → Excursion). UNE sous-occasion par activité,
+ * lue sur des mots sans ambiguïté ; l'ordre compte (une balade en bateau est une excursion, une promenade sur la Muraille une
+ * randonnée, une « longue marche » n'est pas un marché). ARBITRAGE ÉDITORIAL pour les mots, à compléter sur de vrais séjours.
+ */
+const MOTS_SOUS_OCCASION: [RegExp, string][] = [
+  [/\b(mariage|ceremonie|bapteme|communion|gala|fiancailles|remise de diplome)/, "ceremonie"],
+  [/\b(reunion|travail|seminaire|conference|salon|client|rendez vous pro|bureau|formation|congres)/, "travail_reunion"],
+  [/\b(randonnee|rando|trek|trekking|ascension|via ferrata|muraille|sentier|sentiers|longue marche|longues marches|grande marche|marche en montagne|sommet|volcan)/, "randonnee"],
+  [/\b(piscine)/, "piscine"],
+  [/\b(plage|baignade|snorkeling|plongee|bronzer|transat|mer\b|bord de mer|crique)/, "plage"],
+  [/\b(spa|hammam|massage|massages|thermes|sauna|bien etre)/, "spa"],
+  [/\b(sport|ski|surf|velo|course|footing|running|golf|tennis|escalade|kayak|paddle|fitness|salle de sport|yoga|vtt)/, "activite_sportive"],
+  [/\b(diner|soiree|bar|club|concert|spectacle|anniversaire|cocktail|rooftop|fete|cabaret|opera|theatre|restaurant|ballet)/, "restaurant"],
+  // « Marché » et « marche » s'écrivent pareil sans accent : un marché se lit seulement suivi de ce qui le qualifie (de rue, nocturne…)
+  // ou en fin de libellé (« Faire le marché ») ; « Marche dans la forêt » n'en est pas un.
+  [/\bmarches?( (de|du|des|aux|nocturne|nocturnes|local|locaux|flottant|flottants|couvert|artisanal|traditionnel|central)\b| $)|\b(souk|shopping|boutique|boutiques|centre commercial|magasin|emplettes|bazar)\b/, "shopping"],
+  [/\b(bateau|croisiere|excursion|quad|safari|desert|chameau|catamaran|jonque)/, "excursion"],
+  [/\b(detente|detendre|repos|reposer|farniente|sieste|cocooning|hebergement|lecture)/, "detente"],
+  [/\b(balade|promenade|promener|flaner|nature|foret|lac|parc|jardin|cascade|campagne|montagne)/, "balade"],
+  [/\b(visite|visiter|musee|monument|palais|temple|hutong|hutongs|medina|quartier|galerie|exposition|eglise|cathedrale|chateau|village|gastronomie|degustation|brunch|ville|decouvrir|decouverte|explorer)/, "visites"],
+];
+
+/** La sous-occasion qu'un libellé dit sans ambiguïté ; null sinon. */
+export function sousOccasionDuLibelle(libelle: string): string | null {
+  const cle = ` ${cleLibelle(libelle)} `;
+  return MOTS_SOUS_OCCASION.find(([re]) => re.test(cle))?.[1] ?? null;
+}
+
+/** À défaut de mots, l'activité du choix (idée proposée, lecture IA) donne sa sous-occasion. */
+const SOUS_OCCASION_DE_L_ACTIVITE: Record<ActiviteSejour, string> = {
+  ville: "visites",
+  plage: "plage",
+  nature: "balade",
+  randonnee: "randonnee",
+  detente: "detente",
+  soiree: "restaurant",
+  travail: "travail_reunion",
+  sport: "activite_sportive",
+  evenement: "ceremonie",
+};
+
+/** La sous-occasion d'un choix : ses mots d'abord, sinon son activité ; null quand rien ne le décrit (il ne change rien aux tenues). */
+export function sousOccasionDuChoix(c: Pick<ActiviteChoisie, "libelle" | "activite">): string | null {
+  return sousOccasionDuLibelle(c.libelle) ?? (c.activite ? SOUS_OCCASION_DE_L_ACTIVITE[c.activite] : null);
+}
+
 /** L'occasion lue par l'IA dans un libellé (lectureEvenement.ts), traduite en activité du moteur. Quotidien ne dit rien : null. */
 export function activiteDeLOccasion(occasion: OccasionKey | null): ActiviteSejour | null {
   switch (occasion) {

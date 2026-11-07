@@ -445,3 +445,23 @@ Demandé : l'affectation des dates « dès la sélection des activités, dans le
 ## Journées de marche : le confort d'abord (06/11/2026)
 
 Demandé : « le confort prime durant la journée » quand une activité demande de marcher (visites, balade, excursion — Ville les retient). Arbitré pour les chaussures : uniquement des chaussures plates et faites pour marcher — baskets, bottines, bottes en hiver, sandales plates en été ; « pas de mocassins ». `filtrerParContrainte(pool, "marche", meteo)` (programmeValise.ts, `chaussuresDeMarche`) : la saison est celle de la situation (sa météo). Une chaussure sans type reste. Si la valise n'a aucune chaussure de marche, la règle d'avant s'applique (ni talons ni chaussons) plutôt qu'une journée sans tenue. Le soir n'est pas concerné. Les vêtements (arbitré : « Privilégie le confort dans le style et la morphologie de l'utilisateur ») : `privilegierLeConfort` — une pièce habillée (formalité 4), une coupe serrée, une jupe crayon ou une mini-jupe sort d'une journée de marche seulement si sa catégorie garde une pièce confortable ; sinon elle reste. Le moteur choisit ensuite comme toujours, avec le style et la morphologie du profil.
+
+## Vacances : les sous-occasions et les activités concrètes (07/11/2026)
+
+Brief « Création de l'occasion Vacances ». ARBITRÉ le même jour : pas de onzième occasion du moteur, un regroupement « Vacances »
+propre à la valise, et une étiquette « vacances » au catalogue (étape 2, à venir).
+
+- **Les dix sous-occasions** (`SOUS_OCCASIONS_VACANCES`, `programmeValise.ts`) prennent les libellés du brief : Balade & visite,
+  Randonnée & marche, Plage, Piscine, Spa & bien-être, Shopping, Excursion, Restaurant & soirée, Activité sportive, Détente &
+  cocooning. Les identifiants des sous-occasions existantes ne changent pas (les valises gardées restent lisibles) ; deux sont
+  nouvelles : `activite_sportive` (mère Sport) et `detente` (mère Cocooning). Chacune garde sa mère et sa contrainte : le moteur, ses
+  règles et son score sont inchangés. Hors valise, rien n'apparaît.
+- **Une activité concrète, une sous-occasion** (`sousOccasionDuLibelle`, `sousOccasionDuChoix`, `activitesSejour.ts`) : des mots sans
+  ambiguïté d'abord (« Grande Muraille » → Randonnée & marche, « Marché de rue » → Shopping, « Balade en bateau » → Excursion), sinon
+  l'activité de l'idée ou de la lecture IA. Un marché n'est pas une marche : « marché » ne se lit que qualifié (de rue, nocturne…) ou en
+  fin de libellé. Les mots sont un ARBITRAGE ÉDITORIAL, à compléter sur de vrais séjours.
+- **Le programme** (`programmeDesChoix`) : une entrée par sous-occasion, jamais une par activité ; sa fréquence est la plus grande de
+  sa part des jours (`PART_DES_JOURS`, les parts d'avant), du nombre de ses activités et de ses jours datés, bornée par le séjour.
+  Plusieurs activités d'une même sous-occasion et d'une même météo partagent donc un look (les situations, inchangées). Changement
+  assumé : « Visiter la ville » ne donne plus d'office shopping et restaurant ; ce sont des activités à choisir.
+- Le planning affiche le libellé de la sous-occasion (« Balade & visite »).
