@@ -45,6 +45,7 @@ import {
   joursDuSejour,
   libelleDuree,
   lookAChaussuresEtSac,
+  lookChezSoi,
   looksDeLaValise,
   looksParPiece,
   SEUIL_POLYVALENTE,
@@ -58,6 +59,7 @@ import {
   pluieAnnoncee,
   pretPourUneValise,
   resumeLook,
+  dansLOrdreDuLook,
   situationsDuProgramme,
   capsuleDuSejour,
   type SituationValise,
@@ -94,7 +96,7 @@ import { ideesGardees, ideesPourDestination } from "@/lib/ideesSejour";
 import { appliquerPeriode, arriveeAuMilieu, destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, periodeValide, periodesDesDestinations, ETAPES_MAX, type EtapeSejour, type Periode } from "@/lib/etapesSejour";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
-import { activitesAPlanifier, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, pieceLaPlusUtilisee, planificationManuelle, planningDeLaValise, sousIdDeLActivite, type CreneauPlanning, type PlacementsPlanning } from "@/lib/planningValise";
+import { activitesAPlanifier, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, pieceLaPlusUtilisee, planificationManuelle, planningDeLaValise, sousIdDuChoix, type CreneauPlanning, type PlacementsPlanning } from "@/lib/planningValise";
 import { FantomeSaisie, useGlisserVersJour } from "@/components/GlisserVersJour";
 import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
 import {
@@ -121,7 +123,7 @@ import {
   elementProgramme,
   occasionsDuProgramme,
   programmeDepuisOccasions,
-  programmeDesActivites,
+  programmeDesChoix,
   type ActiviteSejour,
   type ItemProgramme,
 } from "@/lib/programmeValise";
@@ -768,7 +770,7 @@ function EtapeActivites({
                 <span className="flex-shrink-0 text-terracotta-deep">{glyphe(c.activite)}</span>
                 {/* Une activité qui a sa tenue se date d'un toucher : « À planifier » tant qu'elle n'a pas de jour (06/11/2026). Une
                     activité que le moteur ne connaît pas ne change rien aux tenues : elle ne se date pas. */}
-                {sousIdDeLActivite(c.activite) ? (
+                {sousIdDuChoix(c) ? (
                   <button
                     type="button"
                     onClick={() => setADater(i)}
@@ -1092,7 +1094,11 @@ export default function ValiseScreen() {
     autresEtapes.every((e) => e.destination.trim() && etapes.includes(e)) &&
     // Chaque destination a des dates complètes et dans l'ordre (30/10/2026, une destination, ses dates).
     (autresEtapes.length === 0 || periodesDesDestinations(depart, retour, autresEtapes.map((e) => e.arrivee)).every(periodeValide));
-  const programme: ItemProgramme[] = programmeDesActivites(activites, jours.length || 1);
+  // Une sous-occasion par activité concrète (07/11/2026, brief « Vacances ») : programmeDesChoix, plus programmeDesActivites.
+  const programme: ItemProgramme[] = programmeDesChoix(
+    choix.map((c) => ({ sousId: sousIdDuChoix(c), jours: (c.jours ?? []).filter((j) => jours.includes(j)) })),
+    jours.length || 1
+  );
 
   /**
    * LA MÉTÉO SUR PLACE, DÈS L'ÉTAPE 1 — seulement quand la prévision peut la
@@ -1893,7 +1899,7 @@ function Resultat({
   const ids = pieces.map((p) => p.id);
   // Un look de valise a toujours chaussures et sac (lookAChaussuresEtSac) : les valises gardées avant cette règle ne montrent plus
   // les looks qui n'en ont pas — « Recomposer » en refait avec.
-  const looks = valise.looks.filter((l) => l.ids.every((id) => ids.includes(id)) && lookAChaussuresEtSac(l.ids, pieces));
+  const looks = valise.looks.filter((l) => l.ids.every((id) => ids.includes(id)) && lookAChaussuresEtSac(l.ids, pieces, lookChezSoi(l, valise.situations)));
   // Le planning jour par jour est calculé ICI, avant les vues d'une pièce ou d'un look : le glisser-déposer (06/11/2026) a besoin de
   // ses crochets à chaque rendu (règles des hooks).
   const joursDuSejourValise = joursDuSejour(valise.depart, valise.retour);
@@ -2083,7 +2089,8 @@ function Resultat({
     return noms.length ? noms.join(" · ") : occasionShortLabel(s.occasion);
   };
 
-  const piecesDuLook = (l: LookValise) => l.ids.map(pieceDe).filter((i): i is Item => !!i);
+  // Les vêtements d'abord, les accessoires ensuite : les miniatures montrent les pièces principales (07/11/2026, dansLOrdreDuLook).
+  const piecesDuLook = (l: LookValise) => dansLOrdreDuLook(l.ids.map(pieceDe).filter((i): i is Item => !!i));
   /*
    * LE LOOK D'UN JOUR ET SA COUCHE EXTÉRIEURE (04/11/2026, arbitrage A ; coucheExterieure.ts). La température est celle des jours que
    * le look habille : la prévision quand elle les couvre, sinon les températures habituelles du lieu (climatologie de la valise) —
@@ -2438,7 +2445,7 @@ function Resultat({
               (proposition.tenue ? (
                 (() => {
                   const t = proposition.tenue;
-                  const piecesT = t.ids.map((id) => base.find((x) => x.id === id)).filter((x): x is Item => !!x);
+                  const piecesT = dansLOrdreDuLook(t.ids.map((id) => base.find((x) => x.id === id)).filter((x): x is Item => !!x));
                   const idsTotal = new Set([...valise.pieceIds, ...t.ids]);
                   const total = volumeDe(base.filter((x) => idsTotal.has(x.id)));
                   return (

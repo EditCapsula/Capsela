@@ -295,6 +295,17 @@ function parseCapsuleSeasons(raw: string | null): CapsuleSeason[] | undefined {
 }
 
 /** Filtre discret, jamais bloquant : un token qui ne correspond à aucune occasion connue est simplement ignoré (recette 20/08/2026). */
+/**
+ * L'étiquette « vacances » (07/11/2026) : présente, les autres valeurs que les occasions de Capsela ignorent sont les activités de séjour
+ * que la pièce sert (« quotidien,vacances,plage,piscine » → ["plage", "piscine"]). Absente : undefined. Rien n'est déduit du nom.
+ */
+const ACTIVITES_DE_VACANCES_CONNUES = ["plage", "piscine", "spa", "randonnee", "visites", "balade", "excursion", "shopping", "restaurant", "activite_sportive", "detente", "trajet"];
+export function mapVacances(raw: string | null): string[] | undefined {
+  const tokens = (splitTags(raw) ?? []).map((t) => t.toLowerCase());
+  if (!tokens.includes("vacances")) return undefined;
+  return [...new Set(tokens.filter((t) => ACTIVITES_DE_VACANCES_CONNUES.includes(t)))];
+}
+
 function mapOccasions(raw: string | null): OccasionKey[] | undefined {
   const tokens = splitTags(raw);
   if (!tokens) return undefined;
@@ -334,6 +345,8 @@ const SHOE_TYPE_MAP: Record<string, ShoeType> = {
   "chaussures d'intérieur": "Chaussures d'intérieur",
   // Réservée à la valise (06/11/2026, piecesDeValise.ts) : une chaussure de sport pour le moteur ; son type exact reste le sous_type.
   "chaussures de randonnée": "Baskets",
+  // 07/11/2026 : les claquettes de la valise sont des sandales plates pour le moteur (plage, piscine) ; au spa, estTong les reconnaît.
+  claquettes: "Sandales",
 };
 
 export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
@@ -390,6 +403,7 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     necessiteSoleil: mapNecessiteSoleil(row.necessite_soleil),
     resistePluie: row.resiste_pluie ?? undefined,
     occasion: mapOccasions(row.occasions),
+    vacances: mapVacances(row.occasions),
     meteoMinTemp: row.meteo_min_temp ?? undefined,
     meteoMaxTemp: row.meteo_max_temp ?? undefined,
     imageUrl: row.url_image || undefined,

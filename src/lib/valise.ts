@@ -1,10 +1,10 @@
 import { previsionPour, type Prevision } from "./prevision";
 import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
-import { ajouterCouverture, estJourneeDeMarche, estRandonnee, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee, sansTenueDeSport } from "./piecesDeValise";
+import { ajouterCouverture, ajouterVesteDePluie, estImpermeableDeValise, estJourneeDeMarche, estPieceDeValise, estRandonnee, estRobeDePlage, estVesteDePluie, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee, sansTenueDeSport } from "./piecesDeValise";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, saisonCapsuleDuJour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
-import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, generateOutfitWithFallback } from "./logic";
+import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, estContexteMaison, generateOutfitWithFallback } from "./logic";
 import { composeWardrobePool } from "./selectors";
 import type { CapsuleSeason, CategoryKey, Item, OccasionKey, ShoeType } from "./types";
 
@@ -229,6 +229,11 @@ export interface SituationValise {
   sousIds?: string[];
   /** Un trajet ou une journée de marche d'un séjour qui compte une randonnée : la paire de randonnée y est proposée (06/11/2026, piecesDeValise.ts). */
   avecRandonnee?: true;
+  /**
+   * Une pluie PRÉVUE sur l'un de ses jours (07/11/2026) : une vraie prévision, jamais les températures habituelles ni la météo
+   * d'aujourd'hui. La veste de pluie n'est proposée qu'alors (piecesDeValise.ts, ajouterVesteDePluie).
+   */
+  pluiePrevue?: true;
 }
 
 /**
@@ -286,6 +291,7 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
     else parGroupe.set(cle, { mere: e.mere, contrainte: e.contrainte, trajet: e.creneau === "trajet", sousIds: [e.id] });
   }
   const randonnee = elements.some((e) => e.id === "randonnee");
+  const pluvieux = new Set(tries.filter((m) => pluieAnnoncee([m])).map((m) => m.jour));
   const out: SituationValise[] = [];
   for (const g of parGroupe.values()) {
     for (const m of groupesMeteo(g.trajet ? extremes : tries)) {
@@ -296,6 +302,7 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
         ...(g.contrainte ? { contrainte: g.contrainte } : {}),
         sousIds: g.sousIds,
         ...((g.trajet || g.contrainte === "marche") && randonnee ? { avecRandonnee: true as const } : {}),
+        ...(m.jours.some((j) => pluvieux.has(j)) ? { pluiePrevue: true as const } : {}),
       });
     }
   }
@@ -355,8 +362,13 @@ export function generateurMoteur(
   piecesValise: Item[] = []
 ): Generateur {
   return (poolComplet, s) => {
-    // Les pièces réservées de cette situation seulement (baignade, randonnée) : piecesPourLaSituation.
-    const avecBain = [...poolComplet, ...piecesPourLaSituation(piecesValise, s).filter((p) => !poolComplet.some((q) => q.id === p.id))];
+    // Les pièces réservées de cette situation seulement (baignade, randonnée, pluie) : piecesPourLaSituation. Une veste de pluie du
+    // dressing passe devant la veste imperméable de la valise, qui n'entre alors pas (07/11/2026).
+    const vesteDePluieAuDressing = poolComplet.some((p) => estVesteDePluie(p) && !estPieceDeValise(p));
+    const reservees = piecesPourLaSituation(piecesValise, s).filter((p) => !(vesteDePluieAuDressing && estImpermeableDeValise(p)));
+    const avecBain = [...poolComplet, ...reservees.filter((p) => !poolComplet.some((q) => q.id === p.id))];
+    // La robe de plage ne passe pas par le moteur (une pièce entière, elle remplacerait le maillot) : elle couvre le maillot ensuite.
+    const robes = avecBain.filter(estRobeDePlage);
     // La contrainte de la situation (chaleur, marche, outdoor) restreint le pool ; le moteur, lui, ne change pas. En baignade, la tenue
     // de bain et sa couverture tiennent lieu de vêtements (poolDeBaignade).
     const brut = sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeRandonnee(poolDeBaignade(avecBain, s), s), s.contrainte, s.meteo), s.occasion);
@@ -364,23 +376,26 @@ export function generateurMoteur(
     const decontracte = s.occasion === "voyage" || estRandonnee(s) ? poolDecontracte(brut) : brut;
     // Hors randonnée, la paire de randonnée se porte avec des vêtements ordinaires (06/11/2026, sansTenueDeSport).
     const pool = estJourneeDeMarche(s) && !estRandonnee(s) ? sansTenueDeSport(decontracte) : decontracte;
-    const t = composer(pool, s.occasion, s.meteo, s);
+    const t = composer(pool, s.occasion, s.meteo, s, robes);
     if (t || !estRandonnee(s)) return t;
     // UNE RANDONNÉE SANS TENUE DE SPORT (06/11/2026, signalé : deux journées de randonnée « Aucun look de ta valise ne répond encore à
     // cette occasion »). Le moteur Sport n'admet que des vêtements et un sac de sport ; une valise qui n'en a pas reçoit une tenue de
     // marche décontractée, toujours avec la paire de randonnée (poolDeRandonnee), dite élargie. Le premier choix reste la tenue de sport.
     const marche = poolDecontracte(sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolDeRandonnee(avecBain, s), "marche", s.meteo), "quotidien"));
-    const repli = composer(marche, "quotidien", s.meteo, s);
+    const repli = composer(marche, "quotidien", s.meteo, s, []);
     return repli ? { ...repli, elargie: true } : null;
   };
 
-  function composer(pool: Item[], occasion: OccasionKey, meteo: Weather, s: SituationValise): TenueMoteur | null {
+  function composer(poolBrut: Item[], occasion: OccasionKey, meteo: Weather, s: SituationValise, robes: Item[]): TenueMoteur | null {
+    const pool = poolBrut.filter((p) => !estRobeDePlage(p));
     if (!pool.length) return null;
     const r = generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
     // Les chaussures et le sac ajoutés suivent les règles du moteur (météo, occasion, couleur, saison) : 12/10/2026, demandé « tenir compte des règles du moteur ».
-    const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion, meteo });
-    return ids ? { ids: ajouterCouverture(ids, pool, s), elargie: r.occasionRelachee } : null;
+    const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion, meteo }, (s.sousIds ?? []).includes("spa"));
+    if (!ids) return null;
+    const couvert = ajouterCouverture(ids, [...pool, ...robes.filter((r) => !pool.some((p) => p.id === r.id))], s);
+    return { ids: ajouterVesteDePluie(couvert, pool, s), elargie: r.occasionRelachee };
   }
 }
 
@@ -402,24 +417,48 @@ export function completerChaussuresEtSac(
    * sac du pool — qui pouvait être des sandales sous la pluie ou des baskets avec une tenue habillée. Aucune candidate acceptée : pas de look.
    * Sans contexte, comportement d'origine.
    */
-  moteur?: { occasion: OccasionKey; meteo: Weather }
+  moteur?: { occasion: OccasionKey; meteo: Weather },
+  /** Une journée de spa : des tongs ou des claquettes conviennent aussi (07/11/2026, estTong). */
+  spa = false
 ): number[] | null {
   const sortie = [...ids];
+  // UN LOOK « CHEZ SOI » (Cocooning : le spa du séjour, 07/11/2026, signalé : les journées de spa d'une valise toujours sans look — la
+  // valise exigeait un sac que le moteur y refuse, R-B14). Ni sac, ni chaussures obligatoires (arbitré : « pour le spa les tongs
+  // suffisent même si ce n'est pas obligatoire ») : des chaussures d'intérieur, des tongs au spa, sinon pieds nus.
+  const chezSoi = Boolean(moteur && estContexteMaison(moteur.occasion));
   for (const cat of ["chaussures", "sac"] as const) {
     if (sortie.some((id) => pool.find((p) => p.id === id)?.cat === cat)) continue;
+    if (cat === "sac" && chezSoi) continue;
     const dejaLa = pool.filter((p) => sortie.includes(p.id));
-    const candidats = moteur
+    const acceptes = moteur
       ? candidatsDeRemplacement(dejaLa, pool.filter((p) => !sortie.includes(p.id)), -1, cat, moteur.occasion, "Présentiel", "Verre", moteur.meteo).filter((p) => p.cat === cat)
       : pool.filter((p) => p.cat === cat && !sortie.includes(p.id));
+    const candidats = cat === "chaussures" && chezSoi && spa ? [...acceptes, ...pool.filter((p) => estTong(p) && !acceptes.includes(p) && !sortie.includes(p.id))] : acceptes;
+    if (!candidats.length && chezSoi) continue;
     if (!candidats.length) return null;
     sortie.push(candidats[Math.min(candidats.length - 1, Math.floor(hasard() * candidats.length))].id);
   }
   return sortie;
 }
 
-/** Une tenue qui a des chaussures ET un sac — la règle des looks de valise (valises gardées avant le 04/10/2026 comprises). */
-export const lookAChaussuresEtSac = (ids: number[], pieces: Item[]): boolean =>
-  (["chaussures", "sac"] as const).every((cat) => ids.some((id) => pieces.find((p) => p.id === id)?.cat === cat));
+/** Des tongs ou des claquettes, lues sur le nom ou le type (l'app n'a pas de type « Tongs ») : rien n'est deviné. */
+export const estTong = (it: Pick<Item, "cat" | "name" | "subtype">): boolean => it.cat === "chaussures" && /\b(tongs?|claquettes?)\b/i.test(`${it.name} ${it.subtype ?? ""}`);
+
+/** Un look qui ne sert que des situations « chez soi » (Cocooning : le spa du séjour). */
+export const lookChezSoi = (l: Pick<LookValise, "situations">, situations: readonly Pick<SituationValise, "occasion">[]): boolean =>
+  l.situations.length > 0 && l.situations.every((i) => situations[i] != null && estContexteMaison(situations[i].occasion));
+
+/**
+ * Une tenue qui a des chaussures ET un sac — la règle des looks de valise (valises gardées avant le 04/10/2026 comprises). Exception
+ * (07/11/2026) : un look « chez soi » (spa) n'a besoin ni de sac (R-B14) ni de chaussures (`chezSoi`, ou des chaussures d'intérieur).
+ */
+export const lookAChaussuresEtSac = (ids: number[], pieces: Item[], chezSoi = false): boolean => {
+  if (chezSoi) return true;
+  const portees = ids.map((id) => pieces.find((p) => p.id === id)).filter((p): p is Item => !!p);
+  const chaussures = portees.filter((p) => p.cat === "chaussures");
+  if (!chaussures.length) return false;
+  return portees.some((p) => p.cat === "sac") || chaussures.every((p) => p.shoeType === "Chaussures d'intérieur");
+};
 
 export interface LookValise {
   ids: number[];
@@ -816,8 +855,18 @@ function nomDansLeLook(p: Item): string {
   const categorie = CATEGORIE_COURTE[p.cat];
   return CATEGORIE_A_NOMMER.includes(p.cat) && !sousType.includes(categorie) ? `${categorie} ${sousType}` : sousType;
 }
+/**
+ * Les pièces d'un look dans l'ordre où on les lit : les vêtements d'abord (robe, combinaison, haut, pull, bas, veste, manteau), puis
+ * chaussures, sac, bijoux et accessoires. Le même ordre pour le nom du look et ses miniatures (07/11/2026, demandé : « dans les premières
+ * pièces de la tenue on voit en premier les pièces principales de la tenue, et non pas les accessoires »). Tri stable : à catégorie
+ * égale, l'ordre du look est gardé.
+ */
+export function dansLOrdreDuLook<T extends Pick<Item, "cat">>(pieces: readonly T[]): T[] {
+  return [...pieces].sort((a, b) => ORDRE_RESUME.indexOf(a.cat) - ORDRE_RESUME.indexOf(b.cat));
+}
+
 export function resumeLook(pieces: Item[]): string {
-  const mots = [...pieces].sort((a, b) => ORDRE_RESUME.indexOf(a.cat) - ORDRE_RESUME.indexOf(b.cat)).map(nomDansLeLook);
+  const mots = dansLOrdreDuLook(pieces).map(nomDansLeLook);
   return [...new Set(mots)].map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(" · ");
 }
 

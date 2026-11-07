@@ -101,9 +101,15 @@ export function affairesDuSejour(ctx: ContexteSejour): AffaireVoyage[] {
   const pluie = meteos.some((m) => m.prevue && /pluie|pluvieux|averse|orage|bruine/i.test(m.label));
 
   const eau = au(programme, "plage", "piscine");
+  // UN SEUL MAILLOT pour la plage, la piscine et le spa (07/11/2026, demandé : « un même maillot de bain peut servir pour la plage et la
+  // piscine… éviter les doublons lorsqu'une pièce répond à plusieurs activités ») : une ligne, qui nomme toutes ses activités ; aucune
+  // quand la valise porte déjà une tenue de bain.
+  const baignades = (["plage", "piscine", "spa"] as const).filter((id) => programme.some((p) => p.id === id));
+  if (baignades.length && !ctx.sousTypes?.some((t) => t === "Maillot de bain" || t === "Short de bain")) {
+    out.push({ id: "maillot", libelle: "Maillot de bain", groupe: "equipement", raison: `${baignades.map((id) => LIBELLE_PROGRAMME[id]).join(", ")} au programme` });
+  }
   if (eau) {
     const raison = `${LIBELLE_PROGRAMME[eau]} au programme`;
-    if (!ctx.sousTypes?.some((t) => t === "Maillot de bain" || t === "Short de bain")) out.push({ id: "maillot", libelle: "Maillot de bain", groupe: "equipement", raison });
     out.push({ id: "serviette", libelle: "Serviette de plage", groupe: "equipement", raison });
     out.push({ id: "tongs", libelle: "Tongs ou sandales de plage", groupe: "equipement", raison });
     out.push({ id: "sac_plage", libelle: "Sac de plage", groupe: "equipement", raison });
@@ -127,7 +133,6 @@ export function affairesDuSejour(ctx: ContexteSejour): AffaireVoyage[] {
       out.push({ id, libelle, groupe: "trajet", raison: "Trajet au programme" });
     }
   }
-  if (au(programme, "spa")) out.push({ id: "maillot_spa", libelle: "Maillot de bain pour le spa", groupe: "equipement", raison: "Spa au programme" });
   if (pluie) out.push({ id: "parapluie", libelle: "Parapluie ou imperméable", groupe: "equipement", raison: "Pluie annoncée" });
   if (min !== null && min <= SEUIL_FROID) out.push({ id: "gants_bonnet", libelle: "Gants et bonnet", groupe: "equipement", raison: `Froid attendu (jusqu'à ${min}°)` });
 

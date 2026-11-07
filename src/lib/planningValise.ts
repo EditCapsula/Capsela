@@ -1,6 +1,6 @@
 import { creneauDuMoment, evenementsDuSejour, libelleEvenement, sousIdEvenement, type EvenementValise, type MomentEvenement } from "./evenementsValise";
 import { ACTIVITES, elementProgramme, type Creneau, type ItemProgramme } from "./programmeValise";
-import type { ActiviteChoisie } from "./activitesSejour";
+import { sousOccasionDuChoix, type ActiviteChoisie } from "./activitesSejour";
 import type { LookValise, SituationValise } from "./valise";
 import type { ValiseGardee } from "./valises";
 
@@ -55,6 +55,9 @@ export function sousIdDeLActivite(activite: ActiviteChoisie["activite"]): string
   return ACTIVITES.find((a) => a.id === activite)?.retenues[0]?.[0] ?? null;
 }
 
+/** L'entrée du programme d'un choix (07/11/2026) : sa sous-occasion Vacances, lue sur ses mots puis sur son activité. */
+export const sousIdDuChoix = (c: Pick<ActiviteChoisie, "libelle" | "activite">): string | null => sousOccasionDuChoix(c);
+
 /** Une activité choisie, datée : son libellé à elle (« Plage de Cascais »), l'entrée du programme qui la porte, ses jours du séjour. */
 export interface ActiviteDatee {
   choix: number;
@@ -66,7 +69,7 @@ export interface ActiviteDatee {
 /** Les activités choisies qui ont au moins un jour DU SÉJOUR ; une activité sans correspondance dans le moteur n'a pas de tenue : écartée. */
 export function activitesDatees(choix: readonly ActiviteChoisie[], jours: readonly string[]): ActiviteDatee[] {
   return choix.flatMap((c, i) => {
-    const sousId = sousIdDeLActivite(c.activite);
+    const sousId = sousIdDuChoix(c);
     const leurs = (c.jours ?? []).filter((j) => jours.includes(j));
     return sousId && leurs.length ? [{ choix: i, libelle: c.libelle, sousId, jours: leurs }] : [];
   });
@@ -74,7 +77,7 @@ export function activitesDatees(choix: readonly ActiviteChoisie[], jours: readon
 
 /** Les activités choisies « À planifier » : une correspondance dans le moteur, aucun jour du séjour. */
 export function activitesAPlanifier(choix: readonly ActiviteChoisie[], jours: readonly string[]): { choix: number; libelle: string }[] {
-  return choix.flatMap((c, i) => (sousIdDeLActivite(c.activite) && !(c.jours ?? []).some((j) => jours.includes(j)) ? [{ choix: i, libelle: c.libelle }] : []));
+  return choix.flatMap((c, i) => (sousIdDuChoix(c) && !(c.jours ?? []).some((j) => jours.includes(j)) ? [{ choix: i, libelle: c.libelle }] : []));
 }
 
 /** L'identité d'un créneau pour le déplacer : l'activité choisie (manuel) ou l'entrée du programme (réparti). */
