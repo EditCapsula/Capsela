@@ -816,8 +816,18 @@ function nomDansLeLook(p: Item): string {
   const categorie = CATEGORIE_COURTE[p.cat];
   return CATEGORIE_A_NOMMER.includes(p.cat) && !sousType.includes(categorie) ? `${categorie} ${sousType}` : sousType;
 }
+/**
+ * Les pièces d'un look dans l'ordre où on les lit : les vêtements d'abord (robe, combinaison, haut, pull, bas, veste, manteau), puis
+ * chaussures, sac, bijoux et accessoires. Le même ordre pour le nom du look et ses miniatures (07/11/2026, demandé : « dans les premières
+ * pièces de la tenue on voit en premier les pièces principales de la tenue, et non pas les accessoires »). Tri stable : à catégorie
+ * égale, l'ordre du look est gardé.
+ */
+export function dansLOrdreDuLook<T extends Pick<Item, "cat">>(pieces: readonly T[]): T[] {
+  return [...pieces].sort((a, b) => ORDRE_RESUME.indexOf(a.cat) - ORDRE_RESUME.indexOf(b.cat));
+}
+
 export function resumeLook(pieces: Item[]): string {
-  const mots = [...pieces].sort((a, b) => ORDRE_RESUME.indexOf(a.cat) - ORDRE_RESUME.indexOf(b.cat)).map(nomDansLeLook);
+  const mots = dansLOrdreDuLook(pieces).map(nomDansLeLook);
   return [...new Set(mots)].map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(" · ");
 }
 

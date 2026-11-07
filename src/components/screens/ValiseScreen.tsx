@@ -58,6 +58,7 @@ import {
   pluieAnnoncee,
   pretPourUneValise,
   resumeLook,
+  dansLOrdreDuLook,
   situationsDuProgramme,
   capsuleDuSejour,
   type SituationValise,
@@ -2083,7 +2084,8 @@ function Resultat({
     return noms.length ? noms.join(" · ") : occasionShortLabel(s.occasion);
   };
 
-  const piecesDuLook = (l: LookValise) => l.ids.map(pieceDe).filter((i): i is Item => !!i);
+  // Les vêtements d'abord, les accessoires ensuite : les miniatures montrent les pièces principales (07/11/2026, dansLOrdreDuLook).
+  const piecesDuLook = (l: LookValise) => dansLOrdreDuLook(l.ids.map(pieceDe).filter((i): i is Item => !!i));
   /*
    * LE LOOK D'UN JOUR ET SA COUCHE EXTÉRIEURE (04/11/2026, arbitrage A ; coucheExterieure.ts). La température est celle des jours que
    * le look habille : la prévision quand elle les couvre, sinon les températures habituelles du lieu (climatologie de la valise) —
@@ -2438,7 +2440,7 @@ function Resultat({
               (proposition.tenue ? (
                 (() => {
                   const t = proposition.tenue;
-                  const piecesT = t.ids.map((id) => base.find((x) => x.id === id)).filter((x): x is Item => !!x);
+                  const piecesT = dansLOrdreDuLook(t.ids.map((id) => base.find((x) => x.id === id)).filter((x): x is Item => !!x));
                   const idsTotal = new Set([...valise.pieceIds, ...t.ids]);
                   const total = volumeDe(base.filter((x) => idsTotal.has(x.id)));
                   return (
