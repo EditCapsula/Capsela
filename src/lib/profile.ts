@@ -56,8 +56,8 @@ export interface Profile {
 export const DEFAULT_PREFS: ProfilePrefs = {
   notifEnabled: true,
   notifTime: "08:00",
-  geoConsent: true,
-  weatherFromGeo: true,
+  geoConsent: false,
+  weatherFromGeo: false,
   unitSystem: "metric",
   workDays: ["Lun", "Mar", "Mer", "Jeu", "Ven"],
   onVacation: false,
