@@ -27,6 +27,13 @@ const PAGE = 1000;
 const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
 const TIRAGES = 8;
 
+/**
+ * Les pièces que la propriétaire a retirées de la proposition (11/11/2026, validé : « Retire-les, on garde 126 pièces ») : jupes crayon,
+ * pantalons cigarette et à pinces, mules à talons, mocassins à petit talon — des coupes de tailleur ou des talons, qui restent au niveau 3.
+ * Identifiants de la base (vestiaire_universel.id).
+ */
+const RETIREES_PAR_LA_PROPRIETAIRE = new Set([765, 867, 1081, 688, 866, 594, 636, 841, 1035, 477, 1072]);
+
 /** Ce qui ne descend jamais au niveau 2, quel que soit le reste du nom. */
 const TOUJOURS_HABILLE = /tailleur|costume|smoking|satin|soie|velours|cérémonie|ceremonie|habillé|habille|fourreau|paillet|cocktail|gala/i;
 
@@ -77,12 +84,13 @@ describe("ouverture du niveau 2 (casual chic / smart casual)", () => {
     console.log("\n1. PROPOSITION DE RECLASSEMENT AU NIVEAU 2 (à relire pièce par pièce)");
     for (const c of CRITERES) {
       const siennes = paires.filter(
-        ({ it }) =>
+        ({ r, it }) =>
           c.cats.includes(it.cat) &&
           c.depuis.includes(formalityOf(it)) &&
           it.vacances === undefined &&
           c.mots.test(`${it.name} ${it.subtype ?? ""}`) &&
           !TOUJOURS_HABILLE.test(`${it.name} ${it.subtype ?? ""}`) &&
+          !RETIREES_PAR_LA_PROPRIETAIRE.has(Number(r.id)) &&
           !proposees.has(it.id)
       );
       console.log(`\n  ${c.nom} (${siennes.length}) :`);
