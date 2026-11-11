@@ -1278,6 +1278,13 @@ export function composerValiseVariee(
     const adaptees = servent.filter((c) => c.adapteA.has(i));
     return leviers.adaptation && adaptees.length ? adaptees : servent;
   };
+  // Les tenues d'une situation qui TIENNENT dans le bagage : les adaptées d'abord ; à défaut d'une adaptée qui tienne, les autres
+  // (mesuré, exécution n° 18 : une valise S restreinte aux seules adaptées perdait un créneau sur cinq, faute de place).
+  const tenables = (i: number) => {
+    const tient = (c: CandidatVarie) => volume(sac) + volume(c.ids.filter((id) => !sac.has(id))) <= capacite;
+    const d = options(i).filter(tient);
+    return d.length ? d : liste.filter((c) => c.situations.has(i) && tient(c));
+  };
   const ordre = situations
     .map((s, i) => ({ i, n: s.jours.length, choix: options(i).length }))
     .sort((a, b) => a.n - b.n || a.choix - b.choix || a.i - b.i);
@@ -1292,9 +1299,8 @@ export function composerValiseVariee(
     servies.add(i);
     let meilleur: CandidatVarie | null = null;
     let cout = Infinity;
-    for (const c of options(i)) {
+    for (const c of tenables(i)) {
       const nouveaux = c.ids.filter((id) => !sac.has(id));
-      if (volume(sac) + volume(nouveaux) > capacite) continue;
       const deCapsule = nouveaux.filter((id) => !possede.has(id)).length;
       const k = leviers.variete && !premier
         ? c.ids.reduce((t, id) => t + (POIDS_REPETITION[tous.get(id)?.cat ?? "accessoire"] ?? 0) * (usages.get(id) ?? 0), 0) +
