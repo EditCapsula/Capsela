@@ -92,6 +92,8 @@ const VARIANTES: { nom: string; leviers: LeviersValise | null }[] = [
 ];
 
 interface Mesure {
+  /** Par occasion : [créneaux couverts, dont par une tenue relâchée par le moteur]. */
+  relaches: Map<string, [number, number]>;
   creneaux: number;
   couverts: number;
   adaptes: number;
@@ -112,7 +114,16 @@ function mesurer(looks: LookValise[], pieceIds: number[], suggestionIds: number[
   for (const l of portes) for (const id of l.ids) usages.set(id, (usages.get(id) ?? 0) + 1);
   const catDe = (id: number) => tous.get(id)?.cat;
   const principales = [...usages.keys()].filter((id) => PRINCIPALES.has(catDe(id)!));
+  const relaches = new Map<string, [number, number]>();
+  for (const c of planning) {
+    if (c.look == null) continue;
+    const r = relaches.get(c.sousId) ?? [0, 0];
+    r[0]++;
+    if (looks[c.look].elargie) r[1]++;
+    relaches.set(c.sousId, r);
+  }
   return {
+    relaches,
     creneaux: planning.length,
     couverts: portes.length,
     adaptes: portes.filter((l) => !l.elargie).length,
@@ -190,7 +201,18 @@ describe("valise variée et adaptée", () => {
     const moy = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
     const pct = (a: number, b: number) => `${b ? ((a / b) * 100).toFixed(0) : "—"} %`;
     console.log("\n═══ BILAN (moyennes sur 3 séjours × 3 profils × 2 dressings) ═══");
-    console.log("variante · taille | créneaux couverts | adaptés | bas le plus porté (créneaux) | bas distincts | hauts distincts | looks distincts | pièces (dont capsule) | volume");
+    console.log("\nTenues relâchées par le moteur (occasion ou formalité), par activité, toutes tailles — relâchées / couvertes :");
+    for (const v of VARIANTES) {
+      const tot = new Map<string, [number, number]>();
+      for (const taille of TAILLES)
+        for (const m of cumul.get(`${v.nom}|${taille}`) ?? [])
+          for (const [k, [n, r]] of m.relaches) {
+            const t = tot.get(k) ?? [0, 0];
+            tot.set(k, [t[0] + n, t[1] + r]);
+          }
+      console.log(`  ${v.nom.padEnd(14)} ${[...tot].sort(([a], [b]) => a.localeCompare(b)).map(([k, [n, r]]) => `${k} ${r}/${n}`).join(" · ")}`);
+    }
+    console.log("\nvariante · taille | créneaux couverts | adaptés | bas le plus porté (créneaux) | bas distincts | hauts distincts | looks distincts | pièces (dont capsule) | volume");
     for (const taille of TAILLES)
       for (const v of VARIANTES) {
         const ms = cumul.get(`${v.nom}|${taille}`) ?? [];

@@ -1284,14 +1284,19 @@ export function composerValiseVariee(
   const tours = Math.max(0, ...ordre.map((o) => o.n));
   const creneaux = Array.from({ length: tours }, (_, k) => ordre.filter((o) => o.n > k).map((o) => o.i)).flat();
 
+  const servies = new Set<number>();
   for (const i of creneaux) {
+    // Le premier look d'une situation se choisit au moindre volume (mesuré, exécution n° 15 : choisi pour sa variété, il prenait la
+    // place des situations suivantes et une valise S perdait des créneaux). La variété ne joue qu'à partir du deuxième.
+    const premier = !servies.has(i);
+    servies.add(i);
     let meilleur: CandidatVarie | null = null;
     let cout = Infinity;
     for (const c of options(i)) {
       const nouveaux = c.ids.filter((id) => !sac.has(id));
       if (volume(sac) + volume(nouveaux) > capacite) continue;
       const deCapsule = nouveaux.filter((id) => !possede.has(id)).length;
-      const k = leviers.variete
+      const k = leviers.variete && !premier
         ? c.ids.reduce((t, id) => t + (POIDS_REPETITION[tous.get(id)?.cat ?? "accessoire"] ?? 0) * (usages.get(id) ?? 0), 0) +
           4 * (usagesLook.get(c.cle) ?? 0) +
           0.25 * volume(nouveaux) +
