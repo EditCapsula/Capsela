@@ -184,6 +184,9 @@ describe("valise variée et adaptée", () => {
       }
     }
 
+    // Le détail d'abord, le bilan en dernier : c'est lui qu'on lit en fin de journal.
+    console.log("\n═══ DÉTAIL ═══");
+    for (const l of lignes) console.log(l);
     const moy = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
     const pct = (a: number, b: number) => `${b ? ((a / b) * 100).toFixed(0) : "—"} %`;
     console.log("\n═══ BILAN (moyennes sur 3 séjours × 3 profils × 2 dressings) ═══");
@@ -196,7 +199,5 @@ describe("valise variée et adaptée", () => {
           `${(v.nom + " · " + taille).padEnd(20)} | ${pct(s((m) => m.couverts), s((m) => m.creneaux)).padEnd(6)} | ${pct(s((m) => m.adaptes), s((m) => m.couverts)).padEnd(6)} | ${moy(ms.map((m) => m.maxPrincipale)).toFixed(1).padEnd(5)} | ${moy(ms.map((m) => m.principales)).toFixed(1).padEnd(5)} | ${moy(ms.map((m) => m.hauts)).toFixed(1).padEnd(5)} | ${moy(ms.map((m) => m.looks)).toFixed(1).padEnd(5)} | ${moy(ms.map((m) => m.pieces)).toFixed(1)} (${moy(ms.map((m) => m.capsule)).toFixed(1)}) | ${pct(moy(ms.map((m) => m.volume)), 1)}`
         );
       }
-    console.log("\n═══ DÉTAIL ═══");
-    for (const l of lignes) console.log(l);
   }, 1_800_000);
 });
