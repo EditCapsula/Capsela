@@ -340,8 +340,11 @@ export function styleLabel(id: string | undefined | null, gender: Gender | null)
  * second élargit seulement le catalogue d'où la capsule tire ses pièces (computeDefaultCapsule : « l'un des styles »).
  * `profiles.styles` est déjà une liste : aucune migration. Reprend un essai de multi-sélection du 20/08/2026, abandonné
  * alors sans raison écrite.
+ *
+ * TROIS STYLES (11/11/2026, demandé : « j'aimerais que l'on puisse choisir 3 styles au lieu de 2 ») : la crainte de 2026-10-05 (une
+ * capsule diluée) est désormais mesurable sur le vrai catalogue — audit `trois-styles`, à lire avant la mise en ligne.
  */
-export const MAX_STYLES = 2;
+export const MAX_STYLES = 3;
 
 /**
  * Le choix d'un style : un style choisi se retire (le second devient alors le principal) ; un style absent s'ajoute ; à
@@ -369,9 +372,10 @@ export function stylesLabels(styles: readonly string[], gender: Gender | null): 
   return styles.map((id) => styleLabel(id, gender)).filter(Boolean);
 }
 
-/** « Preppy », ou « Preppy et Casual chic » : le texte d'un profil à un ou deux styles. */
+/** « Preppy », « Preppy et Casual chic », « Preppy, Casual chic et Bohème » : le texte d'un profil à un, deux ou trois styles. */
 export function libelleStyles(styles: readonly string[], gender: Gender | null): string {
-  return stylesLabels(styles, gender).join(" et ");
+  const l = stylesLabels(styles, gender);
+  return l.length <= 1 ? (l[0] ?? "") : `${l.slice(0, -1).join(", ")} et ${l[l.length - 1]}`;
 }
 
 /**
