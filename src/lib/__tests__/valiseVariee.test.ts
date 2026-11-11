@@ -32,6 +32,16 @@ describe("composerValiseVariee — A : la variété sur tout le séjour", () => 
     expect(principales(avec.looks)).toBeGreaterThanOrEqual(3);
   });
 
+  it("chaque situation reçoit son look avant que la variété n'occupe la place", () => {
+    const jours = ["2026-12-07", "2026-12-08", "2026-12-09", "2026-12-10"].map(meteo);
+    const deux = [...situationsDuSejour(["quotidien"], jours), ...situationsDuSejour(["soiree"], [jours[0]])];
+    const quotidien = generateur(TENUES);
+    const soiree = generateur([[12, 21, 30]]);
+    const gen: Generateur = (pool, s) => (s.occasion === "soiree" ? soiree : quotidien)(pool, s);
+    const r = composerValiseVariee(DRESSING, [], deux, 9, gen, { variete: true });
+    expect(r.situationsSansLook).toEqual([]);
+  });
+
   it("une petite valise limite la variété, une grande la permet", () => {
     const petite = composerValiseVariee(DRESSING, [], quatreJours, 6, generateur(TENUES), { variete: true });
     const grande = composerValiseVariee(DRESSING, [], quatreJours, 40, generateur(TENUES), { variete: true });

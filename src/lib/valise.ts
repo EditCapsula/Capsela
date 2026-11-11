@@ -1269,17 +1269,20 @@ export function composerValiseVariee(
   const usagesLook = new Map<string, number>();
   const retenus = new Map<string, CandidatVarie>();
 
-  // Les créneaux du séjour : un par jour de chaque situation. Les situations les plus rares d'abord (un événement, un trajet), pour que
-  // leurs looks ne soient pas pris par la place des autres ; à rareté égale, l'ordre des situations.
+  // Les créneaux du séjour : un par jour de chaque situation, servis TOUR À TOUR (11/11/2026, mesuré : servie d'un bloc, la première
+  // situation remplissait la valise de looks nouveaux et laissait les suivantes sans aucun look). Chaque situation reçoit d'abord son
+  // premier look, puis chacune son deuxième, etc. ; dans un tour, les plus rares d'abord (un événement, un trajet), à rareté égale
+  // l'ordre des situations.
   const options = (i: number) => {
     const servent = liste.filter((c) => c.situations.has(i));
     const adaptees = servent.filter((c) => c.adapteA.has(i));
     return leviers.adaptation && adaptees.length ? adaptees : servent;
   };
-  const creneaux = situations
+  const ordre = situations
     .map((s, i) => ({ i, n: s.jours.length, choix: options(i).length }))
-    .sort((a, b) => a.n - b.n || a.choix - b.choix || a.i - b.i)
-    .flatMap(({ i, n }) => Array.from({ length: n }, () => i));
+    .sort((a, b) => a.n - b.n || a.choix - b.choix || a.i - b.i);
+  const tours = Math.max(0, ...ordre.map((o) => o.n));
+  const creneaux = Array.from({ length: tours }, (_, k) => ordre.filter((o) => o.n > k).map((o) => o.i)).flat();
 
   for (const i of creneaux) {
     let meilleur: CandidatVarie | null = null;
