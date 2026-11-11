@@ -15,13 +15,14 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="${admobAppId}"/>
 
+        <!-- Plus de verrou portrait (11/11/2026, alerte de la Play Console) : Android 16 l'ignore sur tablettes et pliables, et
+             l'app, une colonne centrée de 480 px au plus, reste lisible en paysage. -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:screenOrientation="portrait"
             android:exported="true">
 
             <intent-filter>

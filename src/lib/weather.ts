@@ -1,16 +1,45 @@
+import { estNatif } from "./authNatif";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type { CreneauPrevision, Prevision } from "./prevision";
 import type { City } from "./types";
 
-/** Position navigateur — résout à null (jamais de rejet) si l'API est absente, refusée ou expire, pour ne jamais bloquer l'app. */
-export function getBrowserPosition(): Promise<GeolocationPosition | null> {
+/** Une position : ce que la météo et la ville en lisent, rien de plus. */
+export interface PositionLue {
+  coords: { latitude: number; longitude: number };
+}
+
+/**
+ * La position de l'appareil — résout à null (jamais de rejet) si elle est absente, refusée ou expire, pour ne jamais bloquer l'app.
+ *
+ * DANS L'APP iOS ET ANDROID, LE PLUGIN NATIF (11/11/2026, signalé dans la vidéo pour Apple : « localhost aimerait utiliser votre position
+ * actuelle »). L'app sert son site embarqué depuis `capacitor://localhost` : l'API web de position y ouvrait la fenêtre de la vue web, au
+ * nom du « site » localhost. Le plugin natif ouvre celle du système, au nom de Capsela, avec le texte d'Info.plist
+ * (NSLocationWhenInUseUsageDescription). Le site web garde l'API du navigateur.
+ */
+export async function getBrowserPosition(): Promise<PositionLue | null> {
+  if (estNatif()) {
+    try {
+      const { Geolocation } = await import("@capacitor/geolocation");
+      const statut = await Geolocation.checkPermissions();
+      const accordee = statut.location === "granted" || statut.coarseLocation === "granted";
+      if (!accordee) {
+        const demande = await Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] });
+        if (demande.location !== "granted" && demande.coarseLocation !== "granted") return null;
+      }
+      const pos = await Geolocation.getCurrentPosition({ timeout: 8000, maximumAge: 10 * 60 * 1000, enableHighAccuracy: false });
+      return { coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } };
+    } catch {
+      // Refus, service de localisation coupé, délai : la ville du profil prend le relais, comme sur le web.
+      return null;
+    }
+  }
   return new Promise((resolve) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       resolve(null);
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve(pos),
+      (pos) => resolve({ coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } }),
       () => resolve(null),
       { timeout: 8000, maximumAge: 10 * 60 * 1000 }
     );

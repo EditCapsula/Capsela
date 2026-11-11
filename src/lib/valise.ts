@@ -735,8 +735,8 @@ export const GROUPES_VALISE: [string, CategoryKey[]][] = [
   ["Robes & combinaisons", ["robe", "combinaison"]],
   ["Vestes & manteaux", ["veste", "manteau"]],
   ["Chaussures", ["chaussures"]],
-  ["Sacs", ["sac"]],
-  ["Bijoux & accessoires", ["bijou", "accessoire"]],
+  // Six familles dans la valise (07/11/2026, refonte : « Sacs et accessoires » réunis) ; le dressing garde les siennes (dressingEcran.ts).
+  ["Sacs & accessoires", ["sac", "bijou", "accessoire"]],
 ];
 
 // ── Ajuster la valise ────────────────────────────────────────────────────

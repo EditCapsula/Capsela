@@ -64,6 +64,12 @@ describe("nomCourtTitre (18/10/2026 : raccourcir sans perdre ce qui dit la pièc
     expect(nomCourtTitre("Veste en jean délavée")).toBe("Veste en jean");
     expect(nomCourtTitre("Sandales à talons fins dorées")).toBe("Sandales à talons");
   });
+  it("jamais sur un adjectif placé devant son nom (11/11/2026 : « les escarpins à petit »)", () => {
+    expect(nomCourtTitre("Escarpins à petit talon")).toBe("Escarpins à petit talon");
+    expect(nomCourtTitre("Robe midi à fines bretelles")).toBe("Robe midi");
+    expect(nomCourtTitre("Mocassins à petit talon carré")).toBe("Mocassins à petit talon");
+    expect(titreDeLaTenue([p("robe", "Robe midi"), p("chaussures", "Escarpins à petit talon")])).toEqual({ a: "La robe midi", b: "et les escarpins à petit talon" });
+  });
   it("le titre de la slide utilise ces noms", () => {
     expect(titreDeLaTenue([p("jupe", "Jupe midi plissée"), p("haut", "Chemisier rayé en coton bio")])).toEqual({
       a: "La jupe midi plissée",

@@ -465,3 +465,25 @@ propre à la valise, et une étiquette « vacances » au catalogue (étape 2, à
   Plusieurs activités d'une même sous-occasion et d'une même météo partagent donc un look (les situations, inchangées). Changement
   assumé : « Visiter la ville » ne donne plus d'office shopping et restaurant ; ce sont des activités à choisir.
 - Le planning affiche le libellé de la sous-occasion (« Balade & visite »).
+
+## Refonte de l'écran de la valise (07/11/2026)
+
+Brief « Refonte UX de l'écran de synthèse de la valise » et maquette du même jour : la liste des pièces devient le contenu principal.
+
+- **Trois onglets**, chacun avec son nombre : **À emporter** (ouvert par défaut), **Tenues**, **Indispensables** (« Essentiels » sous 360 px).
+  L'Aperçu est supprimé ; sa carte « Recomposer ma valise » (après un ajout au dressing) passe en tête d'À emporter.
+- **En-tête** inchangé, plus la ligne des activités prévues (les sous-occasions du programme, sans le trajet) ; le résumé compte les
+  pièces quantités comprises.
+- **À emporter** : les familles de la valise (`GROUPES_VALISE`, six depuis ce jour : Sacs & accessoires réunis ; le dressing garde les
+  siennes), filtrables par pastilles qui défilent (`SegmentedControl defilant`). Une carte par pièce (`PhotoPiece`) : provenance en
+  `Badge` (Dressing, Capsule, Vacances — une pièce qui n'est pas au dressing n'est jamais dite « Dressing »), nom, quantité (− / +,
+  `ControleQuantite`), coche « déjà dans la valise », croix pour la retirer. Puis « À compléter » : chaque pièce manquante s'ajoute au
+  dressing ou se note « Achat à prévoir » (`ValiseGardee.achats`).
+- **Quantités** (`quantitesValise.ts`) : 1 par défaut, réglables de 1 à 9, gardées avec la valise (`ValiseGardee.quantites`, et
+  `EtatAffaires.quantites` pour les indispensables ; `calcul` jsonb, aucune migration). Le remplissage les compte. Les règles de
+  quantité initiale (« 1, puis 2 au-delà de 5 jours de baignade ») sont l'étape 3 du brief Vacances, à venir.
+- **Tenues** : une galerie de looks (cartes `PlancheLook` de l'ancien Aperçu), filtrable par sous-occasion, puis le planning jour par
+  jour, inchangé.
+- **Indispensables** : la checklist d'avant, avec la quantité de chaque article et « Tout cocher ».
+- Vérifié en rendu réel (mode démo, valise de test injectée) à 390 et 320 px. NON vérifié : les photos des pièces (le catalogue de démo
+  n'en a pas).

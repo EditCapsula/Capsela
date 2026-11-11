@@ -20,7 +20,8 @@ const config: CapacitorConfig = {
   // Google, faisaient refuser l'envoi à App Store Connect (« Invalid Signature … GoogleMobileAds.framework »). Sur iOS, seuls les
   // plugins qui servent y sont embarqués.
   ios: {
-    includePlugins: ["@capacitor/app", "@capacitor/browser", "@capacitor/local-notifications"],
+    // La position (11/11/2026) : le plugin natif, pour la fenêtre d'autorisation du système au nom de Capsela (src/lib/weather.ts).
+    includePlugins: ["@capacitor/app", "@capacitor/browser", "@capacitor/local-notifications", "@capacitor/geolocation"],
   },
   plugins: {
     // Icônes sombres dans les barres système, sur le crème de l'app (05/11/2026) ; l'écran d'accueil, sombre, les éclaircit

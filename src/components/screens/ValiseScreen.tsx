@@ -68,7 +68,6 @@ import {
   type TailleBagage,
   type TypeSejour,
 } from "@/lib/valise";
-import { selectionApercu } from "@/lib/valiseApercu";
 import { decalerMois, grilleDuMois, toucherJour } from "@/lib/calendrierPeriode";
 import { articlesChecklist, progressionChecklist, raisonsPartagees, sectionsChecklist, type FiltreChecklist, type Progression, type SectionChecklist } from "@/lib/checklistValise";
 import { lireNomEvenement } from "@/lib/lectureEvenement";
@@ -96,7 +95,7 @@ import { ideesGardees, ideesPourDestination } from "@/lib/ideesSejour";
 import { appliquerPeriode, arriveeAuMilieu, destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, periodeValide, periodesDesDestinations, ETAPES_MAX, type EtapeSejour, type Periode } from "@/lib/etapesSejour";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
-import { activitesAPlanifier, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, pieceLaPlusUtilisee, planificationManuelle, planningDeLaValise, sousIdDuChoix, type CreneauPlanning, type PlacementsPlanning } from "@/lib/planningValise";
+import { activitesAPlanifier, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, planificationManuelle, planningDeLaValise, sousIdDuChoix, type CreneauPlanning, type PlacementsPlanning } from "@/lib/planningValise";
 import { FantomeSaisie, useGlisserVersJour } from "@/components/GlisserVersJour";
 import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
 import {
@@ -134,8 +133,12 @@ import Button from "@/components/Button";
 import LigneInterrupteur from "@/components/LigneInterrupteur";
 import EmptyState from "@/components/EmptyState";
 import Card from "@/components/Card";
+import Badge from "@/components/Badge";
 import { degres } from "@/lib/unites";
-import { piecesPourLaSituation, piecesReserveesDuProfil } from "@/lib/piecesDeValise";
+import { estPieceDeValise, piecesPourLaSituation, piecesReserveesDuProfil } from "@/lib/piecesDeValise";
+import { ajusterQuantite, libelleQuantite, nombreDePieces, quantiteDe, quantitesValides, volumeAvecQuantites } from "@/lib/quantitesValise";
+import ControleQuantite from "@/components/ControleQuantite";
+import PhotoPiece from "@/components/PhotoPiece";
 
 /**
  * PRÉPARER SA VALISE (docs/valise.md).
@@ -169,7 +172,8 @@ const DOW = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 
 
 /** Les quatre vues du résultat (maquette V2) : Aperçu, Looks, Pièces (tous les groupes, avec filtre de provenance), Checklist. */
-type Onglet = "ensemble" | "looks" | "pieces" | "checklist";
+/** Les trois onglets de la valise (07/11/2026, refonte : « À emporter » d'abord, l'Aperçu supprimé). */
+type Onglet = "pieces" | "looks" | "checklist";
 
 /** « 16 → 20 oct. », « 30 sept. → 8 oct. » */
 function libellePeriode(depart: string, retour: string): string {
@@ -1154,7 +1158,7 @@ export default function ValiseScreen() {
     etape === 1 ? destination.trim().length > 1 && depart >= premierJour && dureeOk && etapesCompletes : etape === 2 ? bagage != null : true;
 
   const zoneScroll = useRef<HTMLDivElement | null>(null);
-  const [onglet, setOnglet] = useState<Onglet>("ensemble");
+  const [onglet, setOnglet] = useState<Onglet>("pieces");
   const cleVue = vue.nom === "look" ? `look${vue.index}` : vue.nom === "piece" ? `piece${vue.id}` : vue.nom;
   useEffect(() => {
     zoneScroll.current?.scrollTo({ top: 0, behavior: "auto" });
@@ -1302,7 +1306,7 @@ export default function ValiseScreen() {
     });
     actions.afficherValise(id);
     setIdEnModification(null);
-    setOnglet("ensemble");
+    setOnglet("pieces");
     setVue({ nom: "resultat" });
   };
   const preparer = () => {
@@ -1378,6 +1382,11 @@ export default function ValiseScreen() {
     if (!valise) return;
     sauver({ ...valise, choix });
   };
+  /** Une modification de la valise affichée, gardée aussitôt (quantités, achats à prévoir : 07/11/2026). */
+  const majValise = (f: (v: ValiseGardee) => ValiseGardee) => {
+    if (!valise) return;
+    sauver(f(valise));
+  };
   const majPlacements = (p?: PlacementsPlanning) => {
     if (!valise) return;
     sauver({ ...valise, placements: p && Object.keys(p).length ? p : undefined });
@@ -1389,6 +1398,7 @@ export default function ValiseScreen() {
       ...(e.cochees?.length ? { cochees: e.cochees } : {}),
       ...(e.ajoutees?.length ? { ajoutees: e.ajoutees } : {}),
       ...(e.masquees?.length ? { masquees: e.masquees } : {}),
+      ...(e.quantites && Object.keys(e.quantites).length ? { quantites: e.quantites } : {}),
     };
     sauver({ ...valise, affaires: Object.keys(propre).length ? propre : undefined });
   };
@@ -1776,6 +1786,7 @@ export default function ValiseScreen() {
             majAffaires={majAffaires}
             majPlacements={majPlacements}
             majChoix={majChoix}
+            majValise={majValise}
             enregistrerLook={actions.enregistrerIdeeLook}
             ajouterAuDressing={actions.openAddEtRevenir}
             ajouterCategorie={actions.openAddForCategory}
@@ -1849,6 +1860,7 @@ function Resultat({
   majAffaires,
   majPlacements,
   majChoix,
+  majValise,
   enregistrerLook,
   ajouterAuDressing,
   ajouterCategorie,
@@ -1875,6 +1887,7 @@ function Resultat({
   majAffaires: (f: (e: EtatAffaires) => EtatAffaires) => void;
   majPlacements: (p?: PlacementsPlanning) => void;
   majChoix: (choix: ActiviteChoisie[]) => void;
+  majValise: (f: (v: ValiseGardee) => ValiseGardee) => void;
   enregistrerLook: (ids: number[], occasion: OccasionKey) => void;
   ajouterAuDressing: () => void;
   ajouterCategorie: (c: CategoryKey) => void;
@@ -1888,9 +1901,14 @@ function Resultat({
   /** Le dressing plus les suggestions de capsule que la valise porte : ce que le moteur et l'affichage résolvent. */
   const base = useMemo(() => poolDeLaValise(dressing, valise.suggestionIds, [...capsule, ...vestiairePool]), [dressing, valise.suggestionIds, capsule, vestiairePool]);
   const suggestions = new Set(valise.suggestionIds ?? []);
+  /** Les pièces de la capsule notées « achat à prévoir » (07/11/2026). */
+  const achats = new Set(valise.achats ?? []);
   const [indexLook, setIndexLook] = useState(0);
   const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "retirer"; id: number } | { type: "alleger" } | { type: "tenue" } | null>(null);
   const [enregistres, setEnregistres] = useState<string[]>([]);
+  /** Les filtres des onglets (07/11/2026) : la famille de pièces d'« À emporter », la sous-occasion des « Tenues ». */
+  const [filtreFamille, setFiltreFamille] = useState("tous");
+  const [filtreTenues, setFiltreTenues] = useState("tous");
   const toucher = useRef<number | null>(null);
 
   const capacite = capaciteDe(valise.bagage);
@@ -1924,7 +1942,9 @@ function Resultat({
   const [aDeplacer, setADeplacer] = useState<{ sousId: string; de: string; libelle: string } | null>(null);
   const parPiece = looksParPiece(looks);
   const couvertes = occasionsCouvertes(looks, valise.situations);
-  const volume = volumeDe(pieces);
+  // Le remplissage compte les quantités réglées (07/11/2026) : il suit ce qui est réellement emporté.
+  const quantites = quantitesValides(valise.quantites, ids);
+  const volume = volumeAvecQuantites(pieces, quantites);
   const depasse = etatJauge(volume, capacite) === "depassee";
   const aAlleger = depasse ? allegement(ids, looks, capacite, (id) => unitesDe(pieces.find((p) => p.id === id)?.cat ?? "haut")) : [];
   const tauxRemplissage = Math.round((volume / capacite) * 100);
@@ -2724,13 +2744,14 @@ function Resultat({
   /** Le séjour est couvert : une valise prête, et de quoi varier sur la durée. C'est ce que dit le bloc de validation, rien de plus. */
   const sejourCouvert = prete && !peuDeLooks;
   const piecesRepetees = looks.length > 1 && pieces.some((p) => (parPiece.get(p.id) ?? 0) > 1);
-  /** Les pièces de l'aperçu : une sélection représentative (valiseApercu.ts), le reste compté. */
   /** Les vêtements UNIQUES à emporter (par identifiant) et les suggestions à ajouter, à part (valiseVetements.ts). Les tenues ne bougent pas. */
   const { aEmporter, aAjouter } = vetementsDeLaValise(valise.pieceIds, looks, valise.suggestionIds, pieceDe);
-  const familles = vetementsParFamille(aEmporter);
   /** La checklist des vêtements (onglet Vêtements) : les pièces possédées ET les suggestions de la capsule, chacune dite « Capsule » (04/11/2026). */
   const famillesChecklist = vetementsParFamille([...aEmporter, ...aAjouter]);
-  const apercu = selectionApercu(aEmporter.map((v) => v.item));
+  /** Toutes les pièces de la valise, quantités comprises : les possédées et les suggestions de capsule (07/11/2026). */
+  const totalAEmporter = nombreDePieces([...aEmporter, ...aAjouter].map((v) => v.item), quantites);
+  /** Les activités prévues, dites par leur sous-occasion, une fois chacune, sans le trajet. */
+  const activitesPrevues = [...new Set((valise.programme ?? []).filter((p) => p.id !== "trajet").flatMap((p) => elementProgramme(p.id)?.libelle ?? []))];
   const aOptimiser = nouvelles === 0 && (occasionsAManque.length > 0 || peuDeLooks);
   /**
    * LES LOOKS JOUR PAR JOUR (phase B, 04/10/2026) : le programme réparti sur les jours, un look de la valise par créneau
@@ -2741,18 +2762,32 @@ function Resultat({
     .map((jour, i) => ({ jour, numero: i + 1, creneaux: planning.filter((c) => c.jour === jour) }))
     // Pendant un glisser (06/11/2026), les jours libres s'affichent aussi : on peut y déposer une activité.
     .filter((j) => j.creneaux.length > 0 || saisie != null);
-  const plusUtilisee = pieceLaPlusUtilisee(parPiece);
   /**
    * LES CARTES DE TENUES DE L'APERÇU (30/10/2026) : le jour et l'occasion de chaque créneau qui a sa tenue, d'après le planning ; sans
    * planning (valise d'avant le jour par jour), une carte par tenue avec sa première occasion. Le visuel, ce sont les vraies pièces.
    */
-  const cartesTenues: { cle: string; look: number; quand: string; quoi: string }[] = aPlanning
+  const cartesTenues: { cle: string; look: number; quand: string; quoi: string; filtre: string }[] = aPlanning
     ? planning.flatMap((c) =>
         c.look == null
           ? []
-          : [{ cle: c.jour + c.creneau + c.sousId, look: c.look, quand: dateCourte(c.jour), quoi: c.evenement ? libelleCreneau(c) : c.creneau === "soir" ? `${c.libelle} · soir` : c.libelle }]
+          : [
+              {
+                cle: c.jour + c.creneau + c.sousId + (c.choix ?? ""),
+                look: c.look,
+                // « Jour 2 · mer. 25 nov. » (07/11/2026, maquette de la refonte).
+                quand: `Jour ${joursDuSejourValise.indexOf(c.jour) + 1} · ${dateCourte(c.jour)}`,
+                quoi: c.evenement ? libelleCreneau(c) : c.creneau === "soir" ? `${c.libelle} · soir` : c.libelle,
+                filtre: c.evenement ? "Événements" : c.libelle,
+              },
+            ]
       )
-    : looks.map((lk, i) => ({ cle: `look-${i}`, look: i, quand: `Tenue ${i + 1}`, quoi: occasionsDuLook(lk, valise.situations).map((o) => occasionShortLabel(o))[0] ?? "" }));
+    : looks.map((lk, i) => {
+        const quoi = occasionsDuLook(lk, valise.situations).map((o) => occasionShortLabel(o))[0] ?? "";
+        return { cle: `look-${i}`, look: i, quand: `Tenue ${i + 1}`, quoi, filtre: quoi };
+      });
+  /** Les sous-occasions des tenues, pour les filtrer (07/11/2026) : celles qui ont au moins une tenue, dans l'ordre du séjour. */
+  const filtresTenues = [...new Set(cartesTenues.map((c) => c.filtre).filter(Boolean))];
+  const filtreTenuesActif = filtresTenues.includes(filtreTenues) ? filtreTenues : "tous";
   /**
    * « À COMPLÉTER » (30/10/2026) : ce qui n'est pas dans le dressing. D'abord les suggestions de la capsule que des tenues portent déjà,
    * avec la tenue qui les demande ; puis ce que le moteur a repéré pour une occasion sans tenue ou élargie (l'ancien « Optimise ta
@@ -2783,22 +2818,38 @@ function Resultat({
                 ? `Pour ta tenue ${libelleCreneau(pour)} du ${dateCourte(pour.jour).toLowerCase()}`
                 : `Pour ${tenues.length > 1 ? `${tenues.length} de tes tenues` : "une de tes tenues"}`;
               return (
-                <Card key={p.id} rayon="tuile" className="relative">
-                  <button
-                    onClick={() => ajouterCategorie(p.cat)}
-                    aria-label={`Ajouter ${p.name} à ton dressing`}
-                    className="w-full flex items-center gap-[10px] text-left pl-[10px] pr-[44px] py-[10px] min-h-[62px] cursor-pointer"
-                  >
+                <Card key={p.id} rayon="tuile" className="px-[10px] py-[10px]">
+                  <div className="flex items-center gap-[10px]">
                     <Vignette it={p} taille={44} />
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] text-ink leading-[1.2] break-words">{p.name}</span>
                       <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">{raison.endsWith(".") ? raison : `${raison}.`}</span>
-                      <span className="block text-[11px] text-terracotta-deep mt-[1px]">À ajouter</span>
+                      <span className="block text-[11px] text-terracotta-deep mt-[1px]">{achats.has(p.id) ? "Achat prévu" : "Pas encore dans ton dressing"}</span>
                     </span>
-                    <span aria-hidden="true" className="absolute right-[10px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center">
-                      {G_PLUS}
-                    </span>
-                  </button>
+                  </div>
+                  {/* Deux gestes (07/11/2026, refonte) : l'ajouter au dressing, ou la noter comme un achat à prévoir — jamais dite possédée. */}
+                  <div className="flex gap-2 mt-[10px]">
+                    <button
+                      onClick={() => ajouterCategorie(p.cat)}
+                      aria-label={`Ajouter ${p.name} à ton dressing`}
+                      className="flex-1 rounded-full bg-terracotta-deep text-cream text-[12px] cursor-pointer inline-flex items-center justify-center gap-[6px]"
+                      style={{ minHeight: 40 }}
+                    >
+                      {G_PLUS} À mon dressing
+                    </button>
+                    <button
+                      onClick={() => majValise((v) => {
+                        const deja = (v.achats ?? []).includes(p.id);
+                        const suivants = deja ? (v.achats ?? []).filter((x) => x !== p.id) : [...(v.achats ?? []), p.id];
+                        return { ...v, achats: suivants.length ? suivants : undefined };
+                      })}
+                      aria-pressed={achats.has(p.id)}
+                      className={"flex-1 rounded-full border text-[12px] cursor-pointer " + (achats.has(p.id) ? "border-terracotta-deep text-terracotta-deep bg-warm-bg" : "border-border text-ink bg-card")}
+                      style={{ minHeight: 40 }}
+                    >
+                      {achats.has(p.id) ? "Achat prévu ✓" : "Achat à prévoir"}
+                    </button>
+                  </div>
                 </Card>
               );
             })}
@@ -2884,7 +2935,6 @@ function Resultat({
         )}
       </section>
     ) : null;
-  const pieceReutilisee = plusUtilisee ? pieces.find((p) => p.id === plusUtilisee.id) : undefined;
   /** Une journée du planning : ses créneaux, chacun avec le look de la valise qui lui répond. */
   const carteJour = (j: (typeof planningParJour)[number]) => (
     <Card
@@ -2993,10 +3043,13 @@ function Resultat({
         {[
           libelleDuree(nbJours),
           `${looks.length} ${looks.length > 1 ? "tenues" : "tenue"}`,
-          `${aEmporter.length} ${aEmporter.length > 1 ? "vêtements" : "vêtement"}`,
+          libelleQuantite(totalAEmporter),
           `${affaires.length} ${affaires.length > 1 ? "indispensables" : "indispensable"}`,
         ].join(" · ")}
       </div>
+
+      {/* LES ACTIVITÉS PRÉVUES (07/11/2026, refonte) : les sous-occasions du séjour, une fois chacune, sans le trajet. */}
+      {activitesPrevues.length > 0 && <div className="text-[12px] text-muted-3 leading-[1.45] mt-[4px]">{activitesPrevues.join(" · ")}</div>}
 
       {/* La météo, compacte : celle de la prévision d'aujourd'hui, pour les jours qu'elle couvre ; hors de son horizon (dates passées ou
           lointaines), les températures habituelles du lieu que le calcul a reçues, dites comme telles (31/10/2026) — rien d'autre. */}
@@ -3085,151 +3138,72 @@ function Resultat({
         </div>
       )}
 
-      {/* LES ONGLETS : Aperçu (la valise et ses premiers looks), Looks (jour par jour), Pièces, Checklist. */}
+      {/* LES ONGLETS (07/11/2026, refonte : « la liste des pièces à emporter doit devenir le contenu principal ») : À emporter, ouvert
+          par défaut, Tenues, Indispensables, chacun avec son nombre. L'Aperçu est supprimé : ce qu'il montrait est dans ces trois onglets. */}
       <div className="mt-5">
         <SegmentedControl
           ariaLabel="Contenu de la valise"
           serre
           segments={[
-            { key: "ensemble", label: "Aperçu" },
-            { key: "looks", label: "Tenues" },
-            { key: "pieces", label: "Vêtements" },
-            // « Indispensables » ne tient pas à côté des trois autres sous 360 px (coupé à 320) : « Essentiels », le même onglet.
-            { key: "checklist", label: typeof window !== "undefined" && window.innerWidth < 360 ? "Essentiels" : "Indispensables" },
+            { key: "pieces", label: `À emporter · ${totalAEmporter}` },
+            { key: "looks", label: `Tenues · ${looks.length}` },
+            // « Indispensables · 32 » ne tient pas à côté des deux autres sous 360 px : « Essentiels », le même onglet.
+            { key: "checklist", label: `${typeof window !== "undefined" && window.innerWidth < 360 ? "Essentiels" : "Indispensables"} · ${affaires.length}` },
           ]}
           actif={onglet}
           onChange={setOnglet}
         />
       </div>
 
-      {onglet === "ensemble" && (
-        <>
-      {/* L'APERÇU (refonte du 30/10/2026) : les tenues d'abord, en galerie ; puis les pièces à emporter ; ce qui reste à compléter ; les
-          indispensables. Chaque bloc mène à son onglet. */}
-      <section className="mt-6" aria-labelledby="titre-tenues">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 id="titre-tenues" className="t-titre-section text-ink">
-            Tes tenues
-          </h2>
-          {looks.length > 0 && (
-            <button onClick={() => setOnglet("looks")} className="t-lien text-terracotta cursor-pointer py-[6px] flex-shrink-0">
-              Voir toutes mes tenues →
-            </button>
-          )}
-        </div>
-        {cartesTenues.length === 0 ? (
-          <EmptyState className="mt-3">Aucune tenue complète avec les pièces de cette valise.</EmptyState>
-        ) : (
-          <div className="scrollarea flex gap-[10px] overflow-x-auto -mx-6 px-6 mt-3 pb-[4px]" style={{ scrollbarWidth: "none", scrollSnapType: "x mandatory", scrollPaddingInline: 24 }}>
-            {cartesTenues.slice(0, 8).map((c) => (
-              <button
-                key={c.cle}
-                onClick={() => setVue({ nom: "look", index: c.look })}
-                aria-label={`${c.quand}, ${c.quoi} : voir la tenue`}
-                className="flex-shrink-0 w-[150px] text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer active:opacity-80"
-                style={{ scrollSnapAlign: "start" }}
-              >
-                <span className="block h-[150px] px-[8px] py-[10px]" style={{ background: "var(--color-hero-background)" }}>
-                  <PlancheLook pieces={piecesDuLook(looks[c.look])} />
-                </span>
-                <span className="block px-[10px] py-[9px]">
-                  <span className="block t-label text-terracotta truncate">{c.quand}</span>
-                  <span className="block text-[13px] text-ink leading-[1.25] mt-[3px] truncate">{c.quoi}</span>
-                  <span className="block text-[11px] text-muted mt-[2px]">{nbPieces(looks[c.look].ids.length)}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* LES PIÈCES DE MA VALISE : chaque vêtement une fois, quel que soit le nombre de tenues qui le portent ; les suggestions sont à part. */}
-      <section className="mt-7" aria-labelledby="titre-pieces">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 id="titre-pieces" className="t-titre-section text-ink">
-            Les pièces de ma valise
-          </h2>
-          <button onClick={() => setOnglet("pieces")} className="t-lien text-terracotta cursor-pointer py-[6px] flex-shrink-0">
-            Voir mes vêtements →
-          </button>
-        </div>
-        {familles.length > 0 && <div className="text-[12px] text-muted leading-[1.5] mt-[4px]">{familles.map((f) => `${f.titre} ${f.vetements.length}`).join(" · ")}</div>}
-        {aEmporter.length > 0 && (
-          <Card rayon="carte" className="mt-3 px-[14px] pt-[14px] pb-[16px]">
-            <div className="flex items-center justify-between gap-3">
-              <span className="t-label text-muted">À emporter</span>
-              <span className="text-[11px] text-ink rounded-full bg-cream border border-border px-[10px] py-[3px]">{nbPieces(aEmporter.length)}</span>
-            </div>
-            <ul className="grid grid-cols-6 gap-[8px] mt-3 list-none p-0" style={{ gridAutoRows: "clamp(40px, 11.5vw, 54px)", gridAutoFlow: "dense" }}>
-              {apercu.affichees.map(({ item: p, role, echelle, compacte }, i) => {
-                const im = resolveItemImage(p);
-                const gabarit = compacte
-                  ? "col-span-2 row-span-1"
-                  : echelle === "grand"
-                    ? role === "petit"
-                      ? "col-span-3 row-span-2"
-                      : "col-span-3 row-span-3"
-                    : role === "chaussures" || role === "petit"
-                      ? "col-span-2 row-span-1"
-                      : "col-span-2 row-span-2";
-                return (
-                  <li key={p.id} className={gabarit} style={{ transform: i % 2 ? "translateY(4px)" : undefined }}>
-                    <button onClick={() => ouvrirPiece(p.id)} aria-label={`Voir la pièce : ${p.name}`} className="block w-full h-full cursor-pointer">
-                      {im.url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={im.url} alt="" loading="lazy" className="w-full h-full object-contain" style={{ filter: "drop-shadow(0 2px 3px rgba(29,26,22,.14))" }} />
-                      ) : (
-                        <span className="block w-full h-full rounded-champ" style={{ background: p.hex }} />
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {apercu.reste > 0 && <div className="text-[12px] text-muted text-right mt-[14px]">+{apercu.reste} {apercu.reste > 1 ? "pièces" : "pièce"}</div>}
-          </Card>
-        )}
-        {/* Une métrique n'est dite que si elle est comptée : la pièce la plus portée, et dans combien de tenues. */}
-        {plusUtilisee && pieceReutilisee && !suggestions.has(pieceReutilisee.id) && (
-          <div className="text-[12px] text-muted-3 leading-[1.45] mt-[8px]">
-            {pieceReutilisee.name} revient dans {plusUtilisee.fois} tenues.
-          </div>
-        )}
-      </section>
-
-      {blocACompleter}
-      {reglageDressingSeul}
-
-      {progressionAffaires.total > 0 && (
-        <section className="mt-7" aria-labelledby="titre-indispensables">
-          <h2 id="titre-indispensables" className="t-titre-section text-ink">
-            Les indispensables
-          </h2>
-          <button onClick={() => setOnglet("checklist")} className="block w-full text-left bg-card border border-border rounded-tuile px-[14px] pt-[12px] pb-[10px] mt-3 cursor-pointer" aria-label="Ouvrir les indispensables">
-            <BarrePreparation titre="Préparés" p={progressionAffaires} />
-          </button>
-        </section>
-      )}
-
-      {/* Au retour d'un ajout au dressing : la proposition de recomposer. */}
-      {nouvelles > 0 && (
-        <Card className="mt-4 p-[16px]">
-          <div className="t-titre-carte text-ink">
-            {nouvelles > 1 ? `${nouvelles} nouvelles pièces dans ton dressing` : "Une nouvelle pièce dans ton dressing"}
-          </div>
-          <div className="text-[12px] text-muted-3 leading-[1.5] mt-[5px]">Recompose ta valise pour que Capsela en tienne compte.</div>
-          <Button variante="principal" className="mt-3" onClick={() => recomposer()}>
-            Recomposer ma valise
-          </Button>
-        </Card>
-      )}
-
-        </>
-      )}
-
       {/* 4 · QU'EST-CE QUE JE VAIS PORTER ? Une grande carte éditoriale à la fois. */}
       {onglet === "looks" && (
-        <section className="mt-6" aria-labelledby="titre-looks">
+        <>
+        {/* LES TENUES DU SÉJOUR (07/11/2026, refonte) : en galerie, filtrables par sous-occasion ; chaque carte ouvre la tenue. Puis le
+            planning jour par jour, inchangé. Les cartes sont celles de l'ancien Aperçu (PlancheLook, la règle unique de composition). */}
+        {cartesTenues.length > 0 && (
+          <section className="mt-6" aria-labelledby="titre-galerie">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 id="titre-galerie" className="t-titre-section text-ink">
+                Tes looks pour le séjour
+              </h2>
+              <span className="text-[12px] text-muted flex-shrink-0">{looks.length} {looks.length > 1 ? "looks" : "look"}</span>
+            </div>
+            {filtresTenues.length > 1 && (
+              <div className="mt-3 -mx-6 px-6 overflow-x-auto scrollarea" style={{ scrollbarWidth: "none" }}>
+                <SegmentedControl
+                  ariaLabel="Filtrer les tenues par sous-occasion"
+                  variante="pastilles"
+                  defilant
+                  segments={[{ key: "tous", label: "Tous" }, ...filtresTenues.map((f) => ({ key: f, label: f }))]}
+                  actif={filtreTenuesActif}
+                  onChange={setFiltreTenues}
+                />
+              </div>
+            )}
+            <ul className="grid grid-cols-2 gap-[10px] mt-3 list-none p-0">
+              {cartesTenues
+                .filter((c) => filtreTenuesActif === "tous" || c.filtre === filtreTenuesActif)
+                .map((c) => (
+                  <li key={c.cle} className="min-w-0">
+                    <button
+                      onClick={() => setVue({ nom: "look", index: c.look })}
+                      aria-label={`${c.quoi}, ${c.quand} : voir la tenue`}
+                      className="w-full text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer active:opacity-80"
+                    >
+                      <span className="block h-[170px] px-[8px] py-[10px]" style={{ background: "var(--color-hero-background)" }}>
+                        <PlancheLook pieces={piecesDuLook(looks[c.look])} />
+                      </span>
+                      <span className="block px-[10px] py-[9px]">
+                        <span className="block t-label text-terracotta truncate">{c.quoi}</span>
+                        <span className="block text-[11.5px] text-muted mt-[3px] truncate">{c.quand}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        )}
+        <section className="mt-8" aria-labelledby="titre-looks">
           {aPlanning ? (
             <>
               <div className="flex items-baseline justify-between gap-3">
@@ -3453,11 +3427,25 @@ function Resultat({
           )}
 
         </section>
+        </>
       )}
 
       {/* ── PIÈCES ── regroupées, chacune justifiée par ses looks */}
       {onglet === "pieces" && (
         <>
+      {/* Au retour d'un ajout au dressing : la proposition de recomposer. */}
+      {nouvelles > 0 && (
+        <Card className="mt-5 p-[16px]">
+          <div className="t-titre-carte text-ink">
+            {nouvelles > 1 ? `${nouvelles} nouvelles pièces dans ton dressing` : "Une nouvelle pièce dans ton dressing"}
+          </div>
+          <div className="text-[12px] text-muted-3 leading-[1.5] mt-[5px]">Recompose ta valise pour que Capsela en tienne compte.</div>
+          <Button variante="principal" className="mt-3" onClick={() => recomposer()}>
+            Recomposer ma valise
+          </Button>
+        </Card>
+      )}
+
           {/* LES VÊTEMENTS (30/10/2026) : chaque pièce une fois, par famille, avec sa provenance, ses tenues et son état — à emporter ou
               déjà dans la valise. Cocher, c'est le même état qu'avant (cochees). Les suggestions de la capsule y sont aussi, dites « Capsule » (04/11/2026),
               et restent dans « À compléter », plus bas, pour l'ajout au dressing. */}
@@ -3495,59 +3483,81 @@ function Resultat({
               </Button>
             </Card>
           )}
-          {famillesChecklist.map(({ titre, vetements }) => {
+          {/* À EMPORTER (07/11/2026, refonte : « afficher directement les pièces individuelles sous forme de cartes visuelles »). Les
+              familles du dressing, filtrables ; chaque pièce une fois, quel que soit le nombre de ses tenues, en carte : sa photo, son nom,
+              sa provenance (Dressing, Capsule, Vacances), sa quantité (− / +), sa coche (déjà dans la valise) et sa croix (la retirer). */}
+          {famillesChecklist.length > 1 && (
+            <div className="mt-5 -mx-6 px-6 overflow-x-auto scrollarea" style={{ scrollbarWidth: "none" }}>
+              <SegmentedControl
+                ariaLabel="Filtrer les pièces par catégorie"
+                variante="pastilles"
+                defilant
+                segments={[{ key: "tous", label: "Tous" }, ...famillesChecklist.map((f) => ({ key: f.titre, label: f.titre }))]}
+                actif={famillesChecklist.some((f) => f.titre === filtreFamille) ? filtreFamille : "tous"}
+                onChange={setFiltreFamille}
+              />
+            </div>
+          )}
+          {famillesChecklist
+            .filter((f) => filtreFamille === "tous" || f.titre === filtreFamille || !famillesChecklist.some((x) => x.titre === filtreFamille))
+            .map(({ titre, vetements }) => {
             const duGroupe = vetements.map((v) => v.item);
             return (
-              <section key={titre} className="mt-5">
+              <section key={titre} className="mt-5" aria-label={titre}>
                 <div className="flex items-baseline justify-between">
-                  <h3 className="t-titre-ligne text-ink">{titre}</h3>
-                  <span className="text-[12px] text-muted">{duGroupe.length}</span>
+                  <h3 className="t-titre-ligne text-ink">
+                    {titre} <span className="text-muted font-normal">({nombreDePieces(duGroupe, quantites)})</span>
+                  </h3>
                 </div>
-                <div className="flex flex-col gap-2 mt-2">
+                <ul className="grid grid-cols-3 gap-[8px] mt-[10px] list-none p-0">
                   {duGroupe.map((p) => {
                     const n = parPiece.get(p.id) ?? 0;
                     const dedans = piecesCochees.includes(p.id);
+                    const q = quantiteDe(quantites, p.id);
+                    // La provenance (brief : « Dressing, Capsule, Vacances ») : une pièce de vacances du catalogue, une suggestion de la
+                    // capsule, ou une pièce possédée. Une pièce qui n'est pas au dressing n'est jamais dite « Dressing ».
+                    const provenance = estPieceDeValise(p) ? "Vacances" : suggestions.has(p.id) ? "Capsule" : "Dressing";
                     return (
-                      <Card key={p.id} rayon="tuile" className="flex items-center pr-[2px]">
-                        <button
-                          type="button"
-                          role="checkbox"
-                          aria-checked={dedans}
-                          onClick={() => cocher(p.id)}
-                          aria-label={`${p.name} : ${dedans ? "déjà dans la valise" : "à emporter"}`}
-                          className="w-[44px] h-[44px] flex items-center justify-center flex-shrink-0 cursor-pointer"
-                        >
-                          <span className={"w-[22px] h-[22px] rounded-full border flex items-center justify-center " + (dedans ? "bg-terracotta-deep border-terracotta-deep" : "border-placeholder bg-card")}>
-                            {dedans && G_COCHE(12, "var(--color-cream)")}
-                          </span>
-                        </button>
-                        <button onClick={() => ouvrirPiece(p.id)} className="flex-1 min-w-0 flex items-center gap-[10px] text-left py-[7px] pr-[4px] cursor-pointer" aria-label={`${p.name}, dans ${n} ${n > 1 ? "tenues" : "tenue"}. Voir la pièce`}>
-                          <Vignette it={p} taille={40} />
-                          <span className="flex-1 min-w-0">
-                            <span className={"block text-[13px] leading-[1.3] line-clamp-2 " + (dedans ? "text-muted" : "text-ink")}>{p.name}</span>
-                            {suggestions.has(p.id) ? (
-                              <span className="block text-[11px] leading-[1.35] text-terracotta mt-[2px]">Capsule</span>
-                            ) : (
-                              <span className="block text-[11px] leading-[1.35] text-muted mt-[2px]">Dans ton dressing</span>
-                            )}
-                            <span className="block text-[11px] leading-[1.35] mt-[1px]">
-                              <span className="text-muted whitespace-nowrap">{n ? `${n} ${n > 1 ? "tenues" : "tenue"}` : "Aucune tenue"} ·</span>{" "}
-                              {/* Un bloc insécable : à 320 px, « À emporter » passe entier à la ligne au lieu de se couper (l'espace qui
-                                  précède reste hors du segment insécable : c'est là que la ligne se coupe). */}
-                              <span className={"inline-block " + (dedans ? "text-muted" : "text-terracotta")}>{dedans ? "Déjà dans la valise" : "À emporter"}</span>
+                      <li key={p.id} className="min-w-0">
+                        <Card rayon="tuile" className="relative p-[6px] flex flex-col h-full">
+                          <button onClick={() => ouvrirPiece(p.id)} aria-label={`${p.name}, ${provenance.toLowerCase()}, dans ${n} ${n > 1 ? "tenues" : "tenue"}. Voir la pièce`} className="block w-full cursor-pointer">
+                            <PhotoPiece piece={p} ratio={0.9} rayon={10} className={dedans ? "opacity-60" : ""} />
+                          </button>
+                          <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={dedans}
+                            onClick={() => cocher(p.id)}
+                            aria-label={`${p.name} : ${dedans ? "déjà dans la valise" : "à emporter"}`}
+                            className="absolute top-[2px] right-[2px] w-[36px] h-[36px] flex items-center justify-center cursor-pointer"
+                          >
+                            <span className={"w-[22px] h-[22px] rounded-full border flex items-center justify-center " + (dedans ? "bg-terracotta-deep border-terracotta-deep" : "border-placeholder bg-card")}>
+                              {dedans && G_COCHE(12, "var(--color-cream)")}
                             </span>
-                          </span>
-                        </button>
-                        <button onClick={() => setFeuille({ type: "remplacer", id: p.id })} aria-label={`Remplacer ${p.name}`} className="w-[36px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
-                          {G_ECHANGE}
-                        </button>
-                        <button onClick={() => demanderRetrait(p.id)} aria-label={`Retirer ${p.name} de la valise`} className="w-[36px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
-                          {G_CROIX}
-                        </button>
-                      </Card>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => demanderRetrait(p.id)}
+                            aria-label={`Retirer ${p.name} de la valise`}
+                            className="absolute top-[2px] left-[2px] w-[36px] h-[36px] flex items-center justify-center cursor-pointer"
+                          >
+                            <span className="w-[22px] h-[22px] rounded-full bg-card/90 text-muted flex items-center justify-center">{G_CROIX}</span>
+                          </button>
+                          <div className="mt-[6px] px-[2px]">
+                            <Badge tone={provenance === "Dressing" ? "possede" : provenance === "Capsule" ? "doux" : "plein"} taille="s">
+                              {provenance}
+                            </Badge>
+                          </div>
+                          <div className={"text-[12px] leading-[1.3] line-clamp-2 mt-[5px] px-[2px] break-words " + (dedans ? "text-muted" : "text-ink")}>{p.name}</div>
+                          <div className="text-[11px] text-muted px-[2px] mt-[2px]">{libelleQuantite(q)}</div>
+                          <div className="mt-auto pt-[6px] flex justify-center">
+                            <ControleQuantite compact valeur={q} libelle={p.name} onChange={(d) => majValise((v) => ({ ...v, quantites: ajusterQuantite(quantitesValides(v.quantites, v.pieceIds), p.id, d) }))} />
+                          </div>
+                        </Card>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               </section>
             );
           })}
@@ -3679,7 +3689,7 @@ function Resultat({
                           <div
                             key={art.cle}
                             className="grid items-center border-b border-divider last:border-b-0"
-                            style={{ gridTemplateColumns: a ? "32px minmax(0, 1fr) 44px" : "minmax(0, 1fr) 44px", columnGap: 8, minHeight: 52 }}
+                            style={{ gridTemplateColumns: a ? "32px minmax(0, 1fr) auto 44px" : "minmax(0, 1fr) 44px", columnGap: 8, minHeight: 52 }}
                           >
                             {croix}
                             <div className="flex items-center gap-[10px] min-w-0 py-[6px]">
@@ -3691,6 +3701,15 @@ function Resultat({
                                 {raisonPropre && <span className="block text-[11px] text-terracotta truncate">{raisonPropre}</span>}
                               </span>
                             </div>
+                            {/* La quantité d'un indispensable (07/11/2026, refonte) : 1 par défaut, réglable, gardée avec la valise. */}
+                            {a && (
+                              <ControleQuantite
+                                compact
+                                valeur={quantiteDe(valise.affaires?.quantites, a.id)}
+                                libelle={a.libelle}
+                                onChange={(d) => majAffaires((e) => ({ ...e, quantites: ajusterQuantite(e.quantites, a.id, d) }))}
+                              />
+                            )}
                             <button
                               type="button"
                               role="checkbox"
@@ -3713,6 +3732,17 @@ function Resultat({
               );
             })}
           </div>
+
+          {/* TOUT COCHER (07/11/2026, maquette de la refonte) : tous les indispensables affichés préparés d'un geste ; tout décocher s'ils le sont. */}
+          {affaires.length > 0 && (
+            <Button
+              variante={progressionAffaires.restantes === 0 ? "secondaire" : "principal"}
+              className="mt-4"
+              onClick={() => majAffaires((e) => ({ ...e, cochees: progressionAffaires.restantes === 0 ? [] : [...new Set([...(e.cochees ?? []), ...affaires.map((x) => x.id)])] }))}
+            >
+              {progressionAffaires.restantes === 0 ? "Tout décocher" : "Tout cocher"}
+            </Button>
+          )}
 
           {/* Ajouter une affaire : elle rejoint « Équipement du séjour », le total et la progressionAffaires ; gardée avec la valise. */}
           <div className="mt-5">

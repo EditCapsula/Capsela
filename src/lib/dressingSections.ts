@@ -242,12 +242,33 @@ export const LONGUEUR_TITRE_MAX = 18;
  *      (« Pantalon tailleur taille haute » → « Pantalon tailleur », « Blazer structuré en laine » → « Blazer structuré »).
  * Le nom complet reste sur la fiche de la pièce.
  */
+/**
+ * Les adjectifs qui se placent DEVANT leur nom (11/11/2026, signalé : « La robe midi et les escarpins à petit » — « il manque le mot
+ * petit talon dans le titre »). Un titre ne finit jamais sur l'un d'eux : son nom est remis s'il tient dans la marge
+ * (MARGE_NOM_ANTEPOSE), sinon l'adjectif part avec lui.
+ */
+const ADJECTIFS_ANTEPOSES = new Set([
+  "petit", "petite", "petits", "petites", "grand", "grande", "grands", "grandes", "gros", "grosse", "grosses", "haut", "haute", "hauts", "hautes",
+  "bas", "basse", "basses", "demi", "mi", "double", "fin", "fine", "fins", "fines", "long", "longue", "longs", "longues", "court", "courte", "courts", "courtes",
+]);
+/** La marge accordée pour garder le nom d'un adjectif antéposé (« Escarpins à petit talon », 23 caractères). */
+export const MARGE_NOM_ANTEPOSE = 6;
+
 export function nomCourtTitre(nom: string): string {
   const appellation = premiereAppellation(nom).replace(/\s*\([^)]*\)/g, "").trim();
-  const mots = appellation.split(/\s+/).filter(Boolean);
+  const tous = appellation.split(/\s+/).filter(Boolean);
+  const mots = [...tous];
   if (!mots.length) return nom.trim();
   const estLiaison = (m: string) => MOTS_DE_LIAISON.has(m.toLowerCase().replace(/’/g, "'")) || /^[dl]['’]$/i.test(m);
+  const estAntepose = (m: string) => ADJECTIFS_ANTEPOSES.has(m.toLowerCase());
   while (mots.length > 1 && (mots.join(" ").length > LONGUEUR_TITRE_MAX || estLiaison(mots[mots.length - 1]))) mots.pop();
+  // Un adjectif antéposé en fin de titre : son nom revient s'il tient dans la marge ; sinon il part, et la liaison qui le précède aussi.
+  if (mots.length > 1 && mots.length < tous.length && estAntepose(mots[mots.length - 1])) {
+    const avecSonNom = tous.slice(0, mots.length + 1).join(" ");
+    if (avecSonNom.length <= LONGUEUR_TITRE_MAX + MARGE_NOM_ANTEPOSE) return avecSonNom;
+    mots.pop();
+    while (mots.length > 1 && (estLiaison(mots[mots.length - 1]) || estAntepose(mots[mots.length - 1]))) mots.pop();
+  }
   return mots.join(" ");
 }
 

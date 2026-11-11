@@ -157,6 +157,8 @@ export interface EtatAffaires {
   cochees?: string[];
   ajoutees?: { id: string; libelle: string }[];
   masquees?: string[];
+  /** Les quantités réglées (07/11/2026, quantitesValise.ts) : id de l'affaire → quantité, seulement celles qui ne valent pas 1. */
+  quantites?: Record<string, number>;
 }
 
 /** Les affaires affichées : celles du séjour moins les masquées, plus celles que la personne a ajoutées (groupe « Équipement du séjour »). */

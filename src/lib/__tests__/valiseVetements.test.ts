@@ -46,7 +46,7 @@ describe("vetementsParFamille", () => {
       ["Bas", 1],
       ["Robes & combinaisons", 1],
       ["Chaussures", 1],
-      ["Sacs", 1],
+      ["Sacs & accessoires", 1],
     ]);
   });
 });
