@@ -118,8 +118,9 @@ l'appareil). Ce qui avait changé depuis le 30/09, et ce qui a été fait :
   européenne annoncée, durée réelle de conservation des images (cf. `docs/detourage.md`).
 - **Open-Meteo** : gratuit pour un usage NON commercial seulement. Une app avec abonnement payant relève du plan commercial :
   à souscrire avant le lancement, avec ses conditions de traitement.
-- **restcountries.com** : seul service tiers appelé depuis l'appareil (il reçoit l'adresse IP). Le faire passer par la
-  fonction `weather` le retirerait des textes ; non fait.
+- ~~**restcountries.com**~~ : retiré le 11/11/2026. Sa version v3.1 a fermé ; les pays viennent d'une liste intégrée à
+  l'app (`src/lib/paysData.ts`, world-countries, licence ODbL, mentionnée dans les Mentions légales). Plus aucun service
+  tiers n'est appelé depuis l'appareil pour la recherche de ville. Retiré de la Politique de confidentialité.
 - **Mise à plat** (Photoroom Flat Lay, générative) : masquée (`NEXT_PUBLIC_MISE_A_PLAT`). Si elle est réactivée, dire dans
   la Politique et les CGU que l'image produite est générée et peut différer de la pièce.
 - **Vidéo récompensée** : aucun réseau publicitaire branché (`video-recompense` refuse tout). Le jour où il l'est, les textes

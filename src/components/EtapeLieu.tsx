@@ -183,7 +183,7 @@ export function ChoixVille({
             <span aria-hidden="true" className="flex-shrink-0 text-placeholder"><Loupe /></span>
             <input
               ref={champ}
-              className="capin flex-1 min-w-0 bg-transparent border-none text-[14px] font-medium text-ink"
+              className="capin capin-integre flex-1 min-w-0 bg-transparent border-none text-[14px] font-medium text-ink"
               value={requete}
               onChange={(e) => setRequete(e.target.value)}
               // Le clavier virtuel s'ouvre : le champ remonte, la liste garde sa place dessous.

@@ -27,7 +27,6 @@ import {
   amplitudeHabituelle,
   amplitudePrevue,
   categoriesPourCompleter,
-  completerAvecCapsule,
   poolDeLaValise,
   BAGAGES,
   capaciteDe,
@@ -35,7 +34,7 @@ import {
   unitesDe,
   volumeDe,
   cibleDeVolume,
-  composerValise,
+  composerValiseVariee,
   conseilMeteo,
   dateDe,
   DUREE_MAX_JOURS,
@@ -1253,18 +1252,23 @@ export default function ValiseScreen() {
     if (!actif.current) return;
     setFaites(1);
     // Les événements datés ont chacun leur situation, APRÈS celles du programme : les indices de celles-ci ne bougent pas.
-    const situations = [...situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions), ...situationsDesEvenements(rep.evenements, meteos)];
+    // Les niveaux de formalité des contextes de vacances (PLANCHERS_VACANCES, 11/11/2026) : le trajet en confort, le restaurant et la
+    // soirée de vacances en casual chic, une soirée datée en business casual, une cérémonie habillée.
+    const situations = [
+      ...situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions, { planchersVacances: true }),
+      ...situationsDesEvenements(rep.evenements, meteos, { planchersVacances: true }),
+    ];
     // Une courte pause entre deux traitements, le temps qu'on lise la ligne cochée : jamais une étape qui n'aurait pas eu lieu.
     await pause(300);
     if (!actif.current) return;
-    const r0 = composerValise(dressing, situations, capaciteDe(rep.bagage), generer);
+    // LA VALISE CONSTRUITE SUR TOUT LE SÉJOUR (11/11/2026, validé : leviers A, B, P et R, mesurés par scripts/valise-variete.audit.ts) :
+    // composerValiseVariee remplace composerValise puis completerAvecCapsule — variété des pièces principales, tenues adaptées à leur
+    // activité, la capsule en suggestions quand le dressing convient mal. « Uniquement mon dressing » : la capsule n'entre pas.
+    const seulDressing = rep.uniquementDressing ?? (idCible ? state.valises.find((v) => v.id === idCible)?.uniquementDressing === true : false);
+    const r = composerValiseVariee(dressing, seulDressing ? [] : capsuleDe(situations), situations, capaciteDe(rep.bagage), generer, { variete: true, adaptation: !seulDressing }, undefined, cibleDeVolume(rep.bagage));
     setFaites(2);
     await pause(300);
     if (!actif.current) return;
-    // Le dressing ne couvre pas tout le besoin — une occasion, ou le volume de la valise (05/11/2026) : la capsule complète la valise, ses
-    // pièces marquées « à ajouter » (completerAvecCapsule). Sauf « Uniquement mon dressing » (04/11/2026) : seules les pièces possédées.
-    const seulDressing = rep.uniquementDressing ?? (idCible ? state.valises.find((v) => v.id === idCible)?.uniquementDressing === true : false);
-    const r = seulDressing ? { ...r0, suggestionIds: [] } : completerAvecCapsule(dressing, capsuleDe(situations), situations, r0, capaciteDe(rep.bagage), generer, cibleDeVolume(rep.bagage));
     setFaites(3);
     await pause(300);
     if (!actif.current) return;
@@ -1382,7 +1386,7 @@ export default function ValiseScreen() {
     if (!valise) return;
     sauver({ ...valise, choix });
   };
-  /** Une modification de la valise affichée, gardée aussitôt (quantités, achats à prévoir : 07/11/2026). */
+  /** Une modification de la valise affichée, gardée aussitôt (quantités : 07/11/2026). */
   const majValise = (f: (v: ValiseGardee) => ValiseGardee) => {
     if (!valise) return;
     sauver(f(valise));
@@ -1902,7 +1906,6 @@ function Resultat({
   const base = useMemo(() => poolDeLaValise(dressing, valise.suggestionIds, [...capsule, ...vestiairePool]), [dressing, valise.suggestionIds, capsule, vestiairePool]);
   const suggestions = new Set(valise.suggestionIds ?? []);
   /** Les pièces de la capsule notées « achat à prévoir » (07/11/2026). */
-  const achats = new Set(valise.achats ?? []);
   const [indexLook, setIndexLook] = useState(0);
   const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "retirer"; id: number } | { type: "alleger" } | { type: "tenue" } | null>(null);
   const [enregistres, setEnregistres] = useState<string[]>([]);
@@ -1921,7 +1924,7 @@ function Resultat({
   // Le planning jour par jour est calculé ICI, avant les vues d'une pièce ou d'un look : le glisser-déposer (06/11/2026) a besoin de
   // ses crochets à chaque rendu (règles des hooks).
   const joursDuSejourValise = joursDuSejour(valise.depart, valise.retour);
-  const planning: CreneauPlanning[] = planningDeLaValise(valise, joursDuSejourValise, looks);
+  const planning: CreneauPlanning[] = planningDeLaValise(valise, joursDuSejourValise, looks, pieces);
   const aPlanning = planning.length > 0;
   /** Déplacer une activité répartie vers un autre jour (06/11/2026) : seule l'activité bouge, le reste du planning est gardé tel quel. */
   const manuelle = planificationManuelle(valise.choix);
@@ -2290,7 +2293,7 @@ function Resultat({
           (() => {
             const id = feuille.id;
             const n = parPiece.get(id) ?? 0;
-            const touches = creneauxDeLaPiece(planningDeLaValise(valise, joursDuSejour(valise.depart, valise.retour), looks), looks, id);
+            const touches = creneauxDeLaPiece(planningDeLaValise(valise, joursDuSejour(valise.depart, valise.retour), looks, pieces), looks, id);
             return (
               <>
                 <div className="text-[13px] text-ink leading-[1.5]">
@@ -2824,10 +2827,11 @@ function Resultat({
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] text-ink leading-[1.2] break-words">{p.name}</span>
                       <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">{raison.endsWith(".") ? raison : `${raison}.`}</span>
-                      <span className="block text-[11px] text-terracotta-deep mt-[1px]">{achats.has(p.id) ? "Achat prévu" : "Pas encore dans ton dressing"}</span>
+                      <span className="block text-[11px] text-terracotta-deep mt-[1px]">Pas encore dans ton dressing</span>
                     </span>
                   </div>
-                  {/* Deux gestes (07/11/2026, refonte) : l'ajouter au dressing, ou la noter comme un achat à prévoir — jamais dite possédée. */}
+                  {/* Un geste : l'ajouter au dressing — jamais dite possédée. « Achat à prévoir » est retiré (11/11/2026, demandé : « ne parle pas
+                      d'achat à prévoir ni d'achat prévu comme on ne met rien derrière cette action ») ; `achats` reste lisible en base, plus affiché. */}
                   <div className="flex gap-2 mt-[10px]">
                     <button
                       onClick={() => ajouterCategorie(p.cat)}
@@ -2836,18 +2840,6 @@ function Resultat({
                       style={{ minHeight: 40 }}
                     >
                       {G_PLUS} À mon dressing
-                    </button>
-                    <button
-                      onClick={() => majValise((v) => {
-                        const deja = (v.achats ?? []).includes(p.id);
-                        const suivants = deja ? (v.achats ?? []).filter((x) => x !== p.id) : [...(v.achats ?? []), p.id];
-                        return { ...v, achats: suivants.length ? suivants : undefined };
-                      })}
-                      aria-pressed={achats.has(p.id)}
-                      className={"flex-1 rounded-full border text-[12px] cursor-pointer " + (achats.has(p.id) ? "border-terracotta-deep text-terracotta-deep bg-warm-bg" : "border-border text-ink bg-card")}
-                      style={{ minHeight: 40 }}
-                    >
-                      {achats.has(p.id) ? "Achat prévu ✓" : "Achat à prévoir"}
                     </button>
                   </div>
                 </Card>
@@ -3515,7 +3507,8 @@ function Resultat({
                     const dedans = piecesCochees.includes(p.id);
                     const q = quantiteDe(quantites, p.id);
                     // La provenance (brief : « Dressing, Capsule, Vacances ») : une pièce de vacances du catalogue, une suggestion de la
-                    // capsule, ou une pièce possédée. Une pièce qui n'est pas au dressing n'est jamais dite « Dressing ».
+                    // capsule, ou une pièce possédée. Une pièce qui n'est pas au dressing n'est jamais dite « Dressing ». Les libellés
+                    // « À toi » / « Suggestion », essayés le 11/11/2026, ont été retirés le même jour (demandé : « remets les anciens libellés »).
                     const provenance = estPieceDeValise(p) ? "Vacances" : suggestions.has(p.id) ? "Capsule" : "Dressing";
                     return (
                       <li key={p.id} className="min-w-0">
@@ -3696,7 +3689,7 @@ function Resultat({
                               {p ? <Vignette it={p} taille={40} /> : null}
                               <span className="flex-1 min-w-0">
                                 <span className={"block text-[13px] leading-[1.3] line-clamp-2 break-words " + (art.prete ? "text-muted line-through" : "text-ink")}>{art.libelle}</span>
-                                {/* Une suggestion de la capsule se dit « Capsule » (19/10/2026, demandé) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
+                                {/* Une suggestion de la capsule se dit « Capsule » (19/10/2026, demandé ; reconduit le 11/11/2026) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
                                 {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">Capsule</span>}
                                 {raisonPropre && <span className="block text-[11px] text-terracotta truncate">{raisonPropre}</span>}
                               </span>

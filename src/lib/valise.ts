@@ -234,6 +234,39 @@ export interface SituationValise {
    * d'aujourd'hui. La veste de pluie n'est proposée qu'alors (piecesDeValise.ts, ajouterVesteDePluie).
    */
   pluiePrevue?: true;
+  /**
+   * Le niveau de formalité visé pour ce contexte de vacances (PLANCHERS_VACANCES, 11/11/2026), quand le levier est demandé. Absent :
+   * celui de l'occasion mère (effectiveFormality), comme avant.
+   */
+  plancher?: number;
+}
+
+/**
+ * LES NIVEAUX DE FORMALITÉ D'UN SÉJOUR (11/11/2026, fixés par la propriétaire : « je ne souhaite pas que Capsela considère
+ * automatiquement qu'une soirée ou un restaurant nécessite une tenue habillée. Le niveau doit dépendre du contexte réel de l'occasion »).
+ *   · trajet aller / retour : 1 (décontracté, le confort d'abord) ;
+ *   · soirée décontractée, restaurant classique : 2 (casual chic) ;
+ *   · soirée festive, restaurant chic : 3 (business casual) ;
+ *   · soirée habillée, événement : 4 (habillé).
+ * Les entrées du programme ne disent pas aujourd'hui si un restaurant est chic ni si une soirée est habillée : « Restaurant & soirée »
+ * (restaurant, dîner, sortie) reçoit donc le niveau 2 ; une Soirée datée (événement) le niveau 3 ; une cérémonie le niveau 4. Le
+ * restaurant chic et la soirée habillée demanderont un choix d'ambiance que l'écran ne propose pas encore. Mesuré avant toute bascule
+ * (scripts/valise-variete.audit.ts) : la production ne le demande pas.
+ */
+export const PLANCHERS_VACANCES: Record<string, number> = {
+  trajet: 1,
+  restaurant: 2,
+  diner: 2,
+  sortie_vacances: 2,
+  ceremonie: 4,
+};
+/** Le niveau d'une Soirée DATÉE (un événement du séjour) : festive, 3. */
+export const PLANCHER_SOIREE_DATEE = 3;
+
+/** Le niveau de vacances d'un groupe d'entrées du programme : le plus exigeant d'entre elles, ou rien si aucune n'en a. */
+export function plancherDesEntrees(sousIds: readonly string[]): number | undefined {
+  const niveaux = sousIds.map((id) => PLANCHERS_VACANCES[id]).filter((n): n is number => n != null);
+  return niveaux.length ? Math.max(...niveaux) : undefined;
 }
 
 /**
@@ -275,7 +308,13 @@ export function situationsDuSejour(occasions: OccasionKey[], meteos: MeteoJour[]
  * moteur ne compose pas une tenue complète différente pour chaque occasion. Un trajet ne se joue que le jour du départ et
  * celui du retour : sa météo est celle de ces deux jours. Programme vide : le repli d'avant (situationsDuSejour).
  */
-export function situationsDuProgramme(programme: readonly ItemProgramme[], meteos: MeteoJour[], repli: OccasionKey[]): SituationValise[] {
+export function situationsDuProgramme(
+  programme: readonly ItemProgramme[],
+  meteos: MeteoJour[],
+  repli: OccasionKey[],
+  /** Les niveaux de formalité des contextes de vacances (PLANCHERS_VACANCES) : levier de mesure, la production ne le demande pas. */
+  options?: { planchersVacances?: boolean }
+): SituationValise[] {
   const elements = programme.flatMap((it) => {
     const e = elementProgramme(it.id);
     return e ? [e] : [];
@@ -285,7 +324,9 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
   const extremes = tries.length ? [tries[0], tries[tries.length - 1]].filter((m, i, l) => l.findIndex((x) => x.jour === m.jour) === i) : [];
   const parGroupe = new Map<string, { mere: OccasionKey; contrainte?: Contrainte; trajet: boolean; sousIds: string[] }>();
   for (const e of elements) {
-    const cle = `${e.mere}|${e.contrainte ?? ""}|${e.creneau === "trajet" ? "t" : ""}`;
+    // Avec les niveaux de vacances, deux entrées de niveaux différents ne partagent pas une situation (le moteur ne vise qu'un niveau).
+    const niveau = options?.planchersVacances ? (PLANCHERS_VACANCES[e.id] ?? "") : "";
+    const cle = `${e.mere}|${e.contrainte ?? ""}|${e.creneau === "trajet" ? "t" : ""}|${niveau}`;
     const g = parGroupe.get(cle);
     if (g) g.sousIds.push(e.id);
     else parGroupe.set(cle, { mere: e.mere, contrainte: e.contrainte, trajet: e.creneau === "trajet", sousIds: [e.id] });
@@ -301,6 +342,7 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
         jours: m.jours,
         ...(g.contrainte ? { contrainte: g.contrainte } : {}),
         sousIds: g.sousIds,
+        ...(options?.planchersVacances && plancherDesEntrees(g.sousIds) != null ? { plancher: plancherDesEntrees(g.sousIds) } : {}),
         ...((g.trajet || g.contrainte === "marche") && randonnee ? { avecRandonnee: true as const } : {}),
         ...(m.jours.some((j) => pluvieux.has(j)) ? { pluiePrevue: true as const } : {}),
       });
@@ -330,6 +372,11 @@ export function amplitudePrevue(meteos: MeteoJour[]): { min: number; max: number
 export interface TenueMoteur {
   ids: number[];
   elargie: boolean;
+  /**
+   * Le moteur a dû descendre sous le niveau de formalité de l'occasion (formalityDowngraded, 11/11/2026). Ne sert qu'à la composition
+   * variée (composerValiseVariee, levier `adaptation`) : une tenue ainsi relâchée n'est pas « adaptée » à son activité.
+   */
+  palierBaisse?: boolean;
 }
 
 /** Tire une tenue pour une situation dans un pool donné — le moteur par défaut, remplaçable en test. */
@@ -389,13 +436,15 @@ export function generateurMoteur(
   function composer(poolBrut: Item[], occasion: OccasionKey, meteo: Weather, s: SituationValise, robes: Item[]): TenueMoteur | null {
     const pool = poolBrut.filter((p) => !estRobeDePlage(p));
     if (!pool.length) return null;
-    const r = generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
+    // Le niveau du contexte de vacances, quand la situation en porte un (PLANCHERS_VACANCES) ; sinon celui de l'occasion, comme avant.
+    const leviers = s.plancher != null ? { plancher: s.plancher } : undefined;
+    const r = generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, leviers, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
     // Les chaussures et le sac ajoutés suivent les règles du moteur (météo, occasion, couleur, saison) : 12/10/2026, demandé « tenir compte des règles du moteur ».
     const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion, meteo }, (s.sousIds ?? []).includes("spa"));
     if (!ids) return null;
     const couvert = ajouterCouverture(ids, [...pool, ...robes.filter((r) => !pool.some((p) => p.id === r.id))], s);
-    return { ids: ajouterVesteDePluie(couvert, pool, s), elargie: r.occasionRelachee };
+    return { ids: ajouterVesteDePluie(couvert, pool, s), elargie: r.occasionRelachee, ...(r.formalityDowngraded ? { palierBaisse: true } : {}) };
   }
 }
 
@@ -1141,4 +1190,279 @@ export function capsuleDuSejour(
     }
   }
   return out;
+}
+
+// ── La composition variée (11/11/2026) ────────────────────────────────────
+
+/*
+ * UNE VALISE CONSTRUITE SUR TOUT LE SÉJOUR (11/11/2026, validé par la propriétaire : « une valise réellement adaptée au voyage, variée et
+ * cohérente, pas simplement une sélection de vêtements disponibles dans le dressing »). Signalé : la même combinaison noire dans 7 looks
+ * sur 9 d'une valise M, et des pièces du dressing retenues alors qu'elles convenaient mal.
+ *
+ * Deux leviers, mesurés seuls puis ensemble (scripts/valise-variete.audit.ts) AVANT toute bascule de l'écran — la production appelle
+ * toujours composerValise puis completerAvecCapsule :
+ *
+ *   · `variete` (A). Les tenues sont choisies pour l'ensemble du séjour, journée après journée, en comptant ce qui a déjà été retenu :
+ *     une pièce principale (bas, jupe, robe, combinaison) qui revient coûte cher, un haut un peu moins, les chaussures, sacs et
+ *     accessoires presque rien (POIDS_REPETITION, demandé : « les chaussures, sacs et accessoires peuvent être réutilisés plus
+ *     fréquemment »). La capacité du bagage sert d'abord à de NOUVELLES tenues : un M laisse donc plus de variété qu'un S.
+ *   · `adaptation` (B). Les tenues sont tirées dans le dressing ET dans la capsule du séjour. Pour une activité, une tenue n'est retenue
+ *     que si elle est adaptée — ni occasion relâchée par le moteur (`elargie`), ni formalité descendue sous celle de l'occasion
+ *     (`palierBaisse`) ; la météo et l'activité sont déjà des règles dures du moteur et des pools de la valise. Une tenue du dressing
+ *     n'est donc jamais retenue « parce qu'elle existe ». À adaptation égale, le dressing passe devant : une pièce de capsule nouvelle
+ *     coûte COUT_PIECE_CAPSULE.
+ *
+ * Les seuils (poids, coût d'une pièce de capsule) sont un ARBITRAGE ÉDITORIAL à confirmer sur la mesure.
+ */
+export interface LeviersValise {
+  variete?: boolean;
+  adaptation?: boolean;
+  /**
+   * Un PLAFOND de sorties par pièce principale (11/11/2026, validé : « la limitation des répétitions doit concerner prioritairement les
+   * pièces principales ») : plafondPrincipale(n) créneaux au plus pour un même bas, une même robe ou combinaison, tant qu'une autre
+   * tenue tient dans le bagage — la capsule propose alors une pièce de plus. Sans autre tenue possible, le plafond cède.
+   */
+  plafond?: boolean;
+}
+
+const CATEGORIES_PRINCIPALES: readonly CategoryKey[] = ["pantalon", "jean", "jupe", "short", "robe", "combinaison"];
+/** Un même bas, une même robe ou combinaison : au plus un créneau sur quatre du séjour, et deux au moins. ARBITRAGE ÉDITORIAL. */
+export const plafondPrincipale = (creneaux: number): number => Math.max(2, Math.ceil(creneaux / 4));
+
+/** Ce que coûte une pièce déjà retenue qui revient, par catégorie : les pièces principales d'abord, les hauts ensuite. */
+export const POIDS_REPETITION: Partial<Record<CategoryKey, number>> = {
+  pantalon: 3,
+  jean: 3,
+  jupe: 3,
+  short: 3,
+  robe: 3,
+  combinaison: 3,
+  haut: 1.5,
+  pull: 1.5,
+  veste: 0.5,
+  manteau: 0.25,
+};
+/** Une pièce de capsule nouvelle dans la valise : plus chère qu'un bas du dressing porté une seconde fois, moins qu'une troisième. */
+export const COUT_PIECE_CAPSULE = 4;
+/**
+ * Une paire de chaussures, un sac ou un accessoire de PLUS dans la valise (mesuré, exécution n° 20 : la place d'une valise S ou M partait
+ * en chaussures et en sacs nouveaux, la variété des bas progressait peu). Ils se réutilisent volontiers (demandé) : en ajouter coûte,
+ * pour que la place aille d'abord aux pièces principales et aux hauts.
+ */
+export const COUT_ACCESSOIRE_NOUVEAU: Partial<Record<CategoryKey, number>> = { chaussures: 2, sac: 1.5, accessoire: 1, bijou: 1 };
+
+interface CandidatVarie extends Candidat {
+  /** Les situations auxquelles ce look répond sans relâche du moteur (ni occasion relâchée, ni formalité descendue). */
+  adapteA: Set<number>;
+}
+
+function tirerAvecAdaptation(pool: Item[], situations: SituationValise[], generer: Generateur, tirages: number, dans: Map<string, CandidatVarie>): void {
+  situations.forEach((s, i) => {
+    for (let n = 0; n < tirages; n++) {
+      const t = generer(pool, s);
+      if (!t) continue;
+      const ids = [...new Set(t.ids)].filter((id) => pool.some((p) => p.id === id)).sort((a, b) => a - b);
+      if (!ids.length) continue;
+      const cle = clePrincipale(ids, pool) || ids.join(",");
+      const c = dans.get(cle) ?? { cle, ids, situations: new Set<number>(), elargie: true, adapteA: new Set<number>() };
+      c.situations.add(i);
+      c.elargie = c.elargie && t.elargie;
+      if (!t.elargie && !t.palierBaisse) c.adapteA.add(i);
+      dans.set(cle, c);
+    }
+  });
+}
+
+export interface ValiseVariee extends ResultatValise {
+  /** Les pièces de la capsule retenues : des suggestions à acheter, jamais des pièces possédées. */
+  suggestionIds: number[];
+}
+
+export function composerValiseVariee(
+  dressing: Item[],
+  capsule: Item[],
+  situations: SituationValise[],
+  capacite: number,
+  generer: Generateur,
+  leviers: LeviersValise,
+  tirages = TIRAGES_PAR_SITUATION,
+  /**
+   * La cible de volume du bagage (cibleDeVolume, 11/11/2026, vu en rendu réel : une valise M remplie à 65 % pour 7 jours, que la chaîne
+   * d'avant complétait jusqu'à sa cible). Sous la cible, de NOUVELLES tenues entrent, les moins répétitives d'abord (demandé : « la
+   * capacité disponible doit être utilisée en priorité pour proposer de nouveaux looks plutôt que des variantes très similaires »).
+   */
+  cible?: number
+): ValiseVariee {
+  const possede = new Set(dressing.map((i) => i.id));
+  const tous = new Map<number, Item>([...capsule, ...dressing].map((i) => [i.id, i]));
+  const candidats = new Map<string, CandidatVarie>();
+  tirerAvecAdaptation(dressing, situations, generer, tirages, candidats);
+  if (leviers.adaptation) {
+    // La capsule du séjour, mêlée au dressing : le moteur compose librement entre les deux ; puis, occasion par occasion, le pool habituel
+    // de l'app (la capsule complète les catégories où le dressing n'a rien d'adapté).
+    tirerAvecAdaptation([...tous.values()], situations, generer, tirages, candidats);
+    situations.forEach((s, i) => {
+      const pool = composeWardrobePool(dressing, capsule, TOUTES_CATEGORIES, { completerPourOccasion: s.occasion });
+      const local = new Map<string, CandidatVarie>();
+      tirerAvecAdaptation(pool, [s], generer, tirages, local);
+      for (const c of local.values()) {
+        const d = candidats.get(c.cle) ?? { ...c, situations: new Set<number>(), adapteA: new Set<number>() };
+        d.situations.add(i);
+        if (c.adapteA.size) d.adapteA.add(i);
+        d.elargie = d.elargie && c.elargie;
+        candidats.set(c.cle, d);
+      }
+    });
+  } else {
+    // Sans le levier B, la capsule ne sert qu'aux situations que le dressing ne couvre pas du tout (le principe d'origine).
+    const sansLook = situations.map((_, i) => i).filter((i) => ![...candidats.values()].some((c) => c.situations.has(i)));
+    for (const i of sansLook) {
+      const pool = composeWardrobePool(dressing, capsule, TOUTES_CATEGORIES, { completerPourOccasion: situations[i].occasion });
+      const local = new Map<string, CandidatVarie>();
+      tirerAvecAdaptation(pool, [situations[i]], generer, tirages, local);
+      for (const c of local.values()) {
+        const d = candidats.get(c.cle) ?? { ...c, situations: new Set<number>(), adapteA: new Set<number>() };
+        d.situations.add(i);
+        if (c.adapteA.size) d.adapteA.add(i);
+        candidats.set(c.cle, d);
+      }
+    }
+  }
+  const liste = [...candidats.values()];
+  const volume = (ids: Iterable<number>) => [...ids].reduce((t, id) => t + unitesDe(tous.get(id)?.cat ?? "haut"), 0);
+  const sac = new Set<number>();
+  const usages = new Map<number, number>();
+  const usagesLook = new Map<string, number>();
+  const retenus = new Map<string, CandidatVarie>();
+  /** Les situations auxquelles chaque look retenu a été attribué : le planning doit pouvoir l'y placer, adapté ou retenu à défaut. */
+  const attribues = new Map<string, Set<number>>();
+
+  // Les créneaux du séjour : un par jour de chaque situation, servis TOUR À TOUR (11/11/2026, mesuré : servie d'un bloc, la première
+  // situation remplissait la valise de looks nouveaux et laissait les suivantes sans aucun look). Chaque situation reçoit d'abord son
+  // premier look, puis chacune son deuxième, etc. ; dans un tour, les plus rares d'abord (un événement, un trajet), à rareté égale
+  // l'ordre des situations.
+  const options = (i: number) => {
+    const servent = liste.filter((c) => c.situations.has(i));
+    const adaptees = servent.filter((c) => c.adapteA.has(i));
+    return leviers.adaptation && adaptees.length ? adaptees : servent;
+  };
+  // Les tenues d'une situation qui TIENNENT dans le bagage : les adaptées d'abord ; à défaut d'une adaptée qui tienne, les autres
+  // (mesuré, exécution n° 18 : une valise S restreinte aux seules adaptées perdait un créneau sur cinq, faute de place).
+  const tenables = (i: number) => {
+    const tient = (c: CandidatVarie) => volume(sac) + volume(c.ids.filter((id) => !sac.has(id))) <= capacite;
+    const d = options(i).filter(tient);
+    return d.length ? d : liste.filter((c) => c.situations.has(i) && tient(c));
+  };
+  const ordre = situations
+    .map((s, i) => ({ i, n: s.jours.length, choix: options(i).length }))
+    .sort((a, b) => a.n - b.n || a.choix - b.choix || a.i - b.i);
+  const tours = Math.max(0, ...ordre.map((o) => o.n));
+  const creneaux = Array.from({ length: tours }, (_, k) => ordre.filter((o) => o.n > k).map((o) => o.i)).flat();
+  const plafond = plafondPrincipale(creneaux.length);
+  const depasse = (c: CandidatVarie) =>
+    c.ids.some((id) => CATEGORIES_PRINCIPALES.includes(tous.get(id)?.cat ?? "haut") && (usages.get(id) ?? 0) >= plafond);
+
+  const servies = new Set<number>();
+  for (const i of creneaux) {
+    // Le premier look d'une situation se choisit au moindre volume (mesuré, exécution n° 15 : choisi pour sa variété, il prenait la
+    // place des situations suivantes et une valise S perdait des créneaux). La variété ne joue qu'à partir du deuxième.
+    const premier = !servies.has(i);
+    servies.add(i);
+    let meilleur: CandidatVarie | null = null;
+    let cout = Infinity;
+    const tiennent = tenables(i);
+    const sousPlafond = leviers.plafond ? tiennent.filter((c) => !depasse(c)) : tiennent;
+    for (const c of sousPlafond.length ? sousPlafond : tiennent) {
+      const nouveaux = c.ids.filter((id) => !sac.has(id));
+      const deCapsule = nouveaux.filter((id) => !possede.has(id)).length;
+      const k = leviers.variete && !premier
+        ? c.ids.reduce((t, id) => t + (POIDS_REPETITION[tous.get(id)?.cat ?? "accessoire"] ?? 0) * (usages.get(id) ?? 0), 0) +
+          4 * (usagesLook.get(c.cle) ?? 0) +
+          0.25 * volume(nouveaux) +
+          nouveaux.reduce((t, id) => t + (COUT_ACCESSOIRE_NOUVEAU[tous.get(id)?.cat ?? "haut"] ?? 0), 0) +
+          COUT_PIECE_CAPSULE * deCapsule
+        : // Sans le levier A : la valise la plus légère (le principe d'origine), un look déjà retenu revient sans rien coûter.
+          volume(nouveaux) + COUT_PIECE_CAPSULE * deCapsule;
+      if (k < cout) {
+        meilleur = c;
+        cout = k;
+      }
+    }
+    if (!meilleur) continue;
+    meilleur.ids.forEach((id) => {
+      sac.add(id);
+      usages.set(id, (usages.get(id) ?? 0) + 1);
+    });
+    usagesLook.set(meilleur.cle, (usagesLook.get(meilleur.cle) ?? 0) + 1);
+    retenus.set(meilleur.cle, meilleur);
+    attribues.set(meilleur.cle, (attribues.get(meilleur.cle) ?? new Set<number>()).add(i));
+  }
+
+  // Sous la cible de volume : des tenues que la valise n'a pas encore, dans la capacité, adaptées d'abord, la moins répétitive d'abord.
+  if (cible != null && leviers.variete) {
+    for (;;) {
+      if (volume(sac) >= Math.min(cible, capacite)) break;
+      let meilleur: CandidatVarie | null = null;
+      let cout = Infinity;
+      for (const c of liste) {
+        if (retenus.has(c.cle)) continue;
+        const nouveaux = c.ids.filter((id) => !sac.has(id));
+        if (!nouveaux.length || volume(sac) + volume(nouveaux) > capacite) continue;
+        if (leviers.adaptation && c.adapteA.size === 0) continue;
+        const k =
+          c.ids.reduce((t, id) => t + (POIDS_REPETITION[tous.get(id)?.cat ?? "accessoire"] ?? 0) * (usages.get(id) ?? 0), 0) +
+          nouveaux.reduce((t, id) => t + (COUT_ACCESSOIRE_NOUVEAU[tous.get(id)?.cat ?? "haut"] ?? 0), 0) +
+          COUT_PIECE_CAPSULE * nouveaux.filter((id) => !possede.has(id)).length;
+        if (k < cout) {
+          meilleur = c;
+          cout = k;
+        }
+      }
+      if (!meilleur) break;
+      for (const id of meilleur.ids) {
+        sac.add(id);
+        usages.set(id, (usages.get(id) ?? 0) + 1);
+      }
+      retenus.set(meilleur.cle, meilleur);
+    }
+  }
+
+  // Une situation restée sans look (aucune tenue tirée ne tenait) : de nouveaux tirages du moteur sur les seules pièces de la valise,
+  // comme le fait looksDeLaValise — la référence couvrait ainsi des créneaux que la composition variée laissait vides (mesuré, n° 19).
+  const servie = (i: number) => [...attribues.values()].some((e) => e.has(i));
+  const restantes = situations.map((_, i) => i).filter((i) => !servie(i));
+  if (restantes.length) {
+    const poolSac = [...sac].map((id) => tous.get(id)).filter((p): p is Item => !!p);
+    for (const i of restantes) {
+      const local = new Map<string, CandidatVarie>();
+      tirerAvecAdaptation(poolSac, [situations[i]], generer, tirages, local);
+      const t = [...local.values()].sort((a, b) => b.adapteA.size - a.adapteA.size)[0];
+      if (!t) continue;
+      const c: CandidatVarie = { ...t, situations: new Set([i]), adapteA: t.adapteA.size ? new Set([i]) : new Set<number>() };
+      const deja = retenus.get(c.cle);
+      if (deja) {
+        deja.situations.add(i);
+        if (c.adapteA.size) deja.adapteA.add(i);
+      } else retenus.set(c.cle, c);
+      attribues.set(c.cle, (attribues.get(c.cle) ?? new Set<number>()).add(i));
+    }
+  }
+
+  const looks: LookValise[] = [...retenus.values()]
+    .map((c) => ({
+      ids: c.ids,
+      // Avec le levier B, un look répond aux situations où il est adapté et à celles où il a été retenu à défaut ; sans lui, à toutes
+      // celles où le moteur l'a tiré.
+      situations: [...(leviers.adaptation ? new Set([...c.adapteA, ...(attribues.get(c.cle) ?? [])]) : c.situations)].sort((a, b) => a - b),
+      elargie: leviers.adaptation ? c.adapteA.size === 0 : c.elargie,
+    }))
+    .sort((a, b) => a.situations[0] - b.situations[0] || Number(a.elargie) - Number(b.elargie));
+  const couvertes = new Set(looks.flatMap((l) => l.situations));
+  const pieceIds = [...sac];
+  return {
+    pieceIds,
+    looks,
+    situationsSansLook: situations.map((_, i) => i).filter((i) => !couvertes.has(i)),
+    suggestionIds: pieceIds.filter((id) => !possede.has(id)),
+  };
 }

@@ -1,28 +1,38 @@
 import { describe, expect, it } from "vitest";
-import { libelleVille, lirePaysCommeCapitale } from "../weather";
+import { PAYS } from "../paysData";
+import { libelleVille, paysDeLaSaisie } from "../weather";
 
-const thailande = [{ name: { common: "Thailand", official: "Kingdom of Thailand" }, translations: { fra: { common: "Thaïlande", official: "Royaume de Thaïlande" } }, capital: ["Bangkok"], capitalInfo: { latlng: [13.75, 100.51] }, cca2: "TH" }];
-
-describe("un pays saisi à la place d'une ville (14/10/2026)", () => {
-  it("rend sa capitale, avec ses coordonnées", () => {
-    const r = lirePaysCommeCapitale(thailande, "Thaïlande");
-    expect(r).toEqual([{ name: "Bangkok", country: "TH", state: "", lat: 13.75, lon: 100.51, capitaleDe: "Thaïlande" }]);
+// UN PAYS SAISI À LA PLACE D'UNE VILLE (14/10/2026 ; liste de l'app depuis le 11/11/2026, paysData.ts).
+describe("paysDeLaSaisie", () => {
+  it("reconnaît un pays par son nom français ou anglais, sans accent ni casse", () => {
+    expect(paysDeLaSaisie("Thaïlande")[0]).toMatchObject({ code: "TH", capitale: "Bangkok" });
+    expect(paysDeLaSaisie("thailande")[0].code).toBe("TH");
+    expect(paysDeLaSaisie("THAILAND")[0].code).toBe("TH");
+    expect(paysDeLaSaisie("Inde")[0]).toMatchObject({ code: "IN", capitale: "New Delhi" });
   });
-  it("accepte la saisie sans accent ni casse, et le nom anglais", () => {
-    expect(lirePaysCommeCapitale(thailande, "thailande")).toHaveLength(1);
-    expect(lirePaysCommeCapitale(thailande, "THAILAND")).toHaveLength(1);
+  it("le nom exact passe devant ceux qui commencent pareil : « Niger » avant le Nigéria", () => {
+    const r = paysDeLaSaisie("Niger").map((p) => p.code);
+    expect(r[0]).toBe("NE");
+    expect(r).toContain("NG");
   });
-  it("ne retient qu'un nom exact : « Niger » ne rend pas le Nigéria", () => {
-    const nigeria = [{ name: { common: "Nigeria" }, translations: { fra: { common: "Nigéria" } }, capital: ["Abuja"], capitalInfo: { latlng: [9.08, 7.4] }, cca2: "NG" }];
-    expect(lirePaysCommeCapitale(nigeria, "Niger")).toEqual([]);
+  it("dès trois lettres, les pays qui commencent par la saisie", () => {
+    const r = paysDeLaSaisie("Ind").map((p) => p.nom);
+    expect(r).toEqual(expect.arrayContaining(["Inde", "Indonésie"]));
   });
-  it("sans capitale ou sans coordonnées, rien — jamais une position inventée", () => {
-    expect(lirePaysCommeCapitale([{ ...thailande[0], capitalInfo: {} }], "Thaïlande")).toEqual([]);
-    expect(lirePaysCommeCapitale([{ ...thailande[0], capital: [] }], "Thaïlande")).toEqual([]);
-    expect(lirePaysCommeCapitale({ status: 404 }, "Thaïlande")).toEqual([]);
+  it("un nom officiel ne compte qu'en entier : « Ind » ne fait pas venir Kiribati, « États-Unis » pas le Mexique", () => {
+    expect(paysDeLaSaisie("Ind").map((p) => p.code)).not.toContain("KI");
+    expect(paysDeLaSaisie("États-Unis").map((p) => p.code)).toEqual(["US"]);
+    expect(paysDeLaSaisie("États-Unis du Mexique")[0].code).toBe("MX");
+  });
+  it("rien sous deux lettres, rien pour une ville", () => {
+    expect(paysDeLaSaisie("I")).toEqual([]);
+    expect(paysDeLaSaisie("Lisbonne")).toEqual([]);
+  });
+  it("chaque pays de la liste a un code, un nom et une capitale", () => {
+    expect(PAYS.length).toBeGreaterThan(200);
+    expect(PAYS.every((p) => /^[A-Z]{2}$/.test(p.code) && p.nom && p.capitale)).toBe(true);
   });
   it("l'affichage dit que c'est la capitale", () => {
-    const [v] = lirePaysCommeCapitale(thailande, "Thaïlande");
-    expect(libelleVille(v)).toBe("Bangkok, Thaïlande (capitale)");
+    expect(libelleVille({ name: "Bangkok", country: "TH", state: "", lat: 13.75, lon: 100.51, capitaleDe: "Thaïlande" })).toBe("Bangkok, Thaïlande (capitale)");
   });
 });

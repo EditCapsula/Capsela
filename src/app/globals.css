@@ -277,6 +277,12 @@ input.capin:focus {
   border-color: var(--color-terracotta);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-terracotta) 14%, transparent);
 }
+/* Un champ logé dans un cadre qui porte déjà le repère (focus-within du cadre : la recherche de destination, EtapeLieu) n'en dessine
+   pas un second à l'intérieur (11/11/2026, signalé : « un liseré dans le champ ta destination »). */
+input.capin.capin-integre:focus-visible,
+input.capin.capin-integre:focus {
+  box-shadow: none;
+}
 input.capin::placeholder {
   color: var(--color-placeholder);
 }

@@ -476,9 +476,10 @@ Brief « Refonte UX de l'écran de synthèse de la valise » et maquette du mêm
   pièces quantités comprises.
 - **À emporter** : les familles de la valise (`GROUPES_VALISE`, six depuis ce jour : Sacs & accessoires réunis ; le dressing garde les
   siennes), filtrables par pastilles qui défilent (`SegmentedControl defilant`). Une carte par pièce (`PhotoPiece`) : provenance en
-  `Badge` (Dressing, Capsule, Vacances — une pièce qui n'est pas au dressing n'est jamais dite « Dressing »), nom, quantité (− / +,
-  `ControleQuantite`), coche « déjà dans la valise », croix pour la retirer. Puis « À compléter » : chaque pièce manquante s'ajoute au
-  dressing ou se note « Achat à prévoir » (`ValiseGardee.achats`).
+  `Badge` (Dressing, Capsule, Vacances — une pièce qui n'est pas au dressing n'est jamais dite « Dressing »), nom,
+  quantité (− / +, `ControleQuantite`), coche « déjà dans la valise », croix pour la retirer. Puis « À compléter » : chaque pièce
+  manquante s'ajoute au dressing. « Achat à prévoir » a été retiré le 11/11/2026 (rien n'était fait derrière) ; `ValiseGardee.achats`
+  reste lisible en base, plus affiché.
 - **Quantités** (`quantitesValise.ts`) : 1 par défaut, réglables de 1 à 9, gardées avec la valise (`ValiseGardee.quantites`, et
   `EtatAffaires.quantites` pour les indispensables ; `calcul` jsonb, aucune migration). Le remplissage les compte. Les règles de
   quantité initiale (« 1, puis 2 au-delà de 5 jours de baignade ») sont l'étape 3 du brief Vacances, à venir.
@@ -487,3 +488,28 @@ Brief « Refonte UX de l'écran de synthèse de la valise » et maquette du mêm
 - **Indispensables** : la checklist d'avant, avec la quantité de chaque article et « Tout cocher ».
 - Vérifié en rendu réel (mode démo, valise de test injectée) à 390 et 320 px. NON vérifié : les photos des pièces (le catalogue de démo
   n'en a pas).
+
+## La valise construite sur tout le séjour (11/11/2026)
+
+Validé par la propriétaire (« une valise réellement adaptée au voyage, variée et cohérente ») après le signalement d'une valise M où la
+même combinaison revenait dans 7 looks sur 9. L'écran compose désormais avec `composerValiseVariee` (valise.ts) au lieu de
+`composerValise` puis `completerAvecCapsule` :
+
+- **A, la variété.** Les tenues sont choisies créneau par créneau sur tout le séjour, chaque situation servie tour à tour (son premier
+  look au moindre volume, puis la variété). Une pièce principale qui revient coûte cher, un haut moins, les chaussures, sacs et
+  accessoires presque rien (`POIDS_REPETITION`) ; en ajouter un nouveau coûte de la place (`COUT_ACCESSOIRE_NOUVEAU`). Sous la cible
+  de volume, de nouvelles tenues entrent (`cibleDeVolume`).
+- **B, l'adaptation.** Tenues tirées dans le dressing et dans la capsule du séjour ; une tenue relâchée par le moteur (occasion ou
+  formalité) n'est retenue qu'à défaut. À adaptation égale, le dressing passe devant (`COUT_PIECE_CAPSULE`). « Uniquement mon
+  dressing » : pas de capsule.
+- **P, les niveaux de vacances** (`PLANCHERS_VACANCES`) : trajet 1, restaurant et soirée de vacances 2, soirée datée 3, cérémonie 4.
+  Le restaurant chic et la soirée habillée attendent un choix d'ambiance que l'écran ne propose pas encore.
+- **R, la répartition par pièces.** Le planning (`planningDeLaValise`, écran et tenue du jour) donne à chaque créneau le look dont les
+  pièces ont le moins servi, plus seulement le look le moins porté.
+
+Mesure (`scripts/valise-variete.audit.ts`, exécution n° 24, 3 séjours × 3 profils × 2 dressings × 3 compositions) — valise M :
+créneaux couverts 90 → 95 %, tenues adaptées 72 → 76 %, bas le plus porté 5,7 → 4,8 créneaux, bas distincts 2,6 → 3,5, pièces de
+capsule suggérées 0,4 → 1,7 ; valise L : bas le plus porté 4,7 → 2,7. NON DÉMONTRÉ : la variété d'une valise S (≈ 6, faute de place) ;
+le plafond par pièce principale (`plafond`, sans effet mesurable, non branché). Les soirées et trajets restent les créneaux les moins
+adaptés : ce sont les règles d'occasion (chaussures habillées en soirée, R-S25 ; baskets et niveau 1 en voyage) qui les retiennent,
+pas le niveau de formalité.
