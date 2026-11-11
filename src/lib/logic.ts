@@ -1911,9 +1911,13 @@ export function generateOutfit(
  * pièce par pièce, pour éviter de dupliquer la même règle à deux endroits.
  */
 const FORMALITY_FALLBACK_CHAIN: Record<number, number[]> = {
-  4: [4, 3, 1], // habillé -> business_casual -> décontracté
-  3: [3, 1], // business_casual -> décontracté
-  // Casual chic / smart casual (11/11/2026) : aucune occasion ne le demande encore ; s'il est demandé, repli sur le décontracté.
+  // LE REPLI PASSE PAR LE CASUAL CHIC (11/11/2026, validé : « applique le repli »). Mesuré sur le catalogue reclassé (audit niveau-2,
+  // exécution n° 4, variante D, même pool) : les tenues de bureau, de soirée et d'événement qui retombaient au décontracté passent de
+  // 14 à 17 % à 0 % chez les femmes, de 28,6 % à 14,3 % chez les hommes ; aucun autre effet mesuré (tenue trouvée 100 %, palier
+  // demandé inchangé, quotidien et voyage non concernés). Avant : 4 → [4, 3, 1], 3 → [3, 1].
+  4: [4, 3, 2, 1], // habillé -> business_casual -> casual chic -> décontracté
+  3: [3, 2, 1], // business_casual -> casual chic -> décontracté
+  // Casual chic / smart casual (11/11/2026) : aucune occasion ne le demande ; s'il est demandé, repli sur le décontracté.
   2: [2, 1],
   1: [1], // décontracté : aucun repli
   0: [0], // sport : aucun repli
