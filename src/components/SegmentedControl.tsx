@@ -36,6 +36,7 @@ export default function SegmentedControl<K extends string>({
   ariaLabel,
   serre,
   variante = "piste",
+  defilant = false,
 }: {
   segments: readonly Segment<K>[];
   actif: K;
@@ -51,17 +52,22 @@ export default function SegmentedControl<K extends string>({
    * pastille claire à filet — au lieu de la piste creuse à pastille blanche. `piste` reste la forme des autres écrans.
    */
   variante?: "piste" | "pastilles";
+  /**
+   * Une rangée qui défile (07/11/2026, valise : six familles de pièces, dix sous-occasions) : chaque pastille à la largeur de son libellé,
+   * jamais coupée ; le parent porte le défilement horizontal. Absent : la grille d'avant, inchangée.
+   */
+  defilant?: boolean;
 }) {
   const pastilles = variante === "pastilles";
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={pastilles ? "grid gap-2" : "grid gap-1 rounded-full p-1"}
+      className={(pastilles ? "grid gap-2" : "grid gap-1 rounded-full p-1") + (defilant ? " w-max" : "")}
       style={{
         // Pastilles serrées (Ma Capsule, quatre onglets, 01/11/2026) : colonnes sur le CONTENU, comme la piste — en parts égales,
         // « Composer » et « Pièces clés » étaient coupés à 320 px. Les colonnes `auto` se partagent ensuite la place restante.
-        gridTemplateColumns: pastilles && !serre ? `repeat(${segments.length}, minmax(0, 1fr))` : `repeat(${segments.length}, auto)`,
+        gridTemplateColumns: pastilles && !serre && !defilant ? `repeat(${segments.length}, minmax(0, 1fr))` : `repeat(${segments.length}, auto)`,
         // Jeton existant : le crème sombre déjà utilisé pour les surfaces
         // creuses. Aucune couleur nouvelle.
         background: pastilles ? undefined : "var(--color-chip-soft-bg)",
@@ -76,7 +82,7 @@ export default function SegmentedControl<K extends string>({
             aria-selected={on}
             onClick={() => onChange(s.key)}
             className={
-              "flex items-center justify-center gap-[5px] rounded-full " + (serre ? "px-1" : "px-2") + " text-[12px] cursor-pointer transition-colors min-w-0 " +
+              "flex items-center justify-center gap-[5px] rounded-full " + (defilant ? "px-[14px] whitespace-nowrap" : serre ? "px-1" : "px-2") + " text-[12px] cursor-pointer transition-colors min-w-0 " +
               (pastilles
                 ? on
                   ? "bg-terracotta-deep text-cream"
