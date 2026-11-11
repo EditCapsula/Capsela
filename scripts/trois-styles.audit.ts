@@ -138,6 +138,20 @@ describe("trois styles au lieu de deux", () => {
       }
       console.log(`\n  Par trio (moyenne des saisons) :`);
       for (const l of parTrio) console.log(l);
+
+      // DIAGNOSTIC du dernier style de la liste (Créatif) : il n'est jamais dans la paire [A, B] ci-dessus. Sa capsule seule, puis à
+      // deux, puis à trois, pour savoir si un écart de taille vient du troisième style ou du style lui-même.
+      const dernier = styles[styles.length - 1];
+      console.log(`\n  Diagnostic « ${STYLE_ID_TO_CATALOG_LABEL[dernier]} » (taille totale · hors Sport · Sport · par catégorie) :`);
+      for (const choisis of [[dernier], [styles[0], dernier], [styles[0], styles[1], dernier], [styles[0], styles[1]]] as StyleId[][]) {
+        for (const saison of SAISONS) {
+          const capsule = computeDefaultCapsule(profilAudit({ gender: genre, styles: choisis }), representativeWeatherFor(saison), [], saison, catalogue);
+          const sport = capsule.filter((p) => formalityOf(p) === 0).length;
+          const parCat = new Map<string, number>();
+          for (const p of capsule) if (formalityOf(p) !== 0) parCat.set(p.cat, (parCat.get(p.cat) ?? 0) + 1);
+          console.log(`    ${choisis.map((s) => STYLE_ID_TO_CATALOG_LABEL[s]).join(" + ").padEnd(40)} ${saison.padEnd(10)} ${String(capsule.length).padStart(3)} · ${String(capsule.length - sport).padStart(3)} · ${String(sport).padStart(2)} · ${[...parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`);
+        }
+      }
     }
   }, 600_000);
 });
