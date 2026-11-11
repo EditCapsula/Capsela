@@ -126,7 +126,14 @@ export function planningDuProgramme(
   evenements: readonly EvenementValise[] = [],
   placements: PlacementsPlanning = {},
   /** Planification manuelle : les activités datées remplacent l'étalement (rien n'est réparti). Absent : la répartition automatique. */
-  datees?: readonly ActiviteDatee[]
+  datees?: readonly ActiviteDatee[],
+  /**
+   * LA RÉPARTITION PAR PIÈCES (11/11/2026, levier de mesure, validé : « optimiser la diversité sur l'ensemble du séjour »). Avec ce
+   * poids par pièce (POIDS_REPETITION : une pièce principale lourde, un haut moins, les chaussures, sacs et accessoires presque rien),
+   * un créneau prend le look dont les pièces ont le moins servi, et plus seulement le look le moins porté : deux looks qui partagent la
+   * même combinaison ne passent plus pour variés. Absent : la répartition d'avant.
+   */
+  poidsPiece?: (id: number) => number
 ): CreneauPlanning[] {
   const nb = jours.length;
   if (!nb) return [];
@@ -182,6 +189,8 @@ export function planningDuProgramme(
   //    choisissent EN PREMIER, et les autres créneaux évitent ensuite leurs looks quand un autre look leur répond (22/10/2026) : le look
   //    du mariage ne revient pas chaque soir si la valise en a un autre pour les soirées. Sans autre look, il est partagé, jamais retiré.
   const usage = new Array(looks.length).fill(0);
+  const usagePiece = new Map<number, number>();
+  const charge = (k: number) => (poidsPiece ? looks[k].ids.reduce((t, id) => t + poidsPiece(id) * (usagePiece.get(id) ?? 0), 0) : 0);
   const reserves = new Set<number>();
   const choix = new Array<number | null>(creneaux.length).fill(null);
   const choisir = (idx: number) => {
@@ -190,18 +199,19 @@ export function planningDuProgramme(
     const i = situations.findIndex((s) => (s.sousIds ?? []).includes(c.sousId) && s.jours.includes(jour));
     if (i < 0) return;
     let meilleur: number | null = null;
-    const cle = (k: number): [number, number] => [reserves.has(k) ? 1 : 0, usage[k]];
+    const cle = (k: number): [number, number, number] => [reserves.has(k) ? 1 : 0, charge(k), usage[k]];
     for (let k = 0; k < looks.length; k++) {
       if (!looks[k].situations.includes(i)) continue;
       if (meilleur == null) meilleur = k;
       else {
-        const [a1, a2] = cle(k);
-        const [b1, b2] = cle(meilleur);
-        if (a1 < b1 || (a1 === b1 && a2 < b2)) meilleur = k;
+        const [a1, a2, a3] = cle(k);
+        const [b1, b2, b3] = cle(meilleur);
+        if (a1 < b1 || (a1 === b1 && (a2 < b2 || (a2 === b2 && a3 < b3)))) meilleur = k;
       }
     }
     if (meilleur == null) return;
     usage[meilleur]++;
+    for (const id of looks[meilleur].ids) usagePiece.set(id, (usagePiece.get(id) ?? 0) + 1);
     if (c.evenement) reserves.add(meilleur);
     choix[idx] = meilleur;
   };

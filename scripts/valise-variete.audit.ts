@@ -24,6 +24,7 @@ import {
   type LookValise,
   type MeteoJour,
   PLANCHERS_VACANCES,
+  POIDS_REPETITION,
   type TailleBagage,
   unitesDe,
 } from "../src/lib/valise";
@@ -93,12 +94,16 @@ const TAILLES: TailleBagage[] = ["S", "M", "L"];
 const REPETITIONS = 3;
 // P (11/11/2026) : les niveaux de formalité des contextes de vacances fixés par la propriétaire (PLANCHERS_VACANCES). Plafond : au plus
 // un créneau sur quatre pour une même pièce principale (plafondPrincipale).
-const VARIANTES: { nom: string; leviers: LeviersValise | null; planchers?: boolean }[] = [
+// R (11/11/2026) : la répartition jour par jour compte les pièces déjà portées (planningDuProgramme, poidsPiece).
+const VARIANTES: { nom: string; leviers: LeviersValise | null; planchers?: boolean; repartition?: boolean }[] = [
   { nom: "référence", leviers: null },
   { nom: "réf. + P", leviers: null, planchers: true },
   { nom: "A + B", leviers: { variete: true, adaptation: true } },
   { nom: "A+B+plafond", leviers: { variete: true, adaptation: true, plafond: true } },
   { nom: "A+B+pl.+P", leviers: { variete: true, adaptation: true, plafond: true }, planchers: true },
+  { nom: "réf. + R", leviers: null, repartition: true },
+  { nom: "A+B+pl.+R", leviers: { variete: true, adaptation: true, plafond: true }, repartition: true },
+  { nom: "A+B+pl.+P+R", leviers: { variete: true, adaptation: true, plafond: true }, planchers: true, repartition: true },
 ];
 
 interface Mesure {
@@ -133,9 +138,9 @@ function adapteeAuCreneau(pieces: Item[], occasion: OccasionKey, genre: "femme" 
   return pieces.every((p) => adapteeALOccasion(p, occasion, genre));
 }
 
-function mesurer(looks: LookValise[], pieceIds: number[], suggestionIds: number[], tous: Map<number, Item>, sejour: Sejour, situations: ReturnType<typeof situationsDuProgramme>, capacite: number, genre: "femme" | "homme"): Mesure {
+function mesurer(looks: LookValise[], pieceIds: number[], suggestionIds: number[], tous: Map<number, Item>, sejour: Sejour, situations: ReturnType<typeof situationsDuProgramme>, capacite: number, genre: "femme" | "homme", repartition = false): Mesure {
   const jours = joursDuSejour(sejour.depart, sejour.retour);
-  const planning = planningDuProgramme(sejour.programme, jours, situations, looks);
+  const planning = planningDuProgramme(sejour.programme, jours, situations, looks, [], {}, undefined, repartition ? (id) => POIDS_REPETITION[tous.get(id)?.cat ?? "accessoire"] ?? 0 : undefined);
   const portes = planning.filter((c) => c.look != null).map((c) => looks[c.look!]);
   const usages = new Map<number, number>();
   for (const l of portes) for (const id of l.ids) usages.set(id, (usages.get(id) ?? 0) + 1);
@@ -219,7 +224,7 @@ describe("valise variée et adaptée", () => {
               } else {
                 ({ looks, pieceIds, suggestionIds } = composerValiseVariee(dressing, capsule, situations, capacite, generer, v.leviers));
               }
-              const m = mesurer(looks, pieceIds, suggestionIds, tous, sejour, situations, capacite, profil.genre);
+              const m = mesurer(looks, pieceIds, suggestionIds, tous, sejour, situations, capacite, profil.genre, v.repartition);
               const cle = `${v.nom}|${taille}`;
               cumul.set(cle, [...(cumul.get(cle) ?? []), m]);
               if (rep === 0) ligne.push(`${v.nom}: ${m.couverts}/${m.creneaux} créneaux · adaptés ${m.adaptes} · max bas ${m.maxPrincipale} · bas ${m.principales} · hauts ${m.hauts} · looks ${m.looks} · pièces ${m.pieces} (capsule ${m.capsule})`);

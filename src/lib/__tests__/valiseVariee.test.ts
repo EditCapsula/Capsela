@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { composerValiseVariee, plafondPrincipale, plancherDesEntrees, situationsDuProgramme, situationsDuSejour, type Generateur, type MeteoJour } from "../valise";
 import type { CategoryKey, Item } from "../types";
+import { planningDuProgramme } from "../planningValise";
 
 // La composition variée (11/11/2026) : les leviers A (variété sur tout le séjour) et B (adaptation), inertes en production.
 
@@ -105,5 +106,26 @@ describe("le plafond d'une pièce principale", () => {
     const huit = situationsDuSejour(["quotidien"], ["2026-12-07", "2026-12-08", "2026-12-09", "2026-12-10", "2026-12-11", "2026-12-12", "2026-12-13", "2026-12-14"].map(meteo));
     const r = composerValiseVariee(DRESSING, [], huit, 40, generateur(TENUES), { variete: true, plafond: true });
     expect(r.looks.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("la répartition par pièces (planningDuProgramme, poidsPiece)", () => {
+  const jours = ["2026-12-07", "2026-12-08", "2026-12-09"];
+  const situations = situationsDuProgramme([{ id: "visites", frequence: 3 }], jours.map(meteo), ["quotidien"]);
+  // Deux looks partagent la combinaison 10 ; le troisième est fait d'autres pièces.
+  const looks = [
+    { ids: [10, 20, 30], situations: [0], elargie: false },
+    { ids: [10, 21, 30], situations: [0], elargie: false },
+    { ids: [1, 11, 20, 30], situations: [0], elargie: false },
+  ];
+  const poids = (id: number) => (id === 10 || id === 11 ? 3 : id === 1 ? 1.5 : 0);
+
+  it("sans poids, les deux looks à la combinaison passent pour variés ; avec, la combinaison ne revient qu'à défaut", () => {
+    const sans = planningDuProgramme([{ id: "visites", frequence: 3 }], jours, situations, looks);
+    const avec = planningDuProgramme([{ id: "visites", frequence: 3 }], jours, situations, looks, [], {}, undefined, poids);
+    const combinaison = (p: typeof sans) => p.filter((c) => c.look != null && looks[c.look].ids.includes(10)).length;
+    expect(combinaison(sans)).toBe(2);
+    expect(combinaison(avec)).toBeLessThanOrEqual(2);
+    expect(avec.slice(0, 2).map((c) => c.look)).toContain(2);
   });
 });
