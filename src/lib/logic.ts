@@ -306,6 +306,12 @@ export const DATES_DECONTRACTEES: readonly DateContext[] = ["Activité", "Ciném
 
 export interface LeviersMesure {
   /**
+   * PLANCHER DE FORMALITÉ IMPOSÉ (11/11/2026, ouverture du niveau 2 « casual chic / smart casual ») : remplace, le temps d'une mesure,
+   * le palier que l'occasion demande (effectiveFormality) au départ du repli de formalité. Mesure seulement : aucun appelant de
+   * production ne le passe. R-B6 (baskets) garde son propre seuil.
+   */
+  plancher?: number;
+  /**
    * P1 — le tirage du haut principal s'ouvre aux pulls au lieu de la seule
    * catégorie "haut".
    *
@@ -1902,6 +1908,8 @@ export function generateOutfit(
 const FORMALITY_FALLBACK_CHAIN: Record<number, number[]> = {
   4: [4, 3, 1], // habillé -> business_casual -> décontracté
   3: [3, 1], // business_casual -> décontracté
+  // Casual chic / smart casual (11/11/2026) : aucune occasion ne le demande encore ; s'il est demandé, repli sur le décontracté.
+  2: [2, 1],
   1: [1], // décontracté : aucun repli
   0: [0], // sport : aucun repli
 };
@@ -1936,7 +1944,7 @@ function hasCoreOutfit(ids: number[], pool: Item[], leviers?: LeviersMesure): bo
 }
 
 export interface GeneratedOutfitWithFallback extends GeneratedOutfit {
-  /** Palier de formalité initialement visé par l'occasion (0 sport / 1 décontracté / 3 business_casual / 4 habillé). */
+  /** Palier de formalité initialement visé par l'occasion (0 sport / 1 décontracté / 2 casual chic / 3 business_casual / 4 habillé). */
   requestedFormality: number;
   /** Palier effectivement utilisé pour produire cette tenue. */
   resolvedFormality: number;
@@ -2015,7 +2023,7 @@ export function generateOutfitWithFallback(
   /** Soirée « habillée » (palier 4, cf. soireeHabillee dans occasions.ts) : sans effet hors de l'occasion « soiree ». */
   soireeHabillee = false
 ): GeneratedOutfitWithFallback {
-  const requestedFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext, soireeHabillee) : 0;
+  const requestedFormality = leviers?.plancher ?? (occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext, soireeHabillee) : 0);
   const chain = FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
   for (const tier of chain) {
     const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason, leviers, colorimetrie, soireeHabillee);
