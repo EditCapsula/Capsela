@@ -105,3 +105,14 @@ select category, coalesce(niveau_formalite, '(vide)') as formalite, count(*)
 | D5 | Nouveaux types de chaussures (running, trail, bateau) au catalogue ? | Données et visuels à créer |
 | D6 | Terrain des activités : demandé à la personne, lu par l'IA, ou inconnu par défaut ? | Le brief interdit d'inventer une exigence |
 | D7 | Mesure : exécuter les audits dans un workflow GitHub (clé secrète Supabase), faute d'accès depuis ici ? | Condition de la règle d'audit |
+
+## 9. La mesure (D7, 11/11/2026)
+
+- Workflow **« Audits du moteur (lecture seule) »** (`.github/workflows/audits-moteur.yml`) : lancé à la main, il exécute les audits
+  nommés (`scripts/<nom>.audit.ts`) sur le vrai catalogue, avec la clé secrète déjà en place (`SB_SECRET_KEY`), et garde leur sortie en
+  artefact 30 jours. Vérifié avant : aucun audit n'écrit dans la base.
+- Nouvel audit **`repartition-formalite`** (décision D1) : niveaux déclarés par catégorie, niveaux lus par le moteur, et les pièces
+  ambiguës du brief (blazers, jeans, chemises, robes, baskets) par niveau. Il lit le catalogue par pages.
+- **Risque relevé** : les audits existants lisent `vestiaire_universel` en une requête, sans pagination ; PostgREST plafonne une réponse à
+  1 000 lignes par défaut et les identifiants dépassent 1 350. Si le plafond s'applique, ces audits n'ont vu qu'une partie du catalogue.
+  À vérifier à la première exécution (le nombre de lignes lues est affiché par `repartition-formalite`).
