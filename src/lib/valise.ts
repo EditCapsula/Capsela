@@ -1268,6 +1268,8 @@ export function composerValiseVariee(
   const usages = new Map<number, number>();
   const usagesLook = new Map<string, number>();
   const retenus = new Map<string, CandidatVarie>();
+  /** Les situations auxquelles chaque look retenu a été attribué : le planning doit pouvoir l'y placer, adapté ou retenu à défaut. */
+  const attribues = new Map<string, Set<number>>();
 
   // Les créneaux du séjour : un par jour de chaque situation, servis TOUR À TOUR (11/11/2026, mesuré : servie d'un bloc, la première
   // situation remplissait la valise de looks nouveaux et laissait les suivantes sans aucun look). Chaque situation reçoit d'abord son
@@ -1321,13 +1323,36 @@ export function composerValiseVariee(
     });
     usagesLook.set(meilleur.cle, (usagesLook.get(meilleur.cle) ?? 0) + 1);
     retenus.set(meilleur.cle, meilleur);
+    attribues.set(meilleur.cle, (attribues.get(meilleur.cle) ?? new Set<number>()).add(i));
+  }
+
+  // Une situation restée sans look (aucune tenue tirée ne tenait) : de nouveaux tirages du moteur sur les seules pièces de la valise,
+  // comme le fait looksDeLaValise — la référence couvrait ainsi des créneaux que la composition variée laissait vides (mesuré, n° 19).
+  const servie = (i: number) => [...attribues.values()].some((e) => e.has(i));
+  const restantes = situations.map((_, i) => i).filter((i) => !servie(i));
+  if (restantes.length) {
+    const poolSac = [...sac].map((id) => tous.get(id)).filter((p): p is Item => !!p);
+    for (const i of restantes) {
+      const local = new Map<string, CandidatVarie>();
+      tirerAvecAdaptation(poolSac, [situations[i]], generer, tirages, local);
+      const t = [...local.values()].sort((a, b) => b.adapteA.size - a.adapteA.size)[0];
+      if (!t) continue;
+      const c: CandidatVarie = { ...t, situations: new Set([i]), adapteA: t.adapteA.size ? new Set([i]) : new Set<number>() };
+      const deja = retenus.get(c.cle);
+      if (deja) {
+        deja.situations.add(i);
+        if (c.adapteA.size) deja.adapteA.add(i);
+      } else retenus.set(c.cle, c);
+      attribues.set(c.cle, (attribues.get(c.cle) ?? new Set<number>()).add(i));
+    }
   }
 
   const looks: LookValise[] = [...retenus.values()]
     .map((c) => ({
       ids: c.ids,
-      // Le look ne répond qu'aux situations où il est adapté, quand le levier B joue et qu'il l'est quelque part.
-      situations: [...(leviers.adaptation && c.adapteA.size ? c.adapteA : c.situations)].sort((a, b) => a - b),
+      // Avec le levier B, un look répond aux situations où il est adapté et à celles où il a été retenu à défaut ; sans lui, à toutes
+      // celles où le moteur l'a tiré.
+      situations: [...(leviers.adaptation ? new Set([...c.adapteA, ...(attribues.get(c.cle) ?? [])]) : c.situations)].sort((a, b) => a - b),
       elargie: leviers.adaptation ? c.adapteA.size === 0 : c.elargie,
     }))
     .sort((a, b) => a.situations[0] - b.situations[0] || Number(a.elargie) - Number(b.elargie));
