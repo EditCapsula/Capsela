@@ -167,6 +167,12 @@ const FORMALITE_MAP: Record<string, number> = {
   sport: 0,
   decontracte: 1,
   "décontracté": 1,
+  // LE NIVEAU 2 (11/11/2026, décision D1 de l'audit « formalité, contexte et activités ») : casual chic / smart casual — le blazer
+  // déstructuré, la robe midi portefeuille, la chemise col ouvert. Entre le décontracté (1) et le business casual (3), jusqu'ici vide.
+  casual_chic: 2,
+  "casual chic": 2,
+  smart_casual: 2,
+  "smart casual": 2,
   business_casual: 3,
   "business casual": 3,
   habille: 4,
