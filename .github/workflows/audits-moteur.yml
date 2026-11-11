@@ -1,0 +1,67 @@
+name: Audits du moteur (lecture seule)
+
+# LA MESURE DES AUDITS (11/11/2026, décision D7 de l'audit « formalité, contexte et activités ») : les audits `scripts/*.audit.ts`
+# recalculent le vrai moteur sur le VRAI catalogue, ce qu'exige la règle d'audit (AGENTS.md : mesurer avant / après, sur le même pool).
+# Ils ne peuvent pas tourner depuis l'environnement de développement (Supabase n'y est pas joignable) : ils tournent ici.
+#
+# LECTURE SEULE : vérifié le 11/11/2026, aucun audit n'écrit dans la base (ni update, ni insert, ni upsert, ni delete, ni rpc, ni
+# stockage). La clé secrète (SB_SECRET_KEY, déjà utilisée par la génération des visuels) ne sert qu'à lire le catalogue sans les limites
+# de lecture des visiteurs. Déclenchement manuel uniquement ; la sortie est gardée en artefact 30 jours.
+
+on:
+  workflow_dispatch:
+    inputs:
+      audits:
+        description: "Audits à lancer, noms séparés par des virgules, sans « .audit.ts » (ex. couverture-occasions,coherence-bornes)"
+        required: true
+
+jobs:
+  mesurer:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Lancer les audits
+        env:
+          SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
+          AUDITS: ${{ inputs.audits }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SB_SECRET_KEY" ]; then
+            echo "::error::Secret SB_SECRET_KEY absent (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          mkdir -p sorties
+          fichiers=()
+          IFS=',' read -ra noms <<< "$AUDITS"
+          for brut in "${noms[@]}"; do
+            nom="$(echo "$brut" | tr -d '[:space:]')"
+            # Un nom d'audit, rien d'autre : pas de chemin, pas d'option passée à vitest.
+            if ! [[ "$nom" =~ ^[a-z0-9-]+$ ]] || [ ! -f "scripts/$nom.audit.ts" ]; then
+              echo "::error::Audit inconnu : « $nom » (attendu : le nom d'un fichier scripts/<nom>.audit.ts)."
+              exit 1
+            fi
+            fichiers+=("scripts/$nom.audit.ts")
+          done
+          code=0
+          for f in "${fichiers[@]}"; do
+            nom="$(basename "$f" .audit.ts)"
+            echo "::group::$nom"
+            # La sortie est gardée telle quelle ; le code de sortie est lu à part (jamais celui d'un filtre, AGENTS.md).
+            npx vitest run --config vitest.audit.config.mts "$f" > "sorties/$nom.txt" 2>&1 || code=1
+            cat "sorties/$nom.txt"
+            echo "::endgroup::"
+          done
+          exit $code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audits-${{ github.run_number }}
+          path: sorties/
+          retention-days: 30
