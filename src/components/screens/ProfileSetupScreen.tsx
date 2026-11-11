@@ -92,7 +92,7 @@ const ALL_STEPS = [
   { key: "prenom", kicker: "Toi", title: "Comment tu t'appelles ?", subtitle: "Pour personnaliser ton expérience Capsela." },
   { key: "genre", kicker: "Genre", title: "Comment tu te définis ?", subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
-  { key: "style", kicker: "Ton style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis 1 ou 2 styles maximum." },
+  { key: "style", kicker: "Ton style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis jusqu'à 3 styles." },
   { key: "morpho", kicker: "Ta silhouette", title: "Quelle est ta silhouette ?", subtitle: "Elle nous aide à te proposer des coupes et des proportions qui te mettent en valeur." },
   /*
    * MISE EN VALEUR ET COUPES (31/10/2026, brief « Évolution de l'onboarding », preferencesSilhouette.ts). Ce que la personne AIME,
@@ -318,11 +318,11 @@ export default function ProfileSetupScreen() {
     if (cur.includes(hex)) return patch({ paletteCouleurs: cur.filter((x) => x !== hex) });
     patch({ paletteCouleurs: [...cur, hex] });
   };
-  // Un ou deux styles (05/10/2026 ; avant : sélection unique, arbitrage du 20/08/2026 reconduit après un essai de
-  // multi-sélection le même jour) : basculerStyle, le premier choisi est le principal.
-  // Un troisième style est BLOQUÉ, pas substitué (07/10/2026) : le remplacer en silence changeait un choix sans le dire.
+  // Un à trois styles (trois depuis le 11/11/2026, demandé par la propriétaire ; deux du 05/10/2026 ; avant : sélection unique, arbitrage
+  // du 20/08/2026 reconduit après un essai de multi-sélection le même jour) : basculerStyle, le premier choisi est le principal.
+  // Un style au-delà du plafond est BLOQUÉ, pas substitué (07/10/2026) : le remplacer en silence changeait un choix sans le dire.
   // Seuls comptent les styles que le genre propose (stylesDuGenre) : un style resté d'un autre genre (Glamour après un passage à Homme) ne
-  // doit ni occuper une des deux places ni rester dans le profil.
+  // doit ni occuper une des places ni rester dans le profil.
   const nbStyles = stylesDuGenre(draft.styles, draft.gender).length;
   const selectStyle = (id: string) => {
     const valides = stylesDuGenre(draft.styles, draft.gender);
@@ -784,10 +784,10 @@ export default function ProfileSetupScreen() {
       {meta.key === "taille" && blocTailles}
 
       {/* OÙ EN EST LA SÉLECTION (31/10/2026, brief « Ajustement UX – sélection des styles ») : rien avant le premier choix (le sous-titre
-          dit déjà « 1 ou 2 styles maximum »), puis 1/2, puis 2/2. Hauteur réservée : la grille ne saute pas quand le compteur apparaît. */}
+          dit déjà « jusqu'à 3 styles »), puis 1/3, 2/3, 3/3 (trois styles depuis le 11/11/2026). Hauteur réservée : la grille ne saute pas quand le compteur apparaît. */}
       {meta.key === "style" && (
         <p role="status" aria-live="polite" className="h-[18px] mt-[6px] text-[12px] text-muted leading-[18px]">
-          {nbStyles === 1 ? "1/2 style sélectionné" : nbStyles >= MAX_STYLES ? `${MAX_STYLES}/${MAX_STYLES} styles sélectionnés` : ""}
+          {nbStyles >= 1 ? `${nbStyles}/${MAX_STYLES} ${nbStyles > 1 ? "styles sélectionnés" : "style sélectionné"}` : ""}
         </p>
       )}
       {meta.key === "style" && (
@@ -1061,7 +1061,7 @@ export default function ProfileSetupScreen() {
         {meta.key === "style" && styleBloque && (
           <div role="status" className="detail-part absolute inset-x-0 bottom-3 mx-auto max-w-[480px] px-7 pointer-events-none">
             <div className="bg-ink rounded-feuille px-4 py-[10px] text-[12px] text-cream leading-[1.4] text-center shadow-lg">
-              Tu as déjà choisi deux styles. Retire-en un pour en sélectionner un autre.
+              Tu as déjà choisi {MAX_STYLES} styles. Retire-en un pour en sélectionner un autre.
             </div>
           </div>
         )}

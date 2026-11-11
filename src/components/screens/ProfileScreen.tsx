@@ -39,6 +39,7 @@ import {
   genderLabel,
   morphologyLabel,
   libelleStyles,
+  MAX_STYLES,
   type ChampProfilStyle,
   type Gender,
   type GenderDependentField,
@@ -287,7 +288,7 @@ export default function ProfileScreen() {
           valeur={
             <span className="flex items-center gap-[10px]">
               {/* Les visuels de l'étape « Style » : flat lays femme ; côté homme, ceux fournis le 30/10/2026 (STYLE_CONFIG). */}
-              {profile.styles.slice(0, 2).map((id) => {
+              {profile.styles.slice(0, MAX_STYLES).map((id) => {
                 const visuel =
                   profile.gender === "homme" ? styleConfigFor("homme")[id as StyleId]?.asset : VISUELS_ETAPE_STYLE_FEMME[id as keyof typeof VISUELS_ETAPE_STYLE_FEMME];
                 return visuel ? (

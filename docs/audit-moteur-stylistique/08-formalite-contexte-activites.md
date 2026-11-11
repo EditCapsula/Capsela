@@ -116,3 +116,22 @@ select category, coalesce(niveau_formalite, '(vide)') as formalite, count(*)
 - **Risque relevé** : les audits existants lisent `vestiaire_universel` en une requête, sans pagination ; PostgREST plafonne une réponse à
   1 000 lignes par défaut et les identifiants dépassent 1 350. Si le plafond s'applique, ces audits n'ont vu qu'une partie du catalogue.
   À vérifier à la première exécution (le nombre de lignes lues est affiché par `repartition-formalite`).
+
+## 10. Décisions et résultats (11/11/2026)
+
+- **D1 — niveau 2 ouvert.** Migration 0061 lancée (la contrainte admet `casual_chic`). 126 pièces reclassées (liste de l'audit
+  `niveau-2`, moins 11 pièces retirées par la propriétaire : jupes crayon, pantalons cigarette et à pinces, mules à talons, mocassins à
+  petit talon ; `docs/capsules/formalite-niveau-2.sql`, sauvegarde `sauvegarde_formalite_niveau2`).
+- **Planchers : variante B** (inchangés). Mesuré sur la base reclassée (exécution n° 3) : la sur-formalité au quotidien (tenues portant un
+  vêtement de niveau 3 ou plus) passe de 67,7 % à 46,9 % chez les femmes, de 51,8 % à 48,7 % chez les hommes ; tenue trouvée 100 %.
+  Coût : le palier 3 est un peu moins souvent atteint au bureau et en soirée (83 à 86 % au lieu de 89 à 92 %).
+- **Repli par le casual chic appliqué** (`FORMALITY_FALLBACK_CHAIN` : 4 → 3 → 2 → 1, 3 → 2 → 1). Mesuré (exécution n° 4, variante D) :
+  les tenues de bureau, de soirée et d'événement qui retombaient au décontracté passent de 14 à 17 % à 0 % chez les femmes, de 28,6 % à
+  14,3 % chez les hommes. Le reste masculin tient au catalogue (peu de pièces casual chic homme dans certains styles), pas au moteur.
+- **Les 52 pièces sans niveau classées** (ARBITRAGE ÉDITORIAL de la propriétaire, prompt `docs/capsules/prompt-formalite-52-pieces.md`,
+  correction du 504 en casual chic : une grosse maille n'est pas décontractée par nature). decontracte 13, casual_chic 38,
+  business_casual 1 (collants fins 496). SQL `docs/capsules/formalite-52-pieces.sql`, sauvegarde `sauvegarde_formalite_52` (52 lignes,
+  toutes vides avant). Contrôle `verification-52-formalite` (exécution n° 8) : vert, aucun écart au classement validé. Classement
+  PROVISOIRE, à relire : 486 (lunettes de soleil), 490 et 684 (bagues).
+- **NON DÉMONTRÉ** : l'effet sur les apps mobiles construites avant le 11/11/2026, qui ne lisent pas `casual_chic` (elles devinent le
+  niveau par le nom) ; il faudra un build.
