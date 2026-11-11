@@ -128,5 +128,10 @@ select category, coalesce(niveau_formalite, '(vide)') as formalite, count(*)
 - **Repli par le casual chic appliqué** (`FORMALITY_FALLBACK_CHAIN` : 4 → 3 → 2 → 1, 3 → 2 → 1). Mesuré (exécution n° 4, variante D) :
   les tenues de bureau, de soirée et d'événement qui retombaient au décontracté passent de 14 à 17 % à 0 % chez les femmes, de 28,6 % à
   14,3 % chez les hommes. Le reste masculin tient au catalogue (peu de pièces casual chic homme dans certains styles), pas au moteur.
+- **Les 52 pièces sans niveau classées** (ARBITRAGE ÉDITORIAL de la propriétaire, prompt `docs/capsules/prompt-formalite-52-pieces.md`,
+  correction du 504 en casual chic : une grosse maille n'est pas décontractée par nature). decontracte 13, casual_chic 38,
+  business_casual 1 (collants fins 496). SQL `docs/capsules/formalite-52-pieces.sql`, sauvegarde `sauvegarde_formalite_52` (52 lignes,
+  toutes vides avant). Contrôle `verification-52-formalite` (exécution n° 8) : vert, aucun écart au classement validé. Classement
+  PROVISOIRE, à relire : 486 (lunettes de soleil), 490 et 684 (bagues).
 - **NON DÉMONTRÉ** : l'effet sur les apps mobiles construites avant le 11/11/2026, qui ne lisent pas `casual_chic` (elles devinent le
   niveau par le nom) ; il faudra un build.
