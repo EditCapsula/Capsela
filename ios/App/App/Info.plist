@@ -71,6 +71,11 @@
 	<string>Capsela accède à tes photos pour ajouter des pièces à ton dressing, importer une tenue et demander un avis de styliste.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Capsela utilise ta position pour connaître la météo de ta ville et adapter ta tenue du jour.</string>
+	<!-- 11/11/2026 (ITMS-90683, avertissement d'App Store Connect) : la bibliothèque du plugin de position (@capacitor/geolocation) contient
+	     aussi l'autorisation « toujours ». Capsela ne la demande jamais (seulement « pendant l'utilisation », src/lib/weather.ts), mais Apple
+	     exige le texte dès que la bibliothèque y fait référence. -->
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Capsela utilise ta position uniquement pendant que tu utilises l'app, pour connaître la météo de ta ville et adapter ta tenue du jour.</string>
 	<!-- Le lien profond de retour de connexion (Google, nouveau mot de passe) : app.capsela://auth/callback (authNatif.ts). -->
 	<key>CFBundleURLTypes</key>
 	<array>

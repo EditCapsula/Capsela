@@ -100,3 +100,6 @@ Depuis : dans l'app iOS et Android, `getBrowserPosition` (`src/lib/weather.ts`) 
 `NSLocationWhenInUseUsageDescription` (Info.plist) ; Android garde ses permissions `ACCESS_COARSE_LOCATION` et `ACCESS_FINE_LOCATION`. Le site
 web garde l'API du navigateur. Un refus ou un délai rend `null`, comme avant : la ville du profil prend le relais. NON vérifié sur un
 appareil : à contrôler sur le prochain build TestFlight et Android.
+- **ITMS-90683** (avertissement d'App Store Connect sur le build 11, 11/11/2026) : la bibliothèque du plugin de position fait référence à
+  l'autorisation « toujours » ; Apple exige alors `NSLocationAlwaysAndWhenInUseUsageDescription`. Ajoutée dans Info.plist, avec un texte
+  qui dit que Capsela ne lit la position que pendant l'utilisation. L'app ne demande toujours que « pendant l'utilisation ».
