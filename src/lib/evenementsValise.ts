@@ -1,6 +1,6 @@
 import { elementProgramme } from "./programmeValise";
 import type { OccasionKey } from "./types";
-import { groupesMeteo, type MeteoJour, type SituationValise } from "./valise";
+import { groupesMeteo, PLANCHER_SOIREE_DATEE, PLANCHERS_VACANCES, type MeteoJour, type SituationValise } from "./valise";
 
 /*
  * LES ÉVÉNEMENTS DATÉS D'UNE VALISE (22/10/2026, demandé : « il manque une étape d'événements dans la planification de valises »).
@@ -108,7 +108,12 @@ export function occasionDeLEvenement(e: Pick<EvenementValise, "type" | "occasion
 }
 
 /** Une situation par événement du séjour : son occasion mère, la météo de son jour, ce seul jour. Ajoutées APRÈS celles du programme. */
-export function situationsDesEvenements(evenements: readonly EvenementValise[] | undefined, meteos: readonly MeteoJour[]): SituationValise[] {
+export function situationsDesEvenements(
+  evenements: readonly EvenementValise[] | undefined,
+  meteos: readonly MeteoJour[],
+  /** Les niveaux de formalité de vacances (11/11/2026) : une Soirée datée 3, un Dîner 2, un Mariage 4 (PLANCHERS_VACANCES). */
+  options?: { planchersVacances?: boolean }
+): SituationValise[] {
   const jours = meteos.map((m) => m.jour);
   return evenementsDuSejour(evenements, jours).flatMap((e): SituationValise[] => {
     const element = elementProgramme(e.type);
@@ -116,6 +121,7 @@ export function situationsDesEvenements(evenements: readonly EvenementValise[] |
     const m = meteos.find((x) => x.jour === e.jour);
     if (!element || !occasion || !m) return [];
     const [groupe] = groupesMeteo([m]);
-    return [{ occasion, meteo: groupe.meteo, jours: [e.jour], ...(element.contrainte ? { contrainte: element.contrainte } : {}), sousIds: [sousIdEvenement(e)] }];
+    const plancher = options?.planchersVacances ? (e.type === "soiree" ? PLANCHER_SOIREE_DATEE : PLANCHERS_VACANCES[e.type]) : undefined;
+    return [{ occasion, meteo: groupe.meteo, jours: [e.jour], ...(element.contrainte ? { contrainte: element.contrainte } : {}), sousIds: [sousIdEvenement(e)], ...(plancher != null ? { plancher } : {}) }];
   });
 }

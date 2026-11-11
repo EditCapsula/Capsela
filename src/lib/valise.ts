@@ -1285,7 +1285,13 @@ export function composerValiseVariee(
   capacite: number,
   generer: Generateur,
   leviers: LeviersValise,
-  tirages = TIRAGES_PAR_SITUATION
+  tirages = TIRAGES_PAR_SITUATION,
+  /**
+   * La cible de volume du bagage (cibleDeVolume, 11/11/2026, vu en rendu réel : une valise M remplie à 65 % pour 7 jours, que la chaîne
+   * d'avant complétait jusqu'à sa cible). Sous la cible, de NOUVELLES tenues entrent, les moins répétitives d'abord (demandé : « la
+   * capacité disponible doit être utilisée en priorité pour proposer de nouveaux looks plutôt que des variantes très similaires »).
+   */
+  cible?: number
 ): ValiseVariee {
   const possede = new Set(dressing.map((i) => i.id));
   const tous = new Map<number, Item>([...capsule, ...dressing].map((i) => [i.id, i]));
@@ -1390,6 +1396,35 @@ export function composerValiseVariee(
     usagesLook.set(meilleur.cle, (usagesLook.get(meilleur.cle) ?? 0) + 1);
     retenus.set(meilleur.cle, meilleur);
     attribues.set(meilleur.cle, (attribues.get(meilleur.cle) ?? new Set<number>()).add(i));
+  }
+
+  // Sous la cible de volume : des tenues que la valise n'a pas encore, dans la capacité, adaptées d'abord, la moins répétitive d'abord.
+  if (cible != null && leviers.variete) {
+    for (;;) {
+      if (volume(sac) >= Math.min(cible, capacite)) break;
+      let meilleur: CandidatVarie | null = null;
+      let cout = Infinity;
+      for (const c of liste) {
+        if (retenus.has(c.cle)) continue;
+        const nouveaux = c.ids.filter((id) => !sac.has(id));
+        if (!nouveaux.length || volume(sac) + volume(nouveaux) > capacite) continue;
+        if (leviers.adaptation && c.adapteA.size === 0) continue;
+        const k =
+          c.ids.reduce((t, id) => t + (POIDS_REPETITION[tous.get(id)?.cat ?? "accessoire"] ?? 0) * (usages.get(id) ?? 0), 0) +
+          nouveaux.reduce((t, id) => t + (COUT_ACCESSOIRE_NOUVEAU[tous.get(id)?.cat ?? "haut"] ?? 0), 0) +
+          COUT_PIECE_CAPSULE * nouveaux.filter((id) => !possede.has(id)).length;
+        if (k < cout) {
+          meilleur = c;
+          cout = k;
+        }
+      }
+      if (!meilleur) break;
+      for (const id of meilleur.ids) {
+        sac.add(id);
+        usages.set(id, (usages.get(id) ?? 0) + 1);
+      }
+      retenus.set(meilleur.cle, meilleur);
+    }
   }
 
   // Une situation restée sans look (aucune tenue tirée ne tenait) : de nouveaux tirages du moteur sur les seules pièces de la valise,

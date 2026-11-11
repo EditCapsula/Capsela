@@ -95,7 +95,8 @@ const REPETITIONS = 3;
 // P (11/11/2026) : les niveaux de formalité des contextes de vacances fixés par la propriétaire (PLANCHERS_VACANCES). Plafond : au plus
 // un créneau sur quatre pour une même pièce principale (plafondPrincipale).
 // R (11/11/2026) : la répartition jour par jour compte les pièces déjà portées (planningDuProgramme, poidsPiece).
-const VARIANTES: { nom: string; leviers: LeviersValise | null; planchers?: boolean; repartition?: boolean }[] = [
+// C (11/11/2026) : la valise remplie jusqu'à sa cible de volume par de nouvelles tenues — ce que l'écran branche avec A + B + P + R.
+const VARIANTES: { nom: string; leviers: LeviersValise | null; planchers?: boolean; repartition?: boolean; cible?: boolean }[] = [
   { nom: "référence", leviers: null },
   { nom: "réf. + P", leviers: null, planchers: true },
   { nom: "A + B", leviers: { variete: true, adaptation: true } },
@@ -104,6 +105,8 @@ const VARIANTES: { nom: string; leviers: LeviersValise | null; planchers?: boole
   { nom: "réf. + R", leviers: null, repartition: true },
   { nom: "A+B+pl.+R", leviers: { variete: true, adaptation: true, plafond: true }, repartition: true },
   { nom: "A+B+pl.+P+R", leviers: { variete: true, adaptation: true, plafond: true }, planchers: true, repartition: true },
+  { nom: "A+B+P+R (écran)", leviers: { variete: true, adaptation: true }, planchers: true, repartition: true },
+  { nom: "A+B+P+R+C (écran)", leviers: { variete: true, adaptation: true }, planchers: true, repartition: true, cible: true },
 ];
 
 interface Mesure {
@@ -222,7 +225,7 @@ describe("valise variée et adaptée", () => {
                 const r = completerAvecCapsule(dressing, capsule, situations, r0, capacite, generer, cibleDeVolume(taille));
                 ({ looks, pieceIds, suggestionIds } = r);
               } else {
-                ({ looks, pieceIds, suggestionIds } = composerValiseVariee(dressing, capsule, situations, capacite, generer, v.leviers));
+                ({ looks, pieceIds, suggestionIds } = composerValiseVariee(dressing, capsule, situations, capacite, generer, v.leviers, undefined, v.cible ? cibleDeVolume(taille) : undefined));
               }
               const m = mesurer(looks, pieceIds, suggestionIds, tous, sejour, situations, capacite, profil.genre, v.repartition);
               const cle = `${v.nom}|${taille}`;

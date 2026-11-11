@@ -1,7 +1,8 @@
 import { creneauDuMoment, evenementsDuSejour, libelleEvenement, sousIdEvenement, type EvenementValise, type MomentEvenement } from "./evenementsValise";
 import { ACTIVITES, elementProgramme, type Creneau, type ItemProgramme } from "./programmeValise";
 import { sousOccasionDuChoix, type ActiviteChoisie } from "./activitesSejour";
-import type { LookValise, SituationValise } from "./valise";
+import { POIDS_REPETITION, type LookValise, type SituationValise } from "./valise";
+import type { Item } from "./types";
 import type { ValiseGardee } from "./valises";
 
 /*
@@ -263,11 +264,19 @@ export function deplacerActiviteDatee(choix: readonly ActiviteChoisie[], index: 
 export function planningDeLaValise(
   v: Pick<ValiseGardee, "programme" | "situations" | "evenements" | "placements" | "choix">,
   jours: readonly string[],
-  looks: readonly LookValise[]
+  looks: readonly LookValise[],
+  /**
+   * Les pièces de la valise (11/11/2026, validé : répartir sur tout le séjour) : avec elles, chaque créneau prend le look dont les pièces
+   * ont le moins servi (POIDS_REPETITION), et plus seulement le look le moins porté. L'écran Valise et la tenue du jour les passent
+   * toutes deux : ils lisent le même planning.
+   */
+  pieces?: readonly Pick<Item, "id" | "cat">[]
 ): CreneauPlanning[] {
   if (!(v.programme?.length || v.evenements?.length) || !v.situations.some((s) => s.sousIds?.length)) return [];
   const manuelle = planificationManuelle(v.choix);
-  return planningDuProgramme(v.programme ?? [], jours, v.situations, looks, v.evenements ?? [], v.placements ?? {}, manuelle ? activitesDatees(v.choix ?? [], jours) : undefined);
+  const cat = pieces ? new Map(pieces.map((p) => [p.id, p.cat])) : null;
+  const poids = cat ? (id: number) => POIDS_REPETITION[cat.get(id) ?? "accessoire"] ?? 0 : undefined;
+  return planningDuProgramme(v.programme ?? [], jours, v.situations, looks, v.evenements ?? [], v.placements ?? {}, manuelle ? activitesDatees(v.choix ?? [], jours) : undefined, poids);
 }
 
 /** La pièce la plus réutilisée de la valise, et combien de looks l'utilisent — pour « 1 pièce utilisée jusqu'à 4 fois » ; null s'il n'y en a pas d'au moins deux. */

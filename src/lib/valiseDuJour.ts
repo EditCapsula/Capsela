@@ -58,7 +58,7 @@ export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly 
   const numero = jours.indexOf(jour) + 1;
   const looks = looksVisibles(v, pool);
   // Une valise composée avant le planning jour par jour n'en a pas : aucun look attribué, la tenue du jour se tire dans ses pièces.
-  const planning = planningDeLaValise(v, jours, looks);
+  const planning = planningDeLaValise(v, jours, looks, pool);
   // Les pièces réservées à la valise (maillot, surchemise de plage… piecesDeValise.ts, 06/11/2026) : « ces pièces ne doivent pas être
   // proposées dans les tenues recommandées, planifiées, du jour » — SAUF le jour où le programme prévoit leur activité (arbitré le même
   // jour : « Look de plage ou de rando ou de spa… ») : ce jour-là, le look de plage est la tenue du jour. Jamais dans « Autre tenue ».

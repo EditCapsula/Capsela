@@ -129,3 +129,12 @@ describe("la répartition par pièces (planningDuProgramme, poidsPiece)", () => 
     expect(avec.slice(0, 2).map((c) => c.look)).toContain(2);
   });
 });
+
+describe("la cible de volume (cibleDeVolume)", () => {
+  it("sous sa cible, la valise reçoit de nouvelles tenues ; sans cible, elle s'arrête aux créneaux", () => {
+    const deuxJours = situationsDuSejour(["quotidien"], ["2026-12-07", "2026-12-08"].map(meteo));
+    const sans = composerValiseVariee(DRESSING, [], deuxJours, 40, generateur(TENUES), { variete: true });
+    const avec = composerValiseVariee(DRESSING, [], deuxJours, 40, generateur(TENUES), { variete: true }, undefined, 14);
+    expect(avec.looks.length).toBeGreaterThan(sans.looks.length);
+  });
+});

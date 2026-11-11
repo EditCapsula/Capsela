@@ -27,7 +27,6 @@ import {
   amplitudeHabituelle,
   amplitudePrevue,
   categoriesPourCompleter,
-  completerAvecCapsule,
   poolDeLaValise,
   BAGAGES,
   capaciteDe,
@@ -35,7 +34,7 @@ import {
   unitesDe,
   volumeDe,
   cibleDeVolume,
-  composerValise,
+  composerValiseVariee,
   conseilMeteo,
   dateDe,
   DUREE_MAX_JOURS,
@@ -1253,18 +1252,23 @@ export default function ValiseScreen() {
     if (!actif.current) return;
     setFaites(1);
     // Les événements datés ont chacun leur situation, APRÈS celles du programme : les indices de celles-ci ne bougent pas.
-    const situations = [...situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions), ...situationsDesEvenements(rep.evenements, meteos)];
+    // Les niveaux de formalité des contextes de vacances (PLANCHERS_VACANCES, 11/11/2026) : le trajet en confort, le restaurant et la
+    // soirée de vacances en casual chic, une soirée datée en business casual, une cérémonie habillée.
+    const situations = [
+      ...situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions, { planchersVacances: true }),
+      ...situationsDesEvenements(rep.evenements, meteos, { planchersVacances: true }),
+    ];
     // Une courte pause entre deux traitements, le temps qu'on lise la ligne cochée : jamais une étape qui n'aurait pas eu lieu.
     await pause(300);
     if (!actif.current) return;
-    const r0 = composerValise(dressing, situations, capaciteDe(rep.bagage), generer);
+    // LA VALISE CONSTRUITE SUR TOUT LE SÉJOUR (11/11/2026, validé : leviers A, B, P et R, mesurés par scripts/valise-variete.audit.ts) :
+    // composerValiseVariee remplace composerValise puis completerAvecCapsule — variété des pièces principales, tenues adaptées à leur
+    // activité, la capsule en suggestions quand le dressing convient mal. « Uniquement mon dressing » : la capsule n'entre pas.
+    const seulDressing = rep.uniquementDressing ?? (idCible ? state.valises.find((v) => v.id === idCible)?.uniquementDressing === true : false);
+    const r = composerValiseVariee(dressing, seulDressing ? [] : capsuleDe(situations), situations, capaciteDe(rep.bagage), generer, { variete: true, adaptation: !seulDressing }, undefined, cibleDeVolume(rep.bagage));
     setFaites(2);
     await pause(300);
     if (!actif.current) return;
-    // Le dressing ne couvre pas tout le besoin — une occasion, ou le volume de la valise (05/11/2026) : la capsule complète la valise, ses
-    // pièces marquées « à ajouter » (completerAvecCapsule). Sauf « Uniquement mon dressing » (04/11/2026) : seules les pièces possédées.
-    const seulDressing = rep.uniquementDressing ?? (idCible ? state.valises.find((v) => v.id === idCible)?.uniquementDressing === true : false);
-    const r = seulDressing ? { ...r0, suggestionIds: [] } : completerAvecCapsule(dressing, capsuleDe(situations), situations, r0, capaciteDe(rep.bagage), generer, cibleDeVolume(rep.bagage));
     setFaites(3);
     await pause(300);
     if (!actif.current) return;
@@ -1921,7 +1925,7 @@ function Resultat({
   // Le planning jour par jour est calculé ICI, avant les vues d'une pièce ou d'un look : le glisser-déposer (06/11/2026) a besoin de
   // ses crochets à chaque rendu (règles des hooks).
   const joursDuSejourValise = joursDuSejour(valise.depart, valise.retour);
-  const planning: CreneauPlanning[] = planningDeLaValise(valise, joursDuSejourValise, looks);
+  const planning: CreneauPlanning[] = planningDeLaValise(valise, joursDuSejourValise, looks, pieces);
   const aPlanning = planning.length > 0;
   /** Déplacer une activité répartie vers un autre jour (06/11/2026) : seule l'activité bouge, le reste du planning est gardé tel quel. */
   const manuelle = planificationManuelle(valise.choix);
@@ -2290,7 +2294,7 @@ function Resultat({
           (() => {
             const id = feuille.id;
             const n = parPiece.get(id) ?? 0;
-            const touches = creneauxDeLaPiece(planningDeLaValise(valise, joursDuSejour(valise.depart, valise.retour), looks), looks, id);
+            const touches = creneauxDeLaPiece(planningDeLaValise(valise, joursDuSejour(valise.depart, valise.retour), looks, pieces), looks, id);
             return (
               <>
                 <div className="text-[13px] text-ink leading-[1.5]">
