@@ -104,10 +104,13 @@ describe("ouverture du niveau 2 (casual chic / smart casual)", () => {
 
     // ═══ 2 · MESURE ═══
     const reclasse = catalogue.map((it) => (proposees.has(it.id) ? { ...it, niveauFormalite: 2 } : it));
-    const variantes: { nom: string; pool: CatalogItem[]; planchers: boolean }[] = [
+    // D (11/11/2026, « go repli ») : le catalogue tel qu'il est, avec le repli par le casual chic (3 → 2 → 1, 4 → 3 → 2 → 1).
+    const REPLI_PAR_2 = { 3: [3, 2, 1], 4: [4, 3, 2, 1] };
+    const variantes: { nom: string; pool: CatalogItem[]; planchers: boolean; repli?: boolean }[] = [
       { nom: "A · référence", pool: catalogue, planchers: false },
       { nom: "B · reclassement", pool: reclasse, planchers: false },
       { nom: "C · reclassement + planchers à 2", pool: reclasse, planchers: true },
+      { nom: "D · référence + repli par 2", pool: catalogue, planchers: false, repli: true },
     ];
     const profils: { genre: "femme" | "homme"; styles: readonly string[] }[] = [
       { genre: "femme", styles: STYLES_FEMME },
@@ -119,21 +122,27 @@ describe("ouverture du niveau 2 (casual chic / smart casual)", () => {
       console.log(`  ${"contexte".padEnd(20)} ${variantes.map((v) => v.nom.padEnd(34)).join("")}`);
       const lignes = new Map<string, string[]>();
       for (const v of variantes) {
-        const parCtx = new Map<string, { ok: number; palier: number; total: number; surFormel: number; avec2: number }>();
+        const parCtx = new Map<string, { ok: number; palier: number; total: number; surFormel: number; avec2: number; versUn: number }>();
         for (const saison of SAISONS) {
           const w = representativeWeatherFor(saison);
           for (const style of styles) {
             const capsule = computeDefaultCapsule(profilAudit({ gender: genre, styles: [style] }), w, [], saison, v.pool);
             const parId = new Map(capsule.map((p) => [p.id, p]));
             for (const ctx of CONTEXTES) {
-              const leviers: LeviersMesure | undefined = v.planchers && ctx.plancherC != null ? { plancher: ctx.plancherC } : undefined;
-              const m = parCtx.get(ctx.nom) ?? { ok: 0, palier: 0, total: 0, surFormel: 0, avec2: 0 };
+              const leviers: LeviersMesure | undefined = v.repli
+                ? { chaineDeRepli: REPLI_PAR_2 }
+                : v.planchers && ctx.plancherC != null
+                  ? { plancher: ctx.plancherC }
+                  : undefined;
+              const m = parCtx.get(ctx.nom) ?? { ok: 0, palier: 0, total: 0, surFormel: 0, avec2: 0, versUn: 0 };
               for (let k = 0; k < TIRAGES; k++) {
                 const res = generateOutfitWithFallback(capsule, w, ctx.occasion, ctx.workMode ?? "Présentiel", ctx.dateContext ?? "Verre", [], genre, saison, leviers);
                 m.total++;
                 if (!res.ids.length) continue;
                 m.ok++;
                 if (!res.formalityDowngraded) m.palier++;
+                // Un repli jusqu'au décontracté alors que l'occasion demandait business casual ou plus.
+                if (res.requestedFormality >= 3 && res.resolvedFormality === 1) m.versUn++;
                 const vetements = res.ids.map((id) => parId.get(id)).filter((p): p is CatalogItem => !!p && CLOTHING_CATS.includes(p.cat) && p.cat !== "manteau");
                 if (vetements.some((p) => formalityOf(p) >= 3)) m.surFormel++;
                 if (vetements.some((p) => formalityOf(p) === 2)) m.avec2++;
@@ -144,13 +153,14 @@ describe("ouverture du niveau 2 (casual chic / smart casual)", () => {
         }
         for (const ctx of CONTEXTES) {
           const m = parCtx.get(ctx.nom)!;
-          const cellule = `tenue ${pct(m.ok, m.total)} · palier ${pct(m.palier, m.ok)} · ≥3 ${pct(m.surFormel, m.ok)} · niv.2 ${pct(m.avec2, m.ok)}`;
+          const cellule = `tenue ${pct(m.ok, m.total)} · palier ${pct(m.palier, m.ok)} · repli→1 ${pct(m.versUn, m.ok)} · ≥3 ${pct(m.surFormel, m.ok)} · niv.2 ${pct(m.avec2, m.ok)}`;
           lignes.set(ctx.nom, [...(lignes.get(ctx.nom) ?? []), cellule.padEnd(34)]);
         }
       }
       for (const ctx of CONTEXTES) console.log(`  ${ctx.nom.padEnd(20)} ${(lignes.get(ctx.nom) ?? []).join(" | ")}`);
     }
     console.log("\nLecture : « tenue » = une tenue complète trouvée ; « palier » = sans repli de formalité ; « ≥3 » = la tenue porte un vêtement");
-    console.log("business casual ou plus (manteau exclu) ; « niv.2 » = elle porte un vêtement casual chic.");
+    console.log("business casual ou plus (manteau exclu) ; « niv.2 » = elle porte un vêtement casual chic ; « repli→1 » = l'occasion demandait 3 ou 4");
+    console.log("et la tenue retenue est au niveau décontracté.");
   }, 600_000);
 });

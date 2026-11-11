@@ -312,6 +312,11 @@ export interface LeviersMesure {
    */
   plancher?: number;
   /**
+   * CHAÎNE DE REPLI IMPOSÉE (11/11/2026, « go repli ») : remplace, le temps d'une mesure, FORMALITY_FALLBACK_CHAIN — par exemple
+   * { 3: [3, 2, 1], 4: [4, 3, 2, 1] } pour se replier sur le casual chic avant le décontracté. Mesure seulement.
+   */
+  chaineDeRepli?: Partial<Record<number, number[]>>;
+  /**
    * P1 — le tirage du haut principal s'ouvre aux pulls au lieu de la seule
    * catégorie "haut".
    *
@@ -2024,7 +2029,7 @@ export function generateOutfitWithFallback(
   soireeHabillee = false
 ): GeneratedOutfitWithFallback {
   const requestedFormality = leviers?.plancher ?? (occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext, soireeHabillee) : 0);
-  const chain = FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
+  const chain = leviers?.chaineDeRepli?.[requestedFormality] ?? FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
   for (const tier of chain) {
     const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason, leviers, colorimetrie, soireeHabillee);
     if (hasCoreOutfit(result.ids, pool, leviers)) {

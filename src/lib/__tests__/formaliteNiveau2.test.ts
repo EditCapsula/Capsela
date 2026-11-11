@@ -26,4 +26,18 @@ describe("niveau 2 de formalité", () => {
     expect(avec.requestedFormality).toBe(2);
     expect(avec.ids.length).toBeGreaterThan(0);
   });
+
+  it("le levier « chaineDeRepli » : sans tenue au niveau 3, le repli passe par le casual chic avant le décontracté", () => {
+    const T = "Printemps, Été, Automne, Hiver";
+    const pool = [
+      item({ id: 20, category: "hauts", name: "Blouse col ouvert", couleur_dominante: "Blanc", niveau_formalite: "casual_chic", saison_capsule: T, manches: "longues" }),
+      item({ id: 21, category: "jupes", name: "Jupe midi plissée", sous_type: "Midi", couleur_dominante: "Noir", niveau_formalite: "casual_chic", saison_capsule: T }),
+      item({ id: 22, category: "chaussures", name: "Mocassins", sous_type: "Mocassins", couleur_dominante: "Camel", niveau_formalite: "casual_chic", saison_capsule: T }),
+    ];
+    const w = at(18, "Printemps / Été");
+    const avant = generateOutfitWithFallback(pool, w, "travail_formel", "Présentiel");
+    const apres = generateOutfitWithFallback(pool, w, "travail_formel", "Présentiel", "Verre", [], "femme", null, { chaineDeRepli: { 3: [3, 2, 1] } });
+    expect(avant.resolvedFormality).toBe(1);
+    expect(apres.resolvedFormality).toBe(2);
+  });
 });
