@@ -98,3 +98,19 @@ describe("intention de création de compte", () => {
     expect(consumeSignupIntent()).toBe(false);
   });
 });
+
+describe("compteToutJusteCree (11/11/2026 : Apple depuis « Se connecter » crée le compte)", () => {
+  const t0 = Date.parse("2026-11-11T08:00:00Z");
+  it("un compte créé il y a deux minutes, à sa première connexion : neuf", async () => {
+    const { compteToutJusteCree } = await chargerModule();
+    expect(compteToutJusteCree({ created_at: "2026-11-11T07:58:00Z", last_sign_in_at: "2026-11-11T07:58:01Z" }, t0)).toBe(true);
+    expect(compteToutJusteCree({ created_at: "2026-11-11T07:58:00Z" }, t0)).toBe(true);
+  });
+  it("un compte ancien, ou reconnecté depuis, ne l'est jamais", async () => {
+    const { compteToutJusteCree } = await chargerModule();
+    expect(compteToutJusteCree({ created_at: "2026-11-01T07:58:00Z", last_sign_in_at: "2026-11-11T07:59:00Z" }, t0)).toBe(false);
+    expect(compteToutJusteCree({ created_at: "2026-11-11T07:55:00Z", last_sign_in_at: "2026-11-11T07:59:00Z" }, t0)).toBe(false);
+    expect(compteToutJusteCree(null, t0)).toBe(false);
+    expect(compteToutJusteCree({ created_at: "pas une date" }, t0)).toBe(false);
+  });
+});
