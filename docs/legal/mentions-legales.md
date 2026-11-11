@@ -35,6 +35,9 @@ autorisation écrite est interdite.
 Les photos que tu ajoutes restent les tiennes (voir les Conditions
 générales d'utilisation, « Tes contenus »).
 
+Liste des pays : world-countries (mledoze/countries), sous licence Open
+Database License (ODbL).
+
 ## Données personnelles
 
 Le traitement de tes données est décrit dans la Politique de

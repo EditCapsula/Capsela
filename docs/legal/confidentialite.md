@@ -81,11 +81,10 @@ afficher la météo plus vite à l'ouverture suivante.
 
 Quand tu cherches une ville (pour la météo, un look planifié ou une valise),
 le nom saisi est envoyé au service de météo pour la retrouver. Si tu saisis
-un nom de pays, l'application interroge directement depuis ton appareil un
-service public de données sur les pays (restcountries.com) pour en trouver
-la capitale : ce service reçoit le nom saisi et, comme tout site consulté,
-l'adresse IP de ton appareil. Les dernières villes choisies sont gardées sur
-ton appareil pour te les reproposer.
+un nom de pays, l'application le reconnaît grâce à une liste des pays
+intégrée à l'application, sans interroger d'autre service, puis cherche sa
+capitale auprès du même service de météo. Les dernières villes choisies sont
+gardées sur ton appareil pour te les reproposer.
 
 ### Tes photos
 
@@ -180,7 +179,6 @@ compte et selon nos instructions (sous-traitants au sens du RGPD).
 | Photoroom SAS [À VÉRIFIER — entité et adresse] | Détourage des photos de tes pièces | La photo de la pièce, ou la découpe d'une pièce dans la photo d'une tenue — jamais ton nom, ton e-mail ni ton identifiant | France ; serveurs [À VÉRIFIER — le prestataire n'annonce pas d'hébergement réservé à l'Union européenne] |
 | Open-Meteo [À VÉRIFIER — entité et adresse] | Prévisions météo jusqu'à 16 jours, températures habituelles d'un lieu, recherche de ville | Le nom de la ville cherchée, ou les coordonnées de la ville ou de ta position | [À VÉRIFIER] |
 | OpenWeather Ltd | Météo du jour, prévisions de secours et recherche de ville | Ta ville, ou les coordonnées de ta position si tu l'as autorisée | Royaume-Uni |
-| restcountries.com [À VÉRIFIER — éditeur] | Trouver la capitale d'un pays saisi, interrogé directement depuis ton appareil | Le nom de pays saisi et l'adresse IP de ton appareil | [À VÉRIFIER] |
 | Google Ireland Ltd | Connexion avec Google (si tu la choisis) ; mesure d'audience (si tu l'acceptes) | Données de connexion ; données d'usage | Irlande, avec transferts possibles vers les États-Unis |
 | Google Ireland Ltd (AdMob) [À VÉRIFIER — Google agit en responsable de traitement distinct pour la publicité personnalisée] | Vidéos publicitaires que tu choisis de regarder (application Android) | Identifiant publicitaire et données techniques de l'appareil, adresse IP, interactions avec la publicité ; identifiant de ton compte Capsela, pour confirmer la vidéo vue — jamais ton nom ni ton e-mail | Irlande, avec transferts possibles vers les États-Unis |
 | Functional Software Inc. (Sentry) | Rapports d'erreur | Données techniques de l'erreur, sans identifiant | États-Unis |

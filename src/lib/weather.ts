@@ -2,6 +2,7 @@ import { estNatif } from "./authNatif";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type { CreneauPrevision, Prevision } from "./prevision";
 import type { City } from "./types";
+import { PAYS, type Pays } from "./paysData";
 
 /** Une position : ce que la météo et la ville en lisent, rien de plus. */
 export interface PositionLue {
@@ -265,41 +266,50 @@ export function libelleVille(v: VilleSuggeree): string {
 const sansAccent = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
 /**
- * Un PAYS saisi à la place d'une ville (14/10/2026, signalé : « Thaïlande » ne donnait rien dans la valise) — fonction PURE, donc testée.
- * Un pays n'a pas de position unique : on prend sa CAPITALE, et l'affichage le dit (« Bangkok, Thaïlande (capitale) »). Lecture de la
- * réponse de REST Countries (/v3.1/translation) : seul un pays dont le nom, en français ou en anglais, est exactement la saisie est retenu
- * (« Niger » ne rend pas « Nigeria »), avec ses coordonnées de capitale ; sans capitale ou sans coordonnées, rien.
+ * UN PAYS SAISI À LA PLACE D'UNE VILLE (14/10/2026, signalé : « Thaïlande » ne donnait rien dans la valise ; repris le 11/11/2026,
+ * signalé : « lorsque je saisis un pays le moteur ne trouve pas »). Les pays viennent de la liste de l'app (paysData.ts) — REST Countries
+ * v3.1 a fermé — et sont cherchés à CHAQUE saisie, plus seulement quand le géocodage ne rend aucune ville : il rendait presque toujours
+ * des villages homonymes (« Japon » en Colombie, « Espagne » en France). Fonction PURE, donc testée.
+ *
+ * Un nom exact d'abord (français ou anglais, courant ou officiel, sans accent ni casse), puis, dès trois lettres, les noms qui commencent
+ * par la saisie (« Ind » : Inde, Indonésie). Au plus `max` pays.
  */
-export function lirePaysCommeCapitale(data: unknown, saisie: string): VilleSuggeree[] {
-  if (!Array.isArray(data)) return [];
+export function paysDeLaSaisie(saisie: string, max = 3): Pays[] {
   const voulu = sansAccent(saisie);
-  const sortie: VilleSuggeree[] = [];
-  for (const raw of data) {
-    const p = raw as {
-      name?: { common?: string; official?: string };
-      translations?: { fra?: { common?: string; official?: string } };
-      capital?: string[];
-      capitalInfo?: { latlng?: number[] };
-      cca2?: string;
-    };
-    const noms = [p.name?.common, p.name?.official, p.translations?.fra?.common, p.translations?.fra?.official].filter((n): n is string => typeof n === "string");
-    if (!noms.some((n) => sansAccent(n) === voulu)) continue;
-    const capitale = p.capital?.[0];
-    const ll = p.capitalInfo?.latlng;
-    if (!capitale || !ll || ll.length < 2 || typeof ll[0] !== "number" || typeof ll[1] !== "number") continue;
-    sortie.push({ name: capitale, country: p.cca2 ?? "", state: "", lat: ll[0], lon: ll[1], capitaleDe: p.translations?.fra?.common ?? p.name?.common ?? saisie });
-  }
-  return sortie;
+  if (voulu.length < 2) return [];
+  const rang = (p: Pays): number => {
+    const noms = p.noms.map(sansAccent);
+    if (noms.includes(voulu)) return 0;
+    if (voulu.length >= 3 && noms.some((n) => n.startsWith(voulu))) return 1;
+    return 2;
+  };
+  return PAYS.map((p) => ({ p, r: rang(p) }))
+    .filter((x) => x.r < 2)
+    .sort((a, b) => a.r - b.r || a.p.nom.localeCompare(b.p.nom, "fr"))
+    .slice(0, max)
+    .map((x) => x.p);
 }
 
-async function fetchCapitaleDuPays(nom: string): Promise<VilleSuggeree[]> {
-  try {
-    const res = await fetch(`https://restcountries.com/v3.1/translation/${encodeURIComponent(nom)}?fields=name,translations,capital,capitalInfo,cca2`);
-    if (!res.ok) return [];
-    return lirePaysCommeCapitale(await res.json(), nom);
-  } catch {
-    return [];
-  }
+/**
+ * La capitale d'un pays, en ville suggérée : ses coordonnées par le géocodage de l'app (« Bangkok,TH »), jamais inventées. Gardée par
+ * pays le temps de la session : la saisie se tape lettre à lettre. null : introuvable.
+ */
+const capitalesGardees = new Map<string, Promise<VilleSuggeree | null>>();
+function capitaleDuPays(p: Pays): Promise<VilleSuggeree | null> {
+  const deja = capitalesGardees.get(p.code);
+  if (deja) return deja;
+  const promesse = getSupabase()
+    .functions.invoke("weather", { body: { city: `${p.capitale},${p.code}`, mode: "geo" } })
+    .then(({ data, error }) => {
+      if (error || !data || (data as { error?: unknown }).error) return null;
+      const v = lireVillesSuggerees(data)?.[0];
+      return v ? { ...v, capitaleDe: p.nom } : null;
+    })
+    .catch(() => null);
+  capitalesGardees.set(p.code, promesse);
+  // Un échec ne se garde pas : la saisie suivante retente.
+  promesse.then((v) => v ?? capitalesGardees.delete(p.code));
+  return promesse;
 }
 
 /**
@@ -320,9 +330,12 @@ export async function fetchVilles(q: string, pays?: string): Promise<VilleSugger
     });
     if (error || !data || (data as { error?: unknown }).error) return null;
     const villes = lireVillesSuggerees(data);
-    // Aucune ville : peut-être un pays — sa capitale est proposée (lirePaysCommeCapitale).
-    if (!pays && villes && villes.length === 0 && nom.length >= 3) return await fetchCapitaleDuPays(nom);
-    return villes;
+    if (pays) return villes;
+    // Un pays saisi passe en tête, par sa capitale (paysDeLaSaisie), avant les villes homonymes.
+    const capitales = (await Promise.all(paysDeLaSaisie(nom).map(capitaleDuPays))).filter((v): v is VilleSuggeree => !!v);
+    if (!capitales.length) return villes;
+    const memeLieu = (a: VilleSuggeree, b: VilleSuggeree) => a.country === b.country && Math.abs(a.lat - b.lat) < 0.05 && Math.abs(a.lon - b.lon) < 0.05;
+    return [...capitales, ...(villes ?? []).filter((v) => !capitales.some((c) => memeLieu(c, v)))];
   } catch {
     return null;
   }
