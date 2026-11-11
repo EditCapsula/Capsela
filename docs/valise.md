@@ -476,7 +476,7 @@ Brief « Refonte UX de l'écran de synthèse de la valise » et maquette du mêm
   pièces quantités comprises.
 - **À emporter** : les familles de la valise (`GROUPES_VALISE`, six depuis ce jour : Sacs & accessoires réunis ; le dressing garde les
   siennes), filtrables par pastilles qui défilent (`SegmentedControl defilant`). Une carte par pièce (`PhotoPiece`) : provenance en
-  `Badge` (« À toi », « Suggestion », Vacances depuis le 11/11/2026 — une pièce qui n'est pas au dressing n'est jamais dite à toi), nom,
+  `Badge` (Dressing, Capsule, Vacances — une pièce qui n'est pas au dressing n'est jamais dite « Dressing »), nom,
   quantité (− / +, `ControleQuantite`), coche « déjà dans la valise », croix pour la retirer. Puis « À compléter » : chaque pièce
   manquante s'ajoute au dressing. « Achat à prévoir » a été retiré le 11/11/2026 (rien n'était fait derrière) ; `ValiseGardee.achats`
   reste lisible en base, plus affiché.

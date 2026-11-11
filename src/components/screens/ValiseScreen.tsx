@@ -3477,7 +3477,7 @@ function Resultat({
           )}
           {/* À EMPORTER (07/11/2026, refonte : « afficher directement les pièces individuelles sous forme de cartes visuelles »). Les
               familles du dressing, filtrables ; chaque pièce une fois, quel que soit le nombre de ses tenues, en carte : sa photo, son nom,
-              sa provenance (À toi, Suggestion, Vacances), sa quantité (− / +), sa coche (déjà dans la valise) et sa croix (la retirer). */}
+              sa provenance (Dressing, Capsule, Vacances), sa quantité (− / +), sa coche (déjà dans la valise) et sa croix (la retirer). */}
           {famillesChecklist.length > 1 && (
             <div className="mt-5 -mx-6 px-6 overflow-x-auto scrollarea" style={{ scrollbarWidth: "none" }}>
               <SegmentedControl
@@ -3507,11 +3507,9 @@ function Resultat({
                     const dedans = piecesCochees.includes(p.id);
                     const q = quantiteDe(quantites, p.id);
                     // La provenance (brief : « Dressing, Capsule, Vacances ») : une pièce de vacances du catalogue, une suggestion de la
-                    // capsule, ou une pièce possédée. Une pièce qui n'est pas au dressing n'est jamais dite possédée.
-                    // LIBELLÉS (11/11/2026, demandé : « bien distinguer les pièces déjà possédées, celles sélectionnées pour la valise et
-                    // celles éventuellement recommandées à l'achat ») : « À toi » (possédée), « Suggestion » (de la capsule, pas encore à
-                    // toi). Être dans la valise, c'est la coche, à part. Pas d'« Achat prévu » : rien n'est fait derrière (retiré le même jour).
-                    const provenance = estPieceDeValise(p) ? "Vacances" : suggestions.has(p.id) ? "Suggestion" : "À toi";
+                    // capsule, ou une pièce possédée. Une pièce qui n'est pas au dressing n'est jamais dite « Dressing ». Les libellés
+                    // « À toi » / « Suggestion », essayés le 11/11/2026, ont été retirés le même jour (demandé : « remets les anciens libellés »).
+                    const provenance = estPieceDeValise(p) ? "Vacances" : suggestions.has(p.id) ? "Capsule" : "Dressing";
                     return (
                       <li key={p.id} className="min-w-0">
                         <Card rayon="tuile" className="relative p-[6px] flex flex-col h-full">
@@ -3539,7 +3537,7 @@ function Resultat({
                             <span className="w-[22px] h-[22px] rounded-full bg-card/90 text-muted flex items-center justify-center">{G_CROIX}</span>
                           </button>
                           <div className="mt-[6px] px-[2px]">
-                            <Badge tone={provenance === "À toi" ? "possede" : provenance === "Vacances" ? "plein" : "doux"} taille="s">
+                            <Badge tone={provenance === "Dressing" ? "possede" : provenance === "Capsule" ? "doux" : "plein"} taille="s">
                               {provenance}
                             </Badge>
                           </div>
@@ -3691,8 +3689,8 @@ function Resultat({
                               {p ? <Vignette it={p} taille={40} /> : null}
                               <span className="flex-1 min-w-0">
                                 <span className={"block text-[13px] leading-[1.3] line-clamp-2 break-words " + (art.prete ? "text-muted line-through" : "text-ink")}>{art.libelle}</span>
-                                {/* Une suggestion de la capsule se dit « Suggestion » (11/11/2026, demandé ; « Capsule » avant) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
-                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">Suggestion</span>}
+                                {/* Une suggestion de la capsule se dit « Capsule » (19/10/2026, demandé ; reconduit le 11/11/2026) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
+                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">Capsule</span>}
                                 {raisonPropre && <span className="block text-[11px] text-terracotta truncate">{raisonPropre}</span>}
                               </span>
                             </div>
