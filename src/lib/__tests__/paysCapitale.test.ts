@@ -19,6 +19,11 @@ describe("paysDeLaSaisie", () => {
     const r = paysDeLaSaisie("Ind").map((p) => p.nom);
     expect(r).toEqual(expect.arrayContaining(["Inde", "Indonésie"]));
   });
+  it("un nom officiel ne compte qu'en entier : « Ind » ne fait pas venir Kiribati, « États-Unis » pas le Mexique", () => {
+    expect(paysDeLaSaisie("Ind").map((p) => p.code)).not.toContain("KI");
+    expect(paysDeLaSaisie("États-Unis").map((p) => p.code)).toEqual(["US"]);
+    expect(paysDeLaSaisie("États-Unis du Mexique")[0].code).toBe("MX");
+  });
   it("rien sous deux lettres, rien pour une ville", () => {
     expect(paysDeLaSaisie("I")).toEqual([]);
     expect(paysDeLaSaisie("Lisbonne")).toEqual([]);

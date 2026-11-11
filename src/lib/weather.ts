@@ -280,7 +280,7 @@ export function paysDeLaSaisie(saisie: string, max = 3): Pays[] {
   const rang = (p: Pays): number => {
     const noms = p.noms.map(sansAccent);
     if (noms.includes(voulu)) return 0;
-    if (voulu.length >= 3 && noms.some((n) => n.startsWith(voulu))) return 1;
+    if (voulu.length >= 3 && p.courants.some((n) => sansAccent(n).startsWith(voulu))) return 1;
     return 2;
   };
   return PAYS.map((p) => ({ p, r: rang(p) }))
