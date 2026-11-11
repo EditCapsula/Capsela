@@ -476,9 +476,10 @@ Brief « Refonte UX de l'écran de synthèse de la valise » et maquette du mêm
   pièces quantités comprises.
 - **À emporter** : les familles de la valise (`GROUPES_VALISE`, six depuis ce jour : Sacs & accessoires réunis ; le dressing garde les
   siennes), filtrables par pastilles qui défilent (`SegmentedControl defilant`). Une carte par pièce (`PhotoPiece`) : provenance en
-  `Badge` (Dressing, Capsule, Vacances — une pièce qui n'est pas au dressing n'est jamais dite « Dressing »), nom, quantité (− / +,
-  `ControleQuantite`), coche « déjà dans la valise », croix pour la retirer. Puis « À compléter » : chaque pièce manquante s'ajoute au
-  dressing ou se note « Achat à prévoir » (`ValiseGardee.achats`).
+  `Badge` (« À toi », « Suggestion », Vacances depuis le 11/11/2026 — une pièce qui n'est pas au dressing n'est jamais dite à toi), nom,
+  quantité (− / +, `ControleQuantite`), coche « déjà dans la valise », croix pour la retirer. Puis « À compléter » : chaque pièce
+  manquante s'ajoute au dressing. « Achat à prévoir » a été retiré le 11/11/2026 (rien n'était fait derrière) ; `ValiseGardee.achats`
+  reste lisible en base, plus affiché.
 - **Quantités** (`quantitesValise.ts`) : 1 par défaut, réglables de 1 à 9, gardées avec la valise (`ValiseGardee.quantites`, et
   `EtatAffaires.quantites` pour les indispensables ; `calcul` jsonb, aucune migration). Le remplissage les compte. Les règles de
   quantité initiale (« 1, puis 2 au-delà de 5 jours de baignade ») sont l'étape 3 du brief Vacances, à venir.

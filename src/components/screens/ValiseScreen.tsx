@@ -1386,7 +1386,7 @@ export default function ValiseScreen() {
     if (!valise) return;
     sauver({ ...valise, choix });
   };
-  /** Une modification de la valise affichée, gardée aussitôt (quantités, achats à prévoir : 07/11/2026). */
+  /** Une modification de la valise affichée, gardée aussitôt (quantités : 07/11/2026). */
   const majValise = (f: (v: ValiseGardee) => ValiseGardee) => {
     if (!valise) return;
     sauver(f(valise));
@@ -1906,7 +1906,6 @@ function Resultat({
   const base = useMemo(() => poolDeLaValise(dressing, valise.suggestionIds, [...capsule, ...vestiairePool]), [dressing, valise.suggestionIds, capsule, vestiairePool]);
   const suggestions = new Set(valise.suggestionIds ?? []);
   /** Les pièces de la capsule notées « achat à prévoir » (07/11/2026). */
-  const achats = new Set(valise.achats ?? []);
   const [indexLook, setIndexLook] = useState(0);
   const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "retirer"; id: number } | { type: "alleger" } | { type: "tenue" } | null>(null);
   const [enregistres, setEnregistres] = useState<string[]>([]);
@@ -2828,10 +2827,11 @@ function Resultat({
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] text-ink leading-[1.2] break-words">{p.name}</span>
                       <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">{raison.endsWith(".") ? raison : `${raison}.`}</span>
-                      <span className="block text-[11px] text-terracotta-deep mt-[1px]">{achats.has(p.id) ? "Achat prévu" : "Pas encore dans ton dressing"}</span>
+                      <span className="block text-[11px] text-terracotta-deep mt-[1px]">Pas encore dans ton dressing</span>
                     </span>
                   </div>
-                  {/* Deux gestes (07/11/2026, refonte) : l'ajouter au dressing, ou la noter comme un achat à prévoir — jamais dite possédée. */}
+                  {/* Un geste : l'ajouter au dressing — jamais dite possédée. « Achat à prévoir » est retiré (11/11/2026, demandé : « ne parle pas
+                      d'achat à prévoir ni d'achat prévu comme on ne met rien derrière cette action ») ; `achats` reste lisible en base, plus affiché. */}
                   <div className="flex gap-2 mt-[10px]">
                     <button
                       onClick={() => ajouterCategorie(p.cat)}
@@ -2840,18 +2840,6 @@ function Resultat({
                       style={{ minHeight: 40 }}
                     >
                       {G_PLUS} À mon dressing
-                    </button>
-                    <button
-                      onClick={() => majValise((v) => {
-                        const deja = (v.achats ?? []).includes(p.id);
-                        const suivants = deja ? (v.achats ?? []).filter((x) => x !== p.id) : [...(v.achats ?? []), p.id];
-                        return { ...v, achats: suivants.length ? suivants : undefined };
-                      })}
-                      aria-pressed={achats.has(p.id)}
-                      className={"flex-1 rounded-full border text-[12px] cursor-pointer " + (achats.has(p.id) ? "border-terracotta-deep text-terracotta-deep bg-warm-bg" : "border-border text-ink bg-card")}
-                      style={{ minHeight: 40 }}
-                    >
-                      {achats.has(p.id) ? "Achat prévu ✓" : "Achat à prévoir"}
                     </button>
                   </div>
                 </Card>
@@ -3489,7 +3477,7 @@ function Resultat({
           )}
           {/* À EMPORTER (07/11/2026, refonte : « afficher directement les pièces individuelles sous forme de cartes visuelles »). Les
               familles du dressing, filtrables ; chaque pièce une fois, quel que soit le nombre de ses tenues, en carte : sa photo, son nom,
-              sa provenance (À toi, Suggestion ou Achat prévu, Vacances), sa quantité (− / +), sa coche (déjà dans la valise) et sa croix (la retirer). */}
+              sa provenance (À toi, Suggestion, Vacances), sa quantité (− / +), sa coche (déjà dans la valise) et sa croix (la retirer). */}
           {famillesChecklist.length > 1 && (
             <div className="mt-5 -mx-6 px-6 overflow-x-auto scrollarea" style={{ scrollbarWidth: "none" }}>
               <SegmentedControl
@@ -3522,8 +3510,8 @@ function Resultat({
                     // capsule, ou une pièce possédée. Une pièce qui n'est pas au dressing n'est jamais dite possédée.
                     // LIBELLÉS (11/11/2026, demandé : « bien distinguer les pièces déjà possédées, celles sélectionnées pour la valise et
                     // celles éventuellement recommandées à l'achat ») : « À toi » (possédée), « Suggestion » (de la capsule, pas encore à
-                    // toi), « Achat prévu » (une suggestion notée à acheter). Être dans la valise, c'est la coche, à part.
-                    const provenance = estPieceDeValise(p) ? "Vacances" : suggestions.has(p.id) ? (achats.has(p.id) ? "Achat prévu" : "Suggestion") : "À toi";
+                    // toi). Être dans la valise, c'est la coche, à part. Pas d'« Achat prévu » : rien n'est fait derrière (retiré le même jour).
+                    const provenance = estPieceDeValise(p) ? "Vacances" : suggestions.has(p.id) ? "Suggestion" : "À toi";
                     return (
                       <li key={p.id} className="min-w-0">
                         <Card rayon="tuile" className="relative p-[6px] flex flex-col h-full">
@@ -3703,8 +3691,8 @@ function Resultat({
                               {p ? <Vignette it={p} taille={40} /> : null}
                               <span className="flex-1 min-w-0">
                                 <span className={"block text-[13px] leading-[1.3] line-clamp-2 break-words " + (art.prete ? "text-muted line-through" : "text-ink")}>{art.libelle}</span>
-                                {/* Une suggestion de la capsule se dit « Suggestion », ou « Achat prévu » une fois notée (11/11/2026, demandé ; « Capsule » avant) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
-                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">{achats.has(p.id) ? "Achat prévu" : "Suggestion"}</span>}
+                                {/* Une suggestion de la capsule se dit « Suggestion » (11/11/2026, demandé ; « Capsule » avant) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
+                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">Suggestion</span>}
                                 {raisonPropre && <span className="block text-[11px] text-terracotta truncate">{raisonPropre}</span>}
                               </span>
                             </div>
