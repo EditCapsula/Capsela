@@ -1,11 +1,15 @@
 import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
+import { formalityOf } from "../src/lib/attributes";
 import { computeDefaultCapsule } from "../src/lib/capsule";
+import { effectiveFormality } from "../src/lib/data";
+import { CLOTHING_CATS } from "../src/lib/logic";
+import { adapteeALOccasion } from "../src/lib/selectors";
 import type { CatalogItem } from "../src/lib/catalog";
 import { planningDuProgramme } from "../src/lib/planningValise";
 import { elementProgramme, type ItemProgramme } from "../src/lib/programmeValise";
 import type { StyleId } from "../src/lib/profile";
-import type { CapsuleSeason, Item } from "../src/lib/types";
+import type { CapsuleSeason, Item, OccasionKey } from "../src/lib/types";
 import {
   capaciteDe,
   capsuleDuSejour,
@@ -84,6 +88,8 @@ const PROFILS: { genre: "femme" | "homme"; styles: StyleId[] }[] = [
   { genre: "homme", styles: ["classique_chic"] },
 ];
 const TAILLES: TailleBagage[] = ["S", "M", "L"];
+/** Le moteur tire au hasard : chaque valise est composée trois fois, la moyenne est retenue. */
+const REPETITIONS = 3;
 const VARIANTES: { nom: string; leviers: LeviersValise | null }[] = [
   { nom: "référence", leviers: null },
   { nom: "A variété", leviers: { variete: true } },
@@ -106,7 +112,22 @@ interface Mesure {
   volume: number;
 }
 
-function mesurer(looks: LookValise[], pieceIds: number[], suggestionIds: number[], tous: Map<number, Item>, sejour: Sejour, situations: ReturnType<typeof situationsDuProgramme>, capacite: number): Mesure {
+/**
+ * UNE TENUE ADAPTÉE À SON CRÉNEAU — le même contrôle pour toutes les variantes (le drapeau `elargie` des valises n'est pas calculé de la
+ * même façon par la référence, qui le lève sur l'ensemble des situations d'un look, et par la composition variée, situation par
+ * situation). Trois conditions, sur l'occasion du créneau : le niveau de formalité de l'occasion atteint par au moins un vêtement
+ * (manteau exclu), chaque vêtement déclaré pour cette occasion quand il en déclare, et les préférences d'occasion (adapteeALOccasion).
+ */
+function adapteeAuCreneau(pieces: Item[], occasion: OccasionKey, genre: "femme" | "homme"): boolean {
+  const vetements = pieces.filter((p) => CLOTHING_CATS.includes(p.cat) && p.cat !== "manteau");
+  if (!vetements.length) return false;
+  const plancher = effectiveFormality(occasion, "Présentiel");
+  if (Math.max(...vetements.map(formalityOf)) < plancher) return false;
+  if (vetements.some((p) => p.occasion?.length && !p.occasion.includes(occasion) && !p.occasion.includes("all" as OccasionKey))) return false;
+  return pieces.every((p) => adapteeALOccasion(p, occasion, genre));
+}
+
+function mesurer(looks: LookValise[], pieceIds: number[], suggestionIds: number[], tous: Map<number, Item>, sejour: Sejour, situations: ReturnType<typeof situationsDuProgramme>, capacite: number, genre: "femme" | "homme"): Mesure {
   const jours = joursDuSejour(sejour.depart, sejour.retour);
   const planning = planningDuProgramme(sejour.programme, jours, situations, looks);
   const portes = planning.filter((c) => c.look != null).map((c) => looks[c.look!]);
@@ -115,18 +136,22 @@ function mesurer(looks: LookValise[], pieceIds: number[], suggestionIds: number[
   const catDe = (id: number) => tous.get(id)?.cat;
   const principales = [...usages.keys()].filter((id) => PRINCIPALES.has(catDe(id)!));
   const relaches = new Map<string, [number, number]>();
+  let adaptes = 0;
   for (const c of planning) {
     if (c.look == null) continue;
+    const occasion = situations.find((s) => (s.sousIds ?? []).includes(c.sousId) && s.jours.includes(c.jour))?.occasion ?? "quotidien";
+    const ok = adapteeAuCreneau(looks[c.look].ids.map((id) => tous.get(id)).filter((p): p is Item => !!p), occasion, genre);
+    if (ok) adaptes++;
     const r = relaches.get(c.sousId) ?? [0, 0];
     r[0]++;
-    if (looks[c.look].elargie) r[1]++;
+    if (!ok) r[1]++;
     relaches.set(c.sousId, r);
   }
   return {
     relaches,
     creneaux: planning.length,
     couverts: portes.length,
-    adaptes: portes.filter((l) => !l.elargie).length,
+    adaptes,
     maxPrincipale: Math.max(0, ...principales.map((id) => usages.get(id)!)),
     principales: principales.length,
     hauts: [...usages.keys()].filter((id) => HAUTS.has(catDe(id)!)).length,
@@ -173,6 +198,7 @@ describe("valise variée et adaptée", () => {
           for (const taille of TAILLES) {
             const capacite = capaciteDe(taille);
             const ligne: string[] = [];
+            for (let rep = 0; rep < REPETITIONS; rep++)
             for (const v of VARIANTES) {
               let looks: LookValise[];
               let pieceIds: number[];
@@ -184,10 +210,10 @@ describe("valise variée et adaptée", () => {
               } else {
                 ({ looks, pieceIds, suggestionIds } = composerValiseVariee(dressing, capsule, situations, capacite, generer, v.leviers));
               }
-              const m = mesurer(looks, pieceIds, suggestionIds, tous, sejour, situations, capacite);
+              const m = mesurer(looks, pieceIds, suggestionIds, tous, sejour, situations, capacite, profil.genre);
               const cle = `${v.nom}|${taille}`;
               cumul.set(cle, [...(cumul.get(cle) ?? []), m]);
-              ligne.push(`${v.nom}: ${m.couverts}/${m.creneaux} créneaux · adaptés ${m.adaptes} · max bas ${m.maxPrincipale} · bas ${m.principales} · hauts ${m.hauts} · looks ${m.looks} · pièces ${m.pieces} (capsule ${m.capsule})`);
+              if (rep === 0) ligne.push(`${v.nom}: ${m.couverts}/${m.creneaux} créneaux · adaptés ${m.adaptes} · max bas ${m.maxPrincipale} · bas ${m.principales} · hauts ${m.hauts} · looks ${m.looks} · pièces ${m.pieces} (capsule ${m.capsule})`);
             }
             lignes.push(`\n${sejour.nom} · ${profil.genre} ${profil.styles.join("+")} · dressing ${nomDressing} (${dressing.length}) · ${taille}\n  ${ligne.join("\n  ")}`);
           }
@@ -200,8 +226,8 @@ describe("valise variée et adaptée", () => {
     for (const l of lignes) console.log(l);
     const moy = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
     const pct = (a: number, b: number) => `${b ? ((a / b) * 100).toFixed(0) : "—"} %`;
-    console.log("\n═══ BILAN (moyennes sur 3 séjours × 3 profils × 2 dressings) ═══");
-    console.log("\nTenues relâchées par le moteur (occasion ou formalité), par activité, toutes tailles — relâchées / couvertes :");
+    console.log("\n═══ BILAN (moyennes sur 3 séjours × 3 profils × 2 dressings × 3 compositions) ═══");
+    console.log("\nTenues NON adaptées à leur créneau (contrôle commun : niveau, occasions déclarées, préférences), par activité — non adaptées / couvertes :");
     for (const v of VARIANTES) {
       const tot = new Map<string, [number, number]>();
       for (const taille of TAILLES)
