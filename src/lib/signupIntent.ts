@@ -68,3 +68,21 @@ export function forgetSignupIntent(): void {
     // rien à oublier si le stockage est indisponible.
   }
 }
+
+/**
+ * UN COMPTE TOUT JUSTE CRÉÉ (11/11/2026, signalé : « Quand je choisis Continuer avec Apple alors que je dois créer un compte, je n'ai
+ * pas les étapes d'onboarding »). Apple et Google créent le compte à la première connexion, depuis « Se connecter » aussi — écran qui
+ * ne pose jamais d'intention d'inscription. Un compte se reconnaît neuf à ses dates Supabase : créé il y a moins de FENETRE_COMPTE_NEUF_MS,
+ * et sa dernière connexion est celle de sa création (à une minute près). Un compte existant n'est jamais concerné (règle du 17/08/2026).
+ */
+export const FENETRE_COMPTE_NEUF_MS = 10 * 60 * 1000;
+
+export function compteToutJusteCree(
+  user: { created_at?: string | null; last_sign_in_at?: string | null } | null | undefined,
+  maintenant: number = Date.now()
+): boolean {
+  const cree = user?.created_at ? Date.parse(user.created_at) : NaN;
+  if (!Number.isFinite(cree) || maintenant - cree > FENETRE_COMPTE_NEUF_MS || maintenant < cree - 60_000) return false;
+  const derniere = user?.last_sign_in_at ? Date.parse(user.last_sign_in_at) : cree;
+  return Number.isFinite(derniere) && Math.abs(derniere - cree) <= 60_000;
+}

@@ -8,7 +8,7 @@ import { COLORIMETRIE_VIDE, rafraichirColorimetrie, type Colorimetrie } from "./
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { DEFAULT_PREFS, EMPTY_PROFILE, stylesDuGenre, type Profile } from "./profile";
 import { effacerDonneesLocales } from "./donneesLocales";
-import { consumeSignupIntent, forgetSignupIntent } from "./signupIntent";
+import { compteToutJusteCree, consumeSignupIntent, forgetSignupIntent } from "./signupIntent";
 import { lireRetourLien, messageErreurNouveauMotDePasse, PARAM_RECUPERATION } from "./motDePasse";
 import { App } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
@@ -224,7 +224,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user ?? null);
       if (data.user) {
         await loadProfile(data.user);
-        setJustSignedUp(consumeSignupIntent());
+        // Une intention d'inscription, ou un compte tout juste créé par Apple ou Google depuis « Se connecter » (11/11/2026).
+        setJustSignedUp(consumeSignupIntent() || compteToutJusteCree(data.user));
       }
       setReady(true);
     });
@@ -234,7 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(u);
       if (u) {
         await loadProfile(u);
-        setJustSignedUp(consumeSignupIntent());
+        setJustSignedUp(consumeSignupIntent() || compteToutJusteCree(u));
       } else {
         setProfile(EMPTY_PROFILE);
         setProfilChargeReel(false);
