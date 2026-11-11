@@ -8,7 +8,7 @@ Capacitor emballe le site statique déjà construit (`out/`, `output: "export"`)
 
 - Configuration : `capacitor.config.ts` — identifiant `app.capsela` (définitif une fois publié ; validé le 27/10/2026, capsela.app appartient à la propriétaire), nom « Capsela », fond crème `#F3EEE5`.
 - Versions : `@capacitor/*` 8.5.2, épinglées.
-- iOS : Swift Package Manager (pas de CocoaPods), iPhone seulement, portrait. Android : `minSdk` 24, `targetSdk` 36, portrait.
+- iOS : Swift Package Manager (pas de CocoaPods), iPhone seulement, portrait. Android : `minSdk` 24, `targetSdk` 36, sans verrou d'orientation depuis le 11/11/2026 (alerte de la Play Console : Android 16 l'ignore sur grand écran).
 
 ## Commandes
 
@@ -87,3 +87,16 @@ La vue web d'iOS passe sous la barre d'état et l'encoche ; sans `viewport-fit=c
 rien ne laissait cette place. Correctif : sur iOS natif seulement, `viewport-fit=cover` est ajouté au chargement (App.tsx), et la coque de
 l'app reçoit `pt-safe-top` (globals.css). Android (page déjà entre les barres système) et le web ne changent pas. Le bas, qui utilisait
 déjà `env(safe-area-inset-bottom)`, laisse désormais aussi la place de la barre d'accueil de l'iPhone. À vérifier sur iPhone à chaque build.
+
+## La position dans l'app (11/11/2026)
+
+Signalé dans la vidéo de démonstration pour Apple : « localhost aimerait utiliser votre position actuelle ». Cause : l'app sert son site
+embarqué depuis `capacitor://localhost` (iOS) ; l'API web de position (`navigator.geolocation`) y ouvrait la fenêtre d'autorisation de la
+vue web, au nom de ce « site ». Ce n'était pas une URL de développement : aucune `server.url`, et les mentions de « localhost » du bundle
+viennent de bibliothèques (valeurs par défaut jamais appelées).
+
+Depuis : dans l'app iOS et Android, `getBrowserPosition` (`src/lib/weather.ts`) passe par le plugin natif `@capacitor/geolocation`
+(8.2.4, ajouté à `ios.includePlugins`) : la fenêtre est celle du système, au nom de Capsela, avec le texte de
+`NSLocationWhenInUseUsageDescription` (Info.plist) ; Android garde ses permissions `ACCESS_COARSE_LOCATION` et `ACCESS_FINE_LOCATION`. Le site
+web garde l'API du navigateur. Un refus ou un délai rend `null`, comme avant : la ville du profil prend le relais. NON vérifié sur un
+appareil : à contrôler sur le prochain build TestFlight et Android.
