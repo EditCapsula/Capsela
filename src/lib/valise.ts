@@ -1190,6 +1190,12 @@ export const POIDS_REPETITION: Partial<Record<CategoryKey, number>> = {
 };
 /** Une pièce de capsule nouvelle dans la valise : plus chère qu'un bas du dressing porté une seconde fois, moins qu'une troisième. */
 export const COUT_PIECE_CAPSULE = 4;
+/**
+ * Une paire de chaussures, un sac ou un accessoire de PLUS dans la valise (mesuré, exécution n° 20 : la place d'une valise S ou M partait
+ * en chaussures et en sacs nouveaux, la variété des bas progressait peu). Ils se réutilisent volontiers (demandé) : en ajouter coûte,
+ * pour que la place aille d'abord aux pièces principales et aux hauts.
+ */
+export const COUT_ACCESSOIRE_NOUVEAU: Partial<Record<CategoryKey, number>> = { chaussures: 2, sac: 1.5, accessoire: 1, bijou: 1 };
 
 interface CandidatVarie extends Candidat {
   /** Les situations auxquelles ce look répond sans relâche du moteur (ni occasion relâchée, ni formalité descendue). */
@@ -1308,6 +1314,7 @@ export function composerValiseVariee(
         ? c.ids.reduce((t, id) => t + (POIDS_REPETITION[tous.get(id)?.cat ?? "accessoire"] ?? 0) * (usages.get(id) ?? 0), 0) +
           4 * (usagesLook.get(c.cle) ?? 0) +
           0.25 * volume(nouveaux) +
+          nouveaux.reduce((t, id) => t + (COUT_ACCESSOIRE_NOUVEAU[tous.get(id)?.cat ?? "haut"] ?? 0), 0) +
           COUT_PIECE_CAPSULE * deCapsule
         : // Sans le levier A : la valise la plus légère (le principe d'origine), un look déjà retenu revient sans rien coûter.
           volume(nouveaux) + COUT_PIECE_CAPSULE * deCapsule;
