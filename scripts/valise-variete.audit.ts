@@ -23,6 +23,7 @@ import {
   type LeviersValise,
   type LookValise,
   type MeteoJour,
+  PLANCHERS_VACANCES,
   type TailleBagage,
   unitesDe,
 } from "../src/lib/valise";
@@ -90,11 +91,14 @@ const PROFILS: { genre: "femme" | "homme"; styles: StyleId[] }[] = [
 const TAILLES: TailleBagage[] = ["S", "M", "L"];
 /** Le moteur tire au hasard : chaque valise est composée trois fois, la moyenne est retenue. */
 const REPETITIONS = 3;
-const VARIANTES: { nom: string; leviers: LeviersValise | null }[] = [
+// P (11/11/2026) : les niveaux de formalité des contextes de vacances fixés par la propriétaire (PLANCHERS_VACANCES). Plafond : au plus
+// un créneau sur quatre pour une même pièce principale (plafondPrincipale).
+const VARIANTES: { nom: string; leviers: LeviersValise | null; planchers?: boolean }[] = [
   { nom: "référence", leviers: null },
-  { nom: "A variété", leviers: { variete: true } },
-  { nom: "B adaptation", leviers: { adaptation: true } },
+  { nom: "réf. + P", leviers: null, planchers: true },
   { nom: "A + B", leviers: { variete: true, adaptation: true } },
+  { nom: "A+B+plafond", leviers: { variete: true, adaptation: true, plafond: true } },
+  { nom: "A+B+pl.+P", leviers: { variete: true, adaptation: true, plafond: true }, planchers: true },
 ];
 
 interface Mesure {
@@ -118,10 +122,12 @@ interface Mesure {
  * situation). Trois conditions, sur l'occasion du créneau : le niveau de formalité de l'occasion atteint par au moins un vêtement
  * (manteau exclu), chaque vêtement déclaré pour cette occasion quand il en déclare, et les préférences d'occasion (adapteeALOccasion).
  */
-function adapteeAuCreneau(pieces: Item[], occasion: OccasionKey, genre: "femme" | "homme"): boolean {
+// Depuis le 11/11/2026, le niveau attendu d'un créneau est celui que la propriétaire a fixé pour son contexte de vacances
+// (PLANCHERS_VACANCES), le même pour TOUTES les variantes ; sans contexte fixé, celui de l'occasion.
+function adapteeAuCreneau(pieces: Item[], occasion: OccasionKey, genre: "femme" | "homme", sousId: string): boolean {
   const vetements = pieces.filter((p) => CLOTHING_CATS.includes(p.cat) && p.cat !== "manteau");
   if (!vetements.length) return false;
-  const plancher = effectiveFormality(occasion, "Présentiel");
+  const plancher = PLANCHERS_VACANCES[sousId] ?? effectiveFormality(occasion, "Présentiel");
   if (Math.max(...vetements.map(formalityOf)) < plancher) return false;
   if (vetements.some((p) => p.occasion?.length && !p.occasion.includes(occasion) && !p.occasion.includes("all" as OccasionKey))) return false;
   return pieces.every((p) => adapteeALOccasion(p, occasion, genre));
@@ -140,7 +146,7 @@ function mesurer(looks: LookValise[], pieceIds: number[], suggestionIds: number[
   for (const c of planning) {
     if (c.look == null) continue;
     const occasion = situations.find((s) => (s.sousIds ?? []).includes(c.sousId) && s.jours.includes(c.jour))?.occasion ?? "quotidien";
-    const ok = adapteeAuCreneau(looks[c.look].ids.map((id) => tous.get(id)).filter((p): p is Item => !!p), occasion, genre);
+    const ok = adapteeAuCreneau(looks[c.look].ids.map((id) => tous.get(id)).filter((p): p is Item => !!p), occasion, genre, c.sousId);
     if (ok) adaptes++;
     const r = relaches.get(c.sousId) ?? [0, 0];
     r[0]++;
@@ -183,7 +189,9 @@ describe("valise variée et adaptée", () => {
     for (const sejour of SEJOURS) {
       const jours = joursDuSejour(sejour.depart, sejour.retour);
       const meteos: MeteoJour[] = jours.map((jour) => ({ jour, temp: sejour.temp, label: sejour.label, prevue: true }));
-      const situations = situationsDuProgramme(sejour.programme, meteos, ["quotidien"]);
+      const situationsBase = situationsDuProgramme(sejour.programme, meteos, ["quotidien"]);
+      const situationsP = situationsDuProgramme(sejour.programme, meteos, ["quotidien"], { planchersVacances: true });
+      const situations = situationsBase;
       for (const profil of PROFILS) {
         const profile = profilAudit({ gender: profil.genre, styles: profil.styles });
         const capsule = capsuleDuSejour(situations, (meteo, saison) => computeDefaultCapsule(profile, meteo, [], saison, catalogue));
@@ -200,6 +208,7 @@ describe("valise variée et adaptée", () => {
             const ligne: string[] = [];
             for (let rep = 0; rep < REPETITIONS; rep++)
             for (const v of VARIANTES) {
+              const situations = v.planchers ? situationsP : situationsBase;
               let looks: LookValise[];
               let pieceIds: number[];
               let suggestionIds: number[];

@@ -234,6 +234,39 @@ export interface SituationValise {
    * d'aujourd'hui. La veste de pluie n'est proposée qu'alors (piecesDeValise.ts, ajouterVesteDePluie).
    */
   pluiePrevue?: true;
+  /**
+   * Le niveau de formalité visé pour ce contexte de vacances (PLANCHERS_VACANCES, 11/11/2026), quand le levier est demandé. Absent :
+   * celui de l'occasion mère (effectiveFormality), comme avant.
+   */
+  plancher?: number;
+}
+
+/**
+ * LES NIVEAUX DE FORMALITÉ D'UN SÉJOUR (11/11/2026, fixés par la propriétaire : « je ne souhaite pas que Capsela considère
+ * automatiquement qu'une soirée ou un restaurant nécessite une tenue habillée. Le niveau doit dépendre du contexte réel de l'occasion »).
+ *   · trajet aller / retour : 1 (décontracté, le confort d'abord) ;
+ *   · soirée décontractée, restaurant classique : 2 (casual chic) ;
+ *   · soirée festive, restaurant chic : 3 (business casual) ;
+ *   · soirée habillée, événement : 4 (habillé).
+ * Les entrées du programme ne disent pas aujourd'hui si un restaurant est chic ni si une soirée est habillée : « Restaurant & soirée »
+ * (restaurant, dîner, sortie) reçoit donc le niveau 2 ; une Soirée datée (événement) le niveau 3 ; une cérémonie le niveau 4. Le
+ * restaurant chic et la soirée habillée demanderont un choix d'ambiance que l'écran ne propose pas encore. Mesuré avant toute bascule
+ * (scripts/valise-variete.audit.ts) : la production ne le demande pas.
+ */
+export const PLANCHERS_VACANCES: Record<string, number> = {
+  trajet: 1,
+  restaurant: 2,
+  diner: 2,
+  sortie_vacances: 2,
+  ceremonie: 4,
+};
+/** Le niveau d'une Soirée DATÉE (un événement du séjour) : festive, 3. */
+export const PLANCHER_SOIREE_DATEE = 3;
+
+/** Le niveau de vacances d'un groupe d'entrées du programme : le plus exigeant d'entre elles, ou rien si aucune n'en a. */
+export function plancherDesEntrees(sousIds: readonly string[]): number | undefined {
+  const niveaux = sousIds.map((id) => PLANCHERS_VACANCES[id]).filter((n): n is number => n != null);
+  return niveaux.length ? Math.max(...niveaux) : undefined;
 }
 
 /**
@@ -275,7 +308,13 @@ export function situationsDuSejour(occasions: OccasionKey[], meteos: MeteoJour[]
  * moteur ne compose pas une tenue complète différente pour chaque occasion. Un trajet ne se joue que le jour du départ et
  * celui du retour : sa météo est celle de ces deux jours. Programme vide : le repli d'avant (situationsDuSejour).
  */
-export function situationsDuProgramme(programme: readonly ItemProgramme[], meteos: MeteoJour[], repli: OccasionKey[]): SituationValise[] {
+export function situationsDuProgramme(
+  programme: readonly ItemProgramme[],
+  meteos: MeteoJour[],
+  repli: OccasionKey[],
+  /** Les niveaux de formalité des contextes de vacances (PLANCHERS_VACANCES) : levier de mesure, la production ne le demande pas. */
+  options?: { planchersVacances?: boolean }
+): SituationValise[] {
   const elements = programme.flatMap((it) => {
     const e = elementProgramme(it.id);
     return e ? [e] : [];
@@ -285,7 +324,9 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
   const extremes = tries.length ? [tries[0], tries[tries.length - 1]].filter((m, i, l) => l.findIndex((x) => x.jour === m.jour) === i) : [];
   const parGroupe = new Map<string, { mere: OccasionKey; contrainte?: Contrainte; trajet: boolean; sousIds: string[] }>();
   for (const e of elements) {
-    const cle = `${e.mere}|${e.contrainte ?? ""}|${e.creneau === "trajet" ? "t" : ""}`;
+    // Avec les niveaux de vacances, deux entrées de niveaux différents ne partagent pas une situation (le moteur ne vise qu'un niveau).
+    const niveau = options?.planchersVacances ? (PLANCHERS_VACANCES[e.id] ?? "") : "";
+    const cle = `${e.mere}|${e.contrainte ?? ""}|${e.creneau === "trajet" ? "t" : ""}|${niveau}`;
     const g = parGroupe.get(cle);
     if (g) g.sousIds.push(e.id);
     else parGroupe.set(cle, { mere: e.mere, contrainte: e.contrainte, trajet: e.creneau === "trajet", sousIds: [e.id] });
@@ -301,6 +342,7 @@ export function situationsDuProgramme(programme: readonly ItemProgramme[], meteo
         jours: m.jours,
         ...(g.contrainte ? { contrainte: g.contrainte } : {}),
         sousIds: g.sousIds,
+        ...(options?.planchersVacances && plancherDesEntrees(g.sousIds) != null ? { plancher: plancherDesEntrees(g.sousIds) } : {}),
         ...((g.trajet || g.contrainte === "marche") && randonnee ? { avecRandonnee: true as const } : {}),
         ...(m.jours.some((j) => pluvieux.has(j)) ? { pluiePrevue: true as const } : {}),
       });
@@ -394,7 +436,9 @@ export function generateurMoteur(
   function composer(poolBrut: Item[], occasion: OccasionKey, meteo: Weather, s: SituationValise, robes: Item[]): TenueMoteur | null {
     const pool = poolBrut.filter((p) => !estRobeDePlage(p));
     if (!pool.length) return null;
-    const r = generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
+    // Le niveau du contexte de vacances, quand la situation en porte un (PLANCHERS_VACANCES) ; sinon celui de l'occasion, comme avant.
+    const leviers = s.plancher != null ? { plancher: s.plancher } : undefined;
+    const r = generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, leviers, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
     // Les chaussures et le sac ajoutés suivent les règles du moteur (météo, occasion, couleur, saison) : 12/10/2026, demandé « tenir compte des règles du moteur ».
     const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion, meteo }, (s.sousIds ?? []).includes("spa"));
@@ -1173,7 +1217,17 @@ export function capsuleDuSejour(
 export interface LeviersValise {
   variete?: boolean;
   adaptation?: boolean;
+  /**
+   * Un PLAFOND de sorties par pièce principale (11/11/2026, validé : « la limitation des répétitions doit concerner prioritairement les
+   * pièces principales ») : plafondPrincipale(n) créneaux au plus pour un même bas, une même robe ou combinaison, tant qu'une autre
+   * tenue tient dans le bagage — la capsule propose alors une pièce de plus. Sans autre tenue possible, le plafond cède.
+   */
+  plafond?: boolean;
 }
+
+const CATEGORIES_PRINCIPALES: readonly CategoryKey[] = ["pantalon", "jean", "jupe", "short", "robe", "combinaison"];
+/** Un même bas, une même robe ou combinaison : au plus un créneau sur quatre du séjour, et deux au moins. ARBITRAGE ÉDITORIAL. */
+export const plafondPrincipale = (creneaux: number): number => Math.max(2, Math.ceil(creneaux / 4));
 
 /** Ce que coûte une pièce déjà retenue qui revient, par catégorie : les pièces principales d'abord, les hauts ensuite. */
 export const POIDS_REPETITION: Partial<Record<CategoryKey, number>> = {
@@ -1298,6 +1352,9 @@ export function composerValiseVariee(
     .sort((a, b) => a.n - b.n || a.choix - b.choix || a.i - b.i);
   const tours = Math.max(0, ...ordre.map((o) => o.n));
   const creneaux = Array.from({ length: tours }, (_, k) => ordre.filter((o) => o.n > k).map((o) => o.i)).flat();
+  const plafond = plafondPrincipale(creneaux.length);
+  const depasse = (c: CandidatVarie) =>
+    c.ids.some((id) => CATEGORIES_PRINCIPALES.includes(tous.get(id)?.cat ?? "haut") && (usages.get(id) ?? 0) >= plafond);
 
   const servies = new Set<number>();
   for (const i of creneaux) {
@@ -1307,7 +1364,9 @@ export function composerValiseVariee(
     servies.add(i);
     let meilleur: CandidatVarie | null = null;
     let cout = Infinity;
-    for (const c of tenables(i)) {
+    const tiennent = tenables(i);
+    const sousPlafond = leviers.plafond ? tiennent.filter((c) => !depasse(c)) : tiennent;
+    for (const c of sousPlafond.length ? sousPlafond : tiennent) {
       const nouveaux = c.ids.filter((id) => !sac.has(id));
       const deCapsule = nouveaux.filter((id) => !possede.has(id)).length;
       const k = leviers.variete && !premier

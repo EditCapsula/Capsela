@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { composerValiseVariee, situationsDuSejour, type Generateur, type MeteoJour } from "../valise";
+import { composerValiseVariee, plafondPrincipale, plancherDesEntrees, situationsDuProgramme, situationsDuSejour, type Generateur, type MeteoJour } from "../valise";
 import type { CategoryKey, Item } from "../types";
 
 // La composition variée (11/11/2026) : les leviers A (variété sur tout le séjour) et B (adaptation), inertes en production.
@@ -70,5 +70,40 @@ describe("composerValiseVariee — B : le dressing ne passe avant que s'il convi
   it("à adaptation égale, le dressing passe devant la capsule", () => {
     const r = composerValiseVariee(dressing, capsule, quatreJours, 40, generateur([[1, 11, 20, 30], [100, 101, 102]]), { adaptation: true });
     expect(r.looks[0].ids).toEqual([1, 11, 20, 30]);
+  });
+});
+
+describe("les niveaux de formalité d'un séjour (PLANCHERS_VACANCES, 11/11/2026)", () => {
+  const jours = ["2026-12-07", "2026-12-08", "2026-12-09"].map(meteo);
+  const programme = [{ id: "trajet", frequence: 2 }, { id: "restaurant", frequence: 2 }, { id: "ceremonie", frequence: 1 }, { id: "visites", frequence: 2 }];
+
+  it("trajet 1, restaurant 2, cérémonie 4 ; sans niveau fixé, rien ne change", () => {
+    expect(plancherDesEntrees(["trajet"])).toBe(1);
+    expect(plancherDesEntrees(["restaurant", "diner", "sortie_vacances"])).toBe(2);
+    expect(plancherDesEntrees(["ceremonie"])).toBe(4);
+    expect(plancherDesEntrees(["visites"])).toBeUndefined();
+  });
+
+  it("le levier porte le niveau sur la situation ; sans lui, les situations sont celles d'avant", () => {
+    const avec = situationsDuProgramme(programme, jours, ["quotidien"], { planchersVacances: true });
+    const sans = situationsDuProgramme(programme, jours, ["quotidien"]);
+    expect(avec.find((s) => s.sousIds?.includes("restaurant"))?.plancher).toBe(2);
+    expect(avec.find((s) => s.sousIds?.includes("trajet"))?.plancher).toBe(1);
+    expect(avec.find((s) => s.sousIds?.includes("visites"))?.plancher).toBeUndefined();
+    expect(sans.every((s) => s.plancher === undefined)).toBe(true);
+  });
+});
+
+describe("le plafond d'une pièce principale", () => {
+  it("un créneau sur quatre, deux au moins", () => {
+    expect(plafondPrincipale(4)).toBe(2);
+    expect(plafondPrincipale(12)).toBe(3);
+    expect(plafondPrincipale(16)).toBe(4);
+  });
+
+  it("une même combinaison ne dépasse pas le plafond tant qu'une autre tenue tient", () => {
+    const huit = situationsDuSejour(["quotidien"], ["2026-12-07", "2026-12-08", "2026-12-09", "2026-12-10", "2026-12-11", "2026-12-12", "2026-12-13", "2026-12-14"].map(meteo));
+    const r = composerValiseVariee(DRESSING, [], huit, 40, generateur(TENUES), { variete: true, plafond: true });
+    expect(r.looks.length).toBeGreaterThanOrEqual(3);
   });
 });
