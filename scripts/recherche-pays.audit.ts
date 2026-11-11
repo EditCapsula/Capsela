@@ -28,5 +28,18 @@ describe("recherche d'un pays", () => {
       }
       console.log(`\n« ${q} »\n  géocodage : ${resume}\n  REST Countries : ${pays}`);
     }
+    // Le corps brut de REST Countries, par nom et par code : un 200 qui ne rend aucun pays lisible vient-il du format de la réponse ?
+    for (const url of [
+      "https://restcountries.com/v3.1/translation/Tha%C3%AFlande?fields=name,translations,capital,capitalInfo,cca2",
+      "https://restcountries.com/v3.1/translation/Tha%C3%AFlande",
+      "https://restcountries.com/v3.1/alpha/TH?fields=capital,capitalInfo,cca2",
+    ]) {
+      try {
+        const res = await fetch(url);
+        console.log(`\n${url}\n  HTTP ${res.status} · ${(await res.text()).slice(0, 500)}`);
+      } catch (e) {
+        console.log(`\n${url}\n  échec réseau : ${(e as Error).message}`);
+      }
+    }
   }, 120_000);
 });
