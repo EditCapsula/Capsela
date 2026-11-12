@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activitesAPlanifier, activitesDatees, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, pieceLaPlusUtilisee, planificationManuelle, planningDuProgramme } from "../planningValise";
+import { activitesAPlanifier, activitesDatees, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, looksDesActivites, pieceLaPlusUtilisee, planificationManuelle, planningDuProgramme } from "../planningValise";
 import { basculerJour } from "../activitesSejour";
 import { filtrerParContrainte } from "../programmeValise";
 import { groupesMeteo, situationsDuProgramme, situationsDuSejour, type MeteoJour } from "../valise";
@@ -241,5 +241,28 @@ describe("planification manuelle (06/11/2026) : les dates choisies à l'étape A
     const c = basculerJour(basculerJour(choix, 1, "2026-10-24"), 1, "2026-10-21");
     expect(c[1].jours).toEqual(["2026-10-21", "2026-10-24"]);
     expect(basculerJour(c, 1, "2026-10-21")[1].jours).toEqual(["2026-10-24"]);
+  });
+});
+
+describe("looksDesActivites — une tenue pour chaque activité sans date (12/11/2026)", () => {
+  const situations = [
+    { occasion: "quotidien", sousIds: ["plage"], jours: JOURS, meteo: meteos[0] },
+    { occasion: "soiree", sousIds: ["restaurant"], jours: JOURS, meteo: meteos[0] },
+  ] as unknown as Parameters<typeof looksDesActivites>[2];
+  const choix = [
+    { libelle: "Se détendre sur une plage", activite: "plage" as const, source: "idee" as const, jours: [] },
+    { libelle: "Snorkeling", activite: "plage" as const, source: "idee" as const, jours: [] },
+    { libelle: "Dîner en ville", activite: "soiree" as const, source: "idee" as const, jours: [] },
+  ];
+  const aPlanifier = activitesAPlanifier(choix, JOURS);
+  it("le look qui répond à l'activité, quel que soit le jour ; le moins porté d'abord, pour varier", () => {
+    const looks = [{ situations: [0] }, { situations: [0] }, { situations: [1] }];
+    const r = looksDesActivites(aPlanifier, choix, situations, looks, [{ look: 0 }]);
+    expect(r.map((t) => t.look)).toEqual([1, 0, 2]);
+    expect(r.map((t) => t.situation)).toEqual([0, 0, 1]);
+  });
+  it("aucun look ne répond : la situation est rendue, pour composer une tenue avec les pièces de la valise", () => {
+    const r = looksDesActivites(aPlanifier, choix, situations, [{ situations: [0] }], []);
+    expect(r[2]).toMatchObject({ look: null, situation: 1 });
   });
 });

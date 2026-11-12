@@ -260,7 +260,7 @@ Pas de repli sur le pool complet : si le pool filtré ne permet aucune tenue, la
 
 **Planning jour par jour** (`planningValise.ts`) : calculé à l'affichage, jamais stocké. Trajets : premier et dernier jour. Éléments « jour » et « soir » étalés sur les jours les moins chargés ; pour chaque créneau, le look de la valise qui répond à la situation correspondante, le moins utilisé d'abord. Aucun look adapté : le créneau le dit (« Aucun look de ta valise ne répond encore à cette occasion. »), rien n'est inventé.
 
-**Déplacer une activité** (06/11/2026, demandé : « L'utilisateur devrait pouvoir les modifier avec un glisser déposer » ; seules les activités réparties automatiquement se déplacent, arbitré le même jour). Dans « Tes tenues jour par jour », un appui long sur une activité la saisit et la fait glisser vers un autre jour (`GlisserVersJour.tsx` ; un geste plus court reste un défilement). Le bouton « Déplacer » de chaque ligne fait la même chose sans geste. Trajets et événements datés gardent leur jour. Le déplacement garde le jour de TOUTES les activités réparties telles qu'affichées (`deplacerActivite`), pour que rien d'autre ne bouge ; il est enregistré dans `placements` (dans `calcul`, jsonb : aucune migration). Le look du créneau est choisi de nouveau pour la météo du jour d'arrivée, parmi les looks de la valise ; la tenue du jour pendant le séjour suit. Des jours gardés qui ne valent plus (dates ou fréquence changées) retrouvent la répartition automatique ; « Rétablir la répartition automatique » efface les placements.
+**Déplacer une activité** (06/11/2026, demandé : « L'utilisateur devrait pouvoir les modifier avec un glisser déposer » ; seules les activités réparties automatiquement se déplacent, arbitré le même jour). Dans « Tes tenues par activité » (renommée le 12/11/2026, avant « Tes tenues jour par jour »), un appui long sur une activité la saisit et la fait glisser vers un autre jour (`GlisserVersJour.tsx` ; un geste plus court reste un défilement). Le bouton « Déplacer » de chaque ligne fait la même chose sans geste. Trajets et événements datés gardent leur jour. Le déplacement garde le jour de TOUTES les activités réparties telles qu'affichées (`deplacerActivite`), pour que rien d'autre ne bouge ; il est enregistré dans `placements` (dans `calcul`, jsonb : aucune migration). Le look du créneau est choisi de nouveau pour la météo du jour d'arrivée, parmi les looks de la valise ; la tenue du jour pendant le séjour suit. Des jours gardés qui ne valent plus (dates ou fréquence changées) retrouvent la répartition automatique ; « Rétablir la répartition automatique » efface les placements.
 
 **Résultat à onglets** : Ensemble, Looks (jour par jour), Pièces, Accessoires (Sacs, Bijoux & accessoires). « Ensemble » plutôt que « Vue d'ensemble » : quatre segments ne portent pas le libellé complet à 320 px ; `SegmentedControl` reçoit une option `serre` pour ce cas.
 
@@ -525,3 +525,20 @@ capsule suggérées 0,4 → 1,7 ; valise L : bas le plus porté 4,7 → 2,7. NON
 le plafond par pièce principale (`plafond`, sans effet mesurable, non branché). Les soirées et trajets restent les créneaux les moins
 adaptés : ce sont les règles d'occasion (chaussures habillées en soirée, R-S25 ; baskets et niveau 1 en voyage) qui les retiennent,
 pas le niveau de formalité.
+
+## Tenues complètes et activités sans date (12/11/2026)
+
+- **Tenues complètes seulement** (levier `complets` de `composerValiseVariee`, branché à l'écran). Signalé sur une valise « Polynesia » :
+  les deux trajets « Aucun look de ta valise ne répond encore à cette occasion ». Le moteur ajoute à certaines tenues des pièces
+  réservées à la valise (chaussures de randonnée, maillot) ; tirée sur le dressing seul, une tenue les perdait (« robe + sac à dos »,
+  sans chaussures), restait candidate et, la moins encombrante, était retenue — puis l'écran la masquait (un look de valise a des
+  chaussures et un sac). Désormais une tenue qui perd ses chaussures ou son sac en quittant les pièces hors du pool n'est pas candidate.
+  Mesuré par `scripts/valise-complets.audit.ts` (avant / après dans la même exécution) : séjour avec randonnée, trajets couverts
+  0 → 100 % en S et M, 33 → 100 % en L ; créneaux couverts 56 → 93 % (S), 60 → 100 % (M) ; sans recul notable sur les autres séjours.
+  DÉMONTRÉ sur ces séjours, profils et dressings. `looksDeLaValise` (modification des pièces) n'est pas concerné : ses looks
+  incomplets étaient déjà masqués.
+- **Une tenue pour chaque activité sans date** (demandé : « afficher une tenue pour chaque activité choisie sans attendre de les avoir
+  planifiées », « sans jour indiqué »). Les activités sans date s'affichent dans « Tes tenues par activité » (renommée le 12/11/2026, avant « Tes tenues jour par jour »), dans une carte sans jour
+  placée entre le trajet aller et le jour du retour (demandé : « pas besoin de faire une section dédiée »). Chacune montre le look
+  de la valise qui répond à son activité (`looksDesActivites`, le moins porté d'abord), sinon une tenue que le moteur compose avec les
+  seules pièces de la valise, complète ; « Jours » la date, sans obligation. La galerie « Tes looks pour le séjour » les montre aussi.

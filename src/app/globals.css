@@ -3,6 +3,8 @@
 @theme inline {
   /* Les chiffres d'abord (--font-chiffres : Manrope réduite aux chiffres, layout.tsx, 04/11/2026), puis Bodoni pour les lettres. */
   --font-serif: var(--font-chiffres), var(--font-bodoni), serif;
+  /* La taille optique des titres (12/11/2026, option A) : la classe `font-serif` de Tailwind pose sa propre variation, celle-ci. */
+  --font-serif--font-variation-settings: "opsz" 11;
   --font-sans: var(--font-manrope), sans-serif;
   /* Manuscrite — un seul usage aujourd'hui : la phrase d'ambiance de la card
      Tenue (23/09/2026). Repli cursive pour que la phrase reste lisible si le
@@ -120,6 +122,15 @@
   font-size: 21px;
   line-height: 1.18;
 }
+/*
+ * LES CHIFFRES EN BODONI, DANS UN TITRE DE MOIS SEULEMENT (12/11/2026, choisi par la propriétaire sur planche : « le titre Octobre 2026
+ * en Bodoni taille optique », les jours du calendrier restant en Manrope). La pile de la serif met Manrope devant pour les chiffres
+ * (--font-chiffres, 04/11/2026) : ce titre-là l'en retire. La taille optique basse vient des titres (opsz 11).
+ */
+@utility chiffres-bodoni {
+  /* !important : la classe de titre (t-titre-section, font-serif) pose la pile avec Manrope, et l'ordre des utilitaires n'est pas garanti. */
+  font-family: var(--font-bodoni), serif !important;
+}
 @utility t-titre-carte {
   font-family: var(--font-sans);
   font-size: 16px;
@@ -153,6 +164,13 @@
 @layer base {
   :where(.font-serif, .t-display, .t-titre-ecran, .t-titre-section) {
     font-weight: 500;
+    /*
+     * LA TAILLE OPTIQUE (12/11/2026, option A choisie par la propriétaire sur planche : « les titres en Bodoni ne sont toujours pas
+     * suffisamment lisibles »). Bodoni Moda porte un axe `opsz` (6 à 96) : par défaut le navigateur le cale sur la taille du texte
+     * (21 à 28 px), un dessin très contrasté aux déliés presque invisibles. Le dessin des petites tailles (opsz 11) épaissit les déliés
+     * sans changer de police, de taille ni de graisse. Sans effet sur les chiffres (Manrope, sans axe opsz).
+     */
+    font-variation-settings: "opsz" 11;
   }
 }
 @layer utilities {

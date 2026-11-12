@@ -25,7 +25,7 @@ const FONDU = 36;
  * survivent (travail, date, voyage — arbitré le 22/09 pour le voyage : sans lui, « Longue distance » et son conseil deviennent
  * inatteignables). Les actions du store (setOccasion, setWorkMode…) recalculent la tenue, comme avant : aucune logique parallèle.
  */
-export default function SelecteurOccasion({ quand }: { quand: string }) {
+export default function SelecteurOccasion() {
   const { state, actions } = useCapsela();
   const [feuilleOuverte, setFeuilleOuverte] = useState(false);
   const ligne = useRef<HTMLDivElement>(null);
@@ -87,7 +87,9 @@ export default function SelecteurOccasion({ quand }: { quand: string }) {
 
   return (
     <>
-      <div className="mt-[14px] t-surtitre text-muted">Qu&apos;est-ce qui est prévu {quand} ?</div>
+      {/* « Qu'est-ce qui est prévu aujourd'hui ? » retiré, sans remplacement (12/11/2026, brief « Optimisation UX/UI – Ma tenue du jour »,
+          point 1) : les onglets d'occasion se suffisent. L'espace au-dessus est gardé. */}
+      <div className="mt-[14px]" />
 
       {/* La ligne déborde jusqu'aux bords de l'écran (marges négatives = padding de page) ; le filet bas court sur toute sa largeur. */}
       <div className="relative -mx-6 mt-[4px] border-b border-border">

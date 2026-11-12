@@ -14,6 +14,7 @@
  * Le moteur, ses scores, la capsule et les règles (style, silhouette, colorimétrie) ne changent pas : seule la présentation change.
  */
 
+import { vestePlusLongueQueLeManteau } from "./forme";
 import { SEUIL_MANTEAU } from "./logic";
 import type { Item } from "./types";
 
@@ -27,6 +28,16 @@ export interface TenueSeparee {
 export interface TenueSepareeEtendue extends TenueSeparee {
   /** Vrai quand le manteau n'est pas dans la tenue : le moteur le PROPOSE en plus (cas « tenue sans manteau, manteau disponible »). */
   suggere: boolean;
+  /**
+   * Le manteau de la tenue que la proposition REMPLACE (12/11/2026, R-B25) : trop court pour la veste qu'il couvrirait. Il ne se montre
+   * pas et ne se compte pas comme porté ; porter la proposition le remplace dans la tenue. null sinon.
+   */
+  remplace: Item | null;
+  /**
+   * « Pour finaliser ta tenue » (12/11/2026, arbitré) : le manteau de la tenue est plus court que sa veste, et ni le dressing ni la capsule
+   * n'en ont un assez long. L'encart conseille un manteau plus long au lieu de montrer le manteau trop court.
+   */
+  conseilManteauPlusLong: boolean;
 }
 
 /**
@@ -34,13 +45,36 @@ export interface TenueSepareeEtendue extends TenueSeparee {
  * occasion…). Par le froid, une tenue SANS manteau reçoit le premier d'entre eux en « Pour l'extérieur » (04/11/2026, signalé : « sur
  * cette page il manque la strate extérieure ») ; sans candidat, rien n'est proposé — jamais un manteau inventé.
  */
-export function separerCoucheExterieure(pieces: Item[], temperature: number | null | undefined, candidats: Item[] = []): TenueSepareeEtendue {
+export function separerCoucheExterieure(
+  pieces: Item[],
+  temperature: number | null | undefined,
+  candidats: Item[] = [],
+  /**
+   * Les manteaux de la CAPSULE que le moteur admet pour cette tenue (candidatsDeRemplacement sur la capsule) — 12/11/2026, arbitré : quand
+   * le manteau de la tenue est plus court que la veste qu'il couvre (R-B25, la veste de formalité reste), « on propose une pièce de la
+   * capsule qui fonctionne avec la tenue ».
+   */
+  candidatsCapsule: Item[] = []
+): TenueSepareeEtendue {
   const froid = typeof temperature === "number" && Number.isFinite(temperature) && temperature < SEUIL_MANTEAU;
-  if (!froid) return { principal: pieces, exterieur: null, suggere: false };
+  const rien = { remplace: null, conseilManteauPlusLong: false };
+  if (!froid) return { principal: pieces, exterieur: null, suggere: false, ...rien };
   const exterieur = pieces.find((p) => p.cat === "manteau") ?? null;
-  if (exterieur) return { principal: pieces.filter((p) => p.id !== exterieur.id), exterieur, suggere: false };
-  const propose = autresManteaux(candidats, pieces, null)[0] ?? null;
-  return { principal: pieces, exterieur: propose, suggere: propose !== null };
+  if (exterieur) {
+    const principal = pieces.filter((p) => p.id !== exterieur.id);
+    const vestes = principal.filter((p) => p.cat === "veste");
+    if (!vestes.some((v) => vestePlusLongueQueLeManteau(v, exterieur))) return { principal, exterieur, suggere: false, ...rien };
+    // Un manteau qui COUVRE la veste : sa longueur connue, et aucune veste plus longue — le dressing d'abord, puis la capsule. Une
+    // longueur inconnue ne se suppose pas (« aucune donnée inventée ») : elle ne suffit pas à dire qu'il est assez long.
+    const couvre = (m: Item) => m.cat === "manteau" && m.longueur != null && !vestes.some((v) => vestePlusLongueQueLeManteau(v, m));
+    const propose = autresManteaux([...candidats, ...candidatsCapsule], pieces, null).find(couvre) ?? null;
+    if (propose) return { principal, exterieur: propose, suggere: true, remplace: exterieur, conseilManteauPlusLong: false };
+    return { principal, exterieur: null, suggere: false, remplace: exterieur, conseilManteauPlusLong: true };
+  }
+  // Sans manteau adapté dans le dressing, un manteau de la CAPSULE (12/11/2026, demandé : « la recommandation d'ajout de manteau doit
+  // être remplacée par l'affichage de la strate Extérieur avec un manteau de la capsule si pas de manteau adapté dans le dressing »).
+  const propose = autresManteaux(candidats, pieces, null)[0] ?? autresManteaux(candidatsCapsule, pieces, null)[0] ?? null;
+  return { principal: pieces, exterieur: propose, suggere: propose !== null, ...rien };
 }
 
 /**

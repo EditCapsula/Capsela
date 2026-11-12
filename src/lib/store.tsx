@@ -39,6 +39,7 @@ import {
   updateDressingItemRevente,
   updateDressingItemManches,
   updateDressingItemMotif,
+  updateDressingItemForme,
   updateDressingItemSaisons,
   updateDressingItemWorn,
   updateSavedLook,
@@ -50,6 +51,7 @@ import { choisirMeteo, fetchPrevisionByCity, fetchWeatherByCity, fetchWeatherByC
 import { CATS, CITIES, DATE_CONTEXTS, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, WORK_MODES, type Weather } from "./data";
 import { aDesManches } from "./manches";
 import { aUnMotif } from "./motifs";
+import { aUneCouche, aUneLongueur } from "./forme";
 import { genererTenueDiversifiee, recentsDuJour } from "./diversite";
 import { ecrireRecommandation, lireRecommandations, type TableRecommandations } from "./recommandationsRecentes";
 import { ecrirePiecesEcartees, lirePiecesEcartees } from "./piecesEcartees";
@@ -96,6 +98,8 @@ import type {
   BijouType,
   CapsuleSeason,
   CategoryKey,
+  Couche,
+  Longueur,
   Manches,
   Motif,
   ChoixRevente,
@@ -219,6 +223,12 @@ function buildInitialState(): AppState {
     addMotif: null,
     addMotifIA: null,
     addMotifTouched: false,
+    addLongueur: null,
+    addLongueurIA: null,
+    addLongueurTouched: false,
+    addCouche: null,
+    addCoucheIA: null,
+    addCoucheTouched: false,
     addDone: false,
     addOccasion: [],
     addOccasionTouched: false,
@@ -511,6 +521,10 @@ export interface Actions {
   setAddMotif: (m: Motif) => void;
   /** Remet le motif lu par l'analyse de la photo (« Rétablir »). */
   retablirAddMotif: () => void;
+  setAddLongueur: (l: Longueur) => void;
+  retablirAddLongueur: () => void;
+  setAddCouche: (c: Couche) => void;
+  retablirAddCouche: () => void;
   /** Bascule l'occasion dans la sélection multiple. */
   setAddOccasion: (o: OccasionKey) => void;
   setAddShoeType: (t: ShoeType) => void;
@@ -768,6 +782,10 @@ function sansLecturePrecedente(s: AppState, effacerNom: boolean): Partial<AppSta
     addManchesIA: null,
     addMotif: s.addMotifTouched ? s.addMotif : null,
     addMotifIA: null,
+    addLongueur: s.addLongueurTouched ? s.addLongueur : null,
+    addLongueurIA: null,
+    addCouche: s.addCoucheTouched ? s.addCouche : null,
+    addCoucheIA: null,
     ...(s.addSaisonsLues ? { addSaisons: null, addSaisonsLues: false } : {}),
     ...(effacerNom || !s.addNameTouched ? { addName: "", addNameTouched: false } : {}),
   };
@@ -1882,6 +1900,21 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  /**
+   * Écrit la longueur ou la couche d'une pièce (migration 0062) : même règle que le motif — un échec remet l'état d'avant et se dit ; tant
+   * que la migration n'est pas exécutée, rien n'est écrit et les deux champs ne sont plus proposés (formeDisponible).
+   */
+  const enregistrerForme = (
+    id: number,
+    champ: { longueur: Longueur | null } | { couche: Couche | null },
+    avant: { longueur: Longueur | undefined } | { couche: Couche | undefined }
+  ) => {
+    updateDressingItemForme(id, champ).catch((err) => {
+      setState((st) => ({ ...st, items: st.items.map((it) => (it.id === id ? { ...it, ...avant } : it)) }));
+      reportDressingError("updateDressingItemForme", err);
+    });
+  };
+
   /** Pièces importées dont l'insertion est en cours : la limite gratuite les compte déjà (stateRef n'est à jour qu'au rendu suivant). */
   const piecesImporteesEnVol = useRef(0);
 
@@ -2475,6 +2508,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addMotif: item.motif ?? null,
           addMotifTouched: Boolean(item.motif),
           addMotifIA: null,
+          addLongueur: item.longueur ?? null,
+          addLongueurTouched: Boolean(item.longueur),
+          addLongueurIA: null,
+          addCouche: item.couche ?? null,
+          addCoucheTouched: Boolean(item.couche),
+          addCoucheIA: null,
           addCoupe: item.coupe ?? null,
           addCoupeTouched: Boolean(item.coupe),
           addSacType: item.cat === "sac" ? item.sacType ?? null : null,
@@ -2548,6 +2587,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addMotif: item.motif ?? null,
           addMotifTouched: Boolean(item.motif),
           addMotifIA: null,
+          addLongueur: item.longueur ?? null,
+          addLongueurTouched: Boolean(item.longueur),
+          addLongueurIA: null,
+          addCouche: item.couche ?? null,
+          addCoucheTouched: Boolean(item.couche),
+          addCoucheIA: null,
           addCoupe: item.coupe ?? null,
           addCoupeTouched: Boolean(item.coupe),
           addSacType: item.cat === "sac" ? item.sacType ?? null : null,
@@ -2600,6 +2645,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           ...(aDesManches(k) ? {} : { addManches: null, addManchesIA: null, addManchesTouched: false }),
           // Un bijou n'a pas de motif.
           ...(aUnMotif(k) ? {} : { addMotif: null, addMotifIA: null, addMotifTouched: false }),
+          // La longueur (robe, jupe, manteau) et la couche (veste) ne valent que pour leurs catégories (forme.ts).
+          ...(aUneLongueur(k) ? {} : { addLongueur: null, addLongueurIA: null, addLongueurTouched: false }),
+          ...(aUneCouche(k) ? {} : { addCouche: null, addCoucheIA: null, addCoucheTouched: false }),
         };
       }),
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c, addColorTouched: true })),
@@ -2679,6 +2727,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
                   // Motif lu sur la photo : jamais pour un bijou, jamais par-dessus un choix de l'utilisatrice.
                   addMotif: s.addMotifTouched || !aUnMotif(finalCat) || !catMatches ? s.addMotif : a.motif ?? s.addMotif,
                   addMotifIA: !catMatches || !aUnMotif(finalCat) ? s.addMotifIA : a.motif ?? s.addMotifIA,
+                  // Longueur et couche lues sur la photo (12/11/2026) : seulement pour leurs catégories, jamais par-dessus un choix.
+                  addLongueur: s.addLongueurTouched || !aUneLongueur(finalCat) || !catMatches ? s.addLongueur : a.longueur ?? s.addLongueur,
+                  addLongueurIA: !catMatches || !aUneLongueur(finalCat) ? s.addLongueurIA : a.longueur ?? s.addLongueurIA,
+                  addCouche: s.addCoucheTouched || !aUneCouche(finalCat) || !catMatches ? s.addCouche : a.couche ?? s.addCouche,
+                  addCoucheIA: !catMatches || !aUneCouche(finalCat) ? s.addCoucheIA : a.couche ?? s.addCoucheIA,
                   ...(saisonsLues ? { addSaisons: saisonsLues, addSaisonsLues: true } : {}),
                   addSubtype: finalSubtype,
                   addShoeType: finalShoeType,
@@ -2743,6 +2796,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     retablirAddManches: () => setState((s) => ({ ...s, addManches: s.addManchesIA, addManchesTouched: false })),
     setAddMotif: (m) => setState((s) => ({ ...s, addMotif: s.addMotif === m ? null : m, addMotifTouched: true })),
     retablirAddMotif: () => setState((s) => ({ ...s, addMotif: s.addMotifIA, addMotifTouched: false })),
+    setAddLongueur: (l) => setState((s) => ({ ...s, addLongueur: s.addLongueur === l ? null : l, addLongueurTouched: true })),
+    retablirAddLongueur: () => setState((s) => ({ ...s, addLongueur: s.addLongueurIA, addLongueurTouched: false })),
+    setAddCouche: (c) => setState((s) => ({ ...s, addCouche: s.addCouche === c ? null : c, addCoucheTouched: true })),
+    retablirAddCouche: () => setState((s) => ({ ...s, addCouche: s.addCoucheIA, addCoucheTouched: false })),
     setAddOccasion: (o) =>
       setState((s) => {
         // Une occasion suggérée (en pointillés) qu'on touche devient confirmée ;
@@ -2832,6 +2889,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         saisons,
         manches: aDesManches(s.addCat) ? s.addManches ?? undefined : undefined,
         motif: aUnMotif(s.addCat) ? s.addMotif ?? undefined : undefined,
+        longueur: aUneLongueur(s.addCat) ? s.addLongueur ?? undefined : undefined,
+        couche: aUneCouche(s.addCat) ? s.addCouche ?? undefined : undefined,
         occasion: (() => {
           return s.addOccasion.length ? s.addOccasion : undefined;
         })(),
@@ -2899,6 +2958,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addMotif: null,
         addMotifIA: null,
         addMotifTouched: false,
+        addLongueur: null,
+        addLongueurIA: null,
+        addLongueurTouched: false,
+        addCouche: null,
+        addCoucheIA: null,
+        addCoucheTouched: false,
         addDone: false,
         addShoeType: null,
         addShoeTypeTouched: false,
@@ -2926,6 +2991,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           enregistrerSaisons(editingId, saisons);
           if (base.manches !== original?.manches) enregistrerManches(editingId, base.manches ?? null, original?.manches);
           if (base.motif !== original?.motif) enregistrerMotif(editingId, base.motif ?? null, original?.motif);
+          if (base.longueur !== original?.longueur) enregistrerForme(editingId, { longueur: base.longueur ?? null }, { longueur: original?.longueur });
+          if (base.couche !== original?.couche) enregistrerForme(editingId, { couche: base.couche ?? null }, { couche: original?.couche });
           deleteDressingPhotos(photos).catch((err) => reportDressingError("deleteDressingPhotos", err));
         }
         return;
@@ -2947,6 +3014,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             enregistrerSaisons(item.id, saisons);
             if (base.manches) enregistrerManches(item.id, base.manches, undefined);
             if (base.motif) enregistrerMotif(item.id, base.motif, undefined);
+            if (base.longueur) enregistrerForme(item.id, { longueur: base.longueur }, { longueur: undefined });
+            if (base.couche) enregistrerForme(item.id, { couche: base.couche }, { couche: undefined });
           })
           .catch((err) => {
             // Échec réseau/RLS/contrainte : la pièce n'apparaît pas dans le dressing

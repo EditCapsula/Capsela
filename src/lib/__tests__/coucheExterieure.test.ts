@@ -38,7 +38,7 @@ describe("la tenue et sa couche extérieure", () => {
 
   it("5. aucun manteau dans la tenue ni de candidat : aucun bloc", () => {
     const t = [haut, pantalon, ballerines];
-    expect(separerCoucheExterieure(t, 5)).toEqual({ principal: t, exterieur: null, suggere: false });
+    expect(separerCoucheExterieure(t, 5)).toEqual({ principal: t, exterieur: null, suggere: false, remplace: null, conseilManteauPlusLong: false });
   });
 
   it("2 bis. tenue sans manteau, manteau disponible par le froid : il est proposé, hors du look", () => {
@@ -48,6 +48,15 @@ describe("la tenue et sa couche extérieure", () => {
     expect(r.suggere).toBe(true);
     expect(r.principal).toEqual(t);
     expect(separerCoucheExterieure(t, 18, [manteau]).exterieur).toBeNull();
+  });
+
+  it("2 ter. aucun manteau adapté dans le dressing : un manteau de la capsule, dans la strate extérieure (12/11/2026)", () => {
+    const t = [robe, ballerines, sac];
+    const r = separerCoucheExterieure(t, 10, [], [trench]);
+    expect(r.exterieur).toBe(trench);
+    expect(r.suggere).toBe(true);
+    // Le dressing passe d'abord.
+    expect(separerCoucheExterieure(t, 10, [manteau], [trench]).exterieur).toBe(manteau);
   });
 
   it("8. une veste légère reste dans le look, même par le froid", () => {

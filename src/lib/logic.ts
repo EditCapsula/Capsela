@@ -2,6 +2,7 @@ import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, Occ
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_ENTRETIEN, PREFS_SOIREE_HABILLEE, effectiveFormality, isBag, isRainy, isSunny, necessiteLeSoleil } from "./data";
 import { detectSacType } from "./attributes";
+import { vestePlusLongueQueLeManteau } from "./forme";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, currentSeasonKey, estDeSaison } from "./capsule";
 import { accordVisage, candidatsCouleur, colorimetriePourPivot, type ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -444,6 +445,14 @@ export interface LeviersMesure {
   manchesIgnorees?: boolean;
   /** Reproduit le comportement d'AVANT le 19/10/2026 : aucun manteau ajouté par le froid, et le manteau soumis au plancher de formalité. */
   sansManteauParLeFroid?: boolean;
+  /**
+   * R-B25, LA LONGUEUR DES COUCHES (12/11/2026, validé par la propriétaire : « une veste portée sous un manteau ne doit pas être plus
+   * longue que lui » ; retour d'une testeuse : « robe longue noire + kimono + manteau court »). Une veste plus longue que le manteau tiré
+   * par-dessus quitte la tenue — le manteau reste, la pièce principale dessous aussi (R-B9). Seulement quand les DEUX longueurs sont
+   * connues (forme.ts) : sans elles, rien ne change. Mesurée par scripts/longueur-couches.audit.ts (n° 33), ACTIVE depuis le 12/11/2026
+   * (validé). Levier de mesure : reproduit l'avant (aucune règle de longueur).
+   */
+  sansLongueurDesCouches?: boolean;
 }
 
 /**
@@ -1642,6 +1651,32 @@ export function generateOutfit(
     const manteau = pick(["manteau"], false);
     if (manteau && !ids.includes(manteau.id)) ids.push(manteau.id);
   }
+  // R-B25 — la longueur des couches (levier de mesure sansLongueurDesCouches) : une veste ne dépasse pas sous le manteau. D'abord un AUTRE MANTEAU,
+  // assez long, parmi ceux que les règles admettent (la tenue garde sa veste) ; à défaut, la veste qui dépasse quitte la tenue — jamais
+  // celle qui compense la formalité de la tenue (compensatingVeste) : sans elle, la tenue retomberait sous le niveau de l'occasion. Ce
+  // cas-là (arbitré le 12/11/2026) se règle À L'AFFICHAGE : « Pour l'extérieur » propose un manteau de la capsule assez long, sinon
+  // conseille un manteau plus long (coucheExterieure.ts).
+  if (!leviers?.sansLongueurDesCouches) {
+    const portees = ids.map((id) => pool.find((x) => x.id === id) ?? chosen.find((x) => x.id === id)).filter((x): x is Item => !!x);
+    const manteauPorte = portees.find((x) => x.cat === "manteau");
+    const vestes = portees.filter((x) => x.cat === "veste");
+    if (manteauPorte && vestes.some((v) => vestePlusLongueQueLeManteau(v, manteauPorte))) {
+      const couvrants = poolFor(["manteau"], false).filter((m) => m.cat === "manteau" && m.id !== manteauPorte.id && !vestes.some((v) => vestePlusLongueQueLeManteau(v, m)));
+      const autre = rand(harmonize(couvrants, chosen, false));
+      if (autre) {
+        ids.splice(ids.indexOf(manteauPorte.id), 1, autre.id);
+        const k = chosen.findIndex((x) => x.id === manteauPorte.id);
+        if (k >= 0) chosen.splice(k, 1, autre);
+      } else {
+        for (const v of vestes) {
+          if (v.id === compensatingVeste?.id || !vestePlusLongueQueLeManteau(v, manteauPorte)) continue;
+          ids.splice(ids.indexOf(v.id), 1);
+          const k = chosen.findIndex((x) => x.id === v.id);
+          if (k >= 0) chosen.splice(k, 1);
+        }
+      }
+    }
+  }
   // R-S27 (01/11/2026, demandé : « en télétravail propose plutôt un gilet ») — là où une veste ou un manteau seraient venus (veste par
   // temps frais, manteau sous SEUIL_MANTEAU), un gilet : une maille OUVERTE (fermetureMaille), jamais un pull fermé par-dessus la
   // robe ou le haut. Sans gilet de saison dans le pool, rien n'est ajouté. Pas si la tenue a déjà une maille.
@@ -2728,10 +2763,14 @@ export function computeLookScore(
             .filter((i) => !pieceIds.has(i.id) && estCoucheDuSoir(i) && estDeSaison(i, weather))
             .sort((a, b) => Number(/capuche|hoodie/i.test(`${b.subtype ?? ""} ${b.name}`)) - Number(/capuche|hoodie/i.test(`${a.subtype ?? ""} ${a.name}`)) || dressingDAbord(a, b))
         : [];
+    // Sous SEUIL_MANTEAU, JAMAIS une veste à la place du manteau (12/11/2026, signalé : « la veste courte en tweed n'est pas un manteau,
+    // ici la recommandation aurait été d'ajouter un manteau ») : sans manteau admis, rien n'est suggéré ici — l'écran propose alors un
+    // manteau de la capsule, ou d'en ajouter un au dressing. Le Sport garde sa couche à lui (coucheSport).
+    const froid = tempReference < SEUIL_MANTEAU;
     proactives.push({
       key: "veste_soir",
-      text: `N'hésite pas à compléter cette tenue avec une veste, ${fraicheurDuSoir(weather)}.`,
-      suggestedId: (coucheSport.length ? coucheSport : decontracte.length ? decontracte : parLeFroid.length ? parLeFroid : vesteManteauCandidates)[0]?.id,
+      text: `N'hésite pas à compléter cette tenue avec ${froid ? "un manteau" : "une veste"}, ${fraicheurDuSoir(weather)}.`,
+      suggestedId: (coucheSport.length ? coucheSport : decontracte.length ? decontracte : froid ? parLeFroid : vesteManteauCandidates)[0]?.id,
     });
   }
 
