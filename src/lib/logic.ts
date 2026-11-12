@@ -2,6 +2,7 @@ import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, Occ
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_ENTRETIEN, PREFS_SOIREE_HABILLEE, effectiveFormality, isBag, isRainy, isSunny, necessiteLeSoleil } from "./data";
 import { detectSacType } from "./attributes";
+import { vestePlusLongueQueLeManteau } from "./forme";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, currentSeasonKey, estDeSaison } from "./capsule";
 import { accordVisage, candidatsCouleur, colorimetriePourPivot, type ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -444,6 +445,13 @@ export interface LeviersMesure {
   manchesIgnorees?: boolean;
   /** Reproduit le comportement d'AVANT le 19/10/2026 : aucun manteau ajouté par le froid, et le manteau soumis au plancher de formalité. */
   sansManteauParLeFroid?: boolean;
+  /**
+   * R-B25, LA LONGUEUR DES COUCHES (12/11/2026, validé par la propriétaire : « une veste portée sous un manteau ne doit pas être plus
+   * longue que lui » ; retour d'une testeuse : « robe longue noire + kimono + manteau court »). Une veste plus longue que le manteau tiré
+   * par-dessus quitte la tenue — le manteau reste, la pièce principale dessous aussi (R-B9). Seulement quand les DEUX longueurs sont
+   * connues (forme.ts) : sans elles, rien ne change. INACTIVE tant qu'elle n'est pas mesurée (scripts/longueur-couches.audit.ts).
+   */
+  longueurDesCouches?: boolean;
 }
 
 /**
@@ -1641,6 +1649,20 @@ export function generateOutfit(
   ) {
     const manteau = pick(["manteau"], false);
     if (manteau && !ids.includes(manteau.id)) ids.push(manteau.id);
+  }
+  // R-B25 — la longueur des couches (levier longueurDesCouches) : une veste plus longue que le manteau quitte la tenue. Jamais la veste
+  // qui compense la formalité de la tenue (compensatingVeste) : sans elle, la tenue retomberait sous le niveau de l'occasion.
+  if (leviers?.longueurDesCouches) {
+    const portees = ids.map((id) => pool.find((x) => x.id === id) ?? chosen.find((x) => x.id === id)).filter((x): x is Item => !!x);
+    const manteauPorte = portees.find((x) => x.cat === "manteau");
+    if (manteauPorte) {
+      for (const v of portees) {
+        if (v.id === compensatingVeste?.id || !vestePlusLongueQueLeManteau(v, manteauPorte)) continue;
+        ids.splice(ids.indexOf(v.id), 1);
+        const k = chosen.findIndex((x) => x.id === v.id);
+        if (k >= 0) chosen.splice(k, 1);
+      }
+    }
   }
   // R-S27 (01/11/2026, demandé : « en télétravail propose plutôt un gilet ») — là où une veste ou un manteau seraient venus (veste par
   // temps frais, manteau sous SEUIL_MANTEAU), un gilet : une maille OUVERTE (fermetureMaille), jamais un pull fermé par-dessus la

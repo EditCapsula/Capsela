@@ -11,7 +11,7 @@ describe("longueur et couche", () => {
     expect([...CATEGORIES_A_LONGUEUR]).toEqual([...CATS_EDGE]);
   });
   it("seules une robe, une jupe, un manteau ont une longueur ; seule une veste a une couche", () => {
-    expect(["robe", "jupe", "manteau"].every((c) => aUneLongueur(c as never))).toBe(true);
+    expect(["robe", "jupe", "manteau", "veste"].every((c) => aUneLongueur(c as never))).toBe(true);
     expect(aUneLongueur("pantalon")).toBe(false);
     expect(aUneCouche("veste")).toBe(true);
     expect(aUneCouche("manteau")).toBe(false);

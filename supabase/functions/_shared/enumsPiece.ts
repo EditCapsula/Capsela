@@ -37,7 +37,7 @@ export const aUnMotif = (cat: string): boolean => cat !== "bijou";
 /** La longueur et la couche (12/11/2026) — doivent rester synchronisées avec LONGUEURS, COUCHES (src/lib/forme.ts) ; un test le verrouille. */
 export const LONGUEURS = ["courte", "midi", "longue"] as const;
 export const COUCHES = ["structuree", "fluide"] as const;
-export const CATEGORIES_A_LONGUEUR = ["robe", "jupe", "manteau"] as const;
+export const CATEGORIES_A_LONGUEUR = ["robe", "jupe", "manteau", "veste"] as const;
 
 export const SHOE_TYPES = [
   "Baskets", "Bottines", "Bottes", "Escarpins", "Sandales", "Sandales à talons",
