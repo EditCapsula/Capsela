@@ -3367,6 +3367,15 @@ function indefiniteArticle(it: Item): string {
   return info.gender === "f" ? "une" : "un";
 }
 
+/**
+ * « Un manteau chocolat » (12/11/2026, « À ajouter pour l'extérieur » de la page Tenue) : l'article indéfini et le libellé compact d'une
+ * pièce (pieceLabel), avec une majuscule — tirés de ses données réelles, comme le reste des phrases de l'app. Affichage seulement.
+ */
+export function pieceAvecArticle(it: Item): string {
+  const t = `${indefiniteArticle(it)} ${pieceLabel(it)}`;
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 /** Libellé compact d'une pièce, toujours dérivé de ses données réelles — accord naturel de couleur ("pantalon noir", "baskets blanches"), jamais la construction invariable "en {couleur}". */
 function pieceLabel(it: Item): string {
   const base = pieceBase(it);

@@ -188,13 +188,86 @@ export function RailPiecesTenue({
   onRemplacer,
   misEnAvant = null,
   chargement = false,
+  disposition = "rail",
 }: {
   pieces: Item[];
   onRemplacer?: (piece: Item) => void;
   misEnAvant?: number | null;
   chargement?: boolean;
+  /**
+   * « grille » (12/11/2026, brief « Optimisation UX/UI – Ma tenue du jour », point 5) : deux colonnes, « Les pièces de ton look · N »,
+   * des visuels grands, chaque carte entièrement cliquable. « rail » : la rangée d'avant, gardée dans Planifier et l'agenda.
+   */
+  disposition?: "rail" | "grille";
 }) {
   const { actions } = useCapsela();
+  if (disposition === "grille" && !chargement) {
+    if (!pieces.length) return null;
+    return (
+      <>
+        <div className="t-surtitre text-muted mt-[26px] mb-[10px]">Les pièces de ton look · {pieces.length}</div>
+        <ul className="grid grid-cols-2 gap-[10px] list-none p-0 m-0">
+          {pieces.map((it) => {
+            const suggested = isCatalogId(it.id);
+            const img = resolveItemImage(it);
+            const categorie = CATLABEL[isBag(it) ? "sac" : it.cat];
+            return (
+              <li key={it.id} className="relative min-w-0">
+                <button
+                  type="button"
+                  onClick={() => actions.openItem(it.id, suggested)}
+                  aria-label={`${it.name} — ${categorie}, ${suggested ? "capsule" : "dressing"}. Voir le détail`}
+                  className="w-full text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer active:opacity-80 transition-shadow duration-[1200ms] ease-out"
+                  style={{ boxShadow: misEnAvant === it.id ? "0 0 0 1.5px var(--color-terracotta)" : "0 0 0 1.5px rgba(166,105,80,0)" }}
+                >
+                  {/* Le visuel entier, jamais déformé ni rogné (contain) ; une photo du dressing remplit son carré comme dans le rail. */}
+                  <span className="relative block w-full aspect-square" style={{ background: img.url ? "var(--color-photo-bg)" : it.hex }}>
+                    {img.url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={img.url}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="absolute inset-0 w-full h-full"
+                        style={{
+                          objectFit: img.kind === "photo" ? "cover" : "contain",
+                          padding: img.kind === "photo" ? 0 : 12,
+                          boxSizing: "border-box",
+                          filter: img.kind === "photo" ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
+                        }}
+                      />
+                    )}
+                    {it.imageStatus === "generating" && <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />}
+                  </span>
+                  <span className="block px-[10px] pt-[8px] pb-[10px]">
+                    <span className="block t-titre-vignette text-ink line-clamp-2 break-words">{it.name}</span>
+                    <span className="block text-[11px] text-muted mt-[2px]">{categorie}</span>
+                    {/* Provenance à la pièce — la même séparation que la ligne du hero (isCatalogId), jamais un second calcul. */}
+                    <span className="block text-[11px] mt-[1px]" style={{ color: suggested ? "var(--color-sand-text)" : "var(--color-muted)" }}>
+                      {suggested ? "Capsule" : "Dressing"}
+                    </span>
+                  </span>
+                </button>
+                {/* ⇄ posé sur la carte, à côté du bouton (jamais un bouton dans un bouton) : la tenue du jour seulement. */}
+                {onRemplacer && (
+                  <button
+                    type="button"
+                    onClick={() => onRemplacer(it)}
+                    aria-label={`Remplacer ${it.name}`}
+                    className="absolute top-[7px] right-[7px] w-[30px] h-[30px] rounded-full flex items-center justify-center text-[14px] cursor-pointer"
+                    style={{ background: "rgba(251,248,243,.92)", color: "var(--color-muted)", boxShadow: "0 1px 4px rgba(29,26,22,.14)" }}
+                  >
+                    ⇄
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    );
+  }
   if (chargement) {
     return (
       <div className="scrollarea flex gap-[10px] overflow-x-auto pb-[4px]">

@@ -21,7 +21,7 @@ import { useCapsela } from "@/lib/store";
 import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { RailPiecesTenue } from "@/components/HeroTenue";
-import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
+import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, qualificatifLook, SEUIL_MANTEAU, sousTitreLookDuJour, titreEditorialOccasion, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
 
 /** Première lettre en capitale : « il va faire frais ce soir » en tête de phrase. */
@@ -42,9 +42,9 @@ import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
 import { paletteHexes, styleConfigFor, VISUELS_ETAPE_STYLE_FEMME, type Gender, type StyleId } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
-import type { Item } from "@/lib/types";
+import type { Item, OccasionKey } from "@/lib/types";
 import Badge from "@/components/Badge";
-import Button, { BoutonDiscret } from "@/components/Button";
+import Button from "@/components/Button";
 import Card from "@/components/Card";
 import { degres } from "@/lib/unites";
 
@@ -57,6 +57,20 @@ function PlusIcon() {
     </svg>
   );
 }
+/** La carte de la tenue (12/11/2026) : 564 px avant, plus la signature stylistique sous le flat lay — le flat lay garde sa hauteur. */
+const HAUTEUR_CARTE = 612;
+/** Une action secondaire de la carte (12/11/2026) : du texte et une icône, sans fond ni contour, 44 px de cible. */
+const ACTION_SECONDAIRE =
+  "flex items-center justify-center gap-[5px] min-h-[44px] px-[4px] text-[12px] leading-[1.2] text-center text-ink cursor-pointer min-[360px]:whitespace-nowrap disabled:cursor-default disabled:opacity-45";
+function IconeAutreTenue() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" className="text-terracotta flex-shrink-0" style={{ display: "block" }}>
+      <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /**
  * Une pièce proposée pour compléter la tenue (14/10/2026) : sa vignette ouvre la fiche, « Choisir » la met dans la tenue. Une pièce de
  * la capsule garde son traitement de suggestion (atténuée, « Suggérée ») pour ne jamais passer pour une pièce possédée — la seule
@@ -181,9 +195,6 @@ function ExploreStyleCard({
 }
 
 export default function TenuesScreen() {
-  // Sous 380 px de large, « Autre tenue » ne garde que son icône (libellé lu par les lecteurs d'écran) : la ligne de provenance tient
-  // alors sur une ligne avec les deux pastilles (30/10/2026). L'app n'est rendue que côté client (AppLoader, ssr: false).
-  const etroit = typeof window !== "undefined" && window.innerWidth < 380;
   const { state, weather, meteoDuJour, jourConsulte, geoLoading, wardrobePool, vestiairePool, defaultCapsule, actions, sourceMeteo } = useCapsela();
   // En attente tant que la météo du jour consulté n'est pas connue : position,
   // ou prévision d'un jour à venir (navigation par date, 27/09/2026).
@@ -497,6 +508,20 @@ export default function TenuesScreen() {
     return lignes;
   })();
 
+  // LA SIGNATURE STYLISTIQUE (12/11/2026, brief, 3C) : seulement des textes que l'app produit déjà, à partir de l'occasion choisie, de son
+  // contexte (journée de travail, rendez-vous) et de la température réelle du jour (qualificatifLook ; sans météo réelle, rien n'est dit
+  // d'elle). Aucun score, aucun critère inventé.
+  const occasionSignature = (state.occasion || "all") as OccasionKey;
+  const signature =
+    piecesDuLook.length > 0 && !planApplique
+      ? {
+          accroche: titreEditorialOccasion(occasionSignature),
+          phrase: [sousTitreLookDuJour(occasionSignature, state.workMode, state.dateContext), qualificatifLook(tempReelle, piecesDuLook)]
+            .filter(Boolean)
+            .join(" "),
+        }
+      : null;
+
   // Ce qui manque : ce que le moteur a signalé (outfitMissingCats) ; à
   // défaut, la structure minimale du moteur appliquée à la tenue affichée
   // (27/09/2026) — une tenue modifiée ou rejouée depuis un autre écran
@@ -781,13 +806,13 @@ export default function TenuesScreen() {
           partagé avec l'Accueil. Il remplace le surtitre qui répétait la
           date : les chevrons changent le jour, la météo ouvre
           « Localisation & météo ». */}
-      <BarreDuJour className="mt-2" />
+      <BarreDuJour className="mt-2" meteoEnLigne />
       {/* Ce qui est planifié ce jour-là (Planifier) — le même rappel que
           l'Accueil. Un plan de journée est devenu la tenue ci-dessous (option C,
           30/09/2026) ; restent ici la soirée et les plans écartés ou incomplets. */}
       <PlansDuJour depuis="tenues" className="mt-3" />
 
-      <SelecteurOccasion quand={quand} />
+      <SelecteurOccasion />
 
       {state.occasion === "voyage" && state.travelMode === "Longue distance" && !state.travelTipDismissed && (
         <Card rayon="bloc" className="mt-[14px] flex items-start gap-[11px] px-4 py-[14px]">
@@ -859,7 +884,7 @@ export default function TenuesScreen() {
           // secondaires ont une hauteur fixe. Un constat météo sur un plan l'allonge, jamais le flat lay.
           // Blanc cassé des cartes cerné d'un filet (14/10/2026, demandé : « le hero de Tenue n'a pas le même fond que la homepage ») : le
           // fond de l'accueil depuis l'option 3h, pour que la tenue d'une slide garde son fond en arrivant ici par « Voir le look ».
-          style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : 564, minHeight: 564 }}
+          style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : HAUTEUR_CARTE, minHeight: HAUTEUR_CARTE }}
         >
           {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
               le 23/09). Conditionnelle depuis que le titre est parti : sans
@@ -897,7 +922,15 @@ export default function TenuesScreen() {
                 pas une alternative demandée. */}
             <span className="t-label" aria-live="polite" style={{ color: statut.cle === "a_completer" && !planApplique ? "var(--color-ink-soft)" : "var(--color-ink)" }}>
               {(planApplique || statut.cle === "complete") && <span aria-hidden="true">✦ </span>}
-              {planApplique ? (estPlanValise(planApplique.plan.id) ? "Look de ta valise" : "Ta tenue planifiée") : statut.libelle}
+              {/* « TA SÉLECTION DU JOUR · N PIÈCES » (12/11/2026, brief « Optimisation UX/UI – Ma tenue du jour », 3A) : le nombre de pièces
+                  du look (sans le manteau à part). Une tenue à compléter garde son statut (« À compléter · 3/4 pièces ») : il dit ce qui manque. */}
+              {planApplique
+                ? estPlanValise(planApplique.plan.id)
+                  ? "Look de ta valise"
+                  : "Ta tenue planifiée"
+                : statut.cle === "a_completer"
+                  ? statut.libelle
+                  : `Ta sélection du jour · ${piecesDuLook.length} ${piecesDuLook.length > 1 ? "pièces" : "pièce"}`}
             </span>
             {/* « RECOMMANDÉ » EN TÊTE, à la place d'« Autre tenue » (30/10/2026, demandé), qui passe sur la ligne de la provenance. */}
             {badgesAffiches.length > 0 && (
@@ -948,11 +981,22 @@ export default function TenuesScreen() {
             </div>
           </div>
           <div className="flex-shrink-0">
-            {/* POUR L'EXTÉRIEUR (04/11/2026, brief « Séparer la tenue principale du manteau ») : sous le flat lay, entre deux filets,
-                une ligne secondaire — jamais une seconde grande carte. Seulement quand le moteur a ajouté un manteau par le froid. */}
+            {/* LA SIGNATURE STYLISTIQUE (12/11/2026, brief, 3C) : une accroche et une phrase, sous le flat lay. Rien d'inventé : l'accroche est
+                le titre éditorial de l'occasion (titreEditorialOccasion, celui des idées de tenues), la phrase dit pour quoi la tenue est
+                pensée (sousTitreLookDuJour) et ce que la météo du jour en dit (qualificatifLook, seulement quand la température est réelle). */}
+            {signature && (
+              <div className="px-[6px] mb-[8px]">
+                <div className="t-titre-ligne text-ink">{signature.accroche}</div>
+                <div className="text-[12.5px] text-ink-soft leading-[1.4] mt-[2px]" style={{ textWrap: "pretty" }}>
+                  {signature.phrase}
+                </div>
+              </div>
+            )}
+            {/* À AJOUTER POUR L'EXTÉRIEUR (04/11/2026, « Séparer la tenue principale du manteau » ; formulation du 12/11/2026, brief, 3D) :
+                sous le flat lay, entre deux filets, une ligne secondaire — jamais une seconde grande carte, jamais dans les pièces du look. */}
             {exterieur && tempReelle != null && (
               <div className="mb-[6px]">
-                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} />
+                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} formulation="tenue" />
               </div>
             )}
             {!exterieur && conseilManteauPlusLong && (
@@ -1008,46 +1052,10 @@ export default function TenuesScreen() {
             )}
             {/* LA PROVENANCE ET « AUTRE TENUE » SUR UNE LIGNE (30/10/2026, demandé : « Autre tenue sur la même ligne que 1 pièce de ta
                 capsule », « les deux labels gris sur la même ligne ») : les pastilles ne passent plus à la ligne ; « Autre tenue » à droite. */}
-            {(provenance || !noCompleteOutfit || planApplique) && (
-              <div className="flex items-center gap-[5px] mt-[5px] px-[6px]">
-                <span className="flex-1 min-w-0 flex items-center gap-[5px]">
-                {(provenance ?? []).map((p) => (
-                  <span
-                    key={p.cle}
-                    className="inline-flex items-center rounded-full px-[9px] py-[5px] text-[11px] leading-[1.25] whitespace-nowrap flex-shrink-0"
-                    style={{ background: "rgba(29,26,22,.07)", color: "var(--color-ink)" }}
-                  >
-                    {p.texte}
-                  </span>
-                ))}
-                </span>
-              {planApplique ? (
-                <button
-                  onClick={actions.voirAutreProposition}
-                  className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-ink cursor-pointer -my-[10px] py-[10px]"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <span className={etroit ? "sr-only" : undefined}>Autre tenue</span>
-                </button>
-              ) : !noCompleteOutfit && (
-                <button
-                  onClick={autreTenue}
-                  disabled={tirageEnCours}
-                  aria-busy={tirageEnCours}
-                  className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-ink cursor-pointer disabled:cursor-not-allowed -my-[10px] py-[10px]"
-                  style={{ opacity: tirageEnCours ? 0.6 : 1 }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <span className={etroit ? "sr-only" : undefined}>Autre tenue</span>
-                </button>
-              )}
-              </div>
+            {/* LA PROVENANCE, EN SECOND NIVEAU (12/11/2026, brief, 3E) : une ligne de texte discrète, sans pastille ; « Autre tenue » rejoint
+                les actions secondaires, sous « Choisir cette tenue ». */}
+            {provenance && (
+              <div className="mt-[4px] px-[6px] text-[11.5px] text-muted leading-[1.4]">{provenance.map((p) => p.texte).join(" · ")}</div>
             )}
           </div>
           </div>
@@ -1065,7 +1073,8 @@ export default function TenuesScreen() {
               <span className="w-8 h-8 rounded-full bg-terracotta-deep text-cream flex items-center justify-center text-base flex-shrink-0">
                 ✓
               </span>
-              <div className="text-[13px] text-ink">Bonne journée avec cette tenue !</div>
+              {/* « TENUE CHOISIE ✓ » (12/11/2026, brief, 4) : le retour explicite après « Choisir cette tenue ». */}
+              <div className="text-[13px] text-ink font-semibold" role="status">Tenue choisie</div>
             </div>
           ) : (
             <Button
@@ -1092,7 +1101,7 @@ export default function TenuesScreen() {
                 border: !vesteWithoutBase && statut.cle === "a_completer" ? "1px solid var(--color-terracotta-deep)" : undefined,
               }}
             >
-              Porter cette tenue
+              Choisir cette tenue
             </Button>
           )}
 
@@ -1101,19 +1110,24 @@ export default function TenuesScreen() {
               plein de la card. « Enregistrer » reste inerte sous deux pièces
               (correctif 23/08 : le masquer le faisait disparaître de façon
               déroutante après une régénération). */}
-          <div className="flex-shrink-0 grid grid-cols-2 gap-[9px] mt-[8px]">
-            <BoutonDiscret style={{ minHeight: 48 }}
+          {/* LES ACTIONS SECONDAIRES (12/11/2026, brief, 4) : Enregistrer, Avis d'un proche, Autre tenue — sur une ligne, en texte, sans fond
+              ni contour : elles ne rivalisent pas avec « Choisir cette tenue ». Mêmes actions et mêmes gardes qu'avant. « Autre tenue » ne
+              touche ni aux tenues enregistrées ni à une tenue déjà choisie (inscrite au Journal). */}
+          <div className="flex-shrink-0 flex items-center justify-between gap-1 mt-[6px] px-[2px]">
+            <button
+              type="button"
+              className={ACTION_SECONDAIRE}
               onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook(exterieur ? [exterieur.id] : undefined)}
               disabled={!canSaveOutfit}
               title={canSaveOutfit ? undefined : "Ajoute au moins 2 pièces à cette tenue pour l'enregistrer."}
               aria-pressed={isOutfitSaved}
-              actif={isOutfitSaved}
             >
-              <span aria-hidden="true">{isOutfitSaved ? "♥" : "♡"}</span>
+              <span aria-hidden="true" className="text-terracotta">{isOutfitSaved ? "♥" : "♡"}</span>
               {isOutfitSaved ? "Enregistrée" : "Enregistrer"}
-            </BoutonDiscret>
-            <BoutonDiscret
-              style={{ minHeight: 48 }}
+            </button>
+            <button
+              type="button"
+              className={ACTION_SECONDAIRE}
               onClick={() =>
                 decalage > 0
                   ? actions.openOpinionShare({
@@ -1126,8 +1140,23 @@ export default function TenuesScreen() {
                   : actions.openOpinionShare()
               }
             >
-              <span aria-hidden="true">✦</span> Avis d&apos;un proche
-            </BoutonDiscret>
+              <span aria-hidden="true" className="text-terracotta">✦</span> Avis d&apos;un proche
+            </button>
+            {planApplique ? (
+              <button type="button" className={ACTION_SECONDAIRE} onClick={actions.voirAutreProposition}>
+                <IconeAutreTenue /> Autre tenue
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={ACTION_SECONDAIRE}
+                onClick={autreTenue}
+                disabled={noCompleteOutfit || tirageEnCours}
+                aria-busy={tirageEnCours}
+              >
+                <IconeAutreTenue /> Autre tenue
+              </button>
+            )}
           </div>
 
           {/* « Autre tenue » est remonté en tête de card le 27/09/2026 (cf.
@@ -1397,11 +1426,14 @@ export default function TenuesScreen() {
       {/* LES PIÈCES DE LA TENUE : le composant partagé avec Planifier (RailPiecesTenue, 04/11/2026), ici avec l'échange ⇄ et le contour
           d'une pièce tout juste ajoutée (R-S13/R-S14). Rien ne disparaît : même rail, mêmes fiches, mêmes gestes qu'avant. Pas de lien
           « Voir les détails » : il n'existe pas d'écran de détail de LA tenue, chaque pièce ouvre le sien. */}
+      {/* LES PIÈCES DE TON LOOK, EN GRILLE (12/11/2026, brief, point 5) : exactement les pièces du flat lay (piecesDuLook) — accessoires
+          compris, sans le manteau montré à part « pour l'extérieur ». */}
       <RailPiecesTenue
-        pieces={outfitPieces}
+        pieces={piecesDuLook}
         chargement={meteoEnAttente}
         misEnAvant={recentlyAddedId}
         onRemplacer={(it) => actions.swapPiece(it.id, it.cat)}
+        disposition="grille"
       />
 
       {!noCompleteOutfit && lookScore.badge === "ajuster" && lookScore.adjustMessage && (

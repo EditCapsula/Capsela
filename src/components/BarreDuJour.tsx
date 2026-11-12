@@ -37,7 +37,16 @@ function IconeInfo() {
 
 const chevron = "w-[30px] h-[44px] flex items-center justify-center flex-shrink-0 cursor-pointer disabled:cursor-default disabled:opacity-30 text-terracotta";
 
-export default function BarreDuJour({ className = "", retro }: { className?: string; retro?: RetroJour }) {
+export default function BarreDuJour({
+  className = "",
+  retro,
+  meteoEnLigne = false,
+}: {
+  className?: string;
+  retro?: RetroJour;
+  /** La température et la condition sur UNE ligne (« 9° · Nuageux », 12/11/2026, page « Ma tenue du jour »). L'accueil garde les deux lignes. */
+  meteoEnLigne?: boolean;
+}) {
   const { actions } = useCapsela();
   // La note sur la source de la météo (« Météo actuelle de ta ville — active la géolocalisation… ») est derrière un « i » (14/10/2026,
   // demandé) : elle ne s'affiche qu'à la demande au lieu d'occuper une ligne sous la barre.
@@ -104,10 +113,14 @@ export default function BarreDuJour({ className = "", retro }: { className?: str
         {!enAttente && temp != null && (
           <div className="flex-shrink-0 text-right" aria-label={`${degres(temp)}${label ? `, ${label}` : ""}`}>
             <div className="flex items-center justify-end gap-[6px] text-terracotta">
-              <IconeTuile nom={soleil ? "apresmidi" : "nuage"} taille={22} />
-              <span className="text-[20px] font-medium text-ink tabular-nums">{degres(temp)}</span>
+              <IconeTuile nom={soleil ? "apresmidi" : "nuage"} taille={meteoEnLigne ? 18 : 22} />
+              <span className={(meteoEnLigne ? "text-[15px]" : "text-[20px]") + " font-medium text-ink tabular-nums whitespace-nowrap"}>
+                {degres(temp)}
+                {/* Sur une ligne dès 360 px ; plus étroit, la condition repasse dessous pour laisser la ville lisible. */}
+                {meteoEnLigne && label && <span className="hidden min-[360px]:inline text-[13px] font-normal text-muted"> · {label}</span>}
+              </span>
             </div>
-            {label && <div className="text-[11px] text-muted mt-[2px] whitespace-nowrap">{label}</div>}
+            {label && <div className={"text-[11px] text-muted mt-[2px] whitespace-nowrap" + (meteoEnLigne ? " min-[360px]:hidden" : "")}>{label}</div>}
             {amplitude && <div className="text-[11px] text-muted-3 whitespace-nowrap tabular-nums">Max {degres(amplitude.max)} · min {degres(amplitude.min)}</div>}
           </div>
         )}

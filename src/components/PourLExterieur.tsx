@@ -2,6 +2,7 @@
 
 import PhotoPiece from "@/components/PhotoPiece";
 import type { Item } from "@/lib/types";
+import { pieceAvecArticle } from "@/lib/logic";
 import { degres } from "@/lib/unites";
 
 /**
@@ -15,6 +16,7 @@ export default function PourLExterieur({
   quand,
   onClick,
   compact = false,
+  formulation = "courte",
 }: {
   piece: Item;
   temperature: number;
@@ -22,6 +24,11 @@ export default function PourLExterieur({
   onClick: () => void;
   /** Sur l'accueil, la carte est plus étroite : vignette et texte un cran plus petits. */
   compact?: boolean;
+  /**
+   * « tenue » (12/11/2026, brief « Optimisation UX/UI – Ma tenue du jour », point 3D) : « À ajouter pour l'extérieur » et « Un manteau
+   * chocolat pour compléter ta tenue à 9°. » ; « courte » : la formulation d'avant, gardée sur l'accueil et dans Planifier.
+   */
+  formulation?: "courte" | "tenue";
 }) {
   const t = Math.round(temperature);
   return (
@@ -35,7 +42,11 @@ export default function PourLExterieur({
       </span>
       <span className="flex-1 min-w-0">
         <span className="flex items-center justify-between gap-2">
-          <span className={"font-serif italic text-ink leading-[1.2] " + (compact ? "text-[14px]" : "text-[16px]")}>Pour l&apos;extérieur</span>
+          {formulation === "tenue" ? (
+            <span className="t-titre-ligne text-ink">À ajouter pour l&apos;extérieur</span>
+          ) : (
+            <span className={"font-serif italic text-ink leading-[1.2] " + (compact ? "text-[14px]" : "text-[16px]")}>Pour l&apos;extérieur</span>
+          )}
           <span className="inline-flex items-center gap-[4px] flex-shrink-0 rounded-full px-[8px] py-[3px] text-[11px] text-ink" style={{ background: "var(--color-warm-bg)" }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
               <path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0Z" />
@@ -44,7 +55,7 @@ export default function PourLExterieur({
           </span>
         </span>
         <span className={"block text-muted-3 leading-[1.4] mt-[2px] " + (compact ? "text-[11px]" : "text-[12px]")} style={{ textWrap: "pretty" }}>
-          {piece.name}, à ajouter selon la météo ({degres(t)} {quand}).
+          {formulation === "tenue" ? `${pieceAvecArticle(piece)} pour compléter ta tenue à ${degres(t)}.` : <>{piece.name}, à ajouter selon la météo ({degres(t)} {quand}).</>}
         </span>
       </span>
       <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
