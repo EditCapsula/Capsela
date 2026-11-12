@@ -177,6 +177,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error: errLecture } = await getSupabase().from("profiles").select("*").eq("id", authUser.id).maybeSingle();
     // Lecture ratée (12/11/2026) : le profil n'est pas « chargé » — on ne le confond pas avec un profil vide, qui ouvrirait le questionnaire.
     setProfilIllisible(Boolean(errLecture));
+    // UN COMPTE NEUF (12/11/2026, arbitré par la propriétaire : « les comptes existants ne doivent pas passer par l'onboarding ; le cas
+    // remonté est un utilisateur qui n'avait jamais créé de compte, sur Apple »). Neuf : une intention d'inscription, un compte créé à
+    // l'instant (compteToutJusteCree), ou AUCUNE ligne de profil — un compte qui n'a jamais rien enregistré n'a jamais commencé,
+    // c'est le cas d'une inscription par e-mail confirmée plus tard. Posé ICI, dans le même tour que le profil : dans l'app, il arrivait
+    // après lui, et la navigation tranchait entre les deux, sur un signal encore faux (onboarding.ts).
+    setJustSignedUp(consumeSignupIntent() || compteToutJusteCree(authUser) || (!errLecture && !data));
     if (errLecture) return;
     const loaded = data ? rowToProfile(data) : EMPTY_PROFILE;
     // Repli sur les métadonnées Supabase Auth (correctif 20/08/2026) — nom et
@@ -232,9 +238,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getUser().then(async ({ data }) => {
       setUser(data.user ?? null);
       if (data.user) {
+        // Le signal « compte neuf » est posé par loadProfile, avec le profil (12/11/2026).
         await loadProfile(data.user);
-        // Une intention d'inscription, ou un compte tout juste créé par Apple ou Google depuis « Se connecter » (11/11/2026).
-        setJustSignedUp(consumeSignupIntent() || compteToutJusteCree(data.user));
       }
       setReady(true);
     });
@@ -244,7 +249,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(u);
       if (u) {
         await loadProfile(u);
-        setJustSignedUp(consumeSignupIntent() || compteToutJusteCree(u));
       } else {
         setProfile(EMPTY_PROFILE);
         setProfilChargeReel(false);

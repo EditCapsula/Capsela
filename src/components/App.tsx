@@ -142,10 +142,10 @@ function Screens() {
     };
   }, []);
 
-  // Session ouverte (connexion, retour Apple/Google, rechargement) : la décision suit le PROFIL, pas l'âge du compte (12/11/2026,
-  // onboarding.ts — remplace la règle du 17/08/2026). Profil non terminé : le questionnaire, repris à l'étape enregistrée ; terminé :
-  // l'écran retenu ou l'accueil. Elle attend que le profil soit lu : dans l'app, la session arrive avant lui.
-  const { ready, signedIn } = auth;
+  // Session ouverte (connexion, retour Apple/Google, rechargement) — onboarding.ts. Un compte existant n'est jamais renvoyé vers le
+  // questionnaire (règle du 17/08/2026, reconduite le 12/11/2026) : l'écran retenu ou l'accueil. Un compte NEUF, ou dont l'onboarding a
+  // commencé sans finir, ouvre le questionnaire à l'étape gardée. La décision attend le profil : dans l'app, la session arrive avant lui.
+  const { ready, signedIn, justSignedUp } = auth;
   // Rechargement sur le web : on garde l'écran de premier niveau courant pour le retrouver (cf. ecranRestaure.ts).
   useEffect(() => {
     memoriserEcran(state.screen);
@@ -194,12 +194,14 @@ function Screens() {
       profileLoaded: auth.profileLoaded,
       profilIllisible: auth.profilIllisible,
       completed: profileCompleted,
+      nouveauCompte: justSignedUp,
+      onboardingEnCours: Boolean(etapeEnregistree),
       screen: state.screen,
     });
     if (decision === "questionnaire") actions.goProfileSetup(etapeEnregistree ?? PREMIERE_ETAPE);
     else if (decision === "accueil") actions.go(ecranARestaurer() ?? "home");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, signedIn, auth.profileLoaded, auth.profilIllisible, profileCompleted, state.screen]);
+  }, [ready, signedIn, justSignedUp, auth.profileLoaded, auth.profilIllisible, profileCompleted, etapeEnregistree, state.screen]);
 
   // Récupération du mot de passe (recette du 26/09/2026) : ouverte depuis le
   // lien de l'e-mail, elle passe devant tout le reste — la session qu'elle

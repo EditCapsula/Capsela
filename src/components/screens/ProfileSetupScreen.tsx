@@ -375,6 +375,15 @@ export default function ProfileSetupScreen() {
     if (state.profileSetupFromEdit || profile.completed || !cle) return;
     void saveProfile({ ...draft, completed: false, prefs: { ...draft.prefs, onboardingEtape: cle } });
   };
+  // L'onboarding commencé est gardé DÈS L'OUVERTURE (12/11/2026) : sans cela, un compte neuf qui ferme l'app avant le premier
+  // « Continuer » n'aurait rien en base qui dise qu'il a commencé, et serait traité ensuite comme un compte existant (onboarding.ts).
+  const marqueRef = useRef(false);
+  useEffect(() => {
+    if (marqueRef.current || profile.prefs.onboardingEtape) return;
+    marqueRef.current = true;
+    enregistrerProgression(STEPS[step]?.key);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const finish = async () => {
     // La fin du parcours efface l'étape gardée : un profil terminé n'a plus rien à reprendre.
     const { onboardingEtape: _fini, ...prefs } = draft.prefs;
