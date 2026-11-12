@@ -28,7 +28,7 @@ export default function AppHeader({
   backLabel = "Revenir à l'écran précédent",
   action,
   gauche,
-  cloche = false,
+  cloche,
 }: {
   showAvatar?: boolean;
   dark?: boolean;
@@ -43,8 +43,9 @@ export default function AppHeader({
   /** Un bouton dans la gouttière gauche quand il n'y a pas de retour (calendrier de l'accueil, 07/10/2026). */
   gauche?: React.ReactNode;
   /**
-   * La cloche du centre de notifications (12/11/2026), à gauche de l'avatar — sur l'accueil seulement (arbitré le 12/11/2026). Les
-   * deux gouttières s'élargissent ensemble pour garder le logo centré.
+   * La cloche du centre de notifications (12/11/2026), à gauche de l'avatar. D'abord sur l'accueil seul, puis le même jour sur toutes
+   * les pages majeures (demandé) : par défaut, là où le calendrier est posé — Accueil, Dressing, Capsule, Planifier, Journal —, jamais
+   * sur un écran à retour ni avant la connexion. Les deux gouttières s'élargissent ensemble pour garder le logo centré.
    */
   cloche?: boolean;
 }) {
@@ -54,15 +55,16 @@ export default function AppHeader({
   // (Accueil, Dressing, Capsule, Journal, Planifier) : un même bandeau partout (07/10/2026). Un écran à retour, à action
   // ou d'avant-connexion garde sa gouttière.
   const calendrierParDefaut = !onBack && gauche === undefined && !action && showAvatar && !dark;
+  const avecCloche = cloche ?? calendrierParDefaut;
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
   // Un départ dans les sept jours (rappelsValise.ts) : un point sur le calendrier, le même que sur l'onglet Planifier.
   const rappelValise = useRappelValise();
   const { nonLues } = useNotifications();
-  const gouttiere = cloche ? "w-[76px] h-[34px] flex-shrink-0 flex items-center" : "w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center";
+  const gouttiere = avecCloche ? "w-[76px] h-[34px] flex-shrink-0 flex items-center" : "w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center";
 
   return (
     <div className="flex items-center justify-between mb-[10px]">
-      <div className={gouttiere + (cloche ? " justify-start" : "")}>
+      <div className={gouttiere + (avecCloche ? " justify-start" : "")}>
         {onBack && (
           /* Même bouton que partout ailleurs depuis le 24/09 (cf.
              BoutonRetour) : ce bandeau portait jusque-là un chevron NU, sans
@@ -99,8 +101,8 @@ export default function AppHeader({
       ) : (
         <LogoCapsela />
       )}
-      <div className={gouttiere + (cloche ? " justify-end gap-2" : "")}>
-        {cloche && (
+      <div className={gouttiere + (avecCloche ? " justify-end gap-2" : "")}>
+        {avecCloche && (
           <button
             onClick={actions.goNotifications}
             aria-label={nonLues ? `Notifications, ${nonLues} non ${nonLues === 1 ? "lue" : "lues"}` : "Notifications"}
