@@ -19,5 +19,14 @@ describe("pièce et visuel", () => {
     if (e2) throw new Error(e2.message);
     for (const r of dr ?? []) console.log("DRESSING", JSON.stringify(r));
     console.log(`catalogue ${cat?.length ?? 0} · dressing ${dr?.length ?? 0}`);
+    // Le visuel est-il partagé ? Les autres pièces du catalogue qui portent le même visual_asset_id le perdraient avec lui.
+    for (const r of cat ?? []) {
+      const asset = (r as { visual_asset_id: number | null }).visual_asset_id;
+      if (asset == null) continue;
+      const { data: memes } = await supabase.from("vestiaire_universel").select("id,name,sous_type,couleur_dominante,matiere,manches,url_image").eq("visual_asset_id", asset);
+      console.log(`asset ${asset} : ${memes?.length ?? 0} pièce(s) — ${(memes ?? []).map((m) => JSON.stringify(m)).join(" | ")}`);
+      const { data: a } = await supabase.from("visual_assets").select("*").eq("id", asset);
+      console.log(`visual_assets ${asset} : ${JSON.stringify(a?.map((x) => ({ ...x, prompt: undefined, image_prompt: undefined })))}`);
+    }
   }, 60_000);
 });
