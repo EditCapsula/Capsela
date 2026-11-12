@@ -3,7 +3,7 @@
 import PlancheLook from "@/components/PlancheLook";
 import { OCC_LABELS } from "@/lib/data";
 import { provenanceLook } from "@/lib/ideesLooks";
-import { titreEditorialOccasion } from "@/lib/logic";
+import { texteEditorialLook, titreEnLigne } from "@/lib/editorialLook";
 import type { Item, OccasionKey } from "@/lib/types";
 
 /**
@@ -41,7 +41,9 @@ function CarteLookIdee({
 }) {
   const { suggestions } = provenanceLook(tenue.pieces.map((p) => p.id), dressing);
   const occasion = OCC_LABELS[tenue.occasion];
-  const phrase = titreEditorialOccasion(tenue.occasion);
+  // Le titre éditorial des tenues recommandées (12/11/2026, editorialLook.ts) : le style réel du look, au lieu du titre fixe de
+  // l'occasion. La phrase n'est pas ajoutée : la carte garde sa hauteur, et sa seconde ligne dit déjà la provenance.
+  const phrase = titreEnLigne(texteEditorialLook(tenue.pieces, tenue.occasion, "Présentiel", "Verre").titre);
   return (
     <button
       type="button"

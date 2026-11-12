@@ -365,6 +365,18 @@ input.capin[type="date"]::-webkit-date-and-time-value {
  * `motion-safe:`, donc jamais jouée si le téléphone demande moins
  * d'animations.
  */
+/* Les actions du menu flottant (MenuActions.tsx, 12/11/2026) : un court glissement vers le haut. */
+@keyframes menu-action-apparition {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes capsule-apparition {
   from {
     opacity: 0;

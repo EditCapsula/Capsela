@@ -1,5 +1,8 @@
 "use client";
 
+import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
+import { styleDuLook, texteEditorialLook } from "@/lib/editorialLook";
+import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
@@ -10,7 +13,7 @@ import { estPlanValise } from "@/lib/valiseDuJour";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
-import { candidatsDeRemplacement, clePrincipale, computeLookScore, SEUIL_MANTEAU, estContexteMaison, qualificatifLook, sousTitreLookDuJour, tenueAUnSocle, titreDuQualificatif } from "@/lib/logic";
+import { candidatsDeRemplacement, clePrincipale, computeLookScore, SEUIL_MANTEAU, estContexteMaison, tenueAUnSocle } from "@/lib/logic";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { libelleStyles, paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
@@ -28,7 +31,6 @@ import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/componen
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
-import { titreDeLaTenue } from "@/lib/dressingSections";
 
 /** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
 const glypheUnivers = (d: string) => (
@@ -114,13 +116,15 @@ const FANTOME_CHAUSSURES: CategoryKey[] = ["chaussures"];
 const AUCUN_FANTOME: CategoryKey[] = [];
 
 export default function HomeScreen() {
-  const { state, geoLoading, vestiairePool, wardrobePool, defaultCapsule, meteoDuJour, jourConsulte, valiseConsultee, actions, weather, sourceMeteo } = useCapsela();
+  const { state, vestiairePool, wardrobePool, defaultCapsule, meteoDuJour, jourConsulte, valiseConsultee, actions, weather, sourceMeteo } = useCapsela();
   const rappelValise = useRappelValise();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
-  const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
   const planApplique = usePlanApplique();
   const ouvrirPiece = useOuvrirPiece();
+  // LE FLAT LAY INTERACTIF (12/11/2026, RemplacementPiece) : la tenue du jour proposée et les propositions du carrousel. Une tenue
+  // venue d'un plan ou d'une valise en séjour garde la fiche directe : la remplacer ici ne changerait ni le plan ni la valise.
+  const remplacement = useRemplacementPiece();
   // UNE TENUE SANS CHAUSSURES (14/10/2026) : leur silhouette se pose dans la composition, comme sur la page Tenue.
   const sansChaussures = (pieces: Item[]): CategoryKey[] => (pieces.length > 0 && !pieces.some((p) => p.cat === "chaussures") ? FANTOME_CHAUSSURES : AUCUN_FANTOME);
 
@@ -279,16 +283,19 @@ export default function HomeScreen() {
   const passee = retroActif > 0 ? tenuePassee(state.history, state.tenuesPlanifiees, jourLocal(dateRetro)) : null;
   const piecesPassee = passee ? passee.pieceIds.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => Boolean(i)) : [];
   const planHero = planApplique && hasOutfit ? planApplique.plan : null;
+  const contexteRemplacement = useContexteLook({ occasion: occasionKey || "all", weather: meteoDuJour });
+  /** Toucher une pièce d'un look : Voir / Remplacer, ou la fiche directe quand le look ne peut pas être modifié ici. */
+  const toucherPiece = (look: Item[], appliquer: ((a: number, n: number) => boolean) | null) => (it: Item) =>
+    appliquer
+      ? remplacement.ouvrir(it, { look, contexte: contexteRemplacement, dressing: state.items, suggestions: defaultCapsule, appliquer })
+      : ouvrirPiece(it);
+  const remplacerTenueDuJour = planHero || valiseConsultee ? null : (a: number, n: number) => (actions.remplacerDansTenue(a, n), true);
   // Un look de valise (séjour en cours, valiseDuJour.ts) se dit comme tel : « Look de ta valise · Jour 2 de ton séjour à Lisbonne ».
   const texteHero = planHero
     ? estPlanValise(planHero.id) && valiseConsultee
       ? texteHeroValise(valiseConsultee.numero, valiseConsultee.valise.destination)
       : texteHeroPlan(planHero)
     : null;
-  // Le qualificatif sous le titre (qualificatifLook) : celui de la météo, sans
-  // jamais présenter comme une option une veste que la tenue contient. Aucune
-  // température affichée : elle est sur la ligne jour + météo, juste au-dessus.
-  const qualificatif = qualificatifLook(meteoEnAttente ? null : meteoDuJour.temp, outfitPieces);
 
   /*
    * « J'ADORE » ENREGISTRE LA TENUE (recette du 26/09/2026, qui revient sur
@@ -327,14 +334,12 @@ export default function HomeScreen() {
 
   /** Les styles de la personne, dits en une fois dans la carte capsule : jamais un style écrit en dur. */
   const stylesDits = libelleStyles(profile.styles, profile.gender);
-  const titreHero = (() => {
-    if (planHero) return { a: titreDuPlan(planHero), b: "" };
-    const deLaTenue = titreDeLaTenue(outfitPieces);
-    if (deLaTenue) return deLaTenue;
-    if (qualificatif) return titreDuQualificatif(qualificatif);
-    return { a: "Ta tenue", b: "du jour" };
-  })();
-  const sousTitreHero = texteHero ? texteHero.sousTitre : sousTitreLookDuJour(occasionKey, state.workMode, state.dateContext);
+  // LE BLOC ÉDITORIAL D'UNE TENUE RECOMMANDÉE (12/11/2026, editorialLook.ts) : un titre qui dit le style réel du look et une phrase
+  // qui dit sa pertinence pour l'occasion. Une tenue planifiée garde son titre et son texte (texteHero) : ce n'est pas une recommandation.
+  const texteDuLook = (pieces: Item[], occ: OccasionKey | null) =>
+    texteEditorialLook(pieces, occ ?? "all", state.workMode, state.dateContext, styleDuLook(pieces, profile.styles, profile.gender));
+  const titreHero = planHero ? { a: titreDuPlan(planHero), b: "" } : texteDuLook(outfitPieces, occasionKey).titre;
+  const sousTitreHero = texteHero ? texteHero.sousTitre : texteDuLook(outfitPieces, occasionKey).phrase;
   const cleTenue = clePieces(outfitPieces.length ? outfitPieces.map((p) => p.id) : state.outfit).join(",");
   const sauvegardee = jourAVenir
     ? state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue)
@@ -378,13 +383,7 @@ export default function HomeScreen() {
     (state.outfitValidated || state.history.some((h) => new Date(h.ts).toDateString() === auj && cleSlide(h.pieceIds) === cleSlide(state.outfit)));
   const piecesDe = (ids: number[]) => ids.map((id) => resolvePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
   const dejaSauvegardee = (ids: number[]) => state.savedLooks.some((l) => cleSlide(l.pieceIds) === cleSlide(ids));
-  // Le titre d'une slide nomme ses deux pièces maîtresses (17/10/2026, titreDeLaTenue) : le titre météo était le même sur toutes.
-  const titreDe = (pieces: Item[]) => {
-    const deLaTenue = titreDeLaTenue(pieces);
-    if (deLaTenue) return deLaTenue;
-    const q = qualificatifLook(meteoEnAttente ? null : meteoDuJour.temp, pieces);
-    return q ? titreDuQualificatif(q) : { a: "Ta tenue", b: "du jour" };
-  };
+
 
   const carteSlide = (slide: SlideCarrousel) => {
     const duJour = slide.source !== "proposition";
@@ -413,11 +412,9 @@ export default function HomeScreen() {
           <ConseilManteauPlusLong compact />
         </div>
       ) : null;
-    const titre = slide.source === "plan" && planHero ? { a: titreDuPlan(planHero), b: "" } : titreDe(pieces);
-    const sousTitre =
-      slide.source === "plan" && texteHero
-        ? texteHero.sousTitre
-        : sousTitreLookDuJour(slide.occasion, state.workMode, state.dateContext);
+    const texteSlide = texteDuLook(pieces, slide.occasion);
+    const titre = slide.source === "plan" && planHero ? { a: titreDuPlan(planHero), b: "" } : texteSlide.titre;
+    const sousTitre = slide.source === "plan" && texteHero ? texteHero.sousTitre : texteSlide.phrase;
     // Le libellé d'une tenue planifiée est contextuel (« Look du jour », « Look planifié »…) ; les autres disent leur occasion.
     const surtitre = slide.source === "plan" && texteHero ? texteHero.surtitre : slide.surtitre;
     return (
@@ -452,6 +449,17 @@ export default function HomeScreen() {
           ) : undefined
         }
         portee={duJour && porteeAujourdhui}
+        pourquoi={!(slide.source === "plan" && texteHero) && !enSejour}
+        onPiece={toucherPiece(
+          pieces,
+          duJour
+            ? slide.source === "plan"
+              ? null
+              : remplacerTenueDuJour
+            : enSejour
+              ? null
+              : (a, n) => (actions.remplacerDansProposition(slide.id as SlideId, a, n), true)
+        )}
       />
     );
   };
@@ -549,7 +557,9 @@ export default function HomeScreen() {
           ) : hasOutfit ? (
             <>
               <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
-                <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
+                {/* La pertinence de la tenue attend derrière le « i » du titre (12/11/2026, PourquoiCetteTenue) ; le texte d'un plan ou d'une
+                    valise reste affiché sous le titre. */}
+                <div className="relative font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
                   {titreHero.a}
                   {titreHero.b && (
                     <>
@@ -557,10 +567,13 @@ export default function HomeScreen() {
                       <span className="italic text-terracotta">{titreHero.b}</span>
                     </>
                   )}
+                  {!texteHero && <PourquoiCetteTenue texte={sousTitreHero} />}
                 </div>
-                <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
-                  {sousTitreHero}
-                </div>
+                {texteHero && (
+                  <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+                    {sousTitreHero}
+                  </div>
+                )}
                 {porteeAujourdhui && <MentionPortee />}
               </div>
               <div className="mt-auto pt-4">
@@ -594,7 +607,7 @@ export default function HomeScreen() {
           {passee ? (
             <FlatLayCapsela items={piecesPassee} context="hero-home" layoutSeed={clePieces(piecesPassee.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
           ) : aucuneTenuePossible ? null : (
-            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={ouvrirPiece} fantomes={sansChaussures(outfitPieces)} ajouts={conseilVeste} />
+            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={toucherPiece(outfitPieces, remplacerTenueDuJour)} fantomes={sansChaussures(outfitPieces)} ajouts={conseilVeste} />
           )}
         </div>
 
@@ -678,7 +691,7 @@ export default function HomeScreen() {
             label="Ma capsule"
           />
           <CarteUnivers
-            onClick={actions.planifierDirect}
+            onClick={() => actions.planifierDirect()}
             glyphe={glypheUnivers(D_AGENDA)}
             ligne1="Planifier"
             ligne2="mes looks"
@@ -701,6 +714,8 @@ export default function HomeScreen() {
 
       {/* Quota « Autre tenue » : la même feuille de quota partout. */}
       {quota.feuille}
+      {/* La feuille Voir / Remplacer d'une pièce du flat lay, et sa confirmation (RemplacementPiece). */}
+      {remplacement.rendu}
     </div>
   );
 }

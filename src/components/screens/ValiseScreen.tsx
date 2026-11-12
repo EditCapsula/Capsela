@@ -28,7 +28,9 @@ import {
   amplitudePrevue,
   categoriesPourCompleter,
   poolDeLaValise,
-  BAGAGES,
+  FORMATS_BAGAGE,
+  nomBagage,
+  NomBagage,
   capaciteDe,
   UNITES_MOYENNES_PAR_PIECE,
   unitesDe,
@@ -105,7 +107,7 @@ import {
   type EvenementValise,
 } from "@/lib/evenementsValise";
 import { LIBELLE_RAISON, apercuAllegement, avecTenue, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
-import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
+import { estIdLocal, lavageDuMode, modeLavageDe, nouvelIdLocal, type ModeLavage, type ValiseGardee } from "@/lib/valises";
 import {
   affairesAffichees,
   affairesMasquees,
@@ -116,7 +118,6 @@ import {
 } from "@/lib/affairesVoyage";
 import {
   activitesDuProgramme,
-  bagageConseille,
   couvertureMeteo,
   elementProgramme,
   occasionsDuProgramme,
@@ -326,14 +327,32 @@ const G_CALENDRIER = svg(
   17
 );
 /** Le glyphe valise de l'accueil (« Préparer une valise »), repris à plusieurs tailles. */
-const glypheValise = (taille: number) =>
-  svg(
-    <>
-      <rect x="3" y="7.5" width="18" height="13" rx="2.5" {...trait} strokeWidth={1.4} />
-      <path d="M9 7.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2.5M9.5 11.5v5M14.5 11.5v5" {...trait} strokeWidth={1.4} />
-    </>,
-    taille
+/**
+ * LE VISUEL DE CHAQUE FORMAT (12/11/2026, brief 2.3, point 9) : une valise debout, dessinée au trait comme les autres glyphes, dont la
+ * HAUTEUR suit le format (proportions des dimensions indicatives : 55, 68 et 78 cm). La cabine porte sa poignée télescopique, les
+ * bagages de soute leur poignée de côté. Toutes posées sur la même ligne : la différence de taille se lit d'un coup d'œil.
+ */
+function VisuelBagage({ taille }: { taille: TailleBagage }) {
+  const hauteurs: Record<TailleBagage, number> = { S: 26, M: 30, L: 38, XL: 44 };
+  const h = hauteurs[taille];
+  const l = Math.round(h * 0.62);
+  const x = (40 - l) / 2;
+  const y = 50 - h;
+  const cabine = taille === "M" || taille === "S";
+  return (
+    <svg width={40} height={56} viewBox="0 0 40 56" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round">
+      {cabine ? (
+        <path d={`M${20 - 4} ${y} V${y - 7} H${20 + 4} V${y}`} />
+      ) : (
+        <path d={`M${20 - 4} ${y} V${y - 2.5} H${20 + 4} V${y}`} />
+      )}
+      <rect x={x} y={y} width={l} height={h} rx={3} />
+      <path d={`M${x + l / 3} ${y + 4} V${y + h - 4} M${x + (2 * l) / 3} ${y + 4} V${y + h - 4}`} />
+      <circle cx={x + 3} cy={52.5} r={1.5} />
+      <circle cx={x + l - 3} cy={52.5} r={1.5} />
+    </svg>
   );
+}
 const G_METEO = svg(
   <>
     <path d="M7 18.5h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 18.5z" {...trait} />
@@ -453,13 +472,6 @@ function CarteInfo({ glyphe, children }: { glyphe: React.ReactNode; children: Re
 type Vue = { nom: "etape" } | { nom: "calcul" } | { nom: "erreur" } | { nom: "resultat" } | { nom: "look"; index: number } | { nom: "piece"; id: number; depuis: Vue };
 
 /** Les pictogrammes des activités (maquette V2, plus Randonnée le 19/10/2026). */
-/** À quel séjour chaque valise convient (maquette V2). */
-const USAGE_BAGAGE: Record<TailleBagage, string> = {
-  S: "Week-end ou court séjour",
-  M: "Séjour d'une semaine",
-  L: "Long séjour",
-  XL: "Très long séjour",
-};
 
 const GLYPHES_ACTIVITE: Record<ActiviteSejour, React.ReactNode> = {
   plage: svg(<path d="M3 19c2 0 2-1.5 4.5-1.5S10 19 12 19s2-1.5 4.5-1.5S19 19 21 19M12 4a7 7 0 0 1 7 7H5a7 7 0 0 1 7-7zM12 11v7" {...trait} />, 18),
@@ -1075,7 +1087,9 @@ export default function ValiseScreen() {
   const [retour, setRetour] = useState("");
   const [bagage, setBagage] = useState<TailleBagage | null>(null);
   /** « Pourras-tu laver tes vêtements pendant ton séjour ? » (12/11/2026) : null tant que la personne n'a pas répondu. */
-  const [lavage, setLavage] = useState<boolean | null>(null);
+  // La réponse au lavage (12/11/2026, trois réponses) ; les quantités n'en retiennent que « laver en route, ou non » (lavageDuMode).
+  const [modeLavage, setModeLavage] = useState<ModeLavage | null>(null);
+  const lavage = modeLavage == null ? null : lavageDuMode(modeLavage);
   /**
    * LES ACTIVITÉS du séjour (maquette V2, 11/10/2026) : jusqu'à quatre. Elles donnent le programme (programmeDesActivites), que le
    * moteur reçoit en occasions mères et que le planning jour par jour répartit — le moteur et la phase B sont inchangés.
@@ -1089,8 +1103,6 @@ export default function ValiseScreen() {
   const [dernieresReponses, setDernieresReponses] = useState<{ rep: Reponses; id: string | null } | null>(null);
 
   const jours = depart && retour && retour >= depart ? joursDuSejour(depart, retour) : [];
-  /** La valise que la durée du séjour conseille (maquette : « Valise M conseillée pour 5 jours »). */
-  const conseille = bagageConseille(Math.max(1, jours.length));
   const dureeOk = jours.length > 0 && dateDe(retour) <= dateDe(plusJours(depart, DUREE_MAX_JOURS - 1));
   const nomVille = ville ? ville.name : villeDuLieu(destination.trim());
   const etapes = depart && retour ? etapesRetenues(etapePremiere(destination, ville), autresEtapes, depart, retour) : [];
@@ -1207,6 +1219,7 @@ export default function ValiseScreen() {
     uniquementDressing?: boolean;
     /** Le lavage pendant le séjour (étape 2) ; absent d'une valise d'avant le 12/11/2026. */
     lavage?: boolean;
+    modeLavage?: ModeLavage;
   };
   /** Une préparation à la fois (22/10/2026) : un double toucher sur « Générer ma valise » ne lance pas deux calculs. */
   const preparationEnCours = useRef(false);
@@ -1312,6 +1325,7 @@ export default function ValiseScreen() {
       ...(r.suggestionIds.length ? {} : { suggestionIds: undefined }),
       ...(seulDressing ? { uniquementDressing: true } : {}),
       ...(typeof rep.lavage === "boolean" ? { lavage: rep.lavage } : {}),
+      ...(rep.modeLavage ? { modeLavage: rep.modeLavage } : {}),
       // Les quantités réglées à la main suivent la valise recomposée (quantitesValides ne garde que les pièces encore présentes).
       ...(quantitesValides(ancienne?.quantites, r.pieceIds) ? { quantites: quantitesValides(ancienne?.quantites, r.pieceIds) } : {}),
       // Les pièces du dressing au moment du calcul : une pièce ajoutée
@@ -1332,7 +1346,7 @@ export default function ValiseScreen() {
     const evts = evenementsDuSejour(evenements, jours);
     const meres = occasionsDuProgramme([...retenu, ...evts.map((e) => ({ id: e.type, frequence: 1 }))]);
     void lancer(
-      { destination, ville, ...(roadTrip ? { etapes } : {}), depart, retour, bagage, sejour: null, occasions: occasionsRetenues(meres, null), programme: retenu, activites, choix, evenements: evts, ...(lavage != null ? { lavage } : {}) },
+      { destination, ville, ...(roadTrip ? { etapes } : {}), depart, retour, bagage, sejour: null, occasions: occasionsRetenues(meres, null), programme: retenu, activites, choix, evenements: evts, ...(lavage != null ? { lavage } : {}), ...(modeLavage ? { modeLavage } : {}) },
       idEnModification
     );
   };
@@ -1366,6 +1380,7 @@ export default function ValiseScreen() {
         evenements: valise.evenements,
         uniquementDressing: uniquementDressing ?? valise.uniquementDressing === true,
         ...(typeof valise.lavage === "boolean" ? { lavage: valise.lavage } : {}),
+        ...(valise.modeLavage ? { modeLavage: valise.modeLavage } : {}),
       },
       valise.id
     );
@@ -1435,7 +1450,7 @@ export default function ValiseScreen() {
     setDepart("");
     setRetour("");
     setBagage(null);
-    setLavage(null);
+    setModeLavage(null);
     setChoix([]);
     setEvenements([]);
     setVue({ nom: "etape" });
@@ -1469,7 +1484,7 @@ export default function ValiseScreen() {
     setDepart(valise.depart);
     setRetour(valise.retour);
     setBagage(valise.bagage);
-    setLavage(typeof valise.lavage === "boolean" ? valise.lavage : null);
+    setModeLavage(modeLavageDe(valise));
     // Les activités qu'évoque le programme gardé ; une valise d'avant la refonte n'a que ses occasions mères.
     // Rouvrir l'étape fait passer la valise à la planification manuelle (06/11/2026) : chaque activité montre ses dates, ou « À planifier ».
     setChoix(choixDeLaValise(valise.choix, valise.activites ?? activitesDuProgramme(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1))).map((c) => ({ ...c, jours: c.jours ?? [] })));
@@ -1680,68 +1695,73 @@ export default function ValiseScreen() {
         {questions && etape === 2 && (
           <>
             <Surtitre>Ta valise · 2 / 3</Surtitre>
-            <TitreEtape a="Quelle valise" b="emportes-tu ?" />
-            <div className="text-[13px] text-muted leading-[1.5] mt-2">Nous adaptons ta sélection à sa capacité.</div>
-            <div className="grid grid-cols-2 gap-[10px] mt-5">
-              {BAGAGES.map(([t, , cap], i) => {
-                const on = bagage === t;
+            <TitreEtape a="Quel bagage" b="emportes-tu ?" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Capsela adapte ta sélection à sa place.</div>
+            {/* TROIS FORMATS CONCRETS (12/11/2026, brief 2.3, point 9, valise.ts FORMATS_BAGAGE) au lieu des quatre tailles S à XL. Plus de
+                valise « conseillée » d'après la durée du séjour : la taille ne se déduit pas de la durée (brief) ; c'est le remplissage,
+                une fois la valise composée, qui dit si un bagage plus grand conviendrait (bagageQuiConvient). */}
+            <div role="radiogroup" aria-label="Ton bagage" className="flex flex-col gap-[10px] mt-5">
+              {FORMATS_BAGAGE.map((f) => {
+                const on = bagage === f.taille;
                 return (
                   <button
-                    key={t}
-                    onClick={() => setBagage(t)}
-                    aria-pressed={on}
-                    aria-label={`${t}, ${USAGE_BAGAGE[t]}, environ ${cap} pièces${conseille === t ? ", conseillée" : ""}`}
+                    key={f.taille}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setBagage(f.taille)}
                     className={
-                      "relative flex flex-col text-left rounded-feuille px-[14px] pt-[14px] pb-[13px] cursor-pointer border transition-colors " +
+                      "flex items-center gap-[14px] text-left rounded-feuille px-[14px] py-[12px] cursor-pointer border transition-colors " +
                       (on ? "bg-warm-bg border-terracotta" : "bg-card border-border")
                     }
-                    style={{ minHeight: 158, borderWidth: on ? 1.5 : 1 }}
+                    style={{ borderWidth: on ? 1.5 : 1 }}
                   >
-                    <span className="flex items-start justify-between w-full">
-                      <span className={"font-serif text-[24px] leading-none " + (on ? "text-terracotta" : "text-ink")}>{t}</span>
-                      {on && <Coche />}
+                    <span className={"flex-shrink-0 w-[44px] flex justify-center " + (on ? "text-terracotta" : "text-muted-3")}>
+                      <VisuelBagage taille={f.taille} />
                     </span>
-                    {/* Le glyphe grandit avec la valise : S à XL se lisent d'un coup d'œil. */}
-                    <span className={"flex-1 flex items-center justify-center " + (on ? "text-terracotta" : "text-muted-3")} style={{ minHeight: 56 }}>
-                      {glypheValise(26 + i * 7)}
+                    <span className="flex-1 min-w-0">
+                      <span className={"block t-titre-ligne " + (on ? "text-terracotta" : "text-ink")}>{f.nom}</span>
+                      <span className="block text-[12px] text-ink-soft mt-[2px]">{f.dimensions}</span>
+                      <span className="block text-[12px] text-muted leading-[1.4] mt-[2px]">{f.usage}</span>
                     </span>
-                    <span className="block text-[13px] font-semibold text-ink leading-[1.25]">environ {cap} pièces</span>
-                    <span className="block text-[11px] text-muted mt-[2px]">{USAGE_BAGAGE[t]}</span>
-                    {conseille === t && !on && <span className="absolute top-[14px] right-[12px] text-[10.5px] font-semibold text-terracotta-deep">Conseillée</span>}
+                    {on && <Coche />}
                   </button>
                 );
               })}
             </div>
-            {jours.length > 0 && dureeOk && (
-              <div className="text-[12px] text-muted leading-[1.5] mt-4">
-                Valise {conseille} conseillée pour {jours.length} {jours.length > 1 ? "jours" : "jour"}.
-              </div>
-            )}
-            <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]">
-              Ces quantités sont indicatives : la place tient compte de l&apos;encombrement (chaussures et manteaux en prennent plus qu&apos;un t-shirt). Tu pourras ajuster ta sélection ensuite.
+            <div className="text-[12px] text-muted-3 leading-[1.5] mt-3">
+              Dimensions indicatives : elles varient d&apos;une compagnie à l&apos;autre. La place compte tout ce qui entre dans le bagage,
+              vêtements, chaussures et accessoires ; tu pourras ajuster ta sélection ensuite.
             </div>
-            {/* LE LAVAGE (12/11/2026, étape 3 du brief Vacances, arbitré par la propriétaire : oui / non seulement). Il règle les quantités
-                proposées : oui, comptées sur quelques jours ; non, sur toute la durée du séjour (quantitesProposees.ts). */}
-            <div className="mt-6">
-              <div id="question-lavage" className="t-titre-ligne text-ink">
+            {/* LE LAVAGE, EXPLIQUÉ (12/11/2026, brief 2.3, point 8 — la question oui / non du matin ne disait pas à quoi elle sert). Texte du
+                brief au tutoiement de l'app. Trois réponses ; les deux « oui » règlent les quantités de la même façon (valises.ts,
+                lavageDuMode) : comptées sur quelques jours, puis on lave ; « non » : sur toute la durée du séjour (quantitesProposees.ts).
+                Le nombre de looks n'en dépend jamais. */}
+            <div className="mt-7">
+              <div className="t-surtitre text-muted">Pour optimiser ta valise</div>
+              <div id="question-lavage" className="t-titre-ligne text-ink mt-[6px]">
                 Pourras-tu laver tes vêtements pendant ton séjour ?
               </div>
-              <div role="radiogroup" aria-labelledby="question-lavage" className="grid grid-cols-2 gap-[10px] mt-3">
+              <div className="text-[12px] text-muted leading-[1.5] mt-[6px]">
+                Cette information nous permet d&apos;adapter le nombre de vêtements à emporter et de prévoir les rotations de tenues nécessaires.
+              </div>
+              <div role="radiogroup" aria-labelledby="question-lavage" className="flex flex-col gap-[8px] mt-3">
                 {([
-                  [true, "Oui"],
-                  [false, "Non"],
+                  ["machine", "Oui, j'aurai accès à une machine à laver"],
+                  ["service", "Oui, je pourrai faire laver mes vêtements"],
+                  ["non", "Non, je ne pourrai pas laver mes vêtements"],
                 ] as const).map(([v, libelle]) => {
-                  const on = lavage === v;
+                  const on = modeLavage === v;
                   return (
                     <button
-                      key={libelle}
+                      key={v}
                       type="button"
                       role="radio"
                       aria-checked={on}
-                      onClick={() => setLavage(v)}
+                      onClick={() => setModeLavage(v)}
                       className={
-                        "flex items-center justify-between rounded-tuile border px-[14px] text-[14px] font-semibold cursor-pointer transition-colors " +
-                        (on ? "bg-warm-bg border-terracotta text-terracotta" : "bg-card border-border text-ink")
+                        "flex items-center justify-between gap-3 text-left rounded-tuile border px-[14px] py-[10px] text-[14px] cursor-pointer transition-colors " +
+                        (on ? "bg-warm-bg border-terracotta text-terracotta font-semibold" : "bg-card border-border text-ink")
                       }
                       style={{ minHeight: 52, borderWidth: on ? 1.5 : 1 }}
                     >
@@ -1751,13 +1771,13 @@ export default function ValiseScreen() {
                   );
                 })}
               </div>
-              <div className="text-[12px] text-muted leading-[1.5] mt-2">
-                {lavage === false
-                  ? "Les quantités sont comptées sur toute la durée de ton séjour."
-                  : lavage === true
-                    ? "Les quantités sont réduites : tu pourras laver en route."
-                    : "Nous en tenons compte pour proposer les quantités (t-shirts, sous-vêtements, chaussettes)."}
-              </div>
+              {lavage != null && (
+                <div className="text-[12px] text-muted leading-[1.5] mt-2">
+                  {lavage
+                    ? "Les quantités sont comptées sur quelques jours : tu laves, puis tu reportes tes pièces. Tes looks restent aussi nombreux."
+                    : "Les quantités couvrent toute la durée de ton séjour. Tes looks restent aussi nombreux."}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -2340,12 +2360,13 @@ function Resultat({
         {dressing.every((p) => ids.includes(p.id)) && <div className="text-[13px] text-muted">Toutes les pièces de ton dressing sont déjà dans la valise.</div>}
       </BottomSheet>
 
-      <BottomSheet title="Taille de la valise" open={tailleOuverte} onClose={() => setTailleOuverte(false)}>
+      <BottomSheet title="Ton bagage" open={tailleOuverte} onClose={() => setTailleOuverte(false)}>
         <div className="text-[12px] text-muted leading-[1.45] mb-3">
           Ta sélection est conservée : aucune pièce n&apos;est retirée sans toi. Si la nouvelle valise est plus petite, Capsela te propose d&apos;alléger.
         </div>
         <div role="radiogroup" aria-label="Taille de la valise" className="flex flex-col gap-2">
-          {BAGAGES.map(([t, , cap]) => {
+          {/* Les trois formats ; la S d'une valise ancienne reste affichée tant qu'elle est la sienne. */}
+          {[...(valise.bagage === "S" ? [{ taille: "S" as TailleBagage, nom: "Bagage cabine souple", dimensions: "Ancien format", usage: "" }] : []), ...FORMATS_BAGAGE].map(({ taille: t, nom, dimensions }) => {
             const on = valise.bagage === t;
             return (
               <button
@@ -2359,19 +2380,21 @@ function Resultat({
                   const place = volume - capaciteDe(t);
                   setRetourTaille(
                     place > 0
-                      ? `Valise ${t} : ta sélection ne tient plus (environ ${Math.max(1, Math.ceil(place / UNITES_MOYENNES_PAR_PIECE))} ${place / UNITES_MOYENNES_PAR_PIECE > 1 ? "pièces" : "pièce"} de trop). Elle est conservée telle quelle.`
+                      ? `${NomBagage(t)} : ta sélection ne tient plus (environ ${Math.max(1, Math.ceil(place / UNITES_MOYENNES_PAR_PIECE))} ${place / UNITES_MOYENNES_PAR_PIECE > 1 ? "pièces" : "pièce"} de trop). Elle est conservée telle quelle.`
                       : capaciteDe(t) > capacite
-                        ? `Valise ${t} : ta sélection est conservée. Il reste de la place : « Recomposer ma valise » en profiterait.`
-                        : `Valise ${t} : ta sélection est conservée et tient dedans.`
+                        ? `${NomBagage(t)} : ta sélection est conservée. Il reste de la place : « Recomposer ma valise » en profiterait.`
+                        : `${NomBagage(t)} : ta sélection est conservée et tient dedans.`
                   );
                 }}
                 className={"flex items-center gap-3 text-left rounded-tuile border px-[14px] cursor-pointer " + (on ? "bg-warm-bg border-terracotta" : "bg-card border-border")}
                 style={{ minHeight: 56 }}
               >
-                <span className={"font-serif text-[22px] w-[34px] " + (on ? "text-terracotta" : "text-ink")}>{t}</span>
+                <span className={"flex-shrink-0 w-[40px] flex justify-center " + (on ? "text-terracotta" : "text-muted-3")}>
+                  <VisuelBagage taille={t} />
+                </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-[13px] text-ink">environ {cap} pièces</span>
-                  <span className="block text-[11px] text-muted">{USAGE_BAGAGE[t]}</span>
+                  <span className={"block text-[13px] font-semibold " + (on ? "text-terracotta" : "text-ink")}>{nom}</span>
+                  <span className="block text-[11px] text-muted">{dimensions}</span>
                 </span>
                 {on && <Coche />}
               </button>
@@ -2448,7 +2471,7 @@ function Resultat({
                   <span className={"block text-[11px] " + (n ? "text-terracotta" : "text-muted")}>
                     {n} {n > 1 ? "looks" : "look"}
                   </span>
-                  {!tient && <span className="block text-[11px] text-muted">Prendrait trop de place dans une valise {valise.bagage}</span>}
+                  {!tient && <span className="block text-[11px] text-muted">Prendrait trop de place dans ton {nomBagage(valise.bagage)}</span>}
                 </span>
               </button>
             ))}
@@ -2580,7 +2603,7 @@ function Resultat({
                       </div>
                       {total > capacite && (
                         <div className="text-[12px] text-terracotta leading-[1.45] mt-[6px]">
-                          Ta valise dépasserait la place d&apos;une valise {valise.bagage}.
+                          Ta valise dépasserait la place de ton {nomBagage(valise.bagage)}.
                         </div>
                       )}
                       <div className="flex gap-2 mt-4">
@@ -3253,7 +3276,7 @@ function Resultat({
               : manquePieces > 0
                 ? (
                   <>
-                    {`Environ ${manquePieces} ${manquePieces > 1 ? "pièces" : "pièce"} de plus compléteraient ta valise ${valise.bagage} (remplie à ${tauxRemplissage} %).`}
+                    {`Environ ${manquePieces} ${manquePieces > 1 ? "pièces" : "pièce"} de plus compléteraient ton ${nomBagage(valise.bagage)} (rempli à ${tauxRemplissage} %).`}
                     <button onClick={() => setFeuille({ type: "ajouter" })} className="block mt-[6px] t-lien text-terracotta underline underline-offset-[3px] cursor-pointer">
                       Trouver dans mon dressing
                     </button>
@@ -3268,7 +3291,7 @@ function Resultat({
           la capsule. Les nombres sont ceux de la sélection enregistrée. */}
       <div className="flex items-center justify-between gap-3 mt-5">
         <span className="t-titre-ligne text-ink">
-          Valise {valise.bagage} · {depasse ? "trop pleine" : `remplie à ${tauxRemplissage}\u00a0%`}
+          {NomBagage(valise.bagage)} · {depasse ? "trop plein" : `rempli à ${tauxRemplissage}\u00a0%`}
         </span>
         <button onClick={() => setTailleOuverte(true)} className="t-lien text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[44px] flex-shrink-0">
           Changer
@@ -3285,16 +3308,16 @@ function Resultat({
         <div role="status" className="text-[12px] text-terracotta leading-[1.45] mt-2">
           {aAlleger.length > 0 ? (
             <>
-              Ta sélection dépasse la place d&apos;une valise {valise.bagage}. Rien n&apos;est retiré sans toi :{" "}
+              Ta sélection dépasse la place de ton {nomBagage(valise.bagage)}. Rien n&apos;est retiré sans toi :{" "}
               <button onClick={() => setOnglet("pieces")} className="underline underline-offset-[3px] cursor-pointer">
                 voir ce qu&apos;on peut alléger
               </button>
-              {tailleQuiConvient ? `, ou passer à une valise ${tailleQuiConvient}.` : "."}
+              {tailleQuiConvient ? `, ou passer à un ${nomBagage(tailleQuiConvient)}.` : "."}
             </>
           ) : (
             <>
-              Ta valise {valise.bagage} est pleine avec le linge du séjour.{" "}
-              {tailleQuiConvient ? `Une valise ${tailleQuiConvient} conviendrait.` : valise.bagage === "XL" ? "Tu peux réduire les quantités." : "Même une valise XL serait juste : tu peux réduire les quantités."}
+              Ton {nomBagage(valise.bagage)} est plein avec le linge du séjour.{" "}
+              {tailleQuiConvient ? `Un ${nomBagage(tailleQuiConvient)} conviendrait.` : valise.bagage === "XL" ? "Tu peux réduire les quantités." : "Même un grand bagage en soute serait juste : tu peux réduire les quantités."}
             </>
           )}
         </div>
@@ -3606,7 +3629,7 @@ function Resultat({
             <Card className="mt-4 p-[14px]">
               <div className="t-titre-carte text-ink">On allège un peu ?</div>
               <div className="text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
-                Ta valise dépasse la place d&apos;une valise {valise.bagage}. Voici les pièces qui servent
+                Ta valise dépasse la place de ton {nomBagage(valise.bagage)}. Voici les pièces qui servent
                 le moins.
               </div>
               <div className="flex flex-col gap-2 mt-3">

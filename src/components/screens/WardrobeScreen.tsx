@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { masquerMenuActions } from "@/lib/menuActions";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
@@ -190,6 +191,11 @@ export default function WardrobeScreen() {
   });
   // MES PIÈCES EST FUSIONNÉ ICI (14/10/2026) : la sélection par appui long, la suppression confirmée, « Porté X fois » / « Jamais porté ».
   const [selectionMode, setSelectionMode] = useState(false);
+  // La sélection pose sa barre « Retirer » en bas de l'écran : le menu d'actions flottant (menuActions.ts) s'efface le temps qu'elle dure.
+  useEffect(() => {
+    masquerMenuActions("selection-dressing", selectionMode);
+    return () => masquerMenuActions("selection-dressing", false);
+  }, [selectionMode]);
   const [selection, setSelection] = useState<Set<number>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -746,36 +752,7 @@ export default function WardrobeScreen() {
         Annuler
       </button>
     </BottomSheet>
-    {!selectionMode && <BoutonAjoutFlottant onClick={ajouter} />}
     </>
   );
 }
 
-/**
- * LE BOUTON FLOTTANT « AJOUTER UNE PIÈCE » (12/10/2026, demandé : remplacer le bouton « Ajouter » de l'en-tête par un bouton flottant à
- * droite de l'écran, avec un « + ») : un rond de 56 px, toujours à portée du pouce, au-dessus de la barre du bas. L'étiquette qui se
- * réduisait au « + » après trois usages (maquette du 04/10/2026) disparaît : il est un « + » d'emblée, nommé pour les lecteurs d'écran.
- */
-export function BoutonAjoutFlottant({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Ajouter une pièce à mon dressing"
-      data-tour="dressing-ajouter"
-      className="absolute right-4 z-10 flex items-center justify-center rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream cursor-pointer transition-transform active:scale-[.95]"
-      // 16 px au-dessus du menu, JAMAIS collé (30/10/2026, arbitré : « je ne veux pas coller le bouton + rond »), contrairement aux barres
-      // d'action et aux messages de confirmation, posés sur le menu.
-      style={{
-        bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px)",
-        width: 56,
-        height: 56,
-        boxShadow: "0 4px 14px rgba(29,26,22,.22)",
-      }}
-    >
-      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    </button>
-  );
-}

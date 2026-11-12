@@ -1,3 +1,4 @@
+import { estDansLUnivers } from "./univers";
 import { formalityOf, vetementDeSport } from "./attributes";
 import type { CatalogItem } from "./catalog";
 import { STYLE_ID_TO_CATALOG_LABEL, type Profile, type StyleId } from "./profile";
@@ -60,8 +61,7 @@ const estChaussureDeRando = (it: Pick<Item, "subtype">) => it.subtype === "Chaus
 
 /** La pièce sans style de CE profil pour un type : celle de son genre d'abord, puis une pièce unisexe ; jamais celle de l'autre genre. */
 function pieceDuGenre(catalogue: readonly CatalogItem[], profile: Pick<Profile, "gender">, est: (it: CatalogItem) => boolean): CatalogItem[] {
-  const autreGenre = profile.gender === "homme" ? "femme" : "homme";
-  const pieces = catalogue.filter((it) => est(it) && it.genre !== autreGenre);
+  const pieces = catalogue.filter((it) => est(it) && estDansLUnivers(it, profile.gender));
   const sienne = pieces.find((it) => it.genre === profile.gender) ?? pieces[0];
   return sienne ? [sienne] : [];
 }
@@ -175,7 +175,6 @@ export const estBaignade = (s: { sousIds?: string[] }): boolean =>
  * style du profil, la plus spécifique (le moins d'étiquettes de style), puis une couleur préférée. Jamais une pièce de l'autre genre.
  */
 export function piecesDeBaignade(catalogue: readonly CatalogItem[], profile: Pick<Profile, "gender" | "styles">, couleurs: readonly string[]): CatalogItem[] {
-  const autreGenre = profile.gender === "homme" ? "femme" : "homme";
   const styles = (profile.styles ?? []).map((id) => STYLE_ID_TO_CATALOG_LABEL[id as StyleId]).filter(Boolean);
   const rang = (it: CatalogItem): number[] => [
     styles.length && it.styleTags?.some((t) => styles.includes(t)) ? 0 : 1,
@@ -187,7 +186,7 @@ export function piecesDeBaignade(catalogue: readonly CatalogItem[], profile: Pic
     for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
     return 0;
   };
-  const candidates = catalogue.filter((it) => estPieceDeValise(it) && it.genre !== autreGenre);
+  const candidates = catalogue.filter((it) => estPieceDeValise(it) && estDansLUnivers(it, profile.gender));
   return [candidates.filter(estTenueDeBain), candidates.filter(estCouverture)].flatMap((l) => [...l].sort(avant).slice(0, 1));
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { remplacerDansIds } from "./remplacementPiece";
 import { oublierContexte } from "./memoireEcrans";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
@@ -317,7 +318,8 @@ export interface Actions {
   goHistory: () => void;
   goPlanifier: () => void;
   /** Depuis la carte « Planifier mes looks » de l'accueil : ouvre directement la première étape de planification, retour vers l'accueil. */
-  planifierDirect: () => void;
+  /** Planifier ouvert à sa première étape ; le retour ramène à `depuis` (l'accueil par défaut). */
+  planifierDirect: (depuis?: Screen) => void;
   oublierPlanDirect: () => void;
   goNeverWorn: () => void;
   /** `filtre` : carte du vestiaire — n'affiche que les pièces de ses catégories techniques. */
@@ -574,6 +576,8 @@ export interface Actions {
   requestCatalogImage: (itemId: number) => void;
   regenOutfit: () => void;
   /** « Autre idée » d'une slide du carrousel qui ne porte pas la tenue du jour : une autre proposition pour SON occasion, sans toucher aux autres slides ni au planning. */
+  /** Remplace une pièce d'une proposition du carrousel (12/11/2026, RemplacementPiece) ; les autres pièces ne bougent pas. */
+  remplacerDansProposition: (slide: SlideId, ancienId: number, nouvelId: number) => void;
   autreIdeeSlide: (slide: SlideId) => void;
   /** Tire la slide suivante du carrousel de l'accueil (calcul paresseux, 17/10/2026). */
   etendreCarrousel: () => void;
@@ -1972,7 +1976,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, planJour: Math.max(1, decalage), planRetour: "calendrier", planComposition: null, screen: "planifier" })),
     // Ouverture ordinaire (barre du bas, cartes) : aucun retour particulier.
     goPlanifier: () => setState((s) => ({ ...s, planRetour: null, planJour: null, planDirect: false, screen: "planifier" })),
-    planifierDirect: () => setState((s) => ({ ...s, planRetour: "home", planJour: null, planComposition: null, planDirect: true, screen: "planifier" })),
+    // Depuis l'accueil de Planifier lui-même (menu d'actions flottant), pas d'écran de retour : le parcours revient à cet accueil.
+    planifierDirect: (depuis = "home") => setState((s) => ({ ...s, planRetour: depuis === "planifier" ? null : depuis, planJour: null, planComposition: null, planDirect: true, screen: "planifier" })),
     oublierPlanDirect: () => setState((s) => (s.planDirect ? { ...s, planDirect: false } : s)),
     goNeverWorn: () => go("neverworn"),
     // « Mes pièces » est fusionné dans le Dressing (14/10/2026) : le filtre (catégorie, couleur venue de Tenue) s'applique à la grille du Dressing.
@@ -2394,6 +2399,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         const visibles = Object.keys(s.carrousel.propositions).filter((id) => id !== slideDuJour).length + (slideDuJour ? 1 : 0);
         const suite = completerCarrousel(s, cleCarrousel, visibles + 1);
         return (suite.carrousel?.tentees?.length ?? 0) === (s.carrousel.tentees?.length ?? 0) ? s : suite;
+      }),
+    remplacerDansProposition: (slide, ancienId, nouvelId) =>
+      setState((s) => {
+        const courante = s.carrousel?.propositions?.[slide];
+        if (!s.carrousel || !courante) return s;
+        return { ...s, carrousel: { ...s.carrousel, propositions: { ...s.carrousel.propositions, [slide]: remplacerDansIds(courante, ancienId, nouvelId) } } };
       }),
     autreIdeeSlide: (slide) =>
       setState((s) => {

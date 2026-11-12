@@ -1,5 +1,6 @@
 "use client";
 
+import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
 import { useEffect, useRef, useState } from "react";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { ZoneLookDuJour } from "@/components/ZoneLookDuJour";
@@ -58,6 +59,10 @@ export interface CarteHeroProps {
   pied?: React.ReactNode;
   /** La tenue a été portée aujourd'hui (« Porter cette tenue ») : la carte le dit (15/10/2026, demandé). */
   portee?: boolean;
+  /** Toucher une pièce (12/11/2026, RemplacementPiece) : la feuille Voir / Remplacer. Sans lui, la fiche directe, comme avant. */
+  onPiece?: (it: Item) => void;
+  /** Le sous-titre sous « Pourquoi cette tenue ? » (12/11/2026) : une tenue recommandée. Faux : affiché tel quel (plan, valise). */
+  pourquoi?: boolean;
 }
 
 /**
@@ -65,8 +70,9 @@ export interface CarteHeroProps {
  * seul, arbitré le 14/10/2026 (option 3h), puis Tenue le même jour ; les autres hero gardent --color-hero-background. Le texte réduit à gauche, la composition — point focal — à droite, deux actions
  * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
  */
-export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, ajouts, portee }: CarteHeroProps) {
-  const ouvrirPiece = useOuvrirPiece();
+export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, ajouts, portee, onPiece, pourquoi = false }: CarteHeroProps) {
+  const ouvrirFiche = useOuvrirPiece();
+  const ouvrirPiece = onPiece ?? ouvrirFiche;
   return (
     <div
       // flex-1 : toutes les slides prennent la hauteur de la plus haute (la piste les étire) — pas de saut de hauteur au glissé (18/10/2026).
@@ -82,7 +88,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
         </div>
         {/* Un cran plus petit depuis que le titre nomme les pièces de la tenue (17/10/2026, titreDeLaTenue) : à 27 px, « La robe
             portefeuille et les baskets blanches » prenait cinq lignes. */}
-        <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
+        <div className="relative font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
           {titre.a}
           {titre.b && (
             <>
@@ -90,10 +96,14 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
               <span className="italic text-terracotta">{titre.b}</span>
             </>
           )}
+          {/* La pertinence derrière le « i » du titre (12/11/2026, PourquoiCetteTenue). */}
+          {pourquoi && <PourquoiCetteTenue texte={sousTitre} />}
         </div>
-        <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
-          {sousTitre}
-        </div>
+        {!pourquoi && (
+          <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+            {sousTitre}
+          </div>
+        )}
         {portee && <MentionPortee />}
         <div className="mt-auto pt-4">
           <Button variante="principal" pleine={false} onClick={onVoir} className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap">

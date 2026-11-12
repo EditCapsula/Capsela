@@ -1,7 +1,10 @@
 "use client";
 
+import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
+import { remplacerDansIds } from "@/lib/remplacementPiece";
+import { masquerMenuActions } from "@/lib/menuActions";
 import { autresIdees } from "@/lib/alternativesTenue";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useContexteRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { sansBarre } from "@/lib/phraseOccasion";
 import AgendaLooks, { type EtatAgenda } from "@/components/AgendaLooks";
@@ -867,6 +870,34 @@ export default function PlanifierScreen() {
   const [altsBrut, setAltsBrut] = useState<{ cle: string; vues: number[][]; epuise: boolean } | null>(null);
   const alternativesEpuisees = altsBrut?.cle === cleParams && altsBrut.epuise;
   const idsAffiches = composition ?? choisie ?? tenue?.ids ?? [];
+  /*
+   * LE FLAT LAY INTERACTIF (12/11/2026, RemplacementPiece). La tenue PROPOSÉE : le remplacement change la tenue affichée (la composition
+   * imposée, ou le choix gardé pour ces critères), rien n'est écrit avant « Garder cette tenue ». Une tenue DÉJÀ PLANIFIÉE : le
+   * remplacement est enregistré dans la tenue planifiée (arbitré le 12/11/2026), par la même écriture que la planification ; un échec est dit.
+   */
+  const remplacement = useRemplacementPiece();
+  const contexteResultat = useContexteLook({ occasion: occ ?? "all", weather: meteoUtilisee, workMode, dateContext });
+  const remplacerDansResultat = (a: number, n: number) => {
+    const ids = remplacerDansIds(idsAffiches, a, n);
+    if (composition) setComposition(ids);
+    else setChoixBrut({ cle: cleParams, ids });
+    return true;
+  };
+  const remplacerDansPlan = async (plan: TenuePlanifiee, a: number, n: number) => {
+    if (!userId) return false;
+    const { id: _id, ...sansId } = plan;
+    void _id;
+    try {
+      const ligne = await upsertTenuePlanifiee(userId, { ...sansId, pieceIds: remplacerDansIds(plan.pieceIds, a, n) });
+      // La ligne relue garde ce que l'upsert n'écrit pas (humeur, autres occasions) : repris du plan.
+      const majPlan: TenuePlanifiee = { ...plan, ...ligne, humeur: plan.humeur, occasionsSecondaires: plan.occasionsSecondaires };
+      setPlans((l) => l.map((x) => (x.id === plan.id ? majPlan : x)));
+      setPlanOuvert((o) => (o && o.id === plan.id ? majPlan : o));
+      return true;
+    } catch {
+      return false;
+    }
+  };
   /**
    * « AUTRE TENUE » (04/11/2026, brief « Évolution du parcours de planification ») : une nouvelle proposition, à la place de celle-ci, avec
    * les mêmes critères — le même moteur, les mêmes paramètres — et jamais une tenue déjà montrée pour eux (autresIdees : un autre socle, ou
@@ -1273,6 +1304,23 @@ export default function PlanifierScreen() {
     setPrevision(null);
     setPrevisionEtat("vide");
   };
+  // LE MENU D'ACTIONS FLOTTANT SUR L'ACCUEIL DE PLANIFIER (12/11/2026, demandé ; menuActions.ts). Ses étapes et ses autres vues
+  // posent leur propre action en bas d'écran : le menu s'y efface (avant l'affichage, sans clignotement).
+  useLayoutEffect(() => {
+    masquerMenuActions("planifier-parcours", vue !== "intro");
+  }, [vue]);
+  useLayoutEffect(() => () => masquerMenuActions("planifier-parcours", false), []);
+  // « Planifier une tenue » demandé par le menu alors que Planifier est déjà ouvert : la demande n'est lue qu'à l'arrivée sur
+  // l'écran, elle est donc reprise ici — le même geste que le bouton de la carte du hub.
+  useEffect(() => {
+    if (!state.planDirect || vue === "etape") return;
+    // Une demande venue d'un autre composant (le store), comme les entrées lues à l'arrivée : l'effet est le bon endroit.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    recommencer();
+    actions.oublierPlanDirect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.planDirect]);
+
 
   /**
    * ROUVRIR LE PARCOURS SUR UNE TENUE PLANIFIÉE, PRÉ-REMPLI (30/09/2026) : ce
@@ -1463,7 +1511,9 @@ export default function PlanifierScreen() {
             retourExterne
               ? state.planRetour === "tenues"
                 ? "Revenir à ta tenue"
-                : "Revenir à l'accueil"
+                : state.planRetour === "home"
+                  ? "Revenir à l'accueil"
+                  : "Revenir"
               : vue === "liste" || (vue === "detail" && retourDetail === "intro")
                 ? "Revenir à Planifier"
                 : "Revenir à l'étape précédente"
@@ -1504,16 +1554,49 @@ export default function PlanifierScreen() {
                 la valise et la tenue pour un profil homme. Sans genre renseigné, pas de visuel choisi au hasard : la
                 carte garde sa forme d'avant, glyphe seul. Ils inspirent et expliquent ; les pièces réelles de la personne
                 n'apparaissent que dans ce qu'elle a déjà créé, sous le bouton de création. */}
-            {/* TENUE / VALISE : le même sélecteur que le Dressing, la Valise et Mon planning (SegmentedControl) — la seconde
-                fonctionnalité se découvre sans défiler. Une seule carte à la fois ; elle apparaît par le fondu léger de l'app
-                (capsule-apparition, 220 ms), sans animation si le téléphone demande moins de mouvement. */}
-            <div className="mt-5">
-              <SegmentedControl
-                segments={[{ key: "tenue", label: "Tenue" }, { key: "valise", label: "Valise" }]}
-                actif={hub}
-                onChange={setHub}
-                ariaLabel="Ce que tu veux planifier"
-              />
+            {/* Une seule carte à la fois ; elle apparaît par le fondu léger de l'app (capsule-apparition, 220 ms), sans animation si le
+                téléphone demande moins de mouvement. */}
+            {/* LES DEUX ENTRÉES DE PLANIFIER, VISIBLES DÈS L'ARRIVÉE (12/11/2026, brief 2.3, point 7 : « les entrées Tenue et Valise ne
+                sont pas suffisamment visibles »). Le sélecteur à deux segments, discret, devient deux tuiles côte à côte : le visuel
+                éditorial de chacune (celui qui ouvrait sa carte, qui ne le répète plus), son nom et une ligne. La tuile choisie se marque
+                par la bordure terracotta et le fond de sélection, comme les autres choix de l'app ; elle ouvre toujours sa carte dessous. */}
+            <div className="grid grid-cols-2 gap-[10px] mt-5" role="tablist" aria-label="Ce que tu veux planifier">
+              {(
+                [
+                  ["tenue", "Tenue", "Une occasion à venir"],
+                  ["valise", "Valise", "Un voyage à préparer"],
+                ] as const
+              ).map(([cle, nom, ligne]) => {
+                const on = hub === cle;
+                return (
+                  <button
+                    key={cle}
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => setHub(cle)}
+                    className={
+                      "flex flex-col text-left rounded-tuile overflow-hidden border cursor-pointer transition-colors duration-150 " +
+                      (on ? "bg-selected-bg border-terracotta" : "bg-card border-border")
+                    }
+                    style={{ borderWidth: 1.5 }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={visuelHub(cle, profile.gender)}
+                      alt=""
+                      width={900}
+                      height={600}
+                      decoding="async"
+                      className="block w-full object-cover"
+                      style={{ aspectRatio: "4/3", objectPosition: cle === "valise" ? "center 60%" : "center 38%" }}
+                    />
+                    <span className="block px-[12px] pt-[10px] pb-[12px]">
+                      <span className={"block t-titre-carte " + (on ? "text-terracotta" : "text-ink")}>{nom}</span>
+                      <span className="block text-[12px] text-muted-3 leading-[1.35] mt-[2px]">{ligne}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
             <div key={hub} className="flex flex-col gap-4 mt-4 motion-safe:animate-[capsule-apparition_220ms_ease-out_both]" role="tabpanel">
               {hub === "tenue" && (
@@ -1526,7 +1609,6 @@ export default function PlanifierScreen() {
                 ligne="Occasion · date et lieu · tenue personnalisée"
                 cta={tenuesAVenir.length > 0 ? "Planifier une nouvelle tenue" : "Planifier une tenue"}
                 onClick={recommencer}
-                visuel={visuelHub("tenue", profile.gender)}
               >
                 {/* Ce qui existe déjà : trois au plus, « Voir tout » ouvre la liste complète. Le premier est le prochain. */}
                 {tenuesAVenir.length > 0 && (
@@ -1596,8 +1678,6 @@ export default function PlanifierScreen() {
                 ligne="Destination · dates · météo · activités"
                 cta={valisesAVenir.length > 0 ? "Préparer une nouvelle valise" : "Préparer ma valise"}
                 onClick={() => void actions.ouvrirValise(null)}
-                visuel={visuelHub("valise", profile.gender)}
-                cadrage="center 60%"
               >
                 {valisesAVenir.length > 0 && (
                   <>
@@ -1929,6 +2009,15 @@ export default function PlanifierScreen() {
                 {/* LE MÊME HERO QUE LE LOOK PLANIFIÉ (04/11/2026, demandé : « harmonise aussi l'affichage sur cette page ») : surtitre,
                     flat lay du look (sans phrase manuscrite, comme les autres heros : 04/11/2026), provenance, indicateurs et « Pour l'extérieur » (HeroTenue). Ses actions restent en pied d'écran. */}
                 <HeroTenue
+                  onPiece={(it, look) =>
+                    remplacement.ouvrir(it, {
+                      look,
+                      contexte: contexteResultat,
+                      dressing: state.items,
+                      suggestions: dressingSeul ? [] : capsuleDeLaDate,
+                      appliquer: remplacerDansResultat,
+                    })
+                  }
                   statut={composition ? (depuisPlan ? "Tenue déjà planifiée" : "Tenue de ta photo") : "Ta tenue proposée"}
                   pieces={pieces}
                   temperature={tempResultat}
@@ -2195,6 +2284,25 @@ export default function PlanifierScreen() {
               {/* LE HERO DE LA PAGE TENUE (14/10/2026, demandé), pour la tenue GARDÉE. « Modifier ma tenue » est passé sous la composition
                   (04/11/2026) ; « Avis d'un proche » reste ici, comme sur Tenue. */}
               <HeroTenue
+                // Une tenue passée ne se modifie plus : la fiche directe, comme avant.
+                onPiece={
+                  passee
+                    ? undefined
+                    : (it, look) =>
+                        remplacement.ouvrir(it, {
+                          look,
+                          contexte: {
+                            ...contexteResultat,
+                            occasion: t.occasion,
+                            weather: meteoMoteurPlan ?? meteoUtilisee,
+                            workMode: (t.sousChoix ?? "Présentiel") as WorkMode,
+                            dateContext: (t.sousChoix ?? DATE_CONTEXTS[0][0]) as DateContext,
+                          },
+                          dressing: state.items,
+                          suggestions: t.dressingSeul ? [] : wardrobePool,
+                          appliquer: (a, n) => remplacerDansPlan(t, a, n),
+                        })
+                }
                 statut={passee ? "Ton look était planifié" : "Ta tenue planifiée"}
                 pieces={pieces}
                 temperature={tempPlan}
@@ -2483,6 +2591,8 @@ export default function PlanifierScreen() {
           n'existe pas de popover, et en créer un pour trois lignes ajouterait
           un motif à maintenir. La corbeille quitte la carte : une action
           destructive ne doit pas être la plus visible des secondaires. */}
+      {/* La feuille Voir / Remplacer d'une pièce du flat lay, et sa confirmation (RemplacementPiece). */}
+      {remplacement.rendu}
       <BottomSheet title="Ce look" open={!!menuPlan} onClose={() => setMenuPlan(null)}>
         <div className="flex flex-col">
           <button
