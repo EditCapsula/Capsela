@@ -106,18 +106,23 @@ export function useRemplacementPiece(): { ouvrir: (it: Item, config: ConfigRempl
 
   const rendu = (
     <>
-      <BottomSheet title={piece?.name ?? ""} open={Boolean(piece) && vue === "piece"} onClose={fermer}>
+      {/* LA FEUILLE D'UNE PIÈCE, REVUE (12/11/2026, demandé : « image plus grande et entière, c'est l'élément principal ; titre mieux
+          intégré, typographie éditoriale ; badge plus discret, Suggestion Capsela »). L'en-tête ne porte plus que la provenance, en petite
+          étiquette (le mode `surtitre` de BottomSheet, celui des fiches de suggestion) : « ✦ Suggestion Capsela » ou « Ton dressing ». La
+          photo prend toute la largeur, en entier (bornée en hauteur pour laisser voir les actions) ; dessous, la marque en surtitre si elle
+          est connue, puis le nom en Bodoni. */}
+      <BottomSheet title={suggestion ? "✦ Suggestion Capsela" : "Ton dressing"} surtitre open={Boolean(piece) && vue === "piece"} onClose={fermer}>
         {piece && (
           <>
-            <div className="mx-auto" style={{ width: "min(68%, 260px)" }}>
-              <PhotoPiece piece={piece} ratio={0.8} rayon={18} entiere />
+            <div className="mx-auto" style={{ width: "min(100%, calc(46vh * 0.8))" }}>
+              <PhotoPiece piece={piece} ratio={0.8} rayon={22} entiere />
             </div>
-            {(piece.brand || suggestion) && (
-              <div className="flex items-center justify-center gap-2 mt-4">
-                {piece.brand && <span className="t-surtitre text-muted-3">{piece.brand}</span>}
-                {suggestion && <span className="t-pastille text-terracotta bg-warm-bg rounded-full py-1 px-[10px]">Suggestion</span>}
-              </div>
-            )}
+            <div className="text-center mt-[18px]">
+              {piece.brand && <div className="t-surtitre text-muted-3">{piece.brand}</div>}
+              <h2 className={"font-serif text-ink " + (piece.brand ? "mt-[6px]" : "")} style={{ fontSize: 24, lineHeight: 1.15, textWrap: "balance" }}>
+                {piece.name}
+              </h2>
+            </div>
             <div className="grid grid-cols-2 gap-[10px] mt-5">
               <Button
                 variante="contour"
