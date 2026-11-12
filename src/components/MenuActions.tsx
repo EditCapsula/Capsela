@@ -111,7 +111,12 @@ export default function MenuActions() {
         aria-label={ouvert ? "Fermer les actions rapides" : "Actions rapides : ajouter une pièce, planifier, demander un avis"}
         // Repère de la visite guidée du Dressing (VisiteGuidee) : ce bouton remplace le « + » qui le portait.
         data-tour={state.screen === "wardrobe" ? "dressing-ajouter" : undefined}
-        className="absolute right-4 z-50 flex items-center justify-center rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream cursor-pointer transition-transform active:scale-[.95]"
+        // Fermé, sous les feuilles (BottomSheet, z-50) et au-dessus de la barre du bas (z-20) : une feuille ouverte le recouvre (12/11/2026,
+        // vu en rendu sur la feuille d'une pièce). Ouvert, au-dessus de son voile (z-40).
+        className={
+          "absolute right-4 flex items-center justify-center rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream cursor-pointer transition-transform active:scale-[.95] " +
+          (ouvert ? "z-50" : "z-30")
+        }
         style={{ bottom: bas, width: 56, height: 56, boxShadow: "0 4px 14px rgba(29,26,22,.22)" }}
       >
         <svg

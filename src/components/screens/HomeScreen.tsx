@@ -1,5 +1,6 @@
 "use client";
 
+import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
@@ -121,6 +122,9 @@ export default function HomeScreen() {
   const jourAVenir = jourConsulte.decalage > 0;
   const planApplique = usePlanApplique();
   const ouvrirPiece = useOuvrirPiece();
+  // LE FLAT LAY INTERACTIF (12/11/2026, RemplacementPiece) : la tenue du jour proposée et les propositions du carrousel. Une tenue
+  // venue d'un plan ou d'une valise en séjour garde la fiche directe : la remplacer ici ne changerait ni le plan ni la valise.
+  const remplacement = useRemplacementPiece();
   // UNE TENUE SANS CHAUSSURES (14/10/2026) : leur silhouette se pose dans la composition, comme sur la page Tenue.
   const sansChaussures = (pieces: Item[]): CategoryKey[] => (pieces.length > 0 && !pieces.some((p) => p.cat === "chaussures") ? FANTOME_CHAUSSURES : AUCUN_FANTOME);
 
@@ -279,6 +283,13 @@ export default function HomeScreen() {
   const passee = retroActif > 0 ? tenuePassee(state.history, state.tenuesPlanifiees, jourLocal(dateRetro)) : null;
   const piecesPassee = passee ? passee.pieceIds.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => Boolean(i)) : [];
   const planHero = planApplique && hasOutfit ? planApplique.plan : null;
+  const contexteRemplacement = useContexteLook({ occasion: occasionKey || "all", weather: meteoDuJour });
+  /** Toucher une pièce d'un look : Voir / Remplacer, ou la fiche directe quand le look ne peut pas être modifié ici. */
+  const toucherPiece = (look: Item[], appliquer: ((a: number, n: number) => boolean) | null) => (it: Item) =>
+    appliquer
+      ? remplacement.ouvrir(it, { look, contexte: contexteRemplacement, dressing: state.items, suggestions: defaultCapsule, appliquer })
+      : ouvrirPiece(it);
+  const remplacerTenueDuJour = planHero || valiseConsultee ? null : (a: number, n: number) => (actions.remplacerDansTenue(a, n), true);
   // Un look de valise (séjour en cours, valiseDuJour.ts) se dit comme tel : « Look de ta valise · Jour 2 de ton séjour à Lisbonne ».
   const texteHero = planHero
     ? estPlanValise(planHero.id) && valiseConsultee
@@ -452,6 +463,16 @@ export default function HomeScreen() {
           ) : undefined
         }
         portee={duJour && porteeAujourdhui}
+        onPiece={toucherPiece(
+          pieces,
+          duJour
+            ? slide.source === "plan"
+              ? null
+              : remplacerTenueDuJour
+            : enSejour
+              ? null
+              : (a, n) => (actions.remplacerDansProposition(slide.id as SlideId, a, n), true)
+        )}
       />
     );
   };
@@ -594,7 +615,7 @@ export default function HomeScreen() {
           {passee ? (
             <FlatLayCapsela items={piecesPassee} context="hero-home" layoutSeed={clePieces(piecesPassee.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
           ) : aucuneTenuePossible ? null : (
-            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={ouvrirPiece} fantomes={sansChaussures(outfitPieces)} ajouts={conseilVeste} />
+            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={toucherPiece(outfitPieces, remplacerTenueDuJour)} fantomes={sansChaussures(outfitPieces)} ajouts={conseilVeste} />
           )}
         </div>
 
@@ -701,6 +722,8 @@ export default function HomeScreen() {
 
       {/* Quota « Autre tenue » : la même feuille de quota partout. */}
       {quota.feuille}
+      {/* La feuille Voir / Remplacer d'une pièce du flat lay, et sa confirmation (RemplacementPiece). */}
+      {remplacement.rendu}
     </div>
   );
 }

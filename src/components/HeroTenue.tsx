@@ -32,6 +32,7 @@ export function HeroTenue({
   candidatsExterieur,
   indicateurs,
   badge,
+  onPiece,
 }: {
   statut: string;
   pieces: Item[];
@@ -53,10 +54,16 @@ export function HeroTenue({
   indicateurs?: React.ReactNode;
   /** Une pastille à droite du surtitre (« Ton dressing + ta capsule »…). */
   badge?: React.ReactNode;
+  /**
+   * Toucher une pièce du flat lay (12/11/2026, RemplacementPiece) : la feuille Voir / Remplacer, avec le look affiché (sans la couche
+   * extérieure montrée à part). Sans lui, la fiche directe, comme avant.
+   */
+  onPiece?: (it: Item, look: Item[]) => void;
 }) {
-  const ouvrirPiece = useOuvrirPiece();
+  const ouvrirFiche = useOuvrirPiece();
   const { principal, exterieur, conseilManteauPlusLong } = separerCoucheExterieure(piecesRecues, temperature, candidatsExterieur);
   const pieces = principal;
+  const ouvrirPiece = onPiece ? (it: Item) => onPiece(it, pieces) : ouvrirFiche;
   const total = pieces.length;
   const capsule = pieces.filter((p) => isCatalogId(p.id)).length;
   const dressing = total - capsule;
@@ -103,7 +110,7 @@ export function HeroTenue({
 
       {exterieur && temperature != null && (
         <div className="mt-[6px] flex-shrink-0">
-          <PourLExterieur piece={exterieur} temperature={temperature} quand={quand ?? "prévus"} onClick={() => ouvrirPiece(exterieur)} />
+          <PourLExterieur piece={exterieur} temperature={temperature} quand={quand ?? "prévus"} onClick={() => ouvrirFiche(exterieur)} />
         </div>
       )}
       {/* Le manteau de la tenue est plus court que sa veste, et aucun manteau connu assez long (R-B25, 12/11/2026). */}

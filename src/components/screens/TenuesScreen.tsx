@@ -1,5 +1,6 @@
 "use client";
 
+import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BarreDuJour from "@/components/BarreDuJour";
@@ -215,6 +216,10 @@ export default function TenuesScreen() {
   // La tenue planifiée devenue tenue du jour (option C, 30/09/2026).
   const planApplique = usePlanApplique();
   const ouvrirPiece = useOuvrirPiece();
+  // LE FLAT LAY INTERACTIF (12/11/2026, RemplacementPiece) : toucher une pièce de la tenue ouvre Voir / Remplacer ; le remplacement
+  // s'applique à la tenue affichée (remplacerDansTenue), « Annuler » le défait.
+  const remplacement = useRemplacementPiece();
+  const contexteRemplacement = useContexteLook({ occasion: state.occasion || "all", weather: meteoDuJour });
   const tirageEnCours = quota.tirageEnCours;
   const { profile, userId } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
@@ -977,7 +982,18 @@ export default function TenuesScreen() {
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
             <div className="absolute inset-y-0 left-2 right-2">
-              <FlatLayCapsela items={piecesDuLook} context="look-detail" layoutSeed={clePieces(piecesDuLook.map((p) => p.id)).join(",")} fantomes={fantomesHero} onFantome={(cat) => (cat === "chaussures" ? completerChaussures() : actions.openAddForCategory(cat))} onPiece={ouvrirPiece} ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
+              <FlatLayCapsela items={piecesDuLook} context="look-detail" layoutSeed={clePieces(piecesDuLook.map((p) => p.id)).join(",")} fantomes={fantomesHero} onFantome={(cat) => (cat === "chaussures" ? completerChaussures() : actions.openAddForCategory(cat))} onPiece={(it) =>
+                  remplacement.ouvrir(it, {
+                    look: piecesDuLook,
+                    contexte: contexteRemplacement,
+                    dressing: state.items,
+                    suggestions: defaultCapsule,
+                    appliquer: (a, n) => {
+                      actions.remplacerDansTenue(a, n);
+                      return true;
+                    },
+                  })
+                } ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
             </div>
           </div>
           <div className="flex-shrink-0">
@@ -1653,6 +1669,8 @@ export default function TenuesScreen() {
           referme le toast. fixed plutôt qu'absolute pour rester visible quel
           que soit le défilement de cet écran, contraint à la largeur du
           cadre mobile (max-w-[480px] mx-auto) comme TabBar juste en dessous. */}
+      {/* La feuille Voir / Remplacer d'une pièce du flat lay, et sa confirmation (RemplacementPiece). */}
+      {remplacement.rendu}
       {toast && (
         <div
           className="fixed inset-x-0 mx-auto max-w-[480px] px-6 z-30"

@@ -58,6 +58,8 @@ export interface CarteHeroProps {
   pied?: React.ReactNode;
   /** La tenue a été portée aujourd'hui (« Porter cette tenue ») : la carte le dit (15/10/2026, demandé). */
   portee?: boolean;
+  /** Toucher une pièce (12/11/2026, RemplacementPiece) : la feuille Voir / Remplacer. Sans lui, la fiche directe, comme avant. */
+  onPiece?: (it: Item) => void;
 }
 
 /**
@@ -65,8 +67,9 @@ export interface CarteHeroProps {
  * seul, arbitré le 14/10/2026 (option 3h), puis Tenue le même jour ; les autres hero gardent --color-hero-background. Le texte réduit à gauche, la composition — point focal — à droite, deux actions
  * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
  */
-export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, ajouts, portee }: CarteHeroProps) {
-  const ouvrirPiece = useOuvrirPiece();
+export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, ajouts, portee, onPiece }: CarteHeroProps) {
+  const ouvrirFiche = useOuvrirPiece();
+  const ouvrirPiece = onPiece ?? ouvrirFiche;
   return (
     <div
       // flex-1 : toutes les slides prennent la hauteur de la plus haute (la piste les étire) — pas de saut de hauteur au glissé (18/10/2026).

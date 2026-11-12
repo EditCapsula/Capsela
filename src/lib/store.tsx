@@ -1,5 +1,6 @@
 "use client";
 
+import { remplacerDansIds } from "./remplacementPiece";
 import { oublierContexte } from "./memoireEcrans";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
@@ -575,6 +576,8 @@ export interface Actions {
   requestCatalogImage: (itemId: number) => void;
   regenOutfit: () => void;
   /** « Autre idée » d'une slide du carrousel qui ne porte pas la tenue du jour : une autre proposition pour SON occasion, sans toucher aux autres slides ni au planning. */
+  /** Remplace une pièce d'une proposition du carrousel (12/11/2026, RemplacementPiece) ; les autres pièces ne bougent pas. */
+  remplacerDansProposition: (slide: SlideId, ancienId: number, nouvelId: number) => void;
   autreIdeeSlide: (slide: SlideId) => void;
   /** Tire la slide suivante du carrousel de l'accueil (calcul paresseux, 17/10/2026). */
   etendreCarrousel: () => void;
@@ -2396,6 +2399,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         const visibles = Object.keys(s.carrousel.propositions).filter((id) => id !== slideDuJour).length + (slideDuJour ? 1 : 0);
         const suite = completerCarrousel(s, cleCarrousel, visibles + 1);
         return (suite.carrousel?.tentees?.length ?? 0) === (s.carrousel.tentees?.length ?? 0) ? s : suite;
+      }),
+    remplacerDansProposition: (slide, ancienId, nouvelId) =>
+      setState((s) => {
+        const courante = s.carrousel?.propositions?.[slide];
+        if (!s.carrousel || !courante) return s;
+        return { ...s, carrousel: { ...s.carrousel, propositions: { ...s.carrousel.propositions, [slide]: remplacerDansIds(courante, ancienId, nouvelId) } } };
       }),
     autreIdeeSlide: (slide) =>
       setState((s) => {

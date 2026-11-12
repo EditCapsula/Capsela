@@ -1,5 +1,7 @@
 "use client";
 
+import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
+import { remplacerDansIds } from "@/lib/remplacementPiece";
 import { masquerMenuActions } from "@/lib/menuActions";
 import { autresIdees } from "@/lib/alternativesTenue";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -868,6 +870,34 @@ export default function PlanifierScreen() {
   const [altsBrut, setAltsBrut] = useState<{ cle: string; vues: number[][]; epuise: boolean } | null>(null);
   const alternativesEpuisees = altsBrut?.cle === cleParams && altsBrut.epuise;
   const idsAffiches = composition ?? choisie ?? tenue?.ids ?? [];
+  /*
+   * LE FLAT LAY INTERACTIF (12/11/2026, RemplacementPiece). La tenue PROPOSÉE : le remplacement change la tenue affichée (la composition
+   * imposée, ou le choix gardé pour ces critères), rien n'est écrit avant « Garder cette tenue ». Une tenue DÉJÀ PLANIFIÉE : le
+   * remplacement est enregistré dans la tenue planifiée (arbitré le 12/11/2026), par la même écriture que la planification ; un échec est dit.
+   */
+  const remplacement = useRemplacementPiece();
+  const contexteResultat = useContexteLook({ occasion: occ ?? "all", weather: meteoUtilisee, workMode, dateContext });
+  const remplacerDansResultat = (a: number, n: number) => {
+    const ids = remplacerDansIds(idsAffiches, a, n);
+    if (composition) setComposition(ids);
+    else setChoixBrut({ cle: cleParams, ids });
+    return true;
+  };
+  const remplacerDansPlan = async (plan: TenuePlanifiee, a: number, n: number) => {
+    if (!userId) return false;
+    const { id: _id, ...sansId } = plan;
+    void _id;
+    try {
+      const ligne = await upsertTenuePlanifiee(userId, { ...sansId, pieceIds: remplacerDansIds(plan.pieceIds, a, n) });
+      // La ligne relue garde ce que l'upsert n'écrit pas (humeur, autres occasions) : repris du plan.
+      const majPlan: TenuePlanifiee = { ...plan, ...ligne, humeur: plan.humeur, occasionsSecondaires: plan.occasionsSecondaires };
+      setPlans((l) => l.map((x) => (x.id === plan.id ? majPlan : x)));
+      setPlanOuvert((o) => (o && o.id === plan.id ? majPlan : o));
+      return true;
+    } catch {
+      return false;
+    }
+  };
   /**
    * « AUTRE TENUE » (04/11/2026, brief « Évolution du parcours de planification ») : une nouvelle proposition, à la place de celle-ci, avec
    * les mêmes critères — le même moteur, les mêmes paramètres — et jamais une tenue déjà montrée pour eux (autresIdees : un autre socle, ou
@@ -1979,6 +2009,15 @@ export default function PlanifierScreen() {
                 {/* LE MÊME HERO QUE LE LOOK PLANIFIÉ (04/11/2026, demandé : « harmonise aussi l'affichage sur cette page ») : surtitre,
                     flat lay du look (sans phrase manuscrite, comme les autres heros : 04/11/2026), provenance, indicateurs et « Pour l'extérieur » (HeroTenue). Ses actions restent en pied d'écran. */}
                 <HeroTenue
+                  onPiece={(it, look) =>
+                    remplacement.ouvrir(it, {
+                      look,
+                      contexte: contexteResultat,
+                      dressing: state.items,
+                      suggestions: dressingSeul ? [] : capsuleDeLaDate,
+                      appliquer: remplacerDansResultat,
+                    })
+                  }
                   statut={composition ? (depuisPlan ? "Tenue déjà planifiée" : "Tenue de ta photo") : "Ta tenue proposée"}
                   pieces={pieces}
                   temperature={tempResultat}
@@ -2245,6 +2284,25 @@ export default function PlanifierScreen() {
               {/* LE HERO DE LA PAGE TENUE (14/10/2026, demandé), pour la tenue GARDÉE. « Modifier ma tenue » est passé sous la composition
                   (04/11/2026) ; « Avis d'un proche » reste ici, comme sur Tenue. */}
               <HeroTenue
+                // Une tenue passée ne se modifie plus : la fiche directe, comme avant.
+                onPiece={
+                  passee
+                    ? undefined
+                    : (it, look) =>
+                        remplacement.ouvrir(it, {
+                          look,
+                          contexte: {
+                            ...contexteResultat,
+                            occasion: t.occasion,
+                            weather: meteoMoteurPlan ?? meteoUtilisee,
+                            workMode: (t.sousChoix ?? "Présentiel") as WorkMode,
+                            dateContext: (t.sousChoix ?? DATE_CONTEXTS[0][0]) as DateContext,
+                          },
+                          dressing: state.items,
+                          suggestions: t.dressingSeul ? [] : wardrobePool,
+                          appliquer: (a, n) => remplacerDansPlan(t, a, n),
+                        })
+                }
                 statut={passee ? "Ton look était planifié" : "Ta tenue planifiée"}
                 pieces={pieces}
                 temperature={tempPlan}
@@ -2533,6 +2591,8 @@ export default function PlanifierScreen() {
           n'existe pas de popover, et en créer un pour trois lignes ajouterait
           un motif à maintenir. La corbeille quitte la carte : une action
           destructive ne doit pas être la plus visible des secondaires. */}
+      {/* La feuille Voir / Remplacer d'une pièce du flat lay, et sa confirmation (RemplacementPiece). */}
+      {remplacement.rendu}
       <BottomSheet title="Ce look" open={!!menuPlan} onClose={() => setMenuPlan(null)}>
         <div className="flex flex-col">
           <button
