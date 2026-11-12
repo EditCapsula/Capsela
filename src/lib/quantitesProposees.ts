@@ -1,10 +1,11 @@
 import type { CreneauPlanning } from "./planningValise";
-import type { LookValise, SituationValise } from "./valise";
+import { BAGAGES, capaciteDe, unitesDe, type LookValise, type SituationValise, type TailleBagage } from "./valise";
 import type { Item } from "./types";
 
 /*
  * LES QUANTITÉS PROPOSÉES D'UNE VALISE (12/11/2026, étape 3 du brief « Création de l'occasion Vacances », section 6 ; arbitrages de la
- * propriétaire du même jour). Module PUR, pas encore branché sur l'écran : sa mesure (scripts/valise-quantites.audit.ts) passe avant.
+ * propriétaire du même jour). Module PUR, mesuré par scripts/valise-quantites.audit.ts ; branché le 12/11/2026 (option 3 retenue par la propriétaire : les looks
+ * restent, le linge compte dans le remplissage, et une valise trop pleine le dit avec la taille qui conviendrait).
  *
  *   · Une TABLE DE RÈGLES UNIQUE (REGLES_PIECES, REGLES_LINGE), la première qui s'applique décide.
  *   · Les quantités se calculent sur les JOURS D'UTILISATION RÉELS dans le planning, chaque jour compté une fois même si la pièce
@@ -160,4 +161,37 @@ export function ajusterALaCapacite(
   }
   for (const k of Object.keys(q)) if (q[k] === 1) delete q[k];
   return { quantites: q, retires };
+}
+
+/** Un article de linge dans le remplissage : un quart d'un haut (option 3, 12/11/2026). ARBITRAGE ÉDITORIAL. */
+export const UNITE_LINGE = 0.25;
+
+/**
+ * LES QUANTITÉS DE LA VALISE AFFICHÉE : proposées d'après le planning et le lavage, les réglages à la main devant, puis les exemplaires
+ * en plus retirés si le bagage déborde (le linge compté). Les looks ne changent jamais.
+ */
+export function quantitesDeLaValise(p: {
+  pieces: readonly Item[];
+  planning: readonly CreneauPlanning[];
+  looks: readonly Pick<LookValise, "ids">[];
+  situations: readonly SituationValise[];
+  lavage: Lavage;
+  manuelles: Readonly<Record<string, number>> | undefined;
+  capacite: number;
+  volumeLinge: number;
+}): { quantites: Record<string, number>; retires: number } {
+  const usage = usageDesPieces(p.planning, p.looks, p.situations);
+  const proposees: Record<string, number> = {};
+  for (const it of p.pieces) {
+    const q = quantiteProposee(it, usage.get(it.id), p.lavage);
+    if (q > 1) proposees[String(it.id)] = q;
+  }
+  const manuelles = p.manuelles ?? {};
+  return ajusterALaCapacite(p.pieces, avecReglagesManuels(proposees, manuelles), p.capacite, unitesDe, manuelles, p.volumeLinge);
+}
+
+/** La plus petite valise où tient ce volume, plus grande que l'actuelle ; null si aucune (même la plus grande déborde). */
+export function bagageQuiConvient(volume: number, actuelle: TailleBagage): TailleBagage | null {
+  const rang = BAGAGES.findIndex(([t]) => t === actuelle);
+  return BAGAGES.slice(rang + 1).find(([t]) => capaciteDe(t) >= volume)?.[0] ?? null;
 }

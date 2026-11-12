@@ -1,4 +1,4 @@
-import { unitesDe } from "./valise";
+import { DUREE_MAX_JOURS, unitesDe } from "./valise";
 import type { Item } from "./types";
 
 /*
@@ -12,7 +12,8 @@ import type { Item } from "./types";
  */
 
 export const QUANTITE_MIN = 1;
-export const QUANTITE_MAX = 9;
+/** Jusqu'à un par jour du plus long séjour (12/11/2026 : sans lavage, le linge se compte sur toute la durée, au plus DUREE_MAX_JOURS). */
+export const QUANTITE_MAX = DUREE_MAX_JOURS;
 
 export type Quantites = Readonly<Record<string, number>>;
 
@@ -29,6 +30,14 @@ export function ajusterQuantite(quantites: Quantites | undefined, cle: string | 
   if (suivante === QUANTITE_MIN) delete out[String(cle)];
   else out[String(cle)] = suivante;
   return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * La quantité RÉGLÉE À LA MAIN (12/11/2026, quantités proposées) : la valeur exacte est écrite, 1 compris, car elle passe devant la
+ * quantité que Capsela propose (quantitesProposees.ts) — un « 1 » choisi ne doit pas redevenir les 3 t-shirts proposés.
+ */
+export function reglerQuantite(quantites: Quantites | undefined, cle: string | number, valeur: number): Record<string, number> {
+  return { ...(quantites ?? {}), [String(cle)]: Math.min(QUANTITE_MAX, Math.max(QUANTITE_MIN, Math.round(valeur))) };
 }
 
 /** Les quantités des seules clés encore présentes (une pièce retirée de la valise n'y garde pas la sienne). */

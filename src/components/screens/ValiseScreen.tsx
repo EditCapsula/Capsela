@@ -135,7 +135,8 @@ import Card from "@/components/Card";
 import Badge from "@/components/Badge";
 import { degres } from "@/lib/unites";
 import { estPieceDeValise, piecesPourLaSituation, piecesReserveesDuProfil } from "@/lib/piecesDeValise";
-import { ajusterQuantite, libelleQuantite, nombreDePieces, quantiteDe, quantitesValides, volumeAvecQuantites } from "@/lib/quantitesValise";
+import { libelleQuantite, nombreDePieces, quantiteDe, quantitesValides, reglerQuantite, volumeAvecQuantites } from "@/lib/quantitesValise";
+import { bagageQuiConvient, LINGE_PAR_JOUR, quantiteLinge, quantitesDeLaValise, UNITE_LINGE } from "@/lib/quantitesProposees";
 import ControleQuantite from "@/components/ControleQuantite";
 import PhotoPiece from "@/components/PhotoPiece";
 
@@ -1073,6 +1074,8 @@ export default function ValiseScreen() {
   const [depart, setDepart] = useState("");
   const [retour, setRetour] = useState("");
   const [bagage, setBagage] = useState<TailleBagage | null>(null);
+  /** « Pourras-tu laver tes vêtements pendant ton séjour ? » (12/11/2026) : null tant que la personne n'a pas répondu. */
+  const [lavage, setLavage] = useState<boolean | null>(null);
   /**
    * LES ACTIVITÉS du séjour (maquette V2, 11/10/2026) : jusqu'à quatre. Elles donnent le programme (programmeDesActivites), que le
    * moteur reçoit en occasions mères et que le planning jour par jour répartit — le moteur et la phase B sont inchangés.
@@ -1154,7 +1157,7 @@ export default function ValiseScreen() {
   const amplitudeEtape1 = meteosEtape1 ? amplitudePrevue(meteosEtape1) : null;
 
   const etapeValide =
-    etape === 1 ? destination.trim().length > 1 && depart >= premierJour && dureeOk && etapesCompletes : etape === 2 ? bagage != null : true;
+    etape === 1 ? destination.trim().length > 1 && depart >= premierJour && dureeOk && etapesCompletes : etape === 2 ? bagage != null && lavage != null : true;
 
   const zoneScroll = useRef<HTMLDivElement | null>(null);
   const [onglet, setOnglet] = useState<Onglet>("pieces");
@@ -1202,6 +1205,8 @@ export default function ValiseScreen() {
     evenements?: EvenementValise[];
     /** « Uniquement mon dressing » : sans compléter avec la capsule. Absent : le réglage de la valise modifiée, sinon non. */
     uniquementDressing?: boolean;
+    /** Le lavage pendant le séjour (étape 2) ; absent d'une valise d'avant le 12/11/2026. */
+    lavage?: boolean;
   };
   /** Une préparation à la fois (22/10/2026) : un double toucher sur « Générer ma valise » ne lance pas deux calculs. */
   const preparationEnCours = useRef(false);
@@ -1304,6 +1309,9 @@ export default function ValiseScreen() {
       ...r,
       ...(r.suggestionIds.length ? {} : { suggestionIds: undefined }),
       ...(seulDressing ? { uniquementDressing: true } : {}),
+      ...(typeof rep.lavage === "boolean" ? { lavage: rep.lavage } : {}),
+      // Les quantités réglées à la main suivent la valise recomposée (quantitesValides ne garde que les pièces encore présentes).
+      ...(quantitesValides(ancienne?.quantites, r.pieceIds) ? { quantites: quantitesValides(ancienne?.quantites, r.pieceIds) } : {}),
       // Les pièces du dressing au moment du calcul : une pièce ajoutée
       // ensuite se reconnaît, et l'écran propose de recomposer.
       dressingIds: dressing.map((i) => i.id),
@@ -1322,7 +1330,7 @@ export default function ValiseScreen() {
     const evts = evenementsDuSejour(evenements, jours);
     const meres = occasionsDuProgramme([...retenu, ...evts.map((e) => ({ id: e.type, frequence: 1 }))]);
     void lancer(
-      { destination, ville, ...(roadTrip ? { etapes } : {}), depart, retour, bagage, sejour: null, occasions: occasionsRetenues(meres, null), programme: retenu, activites, choix, evenements: evts },
+      { destination, ville, ...(roadTrip ? { etapes } : {}), depart, retour, bagage, sejour: null, occasions: occasionsRetenues(meres, null), programme: retenu, activites, choix, evenements: evts, ...(lavage != null ? { lavage } : {}) },
       idEnModification
     );
   };
@@ -1355,6 +1363,7 @@ export default function ValiseScreen() {
         choix: valise.choix,
         evenements: valise.evenements,
         uniquementDressing: uniquementDressing ?? valise.uniquementDressing === true,
+        ...(typeof valise.lavage === "boolean" ? { lavage: valise.lavage } : {}),
       },
       valise.id
     );
@@ -1424,6 +1433,7 @@ export default function ValiseScreen() {
     setDepart("");
     setRetour("");
     setBagage(null);
+    setLavage(null);
     setChoix([]);
     setEvenements([]);
     setVue({ nom: "etape" });
@@ -1457,6 +1467,7 @@ export default function ValiseScreen() {
     setDepart(valise.depart);
     setRetour(valise.retour);
     setBagage(valise.bagage);
+    setLavage(typeof valise.lavage === "boolean" ? valise.lavage : null);
     // Les activités qu'évoque le programme gardé ; une valise d'avant la refonte n'a que ses occasions mères.
     // Rouvrir l'étape fait passer la valise à la planification manuelle (06/11/2026) : chaque activité montre ses dates, ou « À planifier ».
     setChoix(choixDeLaValise(valise.choix, valise.activites ?? activitesDuProgramme(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1))).map((c) => ({ ...c, jours: c.jours ?? [] })));
@@ -1707,6 +1718,45 @@ export default function ValiseScreen() {
             <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]">
               Ces quantités sont indicatives : la place tient compte de l&apos;encombrement (chaussures et manteaux en prennent plus qu&apos;un t-shirt). Tu pourras ajuster ta sélection ensuite.
             </div>
+            {/* LE LAVAGE (12/11/2026, étape 3 du brief Vacances, arbitré par la propriétaire : oui / non seulement). Il règle les quantités
+                proposées : oui, comptées sur quelques jours ; non, sur toute la durée du séjour (quantitesProposees.ts). */}
+            <div className="mt-6">
+              <div id="question-lavage" className="t-titre-ligne text-ink">
+                Pourras-tu laver tes vêtements pendant ton séjour ?
+              </div>
+              <div role="radiogroup" aria-labelledby="question-lavage" className="grid grid-cols-2 gap-[10px] mt-3">
+                {([
+                  [true, "Oui"],
+                  [false, "Non"],
+                ] as const).map(([v, libelle]) => {
+                  const on = lavage === v;
+                  return (
+                    <button
+                      key={libelle}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setLavage(v)}
+                      className={
+                        "flex items-center justify-between rounded-tuile border px-[14px] text-[14px] font-semibold cursor-pointer transition-colors " +
+                        (on ? "bg-warm-bg border-terracotta text-terracotta" : "bg-card border-border text-ink")
+                      }
+                      style={{ minHeight: 52, borderWidth: on ? 1.5 : 1 }}
+                    >
+                      {libelle}
+                      {on && <Coche />}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="text-[12px] text-muted leading-[1.5] mt-2">
+                {lavage === false
+                  ? "Les quantités sont comptées sur toute la durée de ton séjour."
+                  : lavage === true
+                    ? "Les quantités sont réduites : tu pourras laver en route."
+                    : "Nous en tenons compte pour proposer les quantités (t-shirts, sous-vêtements, chaussettes)."}
+              </div>
+            </div>
           </>
         )}
 
@@ -1945,11 +1995,30 @@ function Resultat({
   const [aDeplacer, setADeplacer] = useState<{ sousId: string; de: string; libelle: string } | null>(null);
   const parPiece = looksParPiece(looks);
   const couvertes = occasionsCouvertes(looks, valise.situations);
-  // Le remplissage compte les quantités réglées (07/11/2026) : il suit ce qui est réellement emporté.
-  const quantites = quantitesValides(valise.quantites, ids);
-  const volume = volumeAvecQuantites(pieces, quantites);
+  /** Les affaires de voyage : celles du séjour (programme, météo) moins les masquées, plus celles que la personne a ajoutées. */
+  const contexteAffaires = { programme: valise.programme ?? [], meteos: valise.meteos, sousTypes: pieces.flatMap((p) => (p.subtype ? [p.subtype] : [])) };
+  const affaires = affairesAffichees(contexteAffaires, valise.affaires);
+  /**
+   * LES QUANTITÉS (12/11/2026, étape 3 du brief Vacances, option 3 retenue par la propriétaire). Le linge (sous-vêtements, chaussettes) :
+   * un par jour, sur quelques jours avec lavage, sur toute la durée sans lavage — et il compte dans le remplissage, à UNITE_LINGE par
+   * article. Les pièces : proposées d'après le planning (quantitesProposees.ts) ; un réglage à la main passe toujours devant. Si le
+   * bagage déborde, seuls les exemplaires en plus proposés sont retirés : jamais une tenue, jamais un réglage de la personne.
+   */
+  const lavage = typeof valise.lavage === "boolean" ? valise.lavage : null;
+  const lingeParJour = quantiteLinge(joursDuSejourValise.length || valise.meteos.length, lavage);
+  const quantiteAffaire = (id: string) =>
+    valise.affaires?.quantites?.[id] != null || !LINGE_PAR_JOUR.includes(id) ? quantiteDe(valise.affaires?.quantites, id) : lingeParJour;
+  const volumeLinge = affaires.filter((a) => LINGE_PAR_JOUR.includes(a.id)).reduce((t, a) => t + quantiteAffaire(a.id) * UNITE_LINGE, 0);
+  const manuelles = quantitesValides(valise.quantites, ids);
+  const { quantites } = quantitesDeLaValise({ pieces, planning, looks, situations: valise.situations, lavage, manuelles, capacite, volumeLinge });
+  // Le remplissage compte les quantités (07/11/2026) et le linge (12/11/2026) : il suit ce qui est réellement emporté.
+  const volumePieces = volumeAvecQuantites(pieces, quantites);
+  const volume = volumePieces + volumeLinge;
   const depasse = etatJauge(volume, capacite) === "depassee";
-  const aAlleger = depasse ? allegement(ids, looks, capacite, (id) => unitesDe(pieces.find((p) => p.id === id)?.cat ?? "haut")) : [];
+  // « Alléger » ne propose de retirer des pièces que si les PIÈCES elles-mêmes débordent : le linge seul ne fait perdre aucune tenue.
+  const aAlleger = volumePieces > capacite ? allegement(ids, looks, capacite, (id) => unitesDe(pieces.find((p) => p.id === id)?.cat ?? "haut")) : [];
+  /** La valise pleine dit la taille qui conviendrait (option 3) ; null : même la plus grande déborde. */
+  const tailleQuiConvient = depasse ? bagageQuiConvient(volume, valise.bagage) : null;
   const tauxRemplissage = Math.round((volume / capacite) * 100);
   const nbJours = valise.meteos.length;
   const pieceDe = (id: number) => pieces.find((p) => p.id === id);
@@ -2029,9 +2098,6 @@ function Resultat({
   const piecesCochees = (valise.cochees ?? lireChecklistHeritee(valise.id)).filter((id) => valise.pieceIds.includes(id));
   const cocher = cocherPiece;
   const [tailleOuverte, setTailleOuverte] = useState(false);
-  /** Les affaires de voyage : celles du séjour (programme, météo) moins les masquées, plus celles que la personne a ajoutées. */
-  const contexteAffaires = { programme: valise.programme ?? [], meteos: valise.meteos, sousTypes: pieces.flatMap((p) => (p.subtype ? [p.subtype] : [])) };
-  const affaires = affairesAffichees(contexteAffaires, valise.affaires);
   const affairesCochees = cocheesValides(affaires, valise.affaires);
   const affairesCachees = affairesMasquees(contexteAffaires, valise.affaires);
   /** Les articles de la checklist : pièces et affaires (checklistValise.ts), lus séparément ci-dessous. */
@@ -3018,10 +3084,11 @@ function Resultat({
         {valise.destination}
       </h1>
 
-      {/* 2 · TA VALISE EST-ELLE PRÊTE ? */}
+      {/* 2 · TA VALISE EST-ELLE PRÊTE ? Trop pleine, elle est « à ajuster », pas « à compléter » (12/11/2026 : le linge compté, un long
+          séjour sans lavage remplit la valise). */}
       <div className="t-titre-ecran text-ink mt-[14px] flex items-center flex-wrap gap-x-[10px]">
         <span>
-          Ta valise <span className="italic">{prete ? "est prête\u00a0!" : "à compléter"}</span>
+          Ta valise <span className="italic">{prete ? "est prête\u00a0!" : depasse ? "à ajuster" : "à compléter"}</span>
         </span>
         {prete && (
           <span aria-hidden="true" className="w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center flex-shrink-0">
@@ -3114,13 +3181,24 @@ function Resultat({
           {retourTaille}
         </div>
       )}
+      {/* LA VALISE PLEINE (12/11/2026, option 3) : les tenues restent, l'écran dit la taille qui conviendrait. Si les pièces elles-mêmes
+          débordent, l'allègement reste proposé, comme avant. */}
       {depasse && (
         <div role="status" className="text-[12px] text-terracotta leading-[1.45] mt-2">
-          Ta sélection dépasse la place d&apos;une valise {valise.bagage}. Rien n&apos;est retiré sans toi :{" "}
-          <button onClick={() => setOnglet("pieces")} className="underline underline-offset-[3px] cursor-pointer">
-            voir ce qu&apos;on peut alléger
-          </button>
-          .
+          {aAlleger.length > 0 ? (
+            <>
+              Ta sélection dépasse la place d&apos;une valise {valise.bagage}. Rien n&apos;est retiré sans toi :{" "}
+              <button onClick={() => setOnglet("pieces")} className="underline underline-offset-[3px] cursor-pointer">
+                voir ce qu&apos;on peut alléger
+              </button>
+              {tailleQuiConvient ? `, ou passer à une valise ${tailleQuiConvient}.` : "."}
+            </>
+          ) : (
+            <>
+              Ta valise {valise.bagage} est pleine avec le linge du séjour.{" "}
+              {tailleQuiConvient ? `Une valise ${tailleQuiConvient} conviendrait.` : valise.bagage === "XL" ? "Tu peux réduire les quantités." : "Même une valise XL serait juste : tu peux réduire les quantités."}
+            </>
+          )}
         </div>
       )}
 
@@ -3544,7 +3622,7 @@ function Resultat({
                           <div className={"text-[12px] leading-[1.3] line-clamp-2 mt-[5px] px-[2px] break-words " + (dedans ? "text-muted" : "text-ink")}>{p.name}</div>
                           <div className="text-[11px] text-muted px-[2px] mt-[2px]">{libelleQuantite(q)}</div>
                           <div className="mt-auto pt-[6px] flex justify-center">
-                            <ControleQuantite compact valeur={q} libelle={p.name} onChange={(d) => majValise((v) => ({ ...v, quantites: ajusterQuantite(quantitesValides(v.quantites, v.pieceIds), p.id, d) }))} />
+                            <ControleQuantite compact valeur={q} libelle={p.name} onChange={(d) => majValise((v) => ({ ...v, quantites: reglerQuantite(quantitesValides(v.quantites, v.pieceIds), p.id, q + d) }))} />
                           </div>
                         </Card>
                       </li>
@@ -3698,9 +3776,9 @@ function Resultat({
                             {a && (
                               <ControleQuantite
                                 compact
-                                valeur={quantiteDe(valise.affaires?.quantites, a.id)}
+                                valeur={quantiteAffaire(a.id)}
                                 libelle={a.libelle}
-                                onChange={(d) => majAffaires((e) => ({ ...e, quantites: ajusterQuantite(e.quantites, a.id, d) }))}
+                                onChange={(d) => majAffaires((e) => ({ ...e, quantites: reglerQuantite(e.quantites, a.id, quantiteAffaire(a.id) + d) }))}
                               />
                             )}
                             <button

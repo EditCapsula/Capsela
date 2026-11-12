@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ajusterALaCapacite, avecReglagesManuels, quantiteLinge, quantiteProposee, type UsagePiece } from "../quantitesProposees";
+import { ajusterALaCapacite, avecReglagesManuels, bagageQuiConvient, quantiteLinge, quantiteProposee, quantitesDeLaValise, type UsagePiece } from "../quantitesProposees";
+import { reglerQuantite } from "../quantitesValise";
+import { capaciteDe, type SituationValise } from "../valise";
+import type { CreneauPlanning } from "../planningValise";
 import type { CategoryKey, Item } from "../types";
 
 // Les quantités proposées d'une valise (12/11/2026, étape 3 du brief Vacances, arbitrages de la propriétaire).
@@ -67,5 +70,24 @@ describe("réglages manuels et capacité", () => {
     const r = ajusterALaCapacite(pieces, { "1": 3, "2": 3 }, 4, () => 1, { "2": 3 });
     expect(r.quantites).toEqual({ "2": 3 });
     expect(r.retires).toBe(2);
+  });
+});
+
+describe("la valise affichée (branchement du 12/11/2026, option 3)", () => {
+  const situation = { occasion: "sortie_vacances", sousIds: ["visite"], jours: ["2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04"], meteo: { temp: 20 } } as unknown as SituationValise;
+  const planning = situation.jours.map((jour) => ({ jour, sousId: "visite", look: 0 })) as unknown as CreneauPlanning[];
+  const pantalon = piece(7, "pantalon", "Pantalon");
+  const base = { pieces: [tshirt, pantalon], planning, looks: [{ ids: [1, 7] }], situations: [situation], lavage: null, manuelles: undefined, capacite: 22, volumeLinge: 0 };
+  it("propose d'après le planning ; un réglage à la main, 1 compris, passe devant", () => {
+    expect(quantitesDeLaValise(base).quantites).toEqual({ "1": 2 });
+    expect(quantitesDeLaValise({ ...base, manuelles: reglerQuantite(undefined, 1, 1) }).quantites).toEqual({});
+  });
+  it("le linge fait déborder : les exemplaires proposés en plus sont retirés, jamais une pièce", () => {
+    expect(quantitesDeLaValise({ ...base, volumeLinge: 21 }).quantites).toEqual({});
+  });
+  it("la taille qui conviendrait : la plus petite plus grande où tout tient, sinon aucune", () => {
+    expect(bagageQuiConvient(capaciteDe("M") + 1, "M")).toBe("L");
+    expect(bagageQuiConvient(capaciteDe("M") + 1, "S")).toBe("L");
+    expect(bagageQuiConvient(capaciteDe("XL") + 1, "M")).toBeNull();
   });
 });

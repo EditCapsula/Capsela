@@ -5,7 +5,7 @@ import type { CatalogItem } from "../src/lib/catalog";
 import { planningDuProgramme } from "../src/lib/planningValise";
 import { elementProgramme, type ItemProgramme } from "../src/lib/programmeValise";
 import type { StyleId } from "../src/lib/profile";
-import { ajusterALaCapacite, estTshirt, LINGE_PAR_JOUR, quantiteLinge, quantiteProposee, usageDesPieces, type Lavage } from "../src/lib/quantitesProposees";
+import { ajusterALaCapacite, estTshirt, LINGE_PAR_JOUR, quantiteLinge, quantiteProposee, UNITE_LINGE, usageDesPieces, type Lavage } from "../src/lib/quantitesProposees";
 import type { CapsuleSeason, Item } from "../src/lib/types";
 import {
   capaciteDe,
@@ -36,8 +36,6 @@ import { assertCatalogueStyles, profilAudit } from "./harnaisAudit";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PAGE = 1000;
-/** Un article de linge, s'il comptait dans le remplissage : un quart d'un haut. ARBITRAGE ÉDITORIAL à confirmer. */
-const UNITE_LINGE = 0.25;
 
 interface Sejour { nom: string; depart: string; retour: string; temp: number; label: string; programme: ItemProgramme[]; saisonDecalee: CapsuleSeason }
 const SEJOURS: Sejour[] = [

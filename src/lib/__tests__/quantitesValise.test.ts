@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ajusterQuantite, nombreDePieces, quantiteDe, quantitesValides, QUANTITE_MAX, volumeAvecQuantites } from "../quantitesValise";
+import { ajusterQuantite, nombreDePieces, reglerQuantite, quantiteDe, quantitesValides, QUANTITE_MAX, volumeAvecQuantites } from "../quantitesValise";
 import { unitesDe } from "../valise";
 
 /** LES QUANTITÉS DE LA VALISE (07/11/2026). */
@@ -18,6 +18,12 @@ describe("quantités de la valise", () => {
     expect(ajusterQuantite(undefined, 5, -1)).toBeUndefined();
     expect(ajusterQuantite({ "5": QUANTITE_MAX }, 5, 1)).toEqual({ "5": QUANTITE_MAX });
     expect(ajusterQuantite({ "5": 2, a: 3 }, "a", -2)).toEqual({ "5": 2 });
+  });
+
+  it("un réglage à la main garde sa valeur exacte, 1 compris (12/11/2026)", () => {
+    expect(reglerQuantite(undefined, 5, 1)).toEqual({ "5": 1 });
+    expect(reglerQuantite({ "5": 2 }, 6, 40)).toEqual({ "5": 2, "6": QUANTITE_MAX });
+    expect(quantiteDe(reglerQuantite(undefined, 5, 0), 5)).toBe(1);
   });
 
   it("une pièce retirée de la valise ne garde pas sa quantité", () => {

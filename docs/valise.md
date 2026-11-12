@@ -480,9 +480,21 @@ Brief « Refonte UX de l'écran de synthèse de la valise » et maquette du mêm
   quantité (− / +, `ControleQuantite`), coche « déjà dans la valise », croix pour la retirer. Puis « À compléter » : chaque pièce
   manquante s'ajoute au dressing. « Achat à prévoir » a été retiré le 11/11/2026 (rien n'était fait derrière) ; `ValiseGardee.achats`
   reste lisible en base, plus affiché.
-- **Quantités** (`quantitesValise.ts`) : 1 par défaut, réglables de 1 à 9, gardées avec la valise (`ValiseGardee.quantites`, et
-  `EtatAffaires.quantites` pour les indispensables ; `calcul` jsonb, aucune migration). Le remplissage les compte. Les règles de
-  quantité initiale (« 1, puis 2 au-delà de 5 jours de baignade ») sont l'étape 3 du brief Vacances, à venir.
+- **Quantités** (`quantitesValise.ts`) : réglables de 1 à `DUREE_MAX_JOURS` (21), gardées avec la valise (`ValiseGardee.quantites`,
+  et `EtatAffaires.quantites` pour les indispensables ; `calcul` jsonb, aucune migration). Le remplissage les compte. Depuis le
+  12/11/2026, un réglage à la main est écrit à sa valeur exacte (`reglerQuantite`, 1 compris) : il passe devant la quantité proposée.
+- **Quantités proposées** (12/11/2026, étape 3 du brief Vacances, `quantitesProposees.ts`, mesurées par
+  `scripts/valise-quantites.audit.ts`). Une table de règles unique, calculée sur les jours d'utilisation réels du planning (un jour
+  compté une fois) :
+  - t-shirts et débardeurs : 1 pour 2 jours, 1 par jour chaud (≥ 25 °C) ou sportif, au plus 3 ; sans lavage, sur toute la durée ;
+  - maillot, short de bain, robe de plage, short léger : 1, puis 2 au-delà de 5 jours ;
+  - sous-vêtements et chaussettes : 1 par jour ; avec lavage, sur 4 jours ; sans lavage, sur toute la durée, sans plafond ; sans
+    réponse (valise d'avant), au plus 7.
+  Le lavage est demandé à l'étape 2 (« Pourras-tu laver tes vêtements pendant ton séjour ? », oui / non, `ValiseGardee.lavage`).
+  **Option 3 retenue par la propriétaire après la mesure** : les looks ne changent jamais ; le linge compte dans le remplissage
+  (`UNITE_LINGE`, un quart d'un haut par article) ; si le bagage déborde, les exemplaires en plus proposés sont retirés
+  (`ajusterALaCapacite`, jamais sous 1, jamais un réglage à la main), et l'écran dit que la valise est pleine et quelle taille
+  conviendrait (`bagageQuiConvient`). « Alléger » (retirer des pièces) n'est proposé que si les pièces elles-mêmes débordent.
 - **Tenues** : une galerie de looks (cartes `PlancheLook` de l'ancien Aperçu), filtrable par sous-occasion, puis le planning jour par
   jour, inchangé.
 - **Indispensables** : la checklist d'avant, avec la quantité de chaque article et « Tout cocher ».
