@@ -66,7 +66,12 @@ export interface ValiseGardee {
    */
   uniquementDressing?: boolean;
   /**
-   * Les quantités réglées par la personne (07/11/2026, quantitesValise.ts) : id de pièce → quantité, seulement celles qui ne valent pas 1.
+   * « Pourras-tu laver tes vêtements pendant ton séjour ? » (12/11/2026, étape 2) : true oui, false non. Les quantités proposées en
+   * dépendent (quantitesProposees.ts). Dans `calcul` (jsonb) : aucune migration. Absent (valise d'avant) : les plafonds par défaut.
+   */
+  lavage?: boolean;
+  /**
+   * Les quantités réglées par la personne (07/11/2026, quantitesValise.ts) : id de pièce → quantité, et depuis le 12/11/2026 la valeur exacte (1 compris), qui passe devant la quantité proposée.
    * Dans `calcul` (jsonb) : aucune migration. Absent : une de chaque.
    */
   quantites?: Record<string, number>;
@@ -237,7 +242,7 @@ interface ValiseRow {
   sejour: string | null;
   occasions: string[];
   piece_ids: (number | string)[];
-  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "uniquementDressing" | "quantites" | "achats" | "activites" | "choix" | "etapes" | "lieu" | "cochees" | "affaires" | "programme" | "evenements" | "placements">;
+  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "uniquementDressing" | "lavage" | "quantites" | "achats" | "activites" | "choix" | "etapes" | "lieu" | "cochees" | "affaires" | "programme" | "evenements" | "placements">;
 }
 
 const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Number);
@@ -259,6 +264,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     ...(r.calcul?.dressingIds ? { dressingIds: r.calcul.dressingIds } : {}),
     ...(r.calcul?.suggestionIds?.length ? { suggestionIds: r.calcul.suggestionIds } : {}),
     ...(r.calcul?.uniquementDressing ? { uniquementDressing: true } : {}),
+    ...(typeof r.calcul?.lavage === "boolean" ? { lavage: r.calcul.lavage } : {}),
     ...(r.calcul?.quantites && Object.keys(r.calcul.quantites).length ? { quantites: r.calcul.quantites } : {}),
     ...(r.calcul?.achats?.length ? { achats: nombres(r.calcul.achats) } : {}),
     ...(r.calcul?.activites?.length ? { activites: r.calcul.activites } : {}),
@@ -292,6 +298,7 @@ export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
       ...(v.dressingIds ? { dressingIds: v.dressingIds } : {}),
       ...(v.suggestionIds?.length ? { suggestionIds: v.suggestionIds } : {}),
       ...(v.uniquementDressing ? { uniquementDressing: true } : {}),
+      ...(typeof v.lavage === "boolean" ? { lavage: v.lavage } : {}),
       ...(v.quantites && Object.keys(v.quantites).length ? { quantites: v.quantites } : {}),
       ...(v.achats?.length ? { achats: v.achats } : {}),
       ...(v.activites?.length ? { activites: v.activites } : {}),
