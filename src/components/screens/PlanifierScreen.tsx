@@ -1,7 +1,8 @@
 "use client";
 
+import { masquerMenuActions } from "@/lib/menuActions";
 import { autresIdees } from "@/lib/alternativesTenue";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useContexteRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { sansBarre } from "@/lib/phraseOccasion";
 import AgendaLooks, { type EtatAgenda } from "@/components/AgendaLooks";
@@ -1273,6 +1274,23 @@ export default function PlanifierScreen() {
     setPrevision(null);
     setPrevisionEtat("vide");
   };
+  // LE MENU D'ACTIONS FLOTTANT SUR L'ACCUEIL DE PLANIFIER (12/11/2026, demandé ; menuActions.ts). Ses étapes et ses autres vues
+  // posent leur propre action en bas d'écran : le menu s'y efface (avant l'affichage, sans clignotement).
+  useLayoutEffect(() => {
+    masquerMenuActions("planifier-parcours", vue !== "intro");
+  }, [vue]);
+  useLayoutEffect(() => () => masquerMenuActions("planifier-parcours", false), []);
+  // « Planifier une tenue » demandé par le menu alors que Planifier est déjà ouvert : la demande n'est lue qu'à l'arrivée sur
+  // l'écran, elle est donc reprise ici — le même geste que le bouton de la carte du hub.
+  useEffect(() => {
+    if (!state.planDirect || vue === "etape") return;
+    // Une demande venue d'un autre composant (le store), comme les entrées lues à l'arrivée : l'effet est le bon endroit.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    recommencer();
+    actions.oublierPlanDirect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.planDirect]);
+
 
   /**
    * ROUVRIR LE PARCOURS SUR UNE TENUE PLANIFIÉE, PRÉ-REMPLI (30/09/2026) : ce

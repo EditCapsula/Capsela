@@ -4,7 +4,7 @@ import { masquerMenuActions, menuActionsMasque, menuActionsVisible } from "../me
 describe("menu d'actions flottant", () => {
   it("vit sur les pages principales, jamais sur un parcours ni sur un détail à barre d'actions", () => {
     for (const screen of ["home", "wardrobe", "capsule", "history", "tenues"] as const) expect(menuActionsVisible({ screen, masque: false, clavier: false })).toBe(true);
-    for (const screen of ["planifier", "valise", "add", "piece", "createLook", "profileSetup", "welcome"] as const)
+    for (const screen of ["valise", "add", "piece", "createLook", "profileSetup", "welcome"] as const)
       expect(menuActionsVisible({ screen, masque: false, clavier: false })).toBe(false);
   });
   it("s'efface avec le clavier, ou quand un écran le masque", () => {

@@ -1973,7 +1973,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, planJour: Math.max(1, decalage), planRetour: "calendrier", planComposition: null, screen: "planifier" })),
     // Ouverture ordinaire (barre du bas, cartes) : aucun retour particulier.
     goPlanifier: () => setState((s) => ({ ...s, planRetour: null, planJour: null, planDirect: false, screen: "planifier" })),
-    planifierDirect: (depuis = "home") => setState((s) => ({ ...s, planRetour: depuis, planJour: null, planComposition: null, planDirect: true, screen: "planifier" })),
+    // Depuis l'accueil de Planifier lui-même (menu d'actions flottant), pas d'écran de retour : le parcours revient à cet accueil.
+    planifierDirect: (depuis = "home") => setState((s) => ({ ...s, planRetour: depuis === "planifier" ? null : depuis, planJour: null, planComposition: null, planDirect: true, screen: "planifier" })),
     oublierPlanDirect: () => setState((s) => (s.planDirect ? { ...s, planDirect: false } : s)),
     goNeverWorn: () => go("neverworn"),
     // « Mes pièces » est fusionné dans le Dressing (14/10/2026) : le filtre (catégorie, couleur venue de Tenue) s'applique à la grille du Dressing.
