@@ -1504,16 +1504,49 @@ export default function PlanifierScreen() {
                 la valise et la tenue pour un profil homme. Sans genre renseigné, pas de visuel choisi au hasard : la
                 carte garde sa forme d'avant, glyphe seul. Ils inspirent et expliquent ; les pièces réelles de la personne
                 n'apparaissent que dans ce qu'elle a déjà créé, sous le bouton de création. */}
-            {/* TENUE / VALISE : le même sélecteur que le Dressing, la Valise et Mon planning (SegmentedControl) — la seconde
-                fonctionnalité se découvre sans défiler. Une seule carte à la fois ; elle apparaît par le fondu léger de l'app
-                (capsule-apparition, 220 ms), sans animation si le téléphone demande moins de mouvement. */}
-            <div className="mt-5">
-              <SegmentedControl
-                segments={[{ key: "tenue", label: "Tenue" }, { key: "valise", label: "Valise" }]}
-                actif={hub}
-                onChange={setHub}
-                ariaLabel="Ce que tu veux planifier"
-              />
+            {/* Une seule carte à la fois ; elle apparaît par le fondu léger de l'app (capsule-apparition, 220 ms), sans animation si le
+                téléphone demande moins de mouvement. */}
+            {/* LES DEUX ENTRÉES DE PLANIFIER, VISIBLES DÈS L'ARRIVÉE (12/11/2026, brief 2.3, point 7 : « les entrées Tenue et Valise ne
+                sont pas suffisamment visibles »). Le sélecteur à deux segments, discret, devient deux tuiles côte à côte : le visuel
+                éditorial de chacune (celui qui ouvrait sa carte, qui ne le répète plus), son nom et une ligne. La tuile choisie se marque
+                par la bordure terracotta et le fond de sélection, comme les autres choix de l'app ; elle ouvre toujours sa carte dessous. */}
+            <div className="grid grid-cols-2 gap-[10px] mt-5" role="tablist" aria-label="Ce que tu veux planifier">
+              {(
+                [
+                  ["tenue", "Tenue", "Une occasion à venir"],
+                  ["valise", "Valise", "Un voyage à préparer"],
+                ] as const
+              ).map(([cle, nom, ligne]) => {
+                const on = hub === cle;
+                return (
+                  <button
+                    key={cle}
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => setHub(cle)}
+                    className={
+                      "flex flex-col text-left rounded-tuile overflow-hidden border cursor-pointer transition-colors duration-150 " +
+                      (on ? "bg-selected-bg border-terracotta" : "bg-card border-border")
+                    }
+                    style={{ borderWidth: 1.5 }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={visuelHub(cle, profile.gender)}
+                      alt=""
+                      width={900}
+                      height={600}
+                      decoding="async"
+                      className="block w-full object-cover"
+                      style={{ aspectRatio: "4/3", objectPosition: cle === "valise" ? "center 60%" : "center 38%" }}
+                    />
+                    <span className="block px-[12px] pt-[10px] pb-[12px]">
+                      <span className={"block t-titre-carte " + (on ? "text-terracotta" : "text-ink")}>{nom}</span>
+                      <span className="block text-[12px] text-muted-3 leading-[1.35] mt-[2px]">{ligne}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
             <div key={hub} className="flex flex-col gap-4 mt-4 motion-safe:animate-[capsule-apparition_220ms_ease-out_both]" role="tabpanel">
               {hub === "tenue" && (
@@ -1526,7 +1559,6 @@ export default function PlanifierScreen() {
                 ligne="Occasion · date et lieu · tenue personnalisée"
                 cta={tenuesAVenir.length > 0 ? "Planifier une nouvelle tenue" : "Planifier une tenue"}
                 onClick={recommencer}
-                visuel={visuelHub("tenue", profile.gender)}
               >
                 {/* Ce qui existe déjà : trois au plus, « Voir tout » ouvre la liste complète. Le premier est le prochain. */}
                 {tenuesAVenir.length > 0 && (
@@ -1596,8 +1628,6 @@ export default function PlanifierScreen() {
                 ligne="Destination · dates · météo · activités"
                 cta={valisesAVenir.length > 0 ? "Préparer une nouvelle valise" : "Préparer ma valise"}
                 onClick={() => void actions.ouvrirValise(null)}
-                visuel={visuelHub("valise", profile.gender)}
-                cadrage="center 60%"
               >
                 {valisesAVenir.length > 0 && (
                   <>

@@ -71,6 +71,12 @@ export interface ValiseGardee {
    */
   lavage?: boolean;
   /**
+   * COMMENT LAVER (12/11/2026, brief 2.3, point 8) : la réponse telle qu'elle a été donnée, pour la retrouver en rouvrant le parcours.
+   * `lavage` en est déduit (machine ou service : oui ; non : non) et reste seul à régler les quantités : une machine et un service de
+   * blanchisserie laissent tous deux laver en route — ARBITRAGE ÉDITORIAL, les mêmes quantités. Dans `calcul` (jsonb) : aucune migration.
+   */
+  modeLavage?: ModeLavage;
+  /**
    * Les quantités réglées par la personne (07/11/2026, quantitesValise.ts) : id de pièce → quantité, et depuis le 12/11/2026 la valeur exacte (1 compris), qui passe devant la quantité proposée.
    * Dans `calcul` (jsonb) : aucune migration. Absent : une de chaque.
    */
@@ -242,7 +248,7 @@ interface ValiseRow {
   sejour: string | null;
   occasions: string[];
   piece_ids: (number | string)[];
-  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "uniquementDressing" | "lavage" | "quantites" | "achats" | "activites" | "choix" | "etapes" | "lieu" | "cochees" | "affaires" | "programme" | "evenements" | "placements">;
+  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "uniquementDressing" | "lavage" | "modeLavage" | "quantites" | "achats" | "activites" | "choix" | "etapes" | "lieu" | "cochees" | "affaires" | "programme" | "evenements" | "placements">;
 }
 
 const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Number);
@@ -265,6 +271,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     ...(r.calcul?.suggestionIds?.length ? { suggestionIds: r.calcul.suggestionIds } : {}),
     ...(r.calcul?.uniquementDressing ? { uniquementDressing: true } : {}),
     ...(typeof r.calcul?.lavage === "boolean" ? { lavage: r.calcul.lavage } : {}),
+    ...(r.calcul?.modeLavage && MODES_LAVAGE.includes(r.calcul.modeLavage) ? { modeLavage: r.calcul.modeLavage } : {}),
     ...(r.calcul?.quantites && Object.keys(r.calcul.quantites).length ? { quantites: r.calcul.quantites } : {}),
     ...(r.calcul?.achats?.length ? { achats: nombres(r.calcul.achats) } : {}),
     ...(r.calcul?.activites?.length ? { activites: r.calcul.activites } : {}),
@@ -299,6 +306,7 @@ export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
       ...(v.suggestionIds?.length ? { suggestionIds: v.suggestionIds } : {}),
       ...(v.uniquementDressing ? { uniquementDressing: true } : {}),
       ...(typeof v.lavage === "boolean" ? { lavage: v.lavage } : {}),
+      ...(v.modeLavage ? { modeLavage: v.modeLavage } : {}),
       ...(v.quantites && Object.keys(v.quantites).length ? { quantites: v.quantites } : {}),
       ...(v.achats?.length ? { achats: v.achats } : {}),
       ...(v.activites?.length ? { activites: v.activites } : {}),
@@ -364,4 +372,17 @@ export async function supprimerValiseDuCompte(id: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Les trois réponses à « Pourras-tu laver tes vêtements pendant ton séjour ? » (12/11/2026). */
+export type ModeLavage = "machine" | "service" | "non";
+export const MODES_LAVAGE: readonly ModeLavage[] = ["machine", "service", "non"];
+
+/** Ce que les quantités en retiennent : laver en route, ou non. */
+export const lavageDuMode = (m: ModeLavage): boolean => m !== "non";
+
+/** La réponse d'une valise gardée ; celle d'avant le 12/11/2026 (oui / non seulement) se relit « machine » ou « non ». */
+export function modeLavageDe(v: Pick<ValiseGardee, "lavage" | "modeLavage">): ModeLavage | null {
+  if (v.modeLavage) return v.modeLavage;
+  return v.lavage === true ? "machine" : v.lavage === false ? "non" : null;
 }

@@ -95,7 +95,9 @@ export default function AppHeader({
           <button
             onClick={actions.goProfile}
             className={
-              "w-[34px] h-[34px] rounded-full flex items-center justify-center text-[13px] font-serif cursor-pointer " +
+              // L'initiale en Manrope demi-gras (12/11/2026, brief 2.3, point 5) : en Bodoni à 13 px, elle se lisait mal — et la règle du
+              // 04/11/2026 ne veut plus de Bodoni sous 19 px.
+              "w-[34px] h-[34px] rounded-full flex items-center justify-center text-[14px] leading-none font-sans font-semibold cursor-pointer " +
               (dark ? "bg-[rgba(243,238,229,.12)] text-cream" : "bg-ink text-cream")
             }
           >

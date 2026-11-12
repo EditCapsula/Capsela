@@ -177,15 +177,28 @@ export default function TabBar() {
             key={tab.screen}
             onClick={onClick}
             aria-current={active ? "page" : undefined}
-            className="flex flex-col items-center gap-[5px] flex-1 min-w-0 cursor-pointer transition-colors duration-150"
+            className="relative flex flex-col items-center gap-[5px] flex-1 min-w-0 cursor-pointer transition-colors duration-150"
             // Deux jetons existants, aucune couleur nouvelle :
             // --color-terracotta est documenté comme l'accent des icônes
             // actives ; --color-muted est le gris chaud du texte secondaire
             // de toute l'app. L'inactif était jusqu'ici un #948A79 en dur,
             // présent nulle part ailleurs et à 2,94:1 sur le crème — sous le
             // seuil de 3:1.
-            style={{ color: active ? "var(--color-terracotta)" : "var(--color-muted)" }}
+            //
+            // 12/11/2026 (brief 2.3, point 6 : « la distinction entre l'onglet actif et les autres manque de clarté ») : l'inactif passe
+            // de --color-muted (4,2:1 sur le crème) à --color-muted-3 (6,5:1), deux jetons existants ; l'actif garde la terracotta et
+            // reçoit un filet au bord haut de la barre (ci-dessous). Aucune couleur nouvelle, aucune hauteur ajoutée.
+            style={{ color: active ? "var(--color-terracotta)" : "var(--color-muted-3)" }}
           >
+            {/* L'INDICATEUR DE L'ONGLET ACTIF : un filet terracotta posé sur la bordure haute de la barre (-8 px : son padding haut), assez
+                court pour rester une marque, pas un bloc. Il ne prend aucune place : aucun libellé ne bouge. */}
+            {active && (
+              <span
+                aria-hidden="true"
+                className="absolute left-1/2 -translate-x-1/2 rounded-full bg-terracotta"
+                style={{ top: -9, width: 24, height: 2.5 }}
+              />
+            )}
             <span
               className="flex items-center justify-center rounded-full transition-colors duration-150"
               style={{

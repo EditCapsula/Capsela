@@ -98,6 +98,30 @@ export const PART_CIBLE_VALISE = 0.7;
 export const cibleDeVolume = (t: TailleBagage) => Math.ceil(capaciteDe(t) * PART_CIBLE_VALISE);
 export const libelleBagage = (t: TailleBagage) => BAGAGES.find(([k]) => k === t)![1];
 
+/**
+ * LES TROIS FORMATS PROPOSÉS (12/11/2026, brief 2.3, point 9 : « les tailles proposées sont trop abstraites »). Des bagages qu'on
+ * reconnaît, avec des dimensions INDICATIVES — jamais présentées comme une norme : chaque compagnie fixe les siennes, et l'app ne les
+ * vérifie pas (hors du périmètre de la 2.3).
+ *
+ * Ils reprennent les capacités déjà arbitrées (27/09 et 09/10/2026) plutôt que d'en inventer : la cabine 55 × 35 × 25 est la valise M,
+ * la soute moyenne la L, la grande soute la XL. La S (« Cabine souple ») n'est plus proposée ; une valise déjà enregistrée en S se
+ * relit telle quelle. Le rapport des volumes réels (environ 1 : 1,8 : 2,5 entre ces trois formats) est plus large que celui des
+ * capacités (1 : 1,45 : 2) — signalé à la propriétaire, non changé : la capacité est une règle de calcul arbitrée.
+ */
+export const FORMATS_BAGAGE: { taille: TailleBagage; nom: string; dimensions: string; usage: string }[] = [
+  { taille: "M", nom: "Bagage cabine", dimensions: "Environ 55 × 35 × 25 cm", usage: "Il voyage avec toi, au plus juste." },
+  { taille: "L", nom: "Bagage en soute moyen", dimensions: "Environ 65 à 70 cm de haut", usage: "La valise à enregistrer, de la place pour varier." },
+  { taille: "XL", nom: "Grand bagage en soute", dimensions: "Environ 75 à 80 cm de haut", usage: "Le plus grand : manteaux, chaussures et tenues habillées." },
+];
+
+/** Le nom du bagage dans une phrase (« ton bagage cabine ») ; la S d'une valise ancienne garde son libellé. */
+export const nomBagage = (t: TailleBagage): string => (FORMATS_BAGAGE.find((f) => f.taille === t)?.nom ?? "bagage cabine souple").toLowerCase();
+/** Le même, en début de phrase. */
+export const NomBagage = (t: TailleBagage): string => {
+  const n = nomBagage(t);
+  return n.charAt(0).toUpperCase() + n.slice(1);
+};
+
 // ── Types de séjour ──────────────────────────────────────────────────────
 
 export type TypeSejour =

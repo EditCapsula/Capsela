@@ -167,10 +167,13 @@ export default function ProfileScreen() {
         <button
           onClick={() => photoInputRef.current?.click()}
           aria-label="Changer ma photo de profil (optionnelle, jamais partagée)"
-          className="relative w-[52px] h-[52px] rounded-full bg-terracotta flex items-center justify-center flex-shrink-0 overflow-hidden bg-cover bg-center cursor-pointer"
+          className="relative w-[56px] h-[56px] rounded-full bg-terracotta flex items-center justify-center flex-shrink-0 overflow-hidden bg-cover bg-center cursor-pointer"
           style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}
         >
-          {!photoUrl && <span className="font-serif text-[21px] text-cream">{initial}</span>}
+          {/* L'INITIALE LISIBLE (12/11/2026, brief 2.3, point 5) : en Bodoni à 21 px, ses déliés disparaissaient sur la terracotta. Manrope
+              demi-gras à 22 px (texte large au sens WCAG : 3,8:1 suffit), le fond et la couleur de la lettre inchangés. `leading-none` et
+              l'alignement tabulaire la centrent : la ligne de base d'une lettre seule la tirait vers le haut. */}
+          {!photoUrl && <span className="font-sans font-semibold text-[22px] leading-none text-cream" style={{ fontFeatureSettings: '"tnum"' }}>{initial}</span>}
         </button>
         <div className="min-w-0 flex-1">
           <div className={"t-titre-carte break-words " + (profile.displayName ? "text-ink" : "text-placeholder")}>

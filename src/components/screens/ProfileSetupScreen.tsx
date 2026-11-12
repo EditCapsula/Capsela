@@ -36,6 +36,8 @@ import {
   type ParcoursColorimetrie,
 } from "@/lib/colorimetrieParcours";
 import FilEtapes from "@/components/FilEtapes";
+import EtapeMeteo, { type EtatLocalisation } from "@/components/EtapeMeteo";
+import { fetchVilleParPosition, getBrowserPosition } from "@/lib/weather";
 import OptionRow from "@/components/OptionRow";
 import {
   genderLabel,
@@ -139,6 +141,17 @@ const ALL_STEPS = [
   { key: "colorimetrie", kicker: "Environ 1 minute · sans photo", title: "Ta colorimétrie", subtitle: "Quelques informations pour identifier les couleurs qui te mettent en valeur." },
   { key: "colorimetrie_resultat", kicker: "Ta palette", title: "Ta palette", subtitle: "" },
   // « Et maintenant ? » n'est plus une étape (31/10/2026, arbitrage 7) : ses trois bénéfices s'affichent sous « Ta palette ».
+  /*
+   * LA MÉTÉO (12/11/2026, brief 2.3, point 3, EtapeMeteo.tsx). La demande de localisation du téléphone est expliquée AVANT de s'ouvrir,
+   * et ne s'ouvre que sur « Activer ma localisation ». Texte du brief au tutoiement de l'app ; « ta destination » est devenu « l'endroit
+   * où tu te trouves » : c'est la position qui règle la météo des tenues du jour (la valise, elle, suit la destination saisie).
+   */
+  {
+    key: "meteo",
+    kicker: "Ta météo",
+    title: "Des recommandations adaptées à ta météo",
+    subtitle: "Capsela adapte tes tenues aux conditions météo. Autorise l'accès à ta localisation pour qu'elles suivent l'endroit où tu te trouves, ou indique ta ville.",
+  },
   { key: "pal_recap", kicker: "Ton profil", title: "Ton profil Capsela est prêt", subtitle: "Capsela combine tes goûts et ta colorimétrie pour des recommandations qui te ressemblent." },
 ] as const;
 
@@ -292,7 +305,9 @@ export default function ProfileSetupScreen() {
       (s.key !== "colorimetrie_resultat" || colorimetrieUtilisable(draft.colorimetrie)) &&
       // GENRE ET TAILLES SUR UN ÉCRAN (31/10/2026, brief) : les tailles sont posées sous le genre. L'étape « taille » seule ne sert
       // plus qu'à les modifier depuis Mon profil.
-      (s.key !== "taille" || (state.profileSetupFromEdit && state.profileSetupStep === "taille"))
+      (s.key !== "taille" || (state.profileSetupFromEdit && state.profileSetupStep === "taille")) &&
+      // La météo se règle ensuite dans Réglages, Météo et localisation : l'étape n'existe que pendant l'inscription.
+      (s.key !== "meteo" || !state.profileSetupFromEdit)
   );
   // UNE COLORIMÉTRIE DÉJÀ FAITE SE RETROUVE, ELLE NE SE REFAIT PAS (14/10/2026, demandé : « si l'utilisateur a déjà fait le test et revient
   // à cette étape, le résultat déjà obtenu doit s'afficher, avec la possibilité de refaire le test »). Arriver sur l'étape colorimétrie —
@@ -483,6 +498,7 @@ export default function ProfileSetupScreen() {
     { label: "Ta silhouette", cles: ["morpho", "mise_en_valeur", "coupes"] },
     { label: "Tes couleurs", cles: ["pal_couleurs"] },
     { label: "Ta colorimétrie", cles: ["colorimetrie", "colorimetrie_resultat"] },
+    { label: "Ta météo", cles: ["meteo"] },
     { label: "Ton profil", cles: ["pal_recap"] },
     { label: "Ton dressing", cles: [] },
   ];
@@ -492,6 +508,25 @@ export default function ProfileSetupScreen() {
       ? `${sectionCourante + 1} / ${SECTIONS.length} · ${SECTIONS[sectionCourante].label}`
       : null;
   const [styleBloque, setStyleBloque] = useState(false);
+  // L'ÉTAPE MÉTÉO (EtapeMeteo.tsx). La fenêtre du système s'ouvre dans le geste même du toucher : getBrowserPosition demande
+  // l'autorisation puis lit la position, sans délai ni demande différée.
+  const [localisation, setLocalisation] = useState<EtatLocalisation>(draft.prefs.geoConsent && draft.prefs.weatherFromGeo ? "accordee" : "attente");
+  const [villeOuverte, setVilleOuverte] = useState(false);
+  const [villeChoisie, setVilleChoisie] = useState(false);
+  const activerLocalisation = async () => {
+    setLocalisation("enCours");
+    const pos = await getBrowserPosition();
+    if (!pos) {
+      // Refus (ou service coupé) : pas de seconde demande, la ville prend le relais.
+      setLocalisation("refusee");
+      setVilleOuverte(true);
+      setDraft((d) => ({ ...d, prefs: { ...d.prefs, geoConsent: false, weatherFromGeo: false } }));
+      return;
+    }
+    const lieu = await fetchVilleParPosition(pos.coords.latitude, pos.coords.longitude);
+    setLocalisation("accordee");
+    setDraft((d) => ({ ...d, ...(lieu ? { city: lieu.name } : {}), prefs: { ...d.prefs, geoConsent: true, weatherFromGeo: true } }));
+  };
   // Le refus d'un troisième style se dit un instant, puis s'efface (31/10/2026, brief « Ajustement UX – sélection des styles ») : jamais
   // un message permanent. Un nouveau refus relance le délai.
   useEffect(() => {
@@ -569,6 +604,12 @@ export default function ProfileSetupScreen() {
       label: "Ta palette",
       value: "",
       swatches: paletteCapsela(draft.paletteCouleurs, draft.colorimetrie),
+    },
+    {
+      label: "Météo",
+      value: draft.prefs.geoConsent && draft.prefs.weatherFromGeo ? "Ta position" : draft.city || "Ville non renseignée",
+      swatches: [] as string[],
+      etape: "meteo",
     },
   ];
 
@@ -699,6 +740,18 @@ export default function ProfileSetupScreen() {
           <div className="text-[12px] text-muted mt-[6px]">Pré-remplies quand tu ajoutes une pièce.</div>
           {blocTailles}
         </>
+      )}
+
+      {meta.key === "meteo" && (
+        <EtapeMeteo
+          etat={localisation}
+          ville={villeChoisie || localisation === "accordee" ? draft.city : ""}
+          villeOuverte={villeOuverte}
+          onVille={(nom) => {
+            patch({ city: nom });
+            setVilleChoisie(true);
+          }}
+        />
       )}
 
       {meta.key === "pal_couleurs" && (
@@ -1002,6 +1055,15 @@ export default function ProfileSetupScreen() {
         case "indecis":
           return { libelle: "Continuer", onClick: passerColorimetrie, actif: true, lien: { libelle: "Refaire le questionnaire", onClick: () => setColo(recommencer()) } };
       }
+    }
+    if (meta.key === "meteo") {
+      if (localisation === "accordee" || villeChoisie) return { libelle: "Continuer", onClick: next, actif: true };
+      return {
+        libelle: "Activer ma localisation",
+        onClick: () => void activerLocalisation(),
+        actif: localisation !== "enCours",
+        ...(villeOuverte ? {} : { lien: { libelle: "Renseigner ma ville manuellement", onClick: () => setVilleOuverte(true) } }),
+      };
     }
     if (meta.key === "colorimetrie_resultat") {
       return {
