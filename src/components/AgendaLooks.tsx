@@ -365,7 +365,7 @@ function Calendrier({
     <section className="mt-[18px] rounded-carte border border-border bg-card px-[12px] pt-[12px] pb-[10px]" aria-label="Calendrier de tes looks">
       <div className="flex items-center justify-between pl-[6px]">
         {/* Chiffres en Bodoni dans le titre du mois (12/11/2026, chiffres-bodoni), comme « Mon planning ». */}
-        <h2 className="font-serif chiffres-bodoni text-[19px] text-ink" aria-live="polite">
+        <h2 className="t-titre-section chiffres-bodoni text-ink" aria-live="polite">
           {libelleMoisAnnee(mois)}
         </h2>
         <div className="flex items-center">
@@ -619,7 +619,7 @@ function VueJour({
         </EmptyState>
       ) : (
         <>
-          {nb > 0 && <h2 className="font-serif text-[19px] text-ink mt-[20px]">{pluriel(nb, "look planifié", "looks planifiés")}</h2>}
+          {nb > 0 && <h2 className="t-titre-section text-ink mt-[20px]">{pluriel(nb, "look planifié", "looks planifiés")}</h2>}
           {duJour.tenues.map((t) => {
             const pieces = piecesDuPlan(t);
             const detail = detailCapsela(pieces, t.occasion) ?? titreLookDuJour(t.occasion, (t.sousChoix ?? "") as WorkMode, (t.sousChoix ?? "") as DateContext);

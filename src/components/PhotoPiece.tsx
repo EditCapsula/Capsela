@@ -3,9 +3,28 @@
 import { fondPhotoPiece, resolveItemImage } from "@/lib/catalogImages";
 import type { CategoryKey, Item } from "@/lib/types";
 
-/** Une pièce montrée par sa vraie photo (cadrée), ou son fond doux et l'icône de sa catégorie quand elle n'en a pas — jamais une image de stock. */
-export default function PhotoPiece({ piece, ratio, rayon, className = "" }: { piece: Item; ratio: number; rayon: number; className?: string }) {
+/**
+ * Une pièce montrée par sa vraie photo (cadrée), ou son fond doux et l'icône de sa catégorie quand elle n'en a pas — jamais une image de stock.
+ *
+ * `entiere` (12/11/2026, signalé en capture : « les photos des pièces sur la fiche ne sont pas mises en valeur ») : la pièce se montre EN
+ * ENTIER, posée sur le fond de tuile avec de l'air autour, au lieu d'être recadrée pour remplir la case — un pantalon y perdait ses jambes.
+ * Pour les vues où la pièce est le sujet (la feuille d'une pièce du look et ses alternatives) ; les grilles gardent le cadrage d'avant.
+ */
+export default function PhotoPiece({ piece, ratio, rayon, className = "", entiere = false }: { piece: Item; ratio: number; rayon: number; className?: string; entiere?: boolean }) {
   const img = resolveItemImage(piece);
+  if (entiere && img.url) {
+    return (
+      <div
+        role="img"
+        aria-label={piece.name}
+        className={`relative w-full overflow-hidden ${className}`}
+        style={{ aspectRatio: String(ratio), borderRadius: rayon, background: "var(--color-photo-bg)" }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={img.url} alt="" decoding="async" className="absolute inset-0 w-full h-full object-contain" style={{ padding: "9%" }} />
+      </div>
+    );
+  }
   return (
     <div
       role={img.url ? "img" : undefined}

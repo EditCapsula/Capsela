@@ -71,7 +71,7 @@ export default function DernieresPiecesScreen() {
       <button key={p.id} onClick={() => actions.openItem(p.id)} className="block w-full text-left cursor-pointer active:opacity-80 min-w-0 self-start">
         <PhotoPiece piece={p} ratio={0.8} rayon={20} />
         {/* Nom et légende réservent deux lignes : d'une carte à sa voisine, photo, nom, légende et « looks possibles » restent alignés. */}
-        <div className="font-serif text-ink mt-[10px] px-[2px] line-clamp-2" style={{ fontSize: 15, lineHeight: 1.25, minHeight: "2.5em" }}>{p.name}</div>
+        <div className="t-titre-vignette text-ink mt-[10px] px-[2px] line-clamp-2" style={{ minHeight: "2.6em" }}>{p.name}</div>
         <div className="text-[12px] text-muted mt-[2px] px-[2px] line-clamp-2" style={{ lineHeight: 1.35, minHeight: "2.7em" }}>
           {[libelleDuGroupe(p), libelleDateRecente(p.createdAt as number, maintenant)].filter(Boolean).join(" · ")}
         </div>
@@ -145,7 +145,7 @@ export default function DernieresPiecesScreen() {
             <div className="t-surtitre text-muted">
               <span className="font-serif italic text-terracotta" aria-hidden="true">✦</span> Avec tes nouvelles pièces
             </div>
-            <div className="font-serif text-ink mt-2" style={{ fontSize: 22, lineHeight: 1.2 }}>
+            <div className="t-titre-section text-ink mt-2">
               Déjà <span className="italic text-terracotta">{total} {total === 1 ? "look" : "looks"}</span> à porter
             </div>
             <div className="grid grid-cols-2 gap-[12px] mt-4 items-start">
@@ -156,7 +156,7 @@ export default function DernieresPiecesScreen() {
                     <div className="relative overflow-hidden" style={{ aspectRatio: "1", borderRadius: 18, background: "var(--color-photo-bg)" }}>
                       <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} />
                     </div>
-                    <div className="font-serif text-ink mt-[8px] px-[2px]" style={{ fontSize: 15 }}>{occasionShortLabel(idee.occasion)}</div>
+                    <div className="t-titre-vignette text-ink mt-[8px] px-[2px]">{occasionShortLabel(idee.occasion)}</div>
                     <div className="text-[12px] px-[2px] line-clamp-2" style={{ color: "var(--color-muted-3)", lineHeight: 1.35, minHeight: "2.7em" }}>{phrasePiste(piece)}</div>
                   </button>
                 );

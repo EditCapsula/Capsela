@@ -1,5 +1,6 @@
 /**
- * LA VERSION AFFICHÉE DE L'APP (15/10/2026, arbitré : « date et commit, sans numéro »).
+ * LA VERSION AFFICHÉE DE L'APP (15/10/2026, arbitré : « date et commit, sans numéro » ; revu le 12/11/2026, demandé : dans les apps,
+ * le nom et le numéro de version, ceux du store — « 2.3 (52) · 12/11/2026 » —, qui disent d'un coup d'œil quel build est installé).
  *
  * Avant : un numéro écrit à la main (`APP_VERSION = "1.4.0"`, data.ts), figé depuis le 25/09/2026 et contredit par
  * package.json (0.1.0) — il ne disait pas quel build l'utilisatrice avait devant elle. Désormais la date et le commit sont
@@ -11,16 +12,24 @@
 export const COMMIT_BUILD = process.env.CAPSELA_BUILD_COMMIT ?? "";
 /** L'instant du build, ISO 8601, ou chaîne vide. */
 export const DATE_BUILD = process.env.CAPSELA_BUILD_DATE ?? "";
+/** Le nom et le numéro de version d'une app (workflows de build iOS et Android) ; vides sur le web. */
+export const NOM_VERSION = process.env.CAPSELA_VERSION_NOM ?? "";
+export const NUMERO_VERSION = process.env.CAPSELA_VERSION_NUMERO ?? "";
 
 /** « 15/10/2026 · f5524dc », après « Capsela · version » — date à l'heure de Paris ; ce qui manque n'est pas inventé. Pure. */
-export function libelleVersion(commit: string, dateIso: string): string {
+/**
+ * Avec un nom de version (les apps) : « 2.3 (52) · 12/11/2026 » — le commit reste la version des rapports d'erreur (sentryOptions.ts).
+ * Sans (le web) : « 15/10/2026 · f5524dc », comme avant.
+ */
+export function libelleVersion(commit: string, dateIso: string, nom = "", numero = ""): string {
   const d = dateIso ? new Date(dateIso) : null;
   const date =
     d && !Number.isNaN(d.getTime())
       ? new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric" }).format(d)
       : "";
+  if (nom) return [numero ? `${nom} (${numero})` : nom, date].filter(Boolean).join(" · ");
   const morceaux = [date, commit.slice(0, 7)].filter(Boolean);
   return morceaux.length ? morceaux.join(" · ") : "de développement";
 }
 
-export const VERSION_APP = libelleVersion(COMMIT_BUILD, DATE_BUILD);
+export const VERSION_APP = libelleVersion(COMMIT_BUILD, DATE_BUILD, NOM_VERSION, NUMERO_VERSION);

@@ -204,7 +204,7 @@ function CarteATester({
   const num = String(numero).padStart(2, "0");
   const corps = titre ? (
     <>
-      <span className="block text-[14px] font-semibold text-ink leading-[1.35]">{titre}</span>
+      <span className="block t-titre-vignette text-ink">{titre}</span>
       <span className="block text-[13px] text-muted-3 leading-[1.45] mt-[3px]">{texte}</span>
     </>
   ) : (
@@ -418,7 +418,7 @@ export default function ResultatAvis({
             </div>
           </>
         ) : (
-          <div className="mt-[10px] font-serif text-[19px] leading-[1.38] text-ink" style={{ textWrap: "pretty" }}>
+          <div className="mt-[10px] t-titre-section leading-[1.38] text-ink" style={{ textWrap: "pretty" }}>
             {avis.overallAssessment}
           </div>
         )}

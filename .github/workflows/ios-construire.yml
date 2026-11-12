@@ -64,6 +64,10 @@ jobs:
           # « Continuer avec Apple » (docs/connexion-apple.md) : « 1 » une fois Apple et Supabase réglés ; exigé par l'App Store tant que
           # Google est proposé (règle 4.8). Absente : le bouton n'est pas affiché.
           NEXT_PUBLIC_CONNEXION_APPLE: ${{ vars.CONNEXION_APPLE }}
+          # La version affichée en pied de page (12/11/2026, src/lib/versionApp.ts) : le nom saisi au lancement et le numéro de build
+          # (celui du store). Absents sur une pull request : l'app affiche alors la date et le commit.
+          CAPSELA_VERSION_NAME: ${{ inputs.version }}
+          CAPSELA_VERSION_CODE: ${{ github.event_name == 'workflow_dispatch' && github.run_number || '' }}
         run: |
           if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "::error::Clé publique Supabase absente : sans elle, l'app tournerait en mode démo."

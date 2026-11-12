@@ -1,5 +1,6 @@
 "use client";
 
+import { t, tn } from "@/lib/langue";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
 import { styleDuLook, texteEditorialLook, titreEnLigne } from "@/lib/editorialLook";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
@@ -100,7 +101,7 @@ function VignetteChoix({
       <button
         type="button"
         onClick={onVoir}
-        aria-label={`${it.name}. Voir le détail`}
+        aria-label={t("{nom}. Voir le détail", { nom: it.name })}
         className="relative w-full aspect-square rounded-bloc overflow-hidden cursor-pointer"
         style={{ background: image.url ? "var(--color-photo-bg)" : it.hex }}
       >
@@ -121,18 +122,18 @@ function VignetteChoix({
           />
         )}
         <Badge tone={suggeree ? "plein" : "possede"} taille="s" className="absolute top-[7px] left-[7px]">
-          {autreStyle ?? (suggeree ? "Suggérée" : "Ton dressing")}
+          {autreStyle ?? (suggeree ? t("Suggérée") : t("Ton dressing"))}
         </Badge>
       </button>
       <div className="text-[12.5px] text-ink leading-[1.3] mt-[7px] line-clamp-2 min-h-[2.6em]">{it.name}</div>
       <button
         type="button"
         onClick={onChoisir}
-        aria-label={`Choisir ${it.name} pour cette tenue`}
+        aria-label={t("Choisir {nom} pour cette tenue", { nom: it.name })}
         className="mt-[8px] inline-flex items-center justify-center gap-[6px] rounded-full border border-terracotta text-terracotta text-[12px] min-h-[36px] cursor-pointer active:bg-warm-bg"
       >
         <PlusIcon />
-        Choisir
+        {t("Choisir")}
       </button>
     </div>
   );
@@ -781,8 +782,8 @@ export default function TenuesScreen() {
     const d = debutGlissement.current;
     debutGlissement.current = null;
     if (!d) return;
-    const t = e.changedTouches[0];
-    const sens = sensDuGlissement(t.clientX - d.x, t.clientY - d.y, Date.now() - d.t);
+    const toucher = e.changedTouches[0];
+    const sens = sensDuGlissement(toucher.clientX - d.x, toucher.clientY - d.y, Date.now() - d.t);
     if (sens) actions.setOccasion(occasionVoisine(OCCASIONS.map(([k]) => k), state.occasion, sens));
   };
 
@@ -792,7 +793,7 @@ export default function TenuesScreen() {
       onTouchStart={surDebutGlissement}
       onTouchEnd={surFinGlissement}
     >
-      <AppHeader onBack={actions.goHome} backLabel="Revenir à l'accueil" />
+      <AppHeader onBack={actions.goHome} backLabel={t("Revenir à l'accueil")} />
 
       <div className="mt-[10px]">
         {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
@@ -805,7 +806,7 @@ export default function TenuesScreen() {
             DANS la card terracotta est supprimée du même coup — elle ferait
             doublon à deux cents pixels d'écart. */}
         <div className="t-titre-ecran text-ink">
-          Ma <span className="italic text-terracotta">tenue {complementTenue(decalage, dateConsultee)}</span>
+          {t("Ma")} <span className="italic text-terracotta">{t("tenue")} {complementTenue(decalage, dateConsultee)}</span>
         </div>
       </div>
 
@@ -826,7 +827,7 @@ export default function TenuesScreen() {
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1 min-w-0">
             <div className="text-[12px] text-ink-soft leading-[1.45]">
-              En voyage longue distance ? Pense aux bas de contention pour limiter les jambes lourdes.
+              {t("En voyage longue distance ? Pense aux bas de contention pour limiter les jambes lourdes.")}
             </div>
           </div>
           <button
@@ -846,15 +847,15 @@ export default function TenuesScreen() {
       {state.exploredStyleId && (
         <div className="flex items-center justify-between gap-3 mt-[14px]">
           <div className="text-[12px] text-muted leading-[1.4]">
-            Tenue issue du style {styleConfigFor(profile.gender)[state.exploredStyleId].label}.
+            {t("Tenue issue du style {style}.", { style: styleConfigFor(profile.gender)[state.exploredStyleId].label })}
             <br />
-            Ton style personnel reste inchangé.
+            {t("Ton style personnel reste inchangé.")}
           </div>
           <button
             onClick={actions.clearExploredStyle}
             className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer whitespace-nowrap"
           >
-            Revenir à mon style
+            {t("Revenir à mon style")}
           </button>
         </div>
       )}
@@ -933,11 +934,11 @@ export default function TenuesScreen() {
                   du look (sans le manteau à part). Une tenue à compléter garde son statut (« À compléter · 3/4 pièces ») : il dit ce qui manque. */}
               {planApplique
                 ? estPlanValise(planApplique.plan.id)
-                  ? "Look de ta valise"
-                  : "Ta tenue planifiée"
+                  ? t("Look de ta valise")
+                  : t("Ta tenue planifiée")
                 : statut.cle === "a_completer"
                   ? statut.libelle
-                  : `Ta sélection du jour · ${piecesDuLook.length} ${piecesDuLook.length > 1 ? "pièces" : "pièce"}`}
+                  : tn(piecesDuLook.length, "Ta sélection du jour · {n} pièce", "Ta sélection du jour · {n} pièces")}
             </span>
             {/* « RECOMMANDÉ » EN TÊTE, à la place d'« Autre tenue » (30/10/2026, demandé), qui passe sur la ligne de la provenance. */}
             {badgesAffiches.length > 0 && (
@@ -962,7 +963,7 @@ export default function TenuesScreen() {
             <div className="flex-shrink-0 flex items-baseline justify-between gap-3 mb-[8px]">
               <span className="text-[13px] text-ink truncate">{titreDuPlan(planApplique.plan)}</span>
               <button onClick={() => actions.ouvrirPlan(planApplique.plan, "tenues")} className="flex-shrink-0 text-[12px] text-sand-text underline underline-offset-[3px] cursor-pointer">
-                {estPlanValise(planApplique.plan.id) ? "Voir la valise" : "Voir le plan"}
+                {estPlanValise(planApplique.plan.id) ? t("Voir la valise") : t("Voir le plan")}
               </button>
             </div>
           )}
@@ -1046,14 +1047,14 @@ export default function TenuesScreen() {
                 montre qu'un. */}
             {conseilVeste && (
               <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
-                {majuscule(fraicheurDuSoir(meteoDuJour))} : appuie sur + pour ajouter {conseilVeste.piece.name.toLowerCase()}.
+                {t("{debut} : appuie sur + pour ajouter {piece}.", { debut: majuscule(fraicheurDuSoir(meteoDuJour)), piece: conseilVeste.piece.name.toLowerCase() })}
               </div>
             )}
             {vesteAAjouter && (
               <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
                 {coucheAAjouter === "manteau"
-                  ? "Il va faire froid : appuie sur + pour ajouter un manteau à ton dressing."
-                  : `${majuscule(fraicheurDuSoir(meteoDuJour))} : appuie sur + pour ajouter une veste à ton dressing.`}
+                  ? t("Il va faire froid : appuie sur + pour ajouter un manteau à ton dressing.")
+                  : t("{debut} : appuie sur + pour ajouter une veste à ton dressing.", { debut: majuscule(fraicheurDuSoir(meteoDuJour)) })}
               </div>
             )}
             {chaussuresManquantes && (
@@ -1064,7 +1065,7 @@ export default function TenuesScreen() {
                 className="mt-[2px] w-full flex items-center justify-between gap-2 px-[6px] min-h-[36px] text-left text-[12.5px] leading-[1.4] cursor-pointer"
                 style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}
               >
-                <span>Il te manque une paire de chaussures pour compléter ce look.</span>
+                <span>{t("Il te manque une paire de chaussures pour compléter ce look.")}</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta" style={{ display: "block" }}>
                   <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -1094,14 +1095,14 @@ export default function TenuesScreen() {
                 ✓
               </span>
               {/* « TENUE CHOISIE ✓ » (12/11/2026, brief, 4) : le retour explicite après « Choisir cette tenue ». */}
-              <div className="text-[13px] text-ink font-semibold" role="status">Tenue choisie</div>
+              <div className="text-[13px] text-ink font-semibold" role="status">{t("Tenue choisie")}</div>
             </div>
           ) : (
             <Button
               variante="principal"
               onClick={vesteWithoutBase ? undefined : () => actions.wearOutfitToday(sauf)}
               disabled={vesteWithoutBase}
-              title={vesteWithoutBase ? "Ajoute un haut, une robe ou une combinaison sous ta veste." : undefined}
+              title={vesteWithoutBase ? t("Ajoute un haut, une robe ou une combinaison sous ta veste.") : undefined}
               // LE MÊME BOUTON (Button « claire ») que « Découvrir le look » sur l'accueil
               // (02/10/2026 ; avant, chaque écran écrivait le sien, alignés à la main le 23/09/2026). Relevé sur
               // les 26 boutons pleine largeur : 20 CTA principaux, dont la
@@ -1121,7 +1122,7 @@ export default function TenuesScreen() {
                 border: !vesteWithoutBase && statut.cle === "a_completer" ? "1px solid var(--color-terracotta-deep)" : undefined,
               }}
             >
-              Choisir cette tenue
+              {t("Choisir cette tenue")}
             </Button>
           )}
 
@@ -1139,11 +1140,11 @@ export default function TenuesScreen() {
               className={ACTION_SECONDAIRE}
               onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook(exterieur ? [exterieur.id] : undefined)}
               disabled={!canSaveOutfit}
-              title={canSaveOutfit ? undefined : "Ajoute au moins 2 pièces à cette tenue pour l'enregistrer."}
+              title={canSaveOutfit ? undefined : t("Ajoute au moins 2 pièces à cette tenue pour l'enregistrer.")}
               aria-pressed={isOutfitSaved}
             >
               <span aria-hidden="true" className="text-terracotta">{isOutfitSaved ? "♥" : "♡"}</span>
-              {isOutfitSaved ? "Enregistrée" : "Enregistrer"}
+              {isOutfitSaved ? t("Enregistrée") : t("Enregistrer")}
             </button>
             <button
               type="button"
@@ -1160,11 +1161,11 @@ export default function TenuesScreen() {
                   : actions.openOpinionShare()
               }
             >
-              <span aria-hidden="true" className="text-terracotta">✦</span> Avis d&apos;un proche
+              <span aria-hidden="true" className="text-terracotta">✦</span> {t("Avis d'un proche")}
             </button>
             {planApplique ? (
               <button type="button" className={ACTION_SECONDAIRE} onClick={actions.voirAutreProposition}>
-                <IconeAutreTenue /> Autre tenue
+                <IconeAutreTenue /> {t("Autre tenue")}
               </button>
             ) : (
               <button
@@ -1174,7 +1175,7 @@ export default function TenuesScreen() {
                 disabled={noCompleteOutfit || tirageEnCours}
                 aria-busy={tirageEnCours}
               >
-                <IconeAutreTenue /> Autre tenue
+                <IconeAutreTenue /> {t("Autre tenue")}
               </button>
             )}
           </div>
@@ -1194,15 +1195,15 @@ export default function TenuesScreen() {
           toast et son annulation) ; la pièce proposée est désormais celle du
           dressing quand il en a une (cf. computeLookScore). */}
       {!meteoEnAttente && outfitPieces.length > 0 && aCompleter && (
-        <section aria-label="Compléter la tenue" className="mt-[22px]">
+        <section aria-label={t("Compléter la tenue")} className="mt-[22px]">
           <div className="flex items-center gap-[7px]">
             <span className="font-serif italic text-[13px] text-terracotta" aria-hidden="true">
               ✦
             </span>
-            <span className="t-label text-terracotta flex-1">Compléter la tenue</span>
+            <span className="t-label text-terracotta flex-1">{t("Compléter la tenue")}</span>
             {chaussuresManquantes && chaussuresPossibles.length > 0 && (
               <button onClick={() => setChoixChaussuresOuvert(true)} className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer -my-[10px] py-[10px]">
-                Voir plus
+                {t("Voir plus")}
               </button>
             )}
           </div>
@@ -1219,9 +1220,9 @@ export default function TenuesScreen() {
                 </div>
               ) : (
                 <div className="px-4">
-                  <div className="text-[13px] text-ink-soft leading-[1.5]">Aucune paire de ton dressing ne s&apos;accorde à cette tenue pour cette occasion.</div>
+                  <div className="text-[13px] text-ink-soft leading-[1.5]">{t("Aucune paire de ton dressing ne s'accorde à cette tenue pour cette occasion.")}</div>
                   <button onClick={() => actions.openAddForCategory("chaussures")} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
-                    Ajouter des chaussures à mon dressing →
+                    {t("Ajouter des chaussures à mon dressing →")}
                   </button>
                 </div>
               )}
@@ -1230,22 +1231,22 @@ export default function TenuesScreen() {
 
           {!noCompleteOutfit && missingTextCarte && (
             <Card className="mt-[12px] p-4">
-              <div className="t-label text-terracotta">À compléter</div>
+              <div className="t-label text-terracotta">{t("À compléter")}</div>
               <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{missingTextCarte}</div>
               <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
-                Ajouter une pièce →
+                {t("Ajouter une pièce →")}
               </button>
             </Card>
           )}
 
           {!noCompleteOutfit && vesteWithoutBase && (
             <div className="mt-[12px] bg-warm-bg border-[1.5px] border-terracotta rounded-carte p-4">
-              <div className="t-label text-terracotta">À compléter</div>
+              <div className="t-label text-terracotta">{t("À compléter")}</div>
               <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">
-                Ajoute un haut, une robe ou une combinaison sous ta veste pour compléter la tenue.
+                {t("Ajoute un haut, une robe ou une combinaison sous ta veste pour compléter la tenue.")}
               </div>
               <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
-                Choisir une pièce →
+                {t("Choisir une pièce →")}
               </button>
             </div>
           )}
@@ -1276,7 +1277,7 @@ export default function TenuesScreen() {
                           {key === "layer" && (
                             <button
                               onClick={() => setLayeringInfoOpen((v) => !v)}
-                              aria-label="Qu'est-ce que le layering ?"
+                              aria-label={t("Qu'est-ce que le layering ?")}
                               className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-gold text-[10px] text-terracotta flex items-center justify-center cursor-pointer"
                             >
                               i
@@ -1286,8 +1287,7 @@ export default function TenuesScreen() {
                         <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{p.text}</div>
                         {key === "layer" && layeringInfoOpen && (
                           <div className="text-[11px] text-muted mt-[6px] leading-[1.4]">
-                            Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un
-                            débardeur sous une chemise oversize ouverte.
+                            {t("Le layering, c'est superposer plusieurs pièces pour un effet stylé — par exemple un débardeur sous une chemise oversize ouverte.")}
                           </div>
                         )}
                       </div>
@@ -1295,7 +1295,7 @@ export default function TenuesScreen() {
                         onClick={() => actions.dismissOutfitSuggestion(key)}
                         className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer -my-[10px] py-[10px]"
                       >
-                        Ignorer
+                        {t("Ignorer")}
                       </button>
                     </div>
                     {key === "color" && touchesDeCouleur.length > 0 && (
@@ -1335,7 +1335,7 @@ export default function TenuesScreen() {
                             />
                           )}
                           <Badge tone={suggereeDuCatalogue ? "plein" : "possede"} taille="s" className="absolute top-[7px] left-[7px]">
-                            {suggereeDuCatalogue ? "Suggérée" : "Ton dressing"}
+                            {suggereeDuCatalogue ? t("Suggérée") : t("Ton dressing")}
                           </Badge>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1347,7 +1347,7 @@ export default function TenuesScreen() {
                               className="inline-flex items-center justify-center gap-[6px] bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[11px] text-[12px] cursor-pointer"
                             >
                               <PlusIcon />
-                              Ajouter à la tenue
+                              {t("Ajouter à la tenue")}
                             </button>
                             {suggereeDuCatalogue && suggested.affLink && (
                               <a
@@ -1357,7 +1357,7 @@ export default function TenuesScreen() {
                                 className="inline-flex items-center justify-center gap-[6px] border border-border text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
                               >
                                 <BagIcon />
-                                <span className="underline underline-offset-2">Acheter cette pièce</span>
+                                <span className="underline underline-offset-2">{t("Acheter cette pièce")}</span>
                               </a>
                             )}
                           </div>
@@ -1374,7 +1374,7 @@ export default function TenuesScreen() {
           {!noCompleteOutfit && conseilCouleurDuJour && (
             <CarteAccordSaison
               conseil={conseilCouleurDuJour}
-              onVoirDansDressing={(nom, hex) => actions.goWardrobePieces({ libelle: `Couleur : ${nom.toLowerCase()}`, teinte: hex, retour: "tenue" })}
+              onVoirDansDressing={(nom, hex) => actions.goWardrobePieces({ libelle: t("Couleur : {nom}", { nom: nom.toLowerCase() }), teinte: hex, retour: "tenue" })}
               retour={retoursAccords[conseilCouleurDuJour.cle]}
               onRetour={(r) => donnerRetourAccord(conseilCouleurDuJour.cle, r)}
               piecesTenue={outfitPieces}
@@ -1402,15 +1402,14 @@ export default function TenuesScreen() {
 
           {!exploring ? (
             <button onClick={handleExploreStyles} className="mt-[10px] block mx-auto text-[12px] text-terracotta cursor-pointer">
-              Explorer d&apos;autres styles →
+              {t("Explorer d'autres styles →")}
             </button>
           ) : compatibleStyles.length > 0 ? (
             <div className="mt-[18px] text-left">
-              <div className="t-label text-terracotta">✦ Une autre piste</div>
-              <div className="t-titre-vignette text-ink mt-[4px]">Explore un autre univers</div>
+              <div className="t-label text-terracotta">{t("✦ Une autre piste")}</div>
+              <div className="t-titre-vignette text-ink mt-[4px]">{t("Explore un autre univers")}</div>
               <div className="text-[12px] text-muted leading-[1.5] mt-[6px]">
-                Découvre les capsules qui peuvent compléter ton dressing pour cette occasion. Ton style personnel reste
-                inchangé.
+                {t("Découvre les capsules qui peuvent compléter ton dressing pour cette occasion. Ton style personnel reste inchangé.")}
               </div>
               <div className="scrollarea flex gap-[10px] overflow-x-auto mt-[14px] pb-[2px]">
                 {compatibleStyles.map((id) => (
@@ -1427,13 +1426,13 @@ export default function TenuesScreen() {
                 <Button variante="principal" className="mt-[16px]"
                   onClick={handleConfirmExploredStyle}
                 >
-                  Explorer la capsule {styleConfigFor(profile.gender)[selectedExploreStyle].label}
+                  {t("Explorer la capsule")} {styleConfigFor(profile.gender)[selectedExploreStyle].label}
                 </Button>
               )}
             </div>
           ) : (
             <div className="mt-[14px] text-[12px] text-muted leading-[1.5]">
-              Aucun autre style ne permet encore de couvrir cette occasion avec ta capsule actuelle.
+              {t("Aucun autre style ne permet encore de couvrir cette occasion avec ta capsule actuelle.")}
             </div>
           )}
         </Card>
@@ -1475,7 +1474,7 @@ export default function TenuesScreen() {
                 pas dire — la DIMENSION du repli — au lieu de répéter le mot du
                 badge. */}
             <div className="text-[12px] text-ink-soft leading-[1.45]">
-              Pour cette occasion, Capsela privilégie un registre plus sobre, composé avec les pièces de {sourceLabel}.
+              {t("Pour cette occasion, Capsela privilégie un registre plus sobre, composé avec les pièces de {source}.", { source: sourceLabel })}
             </div>
             {/* Le lien ouvre le formulaire d'ajout — il dit donc ce qu'il
                 fait. « Voir une version plus habillée » décrirait une action
@@ -1486,7 +1485,7 @@ export default function TenuesScreen() {
                 « Ajouter une pièce plus habillée » suggérait par ailleurs un
                 achat ; « compléter » décrit le geste réel sans le sous-entendre. */}
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
-              Compléter mon dressing →
+              {t("Compléter mon dressing →")}
             </button>
           </div>
         </Card>
@@ -1499,10 +1498,10 @@ export default function TenuesScreen() {
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1">
             <div className="text-[12px] text-ink-soft leading-[1.45]">
-              Avec les pièces disponibles, Capsela n&apos;a pas d&apos;autre tenue vraiment différente pour cette occasion.
+              {t("Avec les pièces disponibles, Capsela n'a pas d'autre tenue vraiment différente pour cette occasion.")}
             </div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
-              Ajouter une pièce pour cette occasion →
+              {t("Ajouter une pièce pour cette occasion →")}
             </button>
           </div>
         </Card>
@@ -1516,7 +1515,7 @@ export default function TenuesScreen() {
               {occasionElargieText(occasionLabelCourant)}
             </div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
-              Ajouter une pièce pour cette occasion →
+              {t("Ajouter une pièce pour cette occasion →")}
             </button>
           </div>
         </Card>
@@ -1559,20 +1558,20 @@ export default function TenuesScreen() {
           La carte entière est le bouton ; le CTA est un <span> (jamais un bouton dans un bouton, cf. le 24/09/2026). */}
       <button
         onClick={decalage > 0 ? () => actions.planifierLeJour(decalage) : actions.goPlanifier}
-        aria-label={decalage > 0 ? `Planifier une tenue pour ${quand}` : "Planifier une tenue"}
+        aria-label={decalage > 0 ? t("Planifier une tenue pour {quand}", { quand }) : t("Planifier une tenue")}
         className="relative flex w-full min-w-0 text-left bg-card border border-border rounded-carte overflow-hidden mt-4 cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
       >
         <span className="flex flex-col min-w-0 flex-1 pl-4 pr-3 py-[12px]">
           {/* Pas de badge Premium (17/10/2026, décidé : la planification de tenues n'est pas une fonctionnalité Premium ; la valise l'est). */}
-          <span className="t-surtitre text-muted-3 !text-[9.5px] whitespace-nowrap">À préparer</span>
-          <span className="block t-titre-carte text-ink mt-[4px]">Planifie tes looks</span>
+          <span className="t-surtitre text-muted-3 !text-[9.5px] whitespace-nowrap">{t("À préparer")}</span>
+          <span className="block t-titre-carte text-ink mt-[4px]">{t("Planifie tes looks")}</span>
           <span className="block text-[12px] text-muted leading-[1.4] mt-[3px]" style={{ textWrap: "pretty" }}>
-            Prépare tes tenues selon l&apos;occasion, la date et le lieu.
+            {t("Prépare tes tenues selon l'occasion, la date et le lieu.")}
           </span>
           {/* Un seul libellé, même pour un jour à venir (17/10/2026, validé) : la date reste choisie à l'ouverture de Planifier,
               et l'aria-label la nomme. Densité mobile resserrée le même jour (espacements du texte, pas la structure). */}
           <span className="mt-[8px] text-[12px] text-terracotta">
-            Planifier une tenue →
+            {t("Planifier une tenue →")}
           </span>
         </span>
         <span className="relative shrink-0 bg-cream" style={{ width: "clamp(104px, 34%, 168px)" }} aria-hidden="true">
@@ -1594,7 +1593,7 @@ export default function TenuesScreen() {
 
       {/* LE MANTEAU À PART, EN DÉTAIL (04/11/2026) : la pièce, sa fiche, une autre proposition s'il y en a (candidatsDeRemplacement :
           toutes les règles du moteur), et le choix de le compter comme porté — jamais imposé. */}
-      <BottomSheet title="Pour l'extérieur" open={exterieurOuvert && exterieur != null} onClose={() => setExterieurOuvert(false)}>
+      <BottomSheet title={t("Pour l'extérieur")} open={exterieurOuvert && exterieur != null} onClose={() => setExterieurOuvert(false)}>
         {exterieur && (
           <div className="flex flex-col">
             <div className="flex items-center gap-[14px]">
@@ -1603,17 +1602,17 @@ export default function TenuesScreen() {
               </span>
               <div className="flex-1 min-w-0">
                 <div className="text-[14px] font-medium text-ink">{exterieur.name}</div>
-                <div className="text-[12px] text-muted mt-[2px]">{isCatalogId(exterieur.id) ? "De ta capsule" : "De ton dressing"}</div>
+                <div className="text-[12px] text-muted mt-[2px]">{isCatalogId(exterieur.id) ? t("De ta capsule") : t("De ton dressing")}</div>
                 {tempReelle != null && (
                   <div className="text-[12px] text-muted-3 mt-[6px] leading-[1.4]">
-                    À ajouter par-dessus ta tenue : {degres(tempReelle)} {decalage === 0 ? "aujourd'hui" : "prévus"}.
+                    {t("À ajouter par-dessus ta tenue : {temperature} {quand}.", { temperature: degres(tempReelle), quand: decalage === 0 ? t("aujourd'hui") : t("prévus") })}
                   </div>
                 )}
               </div>
             </div>
             {decalage === 0 && !state.outfitValidated && (
               <div className="flex items-center justify-between gap-3 mt-4 py-[10px] border-t border-border">
-                <span className="text-[13px] text-ink">Je le porte aussi aujourd&apos;hui</span>
+                <span className="text-[13px] text-ink">{t("Je le porte aussi aujourd'hui")}</span>
                 <Toggle
                   on={porterExterieur}
                   onClick={() => {
@@ -1622,12 +1621,12 @@ export default function TenuesScreen() {
                     else if (!porterExterieur && exterieurSuggere) actions.addPieceToOutfit(exterieur.id);
                     setPorterPour(porterExterieur ? null : exterieur.id);
                   }}
-                  label="Je le porte aussi aujourd'hui"
+                  label={t("Je le porte aussi aujourd'hui")}
                 />
               </div>
             )}
             <Button variante="contour" className="mt-3" onClick={() => { setExterieurOuvert(false); ouvrirPiece(exterieur); }}>
-              Voir la pièce
+              {t("Voir la pièce")}
             </Button>
             {autresExterieurs.length > 0 && (
               <button
@@ -1636,13 +1635,13 @@ export default function TenuesScreen() {
                 className="w-full rounded-full text-[12px] text-terracotta-deep cursor-pointer mt-1"
                 style={{ minHeight: 44 }}
               >
-                Voir une autre proposition
+                {t("Voir une autre proposition")}
               </button>
             )}
           </div>
         )}
       </BottomSheet>
-      <BottomSheet title="Choisir des chaussures" open={choixChaussuresOuvert && chaussuresPossibles.length > 0} onClose={() => setChoixChaussuresOuvert(false)}>
+      <BottomSheet title={t("Choisir des chaussures")} open={choixChaussuresOuvert && chaussuresPossibles.length > 0} onClose={() => setChoixChaussuresOuvert(false)}>
         <div className="grid grid-cols-2 gap-x-[12px] gap-y-[16px]">
           {chaussuresPossibles.map((it) => (
             <VignetteChoix
@@ -1662,7 +1661,7 @@ export default function TenuesScreen() {
           ))}
         </div>
         <button onClick={() => actions.openAddForCategory("chaussures")} className="mt-[18px] inline-block text-[12px] text-terracotta cursor-pointer">
-          Ajouter une autre paire à mon dressing →
+          {t("Ajouter une autre paire à mon dressing →")}
         </button>
       </BottomSheet>
 
@@ -1686,7 +1685,7 @@ export default function TenuesScreen() {
               onClick={toast.onUndo}
               className="flex-shrink-0 text-[12px] text-terracotta tracking-[.1em] cursor-pointer py-[7px] px-[11px]"
             >
-              Annuler
+              {t("Annuler")}
             </button>
           </div>
         </div>

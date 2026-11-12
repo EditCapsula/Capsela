@@ -35,7 +35,7 @@ export default function PourLExterieur({
       </span>
       <span className="flex-1 min-w-0">
         <span className="flex items-center justify-between gap-2">
-          <span className={"font-serif italic text-ink leading-[1.2] " + (compact ? "text-[14px]" : "text-[16px]")}>Pour l&apos;extérieur</span>
+          <span className={"text-ink " + (compact ? "t-titre-vignette" : "t-titre-carte")}>Pour l&apos;extérieur</span>
           <span className="inline-flex items-center gap-[4px] flex-shrink-0 rounded-full px-[8px] py-[3px] text-[11px] text-ink" style={{ background: "var(--color-warm-bg)" }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
               <path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0Z" />

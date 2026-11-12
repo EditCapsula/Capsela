@@ -87,7 +87,7 @@ export function FormulaireColorimetrie({
     const q = QUESTIONS_COLORIMETRIE[i];
     return (
       <div key={q.id} id={`colo-question-${i}`} className="mt-[24px] scroll-mt-4" role="group" aria-label={q.question}>
-        <div className="text-[14px] font-semibold text-ink leading-[1.35]">{q.question}</div>
+        <div className="t-titre-vignette text-ink">{q.question}</div>
         <div className="grid grid-cols-2 gap-[8px] mt-[10px]">
           {q.reponses.map((r, j) => {
             const on = reponses[i] === j;
@@ -326,7 +326,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
           <ul className="mt-[8px]">
             {explications.map((e) => (
               <li key={e.titre} className="py-[12px] border-b border-border last:border-b-0">
-                <span className="block text-[13.5px] font-semibold text-ink">{e.titre}</span>
+                <span className="block t-titre-vignette text-ink">{e.titre}</span>
                 <span className="block text-[13px] text-muted-3 leading-[1.45] mt-[2px]" style={{ textWrap: "pretty" }}>
                   {e.texte}
                 </span>
@@ -344,7 +344,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
         <section className="mt-[30px]">
           <div className="t-label text-terracotta">Ton approche couleur</div>
           <div className="flex items-center justify-between gap-[12px] mt-[8px]">
-            <div className="font-serif text-[19px] leading-[1.2] text-ink">{approche.libelleRecap ?? intensite}</div>
+            <div className="t-titre-section text-ink">{approche.libelleRecap ?? intensite}</div>
             <div className="flex gap-[5px] flex-shrink-0" aria-hidden="true">
               {approche.pastilles.map((h) => (
                 <span key={h} className="w-[16px] h-[16px] rounded-full" style={{ background: h, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.10)" }} />
@@ -393,7 +393,7 @@ export function SuiteColorimetrie() {
             <Pictogramme nom={p} taille={18} />
           </span>
           <span className="min-w-0">
-            <span className="block text-[14px] font-semibold text-ink">{titre}</span>
+            <span className="block t-titre-vignette text-ink">{titre}</span>
             <span className="block text-[13px] text-muted-3 leading-[1.45] mt-[3px]" style={{ textWrap: "pretty" }}>
               {texte}
             </span>

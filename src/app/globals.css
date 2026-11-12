@@ -93,6 +93,11 @@
  *   t-titre-ligne     15 / 1.3   — libellé d'une ligne de réglage (profil)         (Bodoni 16 avant)
  *   t-titre-vignette  14 / 1.3   — nom sous une vignette, carte compacte           (Bodoni 15 avant)
  *   t-chiffre         21 / 1     — chiffres et statistiques, chiffres alignés      (Bodoni avant)
+ * TOUT TITRE PASSE PAR CES SIX NIVEAUX (12/11/2026, demandé : « harmonise l'ensemble des titres, police, taille et graisse ») :
+ * une soixantaine de titres posaient leur propre taille (13 à 28 px, des clamp) et parfois leur graisse (font-medium) ; ils ont
+ * rejoint le niveau le plus proche, et ceux en Bodoni sous 19 px sont passés en Manrope demi-gras. Le titre d'une feuille
+ * (BottomSheet) est un t-titre-section. Restent hors échelle, parce que ce ne sont pas des titres : les phrases citées en
+ * italique, les ornements (✦, guillemets) et les grands chiffres d'une note.
  * Sans (Manrope) :
  *   t-chapeau         13 / 1.5   — phrase sous un titre d'écran
  *   t-surtitre        11, capitales, .16em — surtitre de section et d'écran

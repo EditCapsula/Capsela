@@ -24,7 +24,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   return (
     <div className="absolute inset-0 bg-cream flex flex-col items-center justify-center px-9 text-center">
       <div className="text-[12px] tracking-[.2em] uppercase text-terracotta">Un instant</div>
-      <h1 className="font-serif text-[28px] leading-[1.2] text-ink mt-4">
+      <h1 className="t-display text-ink mt-4">
         L&apos;édit n&apos;a pas pu s&apos;afficher.
       </h1>
       <p className="text-[13px] text-[#6B6459] mt-3 leading-[1.55] max-w-[300px]">

@@ -432,8 +432,8 @@ export default function PreferencesScreen() {
         </Card>
       )}
 
-      {/* LA SEULE PAGE DE CONFIGURATION DE LA MÉTÉO : la ligne météo de l'Accueil et de Tenue et « Mon lieu et ma météo » du
-          Profil y mènent. Le fuseau est AFFICHÉ, pas réglable : il est lu sur l'appareil. */}
+      {/* LA SEULE PAGE DE CONFIGURATION DE LA MÉTÉO : la ligne météo de l'Accueil et de Tenue y mène (« Mon lieu et ma
+          météo » du Profil, qui y menait aussi, est retirée le 12/11/2026). Le fuseau est AFFICHÉ, pas réglable : il est lu sur l'appareil. */}
       {vue === "localisation" && (
         <Card className="overflow-hidden mt-6">
           <Ligne>

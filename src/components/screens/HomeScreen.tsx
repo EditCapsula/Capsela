@@ -1,5 +1,6 @@
 "use client";
 
+import { t } from "@/lib/langue";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
 import { styleDuLook, texteEditorialLook } from "@/lib/editorialLook";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
@@ -173,7 +174,7 @@ export default function HomeScreen() {
     });
   };
   const { profile } = useAuth();
-  const firstNameOrYou = profile.displayName || "toi";
+  const firstNameOrYou = profile.displayName || t("toi");
 
   // Lecture seule des données déjà disponibles ailleurs dans l'app
   // (météo/localisation, occasion auto-sélectionnée, tenue déjà déterminée) —
@@ -476,7 +477,7 @@ export default function HomeScreen() {
           et « Ta capsule » (bannière) et la carte Avis de styliste n'y figurent pas : l'avis reste accessible depuis le Journal. */}
       <div className="px-6 mt-[18px]">
         <div className="t-display text-ink">
-          Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
+          {t("Bonjour,")} <span className="italic text-terracotta">{firstNameOrYou}</span>
         </div>
         {/* LE JOUR ET SA MÉTÉO (navigation par date, partagée avec Tenue) : le jour se change par ses chevrons, la météo
             ouvre les réglages « Localisation & météo » (BarreDuJour, maquette V9). */}
@@ -522,35 +523,35 @@ export default function HomeScreen() {
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="t-surtitre text-ink whitespace-nowrap">
-              {passee ? (retroActif === 1 ? "Ton look d’hier" : "Ton look passé") : texteHero ? texteHero.surtitre : "Ton look du jour"}
+              {passee ? (retroActif === 1 ? t("Ton look d’hier") : t("Ton look passé")) : texteHero ? texteHero.surtitre : t("Ton look du jour")}
             </span>
           </div>
 
           {passee ? (
             <>
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+              <div className="t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
                 {passee.plan ? titreDuPlan(passee.plan) : OCC_LABELS[passee.occasion]}
               </div>
-              <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]">{passee.source === "porte" ? "Tu as porté cette tenue." : "Tu l’avais planifiée."}</div>
+              <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]">{passee.source === "porte" ? t("Tu as porté cette tenue.") : t("Tu l’avais planifiée.")}</div>
               <div className="mt-auto pt-4">
                 <Button variante="principal" pleine={false} onClick={actions.goHistory} className="!px-[18px]">
-                  Voir dans mon journal
+                  {t("Voir dans mon journal")}
                 </Button>
               </div>
             </>
           ) : aucuneTenuePossible ? (
             <>
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
-                On prépare ta <span className="italic text-terracotta">première tenue</span>
+              <div className="t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
+                {t("On prépare ta")} <span className="italic text-terracotta">{t("première tenue")}</span>
               </div>
               <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
                 {dressingVide
-                  ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
-                  : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."}
+                  ? t("Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour.")
+                  : t("Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront.")}
               </div>
               <div className="mt-auto pt-4">
                 <Button variante="principal" pleine={false} onClick={dressingVide ? actions.openAdd : actions.goWardrobe} className="!px-[18px]">
-                  {dressingVide ? "Ajouter mes pièces" : "Voir mon dressing"}
+                  {dressingVide ? t("Ajouter mes pièces") : t("Voir mon dressing")}
                 </Button>
               </div>
             </>
@@ -559,7 +560,7 @@ export default function HomeScreen() {
               <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
                 {/* La pertinence de la tenue attend derrière le « i » du titre (12/11/2026, PourquoiCetteTenue) ; le texte d'un plan ou d'une
                     valise reste affiché sous le titre. */}
-                <div className="relative font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
+                <div className="relative t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
                   {titreHero.a}
                   {titreHero.b && (
                     <>
@@ -583,17 +584,17 @@ export default function HomeScreen() {
                   onClick={actions.goTenues}
                   className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap"
                 >
-                  Voir le look
+                  {t("Voir le look")}
                 </Button>
               </div>
             </>
           ) : (
             <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
-                Capsela compose <span className="italic text-terracotta">ta tenue…</span>
+              <div className="t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
+                {t("Capsela compose")} <span className="italic text-terracotta">{t("ta tenue…")}</span>
               </div>
               <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]">
-                {jourAVenir ? "Pensée pour ton programme de ce jour-là." : "Pensée pour ton programme d’aujourd’hui."}
+                {jourAVenir ? t("Pensée pour ton programme de ce jour-là.") : t("Pensée pour ton programme d’aujourd’hui.")}
               </div>
               <StatutComposition />
             </div>
@@ -622,7 +623,7 @@ export default function HomeScreen() {
                   <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill={sauvegardee ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               }
-              libelle={sauvegardee ? "Sauvegardée" : "Sauvegarder"}
+              libelle={sauvegardee ? t("Sauvegardée") : t("Sauvegarder")}
               actif={sauvegardee}
               // Aujourd'hui : l'avis « J'adore » (enregistré, et la tenue rejoint Mes looks). Un autre jour : la tenue seule
               // rejoint Mes looks — l'avis du jour ne porte que sur la tenue d'aujourd'hui.
@@ -636,8 +637,8 @@ export default function HomeScreen() {
                     <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 }
-                libelle="Autre tenue"
-                label="Propose-moi une autre tenue"
+                libelle={t("Autre tenue")}
+                label={t("Propose-moi une autre tenue")}
                 disabled={quota.tirageEnCours}
                 onClick={jourAVenir ? () => quota.demander(actions.regenOutfit) : pasPourMoi}
               />
@@ -649,7 +650,7 @@ export default function HomeScreen() {
           state.autreTenueIndisponible !== null &&
           state.autreTenueIndisponible === clePrincipale(state.outfit, [...state.items, ...vestiairePool]) && (
             <p className="mt-3 text-center text-[12px] text-muted leading-[1.45]">
-              Pas d&apos;autre tenue vraiment différente avec les pièces disponibles pour cette occasion.
+              {t("Pas d'autre tenue vraiment différente avec les pièces disponibles pour cette occasion.")}
             </p>
           )}
 
@@ -662,9 +663,9 @@ export default function HomeScreen() {
       {/* ══ EXPLORER CAPSELA — « Tout pour ton style » : les quatre univers de l'app. Sous le carrousel, 8 px au lieu de 28 (15/10/2026,
           demandé) : les repères de pagination ajoutent déjà 32 px sous la slide ; le repère se trouve ainsi à égale distance de la slide et du surtitre. */}
       <div className={`px-6 ${carrouselActif ? "mt-2" : "mt-7"}`}>
-        <span className="t-surtitre text-muted-3 !text-[9.5px]">Explorer Capsela</span>
+        <span className="t-surtitre text-muted-3 !text-[9.5px]">{t("Explorer Capsela")}</span>
         <h2 className="t-titre-ecran text-ink mt-1">
-          Tout pour ton <span className="italic text-terracotta">style</span>
+          {t("Tout pour ton")} <span className="italic text-terracotta">{t("style")}</span>
         </h2>
         {/* Les quatre cartes ont la MÊME hauteur (08/10/2026) : « Ma capsule » cite les styles du profil et pouvait être plus haute que les
             deux cartes du dessous — `1fr` cale chaque rangée sur la plus haute de toutes. */}
@@ -672,42 +673,42 @@ export default function HomeScreen() {
           <CarteUnivers
             onClick={actions.goWardrobe}
             glyphe={glypheUnivers(D_DRESSING)}
-            ligne1="Mon"
-            ligne2="dressing"
-            surtitre="Mes pièces"
-            texte="Ajoute et gère tes pièces"
+            ligne1={t("Mon")}
+            ligne2={t("dressing")}
+            surtitre={t("Mes pièces")}
+            texte={t("Ajoute et gère tes pièces")}
             visuel="/editorial/capsela_editorial_dressing.webp"
-            label="Mon dressing"
+            label={t("Mon dressing")}
           />
           <CarteUnivers
             onClick={actions.goCapsule}
             glyphe={glypheUnivers(D_CAPSULE)}
-            ligne1="Ma"
-            ligne2="capsule"
-            surtitre="Par Capsela"
-            texte={profile.styles.length > 1 ? "Une sélection adaptée à tes styles" : "Une sélection adaptée à ton style"}
+            ligne1={t("Ma")}
+            ligne2={t("capsule")}
+            surtitre={t("Par Capsela")}
+            texte={profile.styles.length > 1 ? t("Une sélection adaptée à tes styles") : t("Une sélection adaptée à ton style")}
             accent={stylesDits || undefined}
             visuel="/editorial/capsela_editorial_capsule.webp"
-            label="Ma capsule"
+            label={t("Ma capsule")}
           />
           <CarteUnivers
             onClick={() => actions.planifierDirect()}
             glyphe={glypheUnivers(D_AGENDA)}
-            ligne1="Planifier"
-            ligne2="mes looks"
-            texte="Organise tes tenues à l’avance"
+            ligne1={t("Planifier")}
+            ligne2={t("mes looks")}
+            texte={t("Organise tes tenues à l’avance")}
             visuel="/editorial/capsela_editorial_planning.webp"
             position="34% center"
-            label="Planifier mes looks"
+            label={t("Planifier mes looks")}
           />
           <CarteUnivers
             onClick={ouvrirValise}
             glyphe={glypheUnivers(D_VALISE)}
-            ligne1="Préparer"
-            ligne2="une valise"
-            texte="Une sélection pensée pour ton voyage"
+            ligne1={t("Préparer")}
+            ligne2={t("une valise")}
+            texte={t("Une sélection pensée pour ton voyage")}
             visuel="/editorial/capsela_editorial_valise.webp"
-            label="Préparer une valise"
+            label={t("Préparer une valise")}
           />
         </div>
       </div>

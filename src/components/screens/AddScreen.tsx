@@ -492,7 +492,7 @@ export default function AddScreen() {
     <div className="absolute inset-0 flex flex-col bg-cream">
       <div className="flex-shrink-0 grid grid-cols-[44px_1fr_44px] items-center gap-2 px-[14px] pt-[8px] pb-[6px]">
         <BoutonRetour onClick={actions.addBack} label="Revenir à l'écran précédent" />
-        <div className="text-center font-serif font-medium text-[19px] text-ink">{titre}</div>
+        <div className="text-center t-titre-section text-ink">{titre}</div>
         <span />
       </div>
 
@@ -544,7 +544,7 @@ export default function AddScreen() {
               {/* LES QUATRE FAÇONS D'AJOUTER (06/11/2026, brief « Refonte UX – Page Ajouter une pièce ») : à l'état initial, une seule carte
                   « Ajouter une pièce » — photo, import, saisie sans photo, ticket. Une fois la saisie manuelle ouverte (ou en modification),
                   la carte redevient l'invitation à ajouter une photo d'avant : le parcours de saisie ne change pas. */}
-              <div className="font-serif font-medium text-[22px] text-ink mt-[14px]">{etat === "initial" ? "Ajouter une pièce" : "Photographier ma pièce"}</div>
+              <div className="t-titre-ecran text-ink mt-[14px]">{etat === "initial" ? "Ajouter une pièce" : "Photographier ma pièce"}</div>
               <div className="text-[12.5px] text-[#5C5648] mt-1 leading-[1.45]">
                 {etat === "initial" ? (
                   "Choisis comment tu souhaites ajouter un vêtement à ton dressing."
@@ -634,7 +634,7 @@ export default function AddScreen() {
                         </svg>
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[13px] text-ink font-medium leading-[1.3]">{c.titre}</span>
+                        <span className="block t-titre-vignette text-ink">{c.titre}</span>
                         <span className="block text-[12px] text-[#5C5648] leading-[1.35]">{c.texte}</span>
                       </span>
                     </li>

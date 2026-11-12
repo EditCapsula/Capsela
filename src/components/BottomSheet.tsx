@@ -78,7 +78,7 @@ export default function BottomSheet({
             <span className="w-[38px] h-[4px] rounded-full" style={{ background: "var(--color-sand-border)" }} />
           </div>
           <div className="flex items-center justify-between gap-3 pl-6 pr-[14px] pt-[6px] pb-[4px] flex-shrink-0 border-b border-border">
-            <span className={surtitre ? "t-surtitre text-terracotta flex-1 min-w-0" : "font-serif font-medium text-[20px] leading-[1.2] text-ink"}>{title}</span>
+            <span className={surtitre ? "t-surtitre text-terracotta flex-1 min-w-0" : "t-titre-section text-ink"}>{title}</span>
             {entete}
             <button
               onClick={onClose}
