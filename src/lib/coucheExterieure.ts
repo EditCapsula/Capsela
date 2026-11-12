@@ -71,7 +71,9 @@ export function separerCoucheExterieure(
     if (propose) return { principal, exterieur: propose, suggere: true, remplace: exterieur, conseilManteauPlusLong: false };
     return { principal, exterieur: null, suggere: false, remplace: exterieur, conseilManteauPlusLong: true };
   }
-  const propose = autresManteaux(candidats, pieces, null)[0] ?? null;
+  // Sans manteau adapté dans le dressing, un manteau de la CAPSULE (12/11/2026, demandé : « la recommandation d'ajout de manteau doit
+  // être remplacée par l'affichage de la strate Extérieur avec un manteau de la capsule si pas de manteau adapté dans le dressing »).
+  const propose = autresManteaux(candidats, pieces, null)[0] ?? autresManteaux(candidatsCapsule, pieces, null)[0] ?? null;
   return { principal: pieces, exterieur: propose, suggere: propose !== null, ...rien };
 }
 

@@ -353,14 +353,14 @@ export default function TenuesScreen() {
   }, [tempReelle, state.outfit, displayPool, state.occasion, state.workMode, state.dateContext, meteoDuJour, manteauChoisi]);
   // Les manteaux de la CAPSULE admis pour la tenue (12/11/2026, R-B25 arbitré) : proposés quand le manteau de la tenue est plus court que
   // sa veste et que le dressing n'en a pas d'assez long ; sinon « Pour finaliser ta tenue » (separerCoucheExterieure).
-  const candidatsCapsule = useMemo(
-    () =>
-      tempReelle == null || tempReelle >= SEUIL_MANTEAU
-        ? []
-        : candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour),
+  // « Voir une autre proposition » fait passer le manteau choisi devant, de la capsule comme du dressing.
+  const candidatsCapsule = useMemo(() => {
+    if (tempReelle == null || tempReelle >= SEUIL_MANTEAU) return [];
+    const c = candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour);
+    const choisi = c.find((i) => i.id === manteauChoisi);
+    return choisi ? [choisi, ...c.filter((i) => i.id !== choisi.id)] : c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tempReelle, state.outfit, defaultCapsule, state.occasion, state.workMode, state.dateContext, meteoDuJour]
-  );
+  }, [tempReelle, state.outfit, defaultCapsule, state.occasion, state.workMode, state.dateContext, meteoDuJour, manteauChoisi]);
   const {
     principal: piecesDuLook,
     exterieur,
@@ -380,7 +380,7 @@ export default function TenuesScreen() {
   const autresExterieurs = exterieur && !manteauRemplace
     ? autresManteaux(
         exterieurSuggere
-          ? candidatsManteau
+          ? [...candidatsManteau, ...candidatsCapsule]
           : candidatsDeRemplacement(outfitPieces, displayPool, exterieur.id, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour),
         outfitPieces,
         exterieur

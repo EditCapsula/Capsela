@@ -50,6 +50,15 @@ describe("la tenue et sa couche extérieure", () => {
     expect(separerCoucheExterieure(t, 18, [manteau]).exterieur).toBeNull();
   });
 
+  it("2 ter. aucun manteau adapté dans le dressing : un manteau de la capsule, dans la strate extérieure (12/11/2026)", () => {
+    const t = [robe, ballerines, sac];
+    const r = separerCoucheExterieure(t, 10, [], [trench]);
+    expect(r.exterieur).toBe(trench);
+    expect(r.suggere).toBe(true);
+    // Le dressing passe d'abord.
+    expect(separerCoucheExterieure(t, 10, [manteau], [trench]).exterieur).toBe(manteau);
+  });
+
   it("8. une veste légère reste dans le look, même par le froid", () => {
     const { principal, exterieur } = separerCoucheExterieure([haut, pantalon, ballerines, blazer], 9);
     expect(exterieur).toBeNull();
