@@ -60,6 +60,7 @@ import LookDetailScreen from "./screens/LookDetailScreen";
 import ItemOutfitsScreen from "./screens/ItemOutfitsScreen";
 import IdeeLookScreen from "./screens/IdeeLookScreen";
 import TabBar from "./TabBar";
+import MenuActions from "./MenuActions";
 import CookieBanner from "./CookieBanner";
 import { readConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
 import ChargementApp from "./ChargementApp";
@@ -291,6 +292,8 @@ function Screens() {
         {state.screen === "ideeLook" && <IdeeLookScreen />}
       </div>
       {showTabbar && <TabBar />}
+      {/* Le menu d'actions flottant (12/11/2026, menuActions.ts) : un seul, pour toutes les pages principales. */}
+      <MenuActions />
       <LegalDocOverlay />
       <ConfirmationAjout auDessusDeLaBarre={showTabbar} />
       <ApercuPiece />

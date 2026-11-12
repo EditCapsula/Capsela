@@ -4,10 +4,9 @@ import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import PhotoPiece from "@/components/PhotoPiece";
-import { BoutonAjoutFlottant } from "@/components/screens/WardrobeScreen";
 import { useIdeesDressing } from "@/components/useIdeesDressing";
 import { occasionShortLabel } from "@/lib/data";
-import { groupesDuVestiaire, syntheseDressing } from "@/lib/dressingEcran";
+import { groupesDuVestiaire } from "@/lib/dressingEcran";
 import {
   libelleDateRecente,
   libelleLooksPossibles,
@@ -35,7 +34,7 @@ import type { Item } from "@/lib/types";
 const NB_PIECES_AVEC_IDEES = 16;
 
 export default function DernieresPiecesScreen() {
-  const { state, actions, defaultCapsule, vestiairePool, etatPremium } = useCapsela();
+  const { state, actions, defaultCapsule, vestiairePool } = useCapsela();
   const { profile } = useAuth();
   const items = state.items;
   const [groupe, setGroupe] = useState<string>("toutes");
@@ -64,7 +63,6 @@ export default function DernieresPiecesScreen() {
         .slice(0, 2)
     : [];
   const resolvePool = useMemo(() => [...items, ...vestiairePool, ...defaultCapsule], [items, vestiairePool, defaultCapsule]);
-  const synthese = syntheseDressing(etatPremium, items.length, groupes.length);
 
   const carte = (p: Item) => {
     const n = idees?.get(p.id)?.length ?? 0;
@@ -176,7 +174,6 @@ export default function DernieresPiecesScreen() {
 
         {section("Un peu plus tôt", avant)}
       </div>
-      {!synthese.complet && <BoutonAjoutFlottant onClick={actions.openAdd} />}
     </>
   );
 }

@@ -1463,7 +1463,9 @@ export default function PlanifierScreen() {
             retourExterne
               ? state.planRetour === "tenues"
                 ? "Revenir à ta tenue"
-                : "Revenir à l'accueil"
+                : state.planRetour === "home"
+                  ? "Revenir à l'accueil"
+                  : "Revenir"
               : vue === "liste" || (vue === "detail" && retourDetail === "intro")
                 ? "Revenir à Planifier"
                 : "Revenir à l'étape précédente"

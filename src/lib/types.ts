@@ -576,8 +576,9 @@ export interface AppState {
    * Écran d'où Planifier a été ouvert sur un plan ou sur une date (Accueil,
    * Tenue) : revenir de cette entrée y ramène au lieu du hub. Oublié dès que
    * le hub de Planifier s'affiche, ou à l'ouverture ordinaire de Planifier.
+   * Toute page principale depuis le menu d'actions flottant (12/11/2026, MenuActions.tsx).
    */
-  planRetour: "home" | "tenues" | "calendrier" | null;
+  planRetour: Screen | null;
   /** Date préremplie (décalage en jours) par « Planifier une tenue pour … » de Tenue ; consommée à l'ouverture. */
   planJour: number | null;
   /** « Planifier mes looks » depuis l'accueil (13/10/2026) : Planifier s'ouvre directement sur sa première étape, pas sur le hub (réservé à l'onglet du menu). */

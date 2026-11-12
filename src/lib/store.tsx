@@ -317,7 +317,8 @@ export interface Actions {
   goHistory: () => void;
   goPlanifier: () => void;
   /** Depuis la carte « Planifier mes looks » de l'accueil : ouvre directement la première étape de planification, retour vers l'accueil. */
-  planifierDirect: () => void;
+  /** Planifier ouvert à sa première étape ; le retour ramène à `depuis` (l'accueil par défaut). */
+  planifierDirect: (depuis?: Screen) => void;
   oublierPlanDirect: () => void;
   goNeverWorn: () => void;
   /** `filtre` : carte du vestiaire — n'affiche que les pièces de ses catégories techniques. */
@@ -1972,7 +1973,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, planJour: Math.max(1, decalage), planRetour: "calendrier", planComposition: null, screen: "planifier" })),
     // Ouverture ordinaire (barre du bas, cartes) : aucun retour particulier.
     goPlanifier: () => setState((s) => ({ ...s, planRetour: null, planJour: null, planDirect: false, screen: "planifier" })),
-    planifierDirect: () => setState((s) => ({ ...s, planRetour: "home", planJour: null, planComposition: null, planDirect: true, screen: "planifier" })),
+    planifierDirect: (depuis = "home") => setState((s) => ({ ...s, planRetour: depuis, planJour: null, planComposition: null, planDirect: true, screen: "planifier" })),
     oublierPlanDirect: () => setState((s) => (s.planDirect ? { ...s, planDirect: false } : s)),
     goNeverWorn: () => go("neverworn"),
     // « Mes pièces » est fusionné dans le Dressing (14/10/2026) : le filtre (catégorie, couleur venue de Tenue) s'applique à la grille du Dressing.
