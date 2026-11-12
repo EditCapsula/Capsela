@@ -42,4 +42,15 @@ describe("R-B25 — longueur des couches", () => {
     const sans = pool.map((p) => ({ ...p, longueur: undefined }));
     expect(lesDeux(true, sans)).toBeGreaterThan(0);
   });
+  it("un autre manteau, assez long, passe d'abord : la tenue garde sa veste", () => {
+    const manteauLong: CatalogItem = { ...item({ id: 6, category: "manteau", name: "Manteau long en laine", sous_type: "Manteau" }), longueur: "longue" };
+    const avecLong = [...pool, manteauLong];
+    let gardee = 0;
+    for (let k = 0; k < 40; k++) {
+      const { ids } = generateOutfit(avecLong, at(SEUIL_MANTEAU - 6), "quotidien", "Présentiel", "Verre", [], "femme", undefined, undefined, null, { longueurDesCouches: true });
+      expect(ids.includes(manteauCourt.id) && ids.includes(kimonoLong.id)).toBe(false);
+      if (ids.includes(kimonoLong.id) && ids.includes(manteauLong.id)) gardee++;
+    }
+    expect(gardee).toBeGreaterThan(0);
+  });
 });

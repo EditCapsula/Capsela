@@ -1650,17 +1650,27 @@ export function generateOutfit(
     const manteau = pick(["manteau"], false);
     if (manteau && !ids.includes(manteau.id)) ids.push(manteau.id);
   }
-  // R-B25 — la longueur des couches (levier longueurDesCouches) : une veste plus longue que le manteau quitte la tenue. Jamais la veste
-  // qui compense la formalité de la tenue (compensatingVeste) : sans elle, la tenue retomberait sous le niveau de l'occasion.
+  // R-B25 — la longueur des couches (levier longueurDesCouches) : une veste ne dépasse pas sous le manteau. D'abord un AUTRE MANTEAU,
+  // assez long, parmi ceux que les règles admettent (la tenue garde sa veste) ; à défaut, la veste qui dépasse quitte la tenue — jamais
+  // celle qui compense la formalité de la tenue (compensatingVeste) : sans elle, la tenue retomberait sous le niveau de l'occasion.
   if (leviers?.longueurDesCouches) {
     const portees = ids.map((id) => pool.find((x) => x.id === id) ?? chosen.find((x) => x.id === id)).filter((x): x is Item => !!x);
     const manteauPorte = portees.find((x) => x.cat === "manteau");
-    if (manteauPorte) {
-      for (const v of portees) {
-        if (v.id === compensatingVeste?.id || !vestePlusLongueQueLeManteau(v, manteauPorte)) continue;
-        ids.splice(ids.indexOf(v.id), 1);
-        const k = chosen.findIndex((x) => x.id === v.id);
-        if (k >= 0) chosen.splice(k, 1);
+    const vestes = portees.filter((x) => x.cat === "veste");
+    if (manteauPorte && vestes.some((v) => vestePlusLongueQueLeManteau(v, manteauPorte))) {
+      const couvrants = poolFor(["manteau"], false).filter((m) => m.cat === "manteau" && m.id !== manteauPorte.id && !vestes.some((v) => vestePlusLongueQueLeManteau(v, m)));
+      const autre = rand(harmonize(couvrants, chosen, false));
+      if (autre) {
+        ids.splice(ids.indexOf(manteauPorte.id), 1, autre.id);
+        const k = chosen.findIndex((x) => x.id === manteauPorte.id);
+        if (k >= 0) chosen.splice(k, 1, autre);
+      } else {
+        for (const v of vestes) {
+          if (v.id === compensatingVeste?.id || !vestePlusLongueQueLeManteau(v, manteauPorte)) continue;
+          ids.splice(ids.indexOf(v.id), 1);
+          const k = chosen.findIndex((x) => x.id === v.id);
+          if (k >= 0) chosen.splice(k, 1);
+        }
       }
     }
   }
