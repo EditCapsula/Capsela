@@ -13,7 +13,6 @@ import {
   I_METRE,
   I_PALETTE,
   I_REGLAGES,
-  I_REPERE,
   FeuilleDateNaissance,
   I_SILHOUETTE,
   Icone,
@@ -58,7 +57,7 @@ import Card from "@/components/Card";
  *   Ton style        Genre (feuille), Style, Morphologie, Palette (étapes du
  *                    questionnaire, retour ici)
  *   Mes tailles      Haut, Bas, Chaussures (étape « taille », retour ici)
- *   Ta météo         la ville et ce qu'elle fait (→ Réglages, Météo et localisation)
+ *   (Ta météo, retirée le 12/11/2026 : elle vit dans Réglages, Météo et localisation)
  *   (Mon abonnement, sous l'identité ; « Ma capsule » retirée le 27/09/2026)
  *
  * RÉGLAGES CAPSELA (05/11/2026, maquette « Mon profil » / « Réglages Capsela ») : l'engrenage en haut à droite ouvre les
@@ -125,7 +124,6 @@ export default function ProfileScreen() {
   const offre = etatPremium === "premium" ? "Premium" : etatPremium === "gratuit" ? "Gratuit" : null;
   // Ce que la ville fait réellement (store : choisirMeteo) — elle ne donne la
   // météo que si la position n'est pas utilisée ou pas disponible.
-  const meteoDeLaPosition = profile.prefs.geoConsent && profile.prefs.weatherFromGeo;
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
@@ -384,26 +382,9 @@ export default function ProfileScreen() {
           espaces (Dressing, Journal) ; le profil reste ce que Capsela sait de
           toi. Aucune donnée n'est supprimée, seul l'affichage quitte l'écran. */}
 
-      {/* TA MÉTÉO — informative : la ville, et ce qu'elle fait vraiment ; les
-          réglages (géolocalisation, météo de la position, ville) vivent dans
-          Réglages, « Météo et localisation », que la ligne ouvre (et dont le retour ramène ici). */}
-      <Surtitre icone={I_GRAPHIQUE}>Mon lieu et ma météo</Surtitre>
-      <Card className="overflow-hidden">
-        <LigneProfil
-          icone={I_REPERE}
-          titre={profile.city || "Ville non renseignée"}
-          valeur={
-            <span className="text-muted-3">
-              {meteoDeLaPosition
-                ? "Relais de ta position quand elle n'est pas disponible."
-                : "Météo utilisée pour tes recommandations."}
-            </span>
-          }
-          renseigne
-          onClick={() => actions.goPreferences("localisation")}
-        />
-      </Card>
-
+      {/* « MON LIEU ET MA MÉTÉO » RETIRÉE (12/11/2026, demandé : « on retrouve deux fois la météo et le lieu, à ne conserver qu'à un
+          seul endroit ») : elle ne faisait que mener à Réglages, « Météo et localisation », la seule page qui règle la ville et la
+          géolocalisation. Rien n'est supprimé des données. */}
 
       <FeuilleDateNaissance open={dateOuverte} onClose={() => setDateOuverte(false)} />
       {genreOuvert && <GenderModal current={profile.gender} onSelect={changerGenre} onClose={() => setGenreOuvert(false)} />}
