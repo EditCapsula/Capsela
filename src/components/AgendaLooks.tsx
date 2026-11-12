@@ -364,7 +364,8 @@ function Calendrier({
   return (
     <section className="mt-[18px] rounded-carte border border-border bg-card px-[12px] pt-[12px] pb-[10px]" aria-label="Calendrier de tes looks">
       <div className="flex items-center justify-between pl-[6px]">
-        <h2 className="font-serif text-[19px] text-ink" aria-live="polite">
+        {/* Chiffres en Bodoni dans le titre du mois (12/11/2026, chiffres-bodoni), comme « Mon planning ». */}
+        <h2 className="font-serif chiffres-bodoni text-[19px] text-ink" aria-live="polite">
           {libelleMoisAnnee(mois)}
         </h2>
         <div className="flex items-center">

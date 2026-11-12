@@ -293,12 +293,13 @@ export default function CalendrierScreen() {
     </div>
   );
 
-  const navigation = (libelle: string, precedent: () => void, suivant: () => void, nom: string) => (
+  const navigation = (libelle: string, precedent: () => void, suivant: () => void, nom: string, chiffresBodoni = false) => (
     <div className="flex items-center justify-between mt-3 mb-1">
       <button onClick={precedent} aria-label={`${nom} précédent`} className="w-[44px] h-[44px] flex items-center justify-center text-ink cursor-pointer">
         <Chevron vers="gauche" />
       </button>
-      <h2 className="t-titre-section text-ink" aria-live="polite">{libelle}</h2>
+      {/* Le titre du MOIS a ses chiffres en Bodoni (« Octobre 2026 », 12/11/2026, chiffres-bodoni) ; la semaine garde Manrope. */}
+      <h2 className={"t-titre-section text-ink" + (chiffresBodoni ? " chiffres-bodoni" : "")} aria-live="polite">{libelle}</h2>
       <button onClick={suivant} aria-label={`${nom} suivant`} className="w-[44px] h-[44px] flex items-center justify-center text-ink cursor-pointer">
         <Chevron vers="droite" />
       </button>
@@ -489,7 +490,7 @@ export default function CalendrierScreen() {
 
         {vue === "mois" && (
           <>
-            {navigation(libelleMois(mois), () => setMois(moisDecale(mois, -1)), () => setMois(moisDecale(mois, 1)), "Mois")}
+            {navigation(libelleMois(mois), () => setMois(moisDecale(mois, -1)), () => setMois(moisDecale(mois, 1)), "Mois", true)}
             {enteteSemaine}
             <div className="flex flex-col">
               {grilleDuMoisComplete(dateDe(mois).getFullYear(), dateDe(mois).getMonth()).map((sem, i) => (

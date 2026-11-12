@@ -122,6 +122,15 @@
   font-size: 21px;
   line-height: 1.18;
 }
+/*
+ * LES CHIFFRES EN BODONI, DANS UN TITRE DE MOIS SEULEMENT (12/11/2026, choisi par la propriétaire sur planche : « le titre Octobre 2026
+ * en Bodoni taille optique », les jours du calendrier restant en Manrope). La pile de la serif met Manrope devant pour les chiffres
+ * (--font-chiffres, 04/11/2026) : ce titre-là l'en retire. La taille optique basse vient des titres (opsz 11).
+ */
+@utility chiffres-bodoni {
+  /* !important : la classe de titre (t-titre-section, font-serif) pose la pile avec Manrope, et l'ordre des utilitaires n'est pas garanti. */
+  font-family: var(--font-bodoni), serif !important;
+}
 @utility t-titre-carte {
   font-family: var(--font-sans);
   font-size: 16px;
