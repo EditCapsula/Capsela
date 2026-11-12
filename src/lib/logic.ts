@@ -1,3 +1,4 @@
+import { accordAPlusieursCouleurs, formeUnAccord } from "./accordsCouleurs";
 import { estDansLUnivers } from "./univers";
 import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
 import type { Weather } from "./data";
@@ -307,6 +308,11 @@ export const SEUIL_COLLANT_SANS_BORNE = 15;
 export const DATES_DECONTRACTEES: readonly DateContext[] = ["Activité", "Cinéma / balade"];
 
 export interface LeviersMesure {
+  /**
+   * LES ACCORDS DE COULEURS À LA WADA (12/11/2026, accordsCouleurs.ts) : `true` rend le comportement d'avant — une seule couleur
+   * affirmée par tenue à la composition, et pas de R-S19 au score. Mesure seulement : aucun appelant de production ne le passe.
+   */
+  sansAccordsWada?: boolean;
   /**
    * PLANCHER DE FORMALITÉ IMPOSÉ (11/11/2026, ouverture du niveau 2 « casual chic / smart casual ») : remplace, le temps d'une mesure,
    * le palier que l'occasion demande (effectiveFormality) au départ du repli de formalité. Mesure seulement : aucun appelant de
@@ -743,7 +749,7 @@ function repetitionWeight(it: Item): number {
   return 0;
 }
 
-function harmonize(candidates: Item[], chosen: Item[], essential = true): Item[] {
+function harmonize(candidates: Item[], chosen: Item[], essential = true, accords = true): Item[] {
   if (candidates.length <= 1) return candidates;
   let pool = candidates;
 
@@ -765,8 +771,14 @@ function harmonize(candidates: Item[], chosen: Item[], essential = true): Item[]
   const accentPiece = colorRelevant.find((i) => !isNeutralColor(i.color));
   if (accentPiece) {
     const neutrals = pool.filter((i) => isNeutralColor(i.color));
-    if (neutrals.length) {
-      pool = neutrals;
+    // LES ACCORDS À LA WADA (12/11/2026, accordsCouleurs.ts) : une AUTRE couleur reste candidate si, avec celles déjà choisies, elle
+    // forme un accord — des tons rompus, au plus une couleur franche, un vrai écart de clarté, trois couleurs au plus. Les neutres
+    // restent candidats à côté d'elle : l'accord est une possibilité de plus, jamais une obligation.
+    const accordees = accords
+      ? pool.filter((i) => i.cat !== "bijou" && !isNeutralColor(i.color) && i.color !== accentPiece.color && formeUnAccord([...colorRelevant, i]))
+      : [];
+    if (neutrals.length || accordees.length) {
+      pool = [...neutrals, ...accordees];
     } else {
       // Aucune option neutre ici (ex. accessoires souvent tous colorés) :
       // on reprend la même teinte affirmée plutôt que d'en ajouter une autre.
@@ -922,6 +934,8 @@ export function generateOutfit(
   soireeHabillee = false
 ): GeneratedOutfit {
   const colo = colorimetrie ?? null;
+  // L'harmonisation de CETTE tenue, accords à la Wada compris sauf sous le levier de mesure (accordsCouleurs.ts).
+  const harmoniser = (c: Item[], ch: Item[], essential = true) => harmonize(c, ch, essential, !leviers?.sansAccordsWada);
   // La soirée « habillée » (08/10/2026, occasions.ts) : l'ancienne « Sortie festive » n'est plus une occasion, c'est un niveau d'habillage
   // de la soirée, déduit de son contexte. Ses règles (talons préférés, pas de chemise, sandales à talons de fête) suivent la DEMANDE, pas le
   // palier de formalité retenu : comme avant pour « festive », elles restent actives quand la formalité replie vers 3 ou 1.
@@ -1379,7 +1393,7 @@ export function generateOutfit(
       if (avecManches.length) base = avecManches;
       else if (weather.season === "Automne / Hiver" && !essential) base = [];
     }
-    const candidates = harmonize(candidatsCouleur(base, preferredHexes, colo), chosen, essential);
+    const candidates = harmoniser(candidatsCouleur(base, preferredHexes, colo), chosen, essential);
     const picked = rand(candidates);
     if (picked) chosen.push(picked);
     return picked;
@@ -1523,7 +1537,7 @@ export function generateOutfit(
     let hautPool = hautMeetingFloor;
     if (dressy && !hautMeetingFloor.length && hautCandidates.length) {
       const vesteCandidates = hardBase.filter((i) => i.cat === "veste" && formalityOf(i) >= minFormality);
-      compensatingVeste = rand(harmonize(vesteCandidates, chosen, false));
+      compensatingVeste = rand(harmoniser(vesteCandidates, chosen, false));
       if (compensatingVeste) hautPool = hautCandidates;
     }
     // R-S17 (25/08/2026, signalé) — soirée habillée (ex-« Sortie festive ») : on privilégie un
@@ -1564,7 +1578,7 @@ export function generateOutfit(
       if (decontractes.length) hautPool = decontractes;
     }
     // Même règle que dans pick() ci-dessus (exemption FALLBACK_HEX comprise).
-    const h = rand(harmonize(candidatsCouleur(hautPool, preferredHexes, colo), chosen, true));
+    const h = rand(harmoniser(candidatsCouleur(hautPool, preferredHexes, colo), chosen, true));
     if (h) chosen.push(h);
     primaryTop = h;
     const b = pick(BOTTOMS);
@@ -1597,7 +1611,7 @@ export function generateOutfit(
         (i.meteoMinTemp == null || weather.temp >= i.meteoMinTemp) && (i.meteoMaxTemp == null || weather.temp <= i.meteoMaxTemp)
     );
     const collantPool = inTemp.length ? inTemp : allCollants;
-    const collant = rand(harmonize(collantPool, chosen, false));
+    const collant = rand(harmoniser(collantPool, chosen, false));
     if (collant && !ids.includes(collant.id)) { chosen.push(collant); ids.push(collant.id); }
   }
   // Entretien + chemise : toujours un blazer/veste légère par-dessus,
@@ -1667,7 +1681,7 @@ export function generateOutfit(
     const vestes = portees.filter((x) => x.cat === "veste");
     if (manteauPorte && vestes.some((v) => vestePlusLongueQueLeManteau(v, manteauPorte))) {
       const couvrants = poolFor(["manteau"], false).filter((m) => m.cat === "manteau" && m.id !== manteauPorte.id && !vestes.some((v) => vestePlusLongueQueLeManteau(v, m)));
-      const autre = rand(harmonize(couvrants, chosen, false));
+      const autre = rand(harmoniser(couvrants, chosen, false));
       if (autre) {
         ids.splice(ids.indexOf(manteauPorte.id), 1, autre.id);
         const k = chosen.findIndex((x) => x.id === manteauPorte.id);
@@ -1694,7 +1708,7 @@ export function generateOutfit(
     !ids.some((id) => pool.find((x) => x.id === id)?.cat === "pull")
   ) {
     const gilets = poolFor(["pull"], false).filter((i) => i.cat === "pull" && fermetureMaille(i) === "ouverte" && !ids.includes(i.id));
-    const gilet = rand(harmonize(gilets, chosen, false));
+    const gilet = rand(harmoniser(gilets, chosen, false));
     if (gilet) {
       ids.push(gilet.id);
       chosen.push(gilet);
@@ -1713,7 +1727,7 @@ export function generateOutfit(
     );
     // Calque près du visage : la colorimétrie s'y applique (sans préférence
     // de palette, qui n'y a jamais joué — sans colorimétrie, liste inchangée).
-    const robeLayer = rand(harmonize(candidatsCouleur(robeLayerCandidates, [], colo), chosen, false));
+    const robeLayer = rand(harmoniser(candidatsCouleur(robeLayerCandidates, [], colo), chosen, false));
     if (robeLayer) { chosen.push(robeLayer); ids.push(robeLayer.id); }
   }
   // R-B8 — superposition hauts/pulls_gilets (TOP_LAYER_CATS) : une 2e pièce
@@ -1764,7 +1778,7 @@ export function generateOutfit(
           // Mailles fermées — règle active par défaut (arbitrage 31/08/2026).
           (leviers?.superpositionMaillesFermees === true || !(isClosedKnit(firstLayer) && isClosedKnit(i)))
       );
-      const layer = rand(harmonize(candidatsCouleur(layerCandidates, [], colo), chosen, false));
+      const layer = rand(harmoniser(candidatsCouleur(layerCandidates, [], colo), chosen, false));
       if (layer) { chosen.push(layer); ids.push(layer.id); }
     }
   }
@@ -1784,7 +1798,7 @@ export function generateOutfit(
           !chosen.some((c) => c.id === i.id) &&
           !(isShirtLike(hautsDeLaTenue[0]) && isShirtLike(i))
       );
-      const base = rand(harmonize(candidatsCouleur(baseCandidates, [], colo), chosen, false));
+      const base = rand(harmoniser(candidatsCouleur(baseCandidates, [], colo), chosen, false));
       if (base) { chosen.push(base); ids.push(base.id); }
     }
   }
@@ -1812,7 +1826,7 @@ export function generateOutfit(
         if (!isCalquePull && !OUTERWEAR_CATS.includes(i.cat)) return false;
         return i.meteoMinTemp == null || weather.temp >= i.meteoMinTemp;
       });
-      const compensation = rand(harmonize(compensationCandidates, chosen, false));
+      const compensation = rand(harmoniser(compensationCandidates, chosen, false));
       if (compensation) { chosen.push(compensation); ids.push(compensation.id); }
       else missingWarmth = true;
     }
@@ -1856,7 +1870,7 @@ export function generateOutfit(
       const decontractees = shoePool.filter((i) => formalityOf(i) <= 1);
       if (decontractees.length) shoePool = decontractees;
     }
-    const picked = rand(harmonize(shoePool, chosen, true));
+    const picked = rand(harmoniser(shoePool, chosen, true));
     if (picked) chosen.push(picked);
     return picked;
   })();
@@ -1916,7 +1930,7 @@ export function generateOutfit(
         (occasion !== "cocooning" || leviers?.echarpeEnCocooning || i.accessoireType !== "Écharpe")
     );
     // Foulard, écharpe : près du visage (candidatsCouleur ; sans colorimétrie, liste inchangée).
-    const ac = rand(harmonize(candidatsCouleur(accessoireBase, [], colo), chosen, false));
+    const ac = rand(harmoniser(candidatsCouleur(accessoireBase, [], colo), chosen, false));
     if (ac) chosen.push(ac);
     if (ac && !ids.includes(ac.id)) ids.push(ac.id);
   }
@@ -2497,7 +2511,9 @@ export function computeLookScore(
    */
   pool: Item[] = [],
   /** Colorimétrie du profil — R-S18 (bonus seul). Non renseignée, score d'origine. */
-  colorimetrie?: ColorimetrieMoteur | null
+  colorimetrie?: ColorimetrieMoteur | null,
+  /** Levier de mesure (LeviersMesure.sansAccordsWada) : sans lui, R-S19 compte. */
+  leviers?: Pick<LeviersMesure, "sansAccordsWada">
 ): LookScore {
   const clothing = pieces.filter((i) => CLOTHING_CATS.includes(i.cat));
   const accessories = pieces.filter((i) => ACCESSORY_CATS.includes(i.cat));
@@ -2526,6 +2542,11 @@ export function computeLookScore(
     }
   }
   if (harmonious) bon("R-S2", 15);
+
+  // R-S19 — UN ACCORD À LA WADA (12/11/2026, accordsCouleurs.ts) : plusieurs couleurs non neutres qui s'accordent par leurs tons
+  // rompus, une seule franche au plus et l'écart de clarté — même quand le cercle chromatique (R-S2) n'y voit rien. Bijou exclu.
+  // ARBITRAGE ÉDITORIAL : +10, moins que R-S2 (+15), pour récompenser l'accord sans faire passer toutes les tenues à la couleur.
+  if (!leviers?.sansAccordsWada && accordAPlusieursCouleurs(pieces.filter((i) => i.cat !== "bijou"))) bon("R-S19", 10);
 
   // R-S3 — règle 60/30/10 (approximation sur poids par catégorie, pas de vraie surface)
   const WEIGHT: Partial<Record<CategoryKey, number>> = {
