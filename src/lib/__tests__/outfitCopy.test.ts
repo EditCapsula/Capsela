@@ -112,7 +112,8 @@ describe("bandeau de repli — la source nommée est celle que l'écran a calcul
   it("le bandeau interpole sourceLabel au lieu d'écrire « ta capsule »", () => {
     const ecran = readFileSync(join(SRC, "components", "screens", "TenuesScreen.tsx"), "utf8");
     const jsx = ecran.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
-    expect(jsx).toContain("composé avec les pièces de {sourceLabel}.");
+    // Traduit depuis le 12/11/2026 (langue.ts) : la source passe en variable de t(), toujours sourceLabel.
+    expect(jsx).toContain('composé avec les pièces de {source}.", { source: sourceLabel }');
     expect(jsx).not.toContain("composé avec les pièces de ta capsule");
   });
 });

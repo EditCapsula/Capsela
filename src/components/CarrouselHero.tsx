@@ -1,5 +1,6 @@
 "use client";
 
+import { aTraduire, t } from "@/lib/langue";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
 import { useEffect, useRef, useState } from "react";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
@@ -107,7 +108,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
         {portee && <MentionPortee />}
         <div className="mt-auto pt-4">
           <Button variante="principal" pleine={false} onClick={onVoir} className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap">
-            Voir le look
+            {t("Voir le look")}
           </Button>
         </div>
       </div>
@@ -121,11 +122,11 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
       </div>
 
       <div className="flex items-center" style={{ gridColumn: "1 / -1" }} aria-live="polite">
-        <ActionRonde icone={<IconeCoeur plein={sauvegardee} />} libelle={sauvegardee ? "Sauvegardée" : "Sauvegarder"} actif={sauvegardee} onClick={onSauvegarder} />
+        <ActionRonde icone={<IconeCoeur plein={sauvegardee} />} libelle={sauvegardee ? t("Sauvegardée") : t("Sauvegarder")} actif={sauvegardee} onClick={onSauvegarder} />
         <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(29,26,22,.2)" }} />
         {/* data-tour : la visite guidée de l'accueil (lib/visites.ts) met en évidence celle de la première slide, affichée à l'arrivée. */}
         <span data-tour="accueil-autre-tenue" className="inline-flex">
-          <ActionRonde icone={<IconeAutre />} libelle="Autre tenue" label="Propose-moi une autre tenue" disabled={autreDesactive} onClick={onAutre} />
+          <ActionRonde icone={<IconeAutre />} libelle={t("Autre tenue")} label={t("Propose-moi une autre tenue")} disabled={autreDesactive} onClick={onAutre} />
         </span>
       </div>
       {pied}
@@ -151,7 +152,7 @@ export function CarrouselHero({
   slides,
   libelles,
   onAvantDerniere,
-  label = "Tes tenues du jour",
+  label = aTraduire("Tes tenues du jour"),
   largeurSlide = "100%",
   classeSlide = "px-4",
   onActif,
@@ -235,7 +236,7 @@ export function CarrouselHero({
   };
 
   return (
-    <div className={className} role="region" aria-roledescription="carrousel" aria-label={label}>
+    <div className={className} role="region" aria-roledescription={t("carrousel")} aria-label={t(label)}>
       <div
         ref={piste}
         onScroll={surDefilement}
@@ -251,7 +252,7 @@ export function CarrouselHero({
             style={{ width: largeurSlide }}
             role="group"
             aria-roledescription="diapositive"
-            aria-label={`${libelles[i]} (${i + 1} sur ${n})`}
+            aria-label={t("{libelle} ({i} sur {n})", { libelle: libelles[i], i: i + 1, n })}
           >
             {slide}
           </div>
@@ -264,7 +265,7 @@ export function CarrouselHero({
               key={i}
               type="button"
               onClick={() => aller(i)}
-              aria-label={`Voir ${libelles[i].toLowerCase()}`}
+              aria-label={t("Voir {libelle}", { libelle: libelles[i].toLowerCase() })}
               aria-current={i === indexActif}
               className="flex items-center justify-center w-[22px] h-[22px] cursor-pointer"
             >
@@ -287,7 +288,7 @@ export function MentionPortee() {
       <span aria-hidden="true" className="w-[20px] h-[20px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center text-[11px] flex-shrink-0">
         ✓
       </span>
-      <span className="text-[12.5px] text-ink">Portée aujourd&apos;hui</span>
+      <span className="text-[12.5px] text-ink">{t("Portée aujourd'hui")}</span>
     </div>
   );
 }

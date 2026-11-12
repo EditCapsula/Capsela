@@ -110,7 +110,7 @@ export function useRemplacementPiece(): { ouvrir: (it: Item, config: ConfigRempl
         {piece && (
           <>
             <div className="mx-auto" style={{ width: "min(68%, 260px)" }}>
-              <PhotoPiece piece={piece} ratio={0.8} rayon={18} />
+              <PhotoPiece piece={piece} ratio={0.8} rayon={18} entiere />
             </div>
             {(piece.brand || suggestion) && (
               <div className="flex items-center justify-center gap-2 mt-4">
@@ -158,7 +158,7 @@ export function useRemplacementPiece(): { ouvrir: (it: Item, config: ConfigRempl
           <div className="grid grid-cols-3 gap-[10px]" role="list" aria-label="Pièces de remplacement">
             {alternatives.map((p) => (
               <button key={p.id} type="button" role="listitem" onClick={() => void remplacer(p)} className="text-left cursor-pointer active:opacity-80 min-w-0">
-                <PhotoPiece piece={p} ratio={0.8} rayon={14} />
+                <PhotoPiece piece={p} ratio={0.8} rayon={14} entiere />
                 <span className="block text-[11.5px] text-ink leading-[1.3] mt-[6px] line-clamp-2">{p.name}</span>
                 {estSuggestion(p) && <span className="block t-pastille text-terracotta mt-[3px]">Suggestion</span>}
               </button>
