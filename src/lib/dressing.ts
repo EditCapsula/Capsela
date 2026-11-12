@@ -37,7 +37,7 @@ import type {
  * pas de colonne correspondante.
  */
 
-interface DressingItemRow {
+export interface DressingItemRow {
   id: number;
   user_id: string;
   name: string;
@@ -68,7 +68,7 @@ interface DressingItemRow {
   motif?: string | null;
 }
 
-function rowToItem(row: DressingItemRow): Item {
+export function rowToItem(row: DressingItemRow): Item {
   return {
     id: row.id,
     // Comme au catalogue (18/10/2026) : le « / » d'un nom s'affiche en point médian.
