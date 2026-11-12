@@ -1,5 +1,6 @@
 "use client";
 
+import TitrePage from "@/components/TitrePage";
 import { useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import AvisEnregistresJournal from "@/components/AvisEnregistresJournal";
@@ -732,13 +733,9 @@ export default function HistoryScreen() {
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
         <AppHeader />
-        <Surtitre className="mt-[18px]">Ton journal</Surtitre>
-        <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+        <TitrePage chapeau="Chaque tenue que tu portes enrichit ton journal et aide Capsela à mieux comprendre ton style.">
           Ton style <span className="italic text-terracotta">commence ici</span>
-        </div>
-        <div className="t-chapeau text-muted-3 mt-[10px]">
-          Chaque tenue que tu portes enrichit ton journal et aide Capsela à mieux comprendre ton style.
-        </div>
+        </TitrePage>
 
         {/* VISUEL D'ÉTAT VIDE (fournis le 25/09/2026) : des vêtements à
             plat, sans personne — §2 du brief. Choisi sur le genre déclaré,
@@ -869,30 +866,31 @@ export default function HistoryScreen() {
       {/* EN-TÊTE (15/10/2026, maquette du Journal) : le titre à gauche, la période en menu à droite (« Octobre 2026 »). Ce menu est le
           SEUL sélecteur de période du titre, du bilan et des chiffres clés. Un <select> natif : la liste s'ouvre à la manière du
           système, au clavier et au lecteur d'écran aussi. */}
-      <Surtitre className="mt-[18px]">Ton journal</Surtitre>
-      <div className="flex items-start justify-between gap-3 mt-[6px]">
-        <div className="t-titre-ecran text-ink min-w-0" aria-live="polite">
-          {chiffres.tenues} <span className="italic text-terracotta">{pl(chiffres.tenues, "tenue portée", "tenues portées")}</span>
-        </div>
-        <label className="relative flex-shrink-0">
-          <span className="sr-only">Période du journal</span>
-          <select
-            value={periode}
-            onChange={(e) => setPeriode(e.target.value as PeriodeJournal)}
-            className="appearance-none min-h-[40px] pl-[14px] pr-[34px] rounded-full bg-card border border-border text-[12.5px] text-ink cursor-pointer"
-          >
-            {PERIODES.map(({ key, label }) => (
-              <option key={key} value={key}>
-                {key === "mois" ? libelleMois : key === "tout" ? "Depuis le début" : label}
-              </option>
-            ))}
-          </select>
-          <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none text-ink">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </label>
-      </div>
-      <div className="t-chapeau text-muted-3 mt-[8px]">{phraseEnTete}</div>
+      <TitrePage
+        ariaLive
+        chapeau={phraseEnTete}
+        droite={
+          <label className="relative">
+            <span className="sr-only">Période du journal</span>
+            <select
+              value={periode}
+              onChange={(e) => setPeriode(e.target.value as PeriodeJournal)}
+              className="appearance-none min-h-[40px] pl-[14px] pr-[34px] rounded-full bg-card border border-border text-[12.5px] text-ink cursor-pointer"
+            >
+              {PERIODES.map(({ key, label }) => (
+                <option key={key} value={key}>
+                  {key === "mois" ? libelleMois : key === "tout" ? "Depuis le début" : label}
+                </option>
+              ))}
+            </select>
+            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none text-ink">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </label>
+        }
+      >
+        {chiffres.tenues} <span className="italic text-terracotta">{pl(chiffres.tenues, "tenue portée", "tenues portées")}</span>
+      </TitrePage>
 
       {/* BILAN DU MOIS d'abord (A), puis les chiffres clés (B) et le dressing en chiffres (C) — ordre du brief du 12/10/2026. */}
       {/* LA CARTE ÉDITORIALE (26/09/2026 ; moteur de commentaires du 16/10/2026). Le commentaire vient de commentaireJournal (règles et

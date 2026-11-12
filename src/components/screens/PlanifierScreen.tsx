@@ -1,5 +1,6 @@
 "use client";
 
+import TitrePage from "@/components/TitrePage";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
 import { remplacerDansIds } from "@/lib/remplacementPiece";
 import { masquerMenuActions } from "@/lib/menuActions";
@@ -1539,7 +1540,7 @@ export default function PlanifierScreen() {
         </div>
       )}
 
-      <div ref={zoneScroll} className={"scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-4 " + (vue === "intro" || vue === "detail" ? "pb-safe-nav" : "pb-5")}>
+      <div ref={zoneScroll} className={"scrollarea flex-1 min-h-0 overflow-y-auto px-6 " + (vue === "intro" ? "pt-[6px] " : "pt-4 ") + (vue === "intro" || vue === "detail" ? "pb-safe-nav" : "pb-5")}>
         {/* LE HUB « PLANIFIER » — brief « Page Planifier, design + UX »
             (transmis le 25/09/2026, source de vérité). Trois questions dans
             l'ordre du brief : que puis-je planifier, comment commencer,
@@ -1547,14 +1548,12 @@ export default function PlanifierScreen() {
             parcours, puis les planifications. */}
         {vue === "intro" && (
           <>
-            {/* 18 px sous le bandeau, comme les autres onglets (pt-4 du conteneur + 2). */}
-            <div className="mt-[2px]">
-              <Surtitre>Planifier</Surtitre>
-            </div>
-            <TitreEtape a="Anticipe tes moments." b="Capsela s'occupe du look" />
-            <div className="t-chapeau text-muted-3 mt-[10px]" style={{ textWrap: "pretty" }}>
-              Des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing.
-            </div>
+            {/* Le titre à la même hauteur que sur les autres onglets (mesuré en rendu : le bandeau de cet écran est hors de la zone qui
+                défile, d'où une marge plus courte ici) ; le surtitre « Planifier », qui répétait
+                l'onglet, est retiré (TitrePage, 12/11/2026). */}
+            <TitrePage decalage={2} chapeau="Des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing.">
+              Anticipe tes moments. <span className="italic text-terracotta">Capsela s&apos;occupe du look</span>
+            </TitrePage>
 
             {/* LES DEUX VISUELS ÉDITORIAUX sont ceux d'avant (recette du 26/09/2026, fournis par la propriétaire) : une tenue
                 pour « Planifier une tenue », la valise ouverte pour « Préparer ma valise » — les deux pour un profil femme,
