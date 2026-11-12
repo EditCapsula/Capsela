@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { notifAlerteMeteo } from "@/lib/centreNotifications";
+import { noterNotifications } from "@/lib/notificationsStore";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { occasionShortLabel } from "@/lib/data";
 import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
@@ -90,6 +93,14 @@ export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<Re
   const { actions } = useCapsela();
   const calculer = useCalculAdaptation();
   const { alerte, plan, pieces, meteo } = planApplique;
+  // La même alerte, gardée dans le centre de notifications (Conseils, 12/11/2026) : une fois par tenue, par jour et par cause.
+  const cleAlerte = alerte && meteo ? `${plan.id}|${plan.jour}|${alerte.cause}` : null;
+  useEffect(() => {
+    if (!cleAlerte || !alerte) return;
+    noterNotifications(notifAlerteMeteo(String(plan.id), plan.jour, alerte.cause, alerte.titre, alerte.message));
+    // La clé suffit : une nouvelle phrase pour la même alerte (un degré de plus) n'est pas un nouvel événement.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleAlerte]);
   if (!alerte || !meteo) return null;
   const adapter = () => {
     const proposition = calculer(plan, pieces, meteo);

@@ -39,6 +39,8 @@ import { CHALEUR_HORS_SAISON, computeDefaultCapsule, saisonCalendairePour, saiso
 import EtapeLieu, { type MeteoEtapeLieu } from "@/components/EtapeLieu";
 import { meteoPourLaDate } from "@/lib/meteoPlan";
 import { fetchClimat, previsionGardee, type Climat, type VilleSuggeree } from "@/lib/weather";
+import { notifPieceRemplaceePlan } from "@/lib/centreNotifications";
+import { noterNotifications } from "@/lib/notificationsStore";
 import { deleteTenuePlanifiee, fetchTenuesPlanifiees, enregistrerConfirmationPlan, enregistrerHumeurPlan, enregistrerOccasionsSecondaires, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
 import { VISUEL_SEJOUR } from "@/lib/valise";
@@ -893,6 +895,11 @@ export default function PlanifierScreen() {
       const majPlan: TenuePlanifiee = { ...plan, ...ligne, humeur: plan.humeur, occasionsSecondaires: plan.occasionsSecondaires };
       setPlans((l) => l.map((x) => (x.id === plan.id ? majPlan : x)));
       setPlanOuvert((o) => (o && o.id === plan.id ? majPlan : o));
+      // Une tenue ENREGISTRÉE a changé (centre de notifications, 12/11/2026) : utile à retrouver le jour venu.
+      const nom = (id: number) => [...state.items, ...vestiairePool].find((p) => p.id === id)?.name;
+      const ancien = nom(a);
+      const nouvel = nom(n);
+      if (ancien && nouvel) noterNotifications(notifPieceRemplaceePlan(String(plan.id), ancien, nouvel));
       return true;
     } catch {
       return false;

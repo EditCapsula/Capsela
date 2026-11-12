@@ -19,6 +19,10 @@ if (typeof document !== "undefined" && Capacitor.getPlatform() === "ios") {
 }
 import { arreterPublicite, demarrerPublicite } from "@/lib/publicite";
 import { synchroniserNotifications } from "@/lib/notifications";
+import { notificationsDesValises, notifProfilACompleter } from "@/lib/centreNotifications";
+import { demarrerNotifications, noterNotifications } from "@/lib/notificationsStore";
+import { prochaineActionProfil } from "@/lib/profile";
+import { jourLocal } from "@/lib/outfitFeedback";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CapselaProvider, useCapsela } from "@/lib/store";
@@ -59,6 +63,7 @@ import ApercuPiece from "./ApercuPiece";
 import LookDetailScreen from "./screens/LookDetailScreen";
 import ItemOutfitsScreen from "./screens/ItemOutfitsScreen";
 import IdeeLookScreen from "./screens/IdeeLookScreen";
+import NotificationsScreen from "./screens/NotificationsScreen";
 import TabBar from "./TabBar";
 import MenuActions from "./MenuActions";
 import CookieBanner from "./CookieBanner";
@@ -111,6 +116,24 @@ function Screens() {
     if (!userIdPub) arreterPublicite();
     else if (profilCompletPub && etatPremium === "gratuit") void demarrerPublicite(userIdPub);
   }, [userIdPub, profilCompletPub, etatPremium]);
+
+  // LE CENTRE DE NOTIFICATIONS (12/11/2026, notificationsStore.ts) : chargé dès que la personne est connue (le mode démo garde les
+  // siennes sur l'appareil), puis les événements DÉRIVÉS sont relevés depuis les données déjà chargées — un départ en valise dans les
+  // sept jours, la prochaine information du profil. Une même détection rejouée ne note rien deux fois (clé de l'événement).
+  const idNotif = auth.signedIn ? auth.userId : null;
+  const connecte = auth.signedIn;
+  useEffect(() => {
+    if (connecte) void demarrerNotifications(idNotif);
+  }, [connecte, idNotif]);
+  const valisesNotif = state.valises;
+  const actionProfil = profilCompletPub ? prochaineActionProfil(auth.profile) : null;
+  const cleActionProfil = actionProfil?.cle ?? null;
+  const messageActionProfil = actionProfil?.message ?? "";
+  useEffect(() => {
+    if (!connecte || !profilCompletPub) return;
+    noterNotifications(notificationsDesValises(valisesNotif, jourLocal()));
+    if (cleActionProfil) noterNotifications(notifProfilACompleter(cleActionProfil, messageActionProfil));
+  }, [connecte, profilCompletPub, valisesNotif, cleActionProfil, messageActionProfil]);
 
   // LA NOTIFICATION DE LA TENUE DU JOUR (04/11/2026, notifications.ts) : remise en accord avec les Préférences à chaque lancement,
   // une fois le profil complet — la demande d'autorisation du téléphone ne coupe donc jamais le questionnaire d'inscription.
@@ -292,6 +315,7 @@ function Screens() {
         {state.screen === "lookDetail" && <LookDetailScreen />}
         {state.screen === "itemOutfits" && <ItemOutfitsScreen />}
         {state.screen === "ideeLook" && <IdeeLookScreen />}
+        {state.screen === "notifications" && <NotificationsScreen />}
       </div>
       {showTabbar && <TabBar />}
       {/* Le menu d'actions flottant (12/11/2026, menuActions.ts) : un seul, pour toutes les pages principales. */}
