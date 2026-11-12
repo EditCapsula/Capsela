@@ -703,10 +703,17 @@ export default function TenuesScreen() {
   // Pas de conseil quand un manteau est déjà proposé « Pour l'extérieur » (04/11/2026, demandé : « pas la peine de suggérer le manteau si on
   // le met toujours dans la strate extérieure ») : ni pièce estompée, ni silhouette à ajouter, ni carte « À prévoir ».
   const coucheDejaDehors = exterieur != null;
+  // La température qui décide de la couche : celle du soir quand la prévision la donne (comme « veste_soir », computeLookScore).
+  const tempCouche = meteoDuJour.tempSoir ?? meteoDuJour.temp;
+  // Par le froid du soir, sans manteau adapté dans le dressing : un manteau de la CAPSULE (12/11/2026, demandé), jamais une veste.
+  const manteauxCapsuleSoir =
+    tempCouche < SEUIL_MANTEAU && outfitPieces.length
+      ? candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour)
+      : [];
   const conseilVeste = (() => {
     const p = liveProactiveByKey.get("veste_soir");
-    if (coucheDejaDehors || !p || p.suggestedId == null || dismissingEntries["veste_soir"]) return null;
-    const piece = displayPool.find((i) => i.id === p.suggestedId);
+    if (coucheDejaDehors || !p || dismissingEntries["veste_soir"]) return null;
+    const piece = p.suggestedId != null ? displayPool.find((i) => i.id === p.suggestedId) : manteauxCapsuleSoir[0];
     return piece ? { p, piece } : null;
   })();
   // SANS VESTE À PROPOSER (14/10/2026, demandé, capture d'une tenue Cérémonie) : aucune veste du dressing ni de la capsule n'atteint le
@@ -720,7 +727,7 @@ export default function TenuesScreen() {
     (k) => !((conseilVeste || vesteAAjouter || coucheDejaDehors) && k === "veste_soir") && !chaussuresManquantes
   );
   // Par le froid (sous SEUIL_MANTEAU, 19/10/2026), la pièce à ajouter est un manteau, pas une veste.
-  const coucheAAjouter = meteoDuJour.temp < SEUIL_MANTEAU ? ("manteau" as const) : ("veste" as const);
+  const coucheAAjouter = tempCouche < SEUIL_MANTEAU ? ("manteau" as const) : ("veste" as const);
   const fantomesHero = [...(chaussuresManquantes ? (["chaussures"] as const) : []), ...(vesteAAjouter ? [coucheAAjouter] : [])];
   const aCompleter = !noCompleteOutfit && (proactiveKeys.length > 0 || Boolean(missingTextCarte) || vesteWithoutBase || chaussuresManquantes);
 

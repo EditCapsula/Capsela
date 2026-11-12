@@ -34,3 +34,15 @@ describe("le conseil « frais ce soir » lit la soirée", () => {
     expect(fraicheurDuSoir({})).toBe("il fait frais aujourd'hui");
   });
 });
+
+describe("par le froid, jamais une veste à la place du manteau (12/11/2026, signalé)", () => {
+  it("soirée sous le seuil du manteau, une veste seulement : rien n'est suggéré, le texte parle d'un manteau", () => {
+    const c = conseil(14, 8);
+    expect(c).toBeDefined();
+    expect(c!.suggestedId).toBeUndefined();
+    expect(c!.text).toContain("un manteau");
+  });
+  it("au-dessus du seuil, la veste reste suggérée", () => {
+    expect(conseil(24, 14)!.suggestedId).toBe(VESTE.id);
+  });
+});

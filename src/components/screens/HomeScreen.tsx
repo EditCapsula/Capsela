@@ -246,11 +246,17 @@ export default function HomeScreen() {
       colorimetrieMoteur(profile.colorimetrie)
     );
     const p = score.proactives.find((x) => x.key === "veste_soir");
-    const piece = p?.suggestedId != null ? wardrobePool.find((i) => i.id === p.suggestedId) : undefined;
+    // Par le froid du soir sans manteau adapté dans le dressing : un manteau de la capsule, jamais une veste (12/11/2026, comme Tenue).
+    const tempCouche = meteoDuJour.tempSoir ?? meteoDuJour.temp;
+    const manteauCapsule =
+      p && p.suggestedId == null && tempCouche < SEUIL_MANTEAU
+        ? candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour)[0]
+        : undefined;
+    const piece = p?.suggestedId != null ? wardrobePool.find((i) => i.id === p.suggestedId) : manteauCapsule;
     return piece ? [{ item: piece, onAjouter: () => actions.addPieceToOutfit(piece.id) }] : undefined;
     // `actions` change à chaque rendu ; la suggestion ne dépend que de la tenue, de la météo, de l'occasion et du profil.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.outfit, state.occasion, state.workMode, state.dateContext, state.dismissedSuggestions, meteoDuJour, wardrobePool, profile, hasOutfit, exterieurId]);
+  }, [state.outfit, state.occasion, state.workMode, state.dateContext, state.dismissedSuggestions, meteoDuJour, wardrobePool, defaultCapsule, profile, hasOutfit, exterieurId]);
 
   /*
    * LE HERO DYNAMIQUE (04/10/2026) — trois états qui portent un plan, un qui n'en porte pas :

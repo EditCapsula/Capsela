@@ -2763,10 +2763,14 @@ export function computeLookScore(
             .filter((i) => !pieceIds.has(i.id) && estCoucheDuSoir(i) && estDeSaison(i, weather))
             .sort((a, b) => Number(/capuche|hoodie/i.test(`${b.subtype ?? ""} ${b.name}`)) - Number(/capuche|hoodie/i.test(`${a.subtype ?? ""} ${a.name}`)) || dressingDAbord(a, b))
         : [];
+    // Sous SEUIL_MANTEAU, JAMAIS une veste à la place du manteau (12/11/2026, signalé : « la veste courte en tweed n'est pas un manteau,
+    // ici la recommandation aurait été d'ajouter un manteau ») : sans manteau admis, rien n'est suggéré ici — l'écran propose alors un
+    // manteau de la capsule, ou d'en ajouter un au dressing. Le Sport garde sa couche à lui (coucheSport).
+    const froid = tempReference < SEUIL_MANTEAU;
     proactives.push({
       key: "veste_soir",
-      text: `N'hésite pas à compléter cette tenue avec une veste, ${fraicheurDuSoir(weather)}.`,
-      suggestedId: (coucheSport.length ? coucheSport : decontracte.length ? decontracte : parLeFroid.length ? parLeFroid : vesteManteauCandidates)[0]?.id,
+      text: `N'hésite pas à compléter cette tenue avec ${froid ? "un manteau" : "une veste"}, ${fraicheurDuSoir(weather)}.`,
+      suggestedId: (coucheSport.length ? coucheSport : decontracte.length ? decontracte : froid ? parLeFroid : vesteManteauCandidates)[0]?.id,
     });
   }
 
