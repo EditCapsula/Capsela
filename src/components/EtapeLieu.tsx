@@ -371,7 +371,7 @@ function MeteoDuLieu({ meteo }: { meteo: MeteoEtapeLieu }) {
             <IconeTuile nom={/soleil|dégagé|ensoleill/i.test(meteo.label) ? "apresmidi" : "nuage"} taille={26} />
           </span>
           <span className="flex-1 min-w-0">
-            <span className="block font-serif text-[20px] text-ink leading-[1.2]">
+            <span className="block t-titre-section text-ink">
               {meteo.tempMin === meteo.tempMax ? `${degres(meteo.temp)}` : `${degres(meteo.tempMin)} — ${degres(meteo.tempMax)}`}
             </span>
             <span className="block text-[12px] text-muted-3 mt-[1px]">Prévisions pour le jour sélectionné · {meteo.label}</span>
@@ -384,7 +384,7 @@ function MeteoDuLieu({ meteo }: { meteo: MeteoEtapeLieu }) {
     return (
       <div className="mt-4" aria-live="polite">
         <div className="rounded-bloc border border-border bg-card px-[14px] py-[12px]">
-          <div className="font-serif text-[20px] text-ink leading-[1.2]">
+          <div className="t-titre-section text-ink">
             {meteo.tempMin === meteo.tempMax ? `${degres(meteo.tempMin)}` : `${degres(meteo.tempMin)} — ${degres(meteo.tempMax)}`}
           </div>
           <div className="text-[12px] text-muted-3 mt-[1px]">Températures habituelles à cette date · la prévision sera disponible plus près du jour.</div>

@@ -119,7 +119,7 @@ export function useRemplacementPiece(): { ouvrir: (it: Item, config: ConfigRempl
             </div>
             <div className="text-center mt-[18px]">
               {piece.brand && <div className="t-surtitre text-muted-3">{piece.brand}</div>}
-              <h2 className={"font-serif text-ink " + (piece.brand ? "mt-[6px]" : "")} style={{ fontSize: 24, lineHeight: 1.15, textWrap: "balance" }}>
+              <h2 className={"t-titre-ecran text-ink " + (piece.brand ? "mt-[6px]" : "")} style={{ textWrap: "balance" }}>
                 {piece.name}
               </h2>
             </div>

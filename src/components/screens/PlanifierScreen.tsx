@@ -2094,7 +2094,7 @@ export default function PlanifierScreen() {
                       <li key={titre} className="flex gap-3 items-start py-3 border-b border-border last:border-b-0">
                         <span className="flex-shrink-0 text-terracotta mt-[1px]"><IconeTuile nom={icone} taille={18} /></span>
                         <span className="flex-1 min-w-0">
-                          <span className="block text-[13px] font-semibold text-ink">{titre}</span>
+                          <span className="block t-titre-vignette text-ink">{titre}</span>
                           <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[1px]">{texte}</span>
                         </span>
                       </li>
@@ -2381,7 +2381,7 @@ export default function PlanifierScreen() {
               {!passee && (
                 <div className="mt-[14px] bg-warm-bg border border-warm-border rounded-carte px-[16px] py-[16px]">
                   {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
-                  <div className="font-serif text-[19px] text-ink leading-[1.2] mt-[2px]" style={{ textWrap: "balance" }}>
+                  <div className="t-titre-section text-ink mt-[2px]" style={{ textWrap: "balance" }}>
                     L&apos;œil de Capsela, avant le jour J.
                   </div>
                   <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>

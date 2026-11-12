@@ -529,7 +529,7 @@ export default function HomeScreen() {
 
           {passee ? (
             <>
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+              <div className="t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
                 {passee.plan ? titreDuPlan(passee.plan) : OCC_LABELS[passee.occasion]}
               </div>
               <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]">{passee.source === "porte" ? t("Tu as porté cette tenue.") : t("Tu l’avais planifiée.")}</div>
@@ -541,7 +541,7 @@ export default function HomeScreen() {
             </>
           ) : aucuneTenuePossible ? (
             <>
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+              <div className="t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
                 {t("On prépare ta")} <span className="italic text-terracotta">{t("première tenue")}</span>
               </div>
               <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
@@ -560,7 +560,7 @@ export default function HomeScreen() {
               <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
                 {/* La pertinence de la tenue attend derrière le « i » du titre (12/11/2026, PourquoiCetteTenue) ; le texte d'un plan ou d'une
                     valise reste affiché sous le titre. */}
-                <div className="relative font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
+                <div className="relative t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
                   {titreHero.a}
                   {titreHero.b && (
                     <>
@@ -590,7 +590,7 @@ export default function HomeScreen() {
             </>
           ) : (
             <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+              <div className="t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
                 {t("Capsela compose")} <span className="italic text-terracotta">{t("ta tenue…")}</span>
               </div>
               <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]">

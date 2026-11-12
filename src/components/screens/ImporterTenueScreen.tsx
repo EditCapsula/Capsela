@@ -435,7 +435,7 @@ export default function ImporterTenueScreen() {
           </button>
         ) : (
           <>
-            <div className="flex-1 text-center font-serif font-medium text-[19px] text-ink">Ajouter une pièce</div>
+            <div className="flex-1 text-center t-titre-section text-ink">Ajouter une pièce</div>
             <span className="w-[44px] flex-shrink-0" />
           </>
         )}
@@ -454,7 +454,7 @@ export default function ImporterTenueScreen() {
             <span className="text-terracotta-deep" aria-hidden="true">
               <CameraIcon />
             </span>
-            <div className="font-serif font-medium text-[19px] text-ink mt-[10px]">Photographie ta tenue</div>
+            <div className="t-titre-section text-ink mt-[10px]">Photographie ta tenue</div>
             <div className="text-[12.5px] text-muted-3 mt-1">Porte-la en pied, sur un fond simple, bien éclairée.</div>
             <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-2 w-full mt-[18px]">
               <button type="button" onClick={() => cameraRef.current?.click()} className="h-[44px] rounded-full bg-terracotta-deep text-on-terracotta text-[13px] font-semibold cursor-pointer">
@@ -488,7 +488,7 @@ export default function ImporterTenueScreen() {
           {phase === "resultat" && (
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-serif font-medium text-[22px] text-ink">{ticket ? (seul ? "1 article sur ton ticket" : `${nbRepere} articles sur ton ticket`) : seul ? "1 pièce détectée" : `${nbRepere} pièces détectées`}</p>
+                <p className="t-titre-section text-ink">{ticket ? (seul ? "1 article sur ton ticket" : `${nbRepere} articles sur ton ticket`) : seul ? "1 pièce détectée" : `${nbRepere} pièces détectées`}</p>
                 <p className="text-[12.5px] text-muted-3 mt-1">
                   {ticket
                     ? "Capsela a prérempli la fiche d'après ton ticket. Vérifie les informations avant d'ajouter l'article : une photo pourra s'ajouter ensuite depuis sa fiche."
@@ -870,7 +870,7 @@ export default function ImporterTenueScreen() {
         {/* Terminé. */}
         {phase === "termine" && (
           <div className="mt-2">
-            <p className="font-serif font-medium text-[20px] text-ink" role="status">
+            <p className="t-titre-section text-ink" role="status">
               {nPieces(ajoutees.length)} {ajoutees.length > 1 ? "ajoutées" : "ajoutée"} à ton dressing
             </p>
             <div className="flex gap-2 mt-4 flex-wrap">

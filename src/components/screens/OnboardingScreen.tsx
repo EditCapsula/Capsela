@@ -204,7 +204,7 @@ function VisuelValise() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="t-label text-terracotta">{t("1 · Destination")}</div>
-            <div className="font-serif text-[22px] text-ink leading-[1.1] mt-[4px]">Rhodes</div>
+            <div className="t-titre-section text-ink mt-[4px]">Rhodes</div>
             <div className="text-[11px] text-muted mt-[2px]">{t("7 jours · 23° · exemple")}</div>
           </div>
           <div className="flex gap-[3px] text-[15px] leading-none flex-shrink-0 mt-[4px]" aria-hidden="true">

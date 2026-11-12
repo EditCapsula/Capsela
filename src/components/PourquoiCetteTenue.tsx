@@ -72,7 +72,7 @@ export default function PourquoiCetteTenue({ texte }: { texte: string }) {
           }
           style={{ width: "min(240px, 70vw)", boxShadow: "0 6px 18px rgba(29,26,22,.12)" }}
         >
-          <span className="block t-titre-ligne text-ink" style={{ fontSize: 13 }}>
+          <span className="block t-titre-vignette text-ink">
             Pourquoi cette tenue{" "}?
           </span>
           <span className="block text-[12.5px] text-ink-soft leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>

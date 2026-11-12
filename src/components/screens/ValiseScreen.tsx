@@ -665,7 +665,7 @@ function EtapeActivites({
     <>
       {/* ── LES IDÉES ── */}
       <section className="mt-6" aria-labelledby="idees-sejour">
-        <div id="idees-sejour" className="font-serif text-[19px] text-ink leading-[1.25]">
+        <div id="idees-sejour" className="t-titre-section text-ink">
           Quelques idées pour ton séjour
         </div>
         <div className="text-[13px] text-muted leading-[1.5] mt-[4px]">
@@ -732,7 +732,7 @@ function EtapeActivites({
 
       {/* ── UNE AUTRE IDÉE ── un champ, un geste ; Entrée ajoute aussi. */}
       <section className="mt-8 pt-6 border-t border-border" aria-labelledby="autre-idee">
-        <div id="autre-idee" className="font-serif text-[19px] text-ink leading-[1.25]">
+        <div id="autre-idee" className="t-titre-section text-ink">
           Une autre idée ?
         </div>
         <div className="text-[13px] text-muted leading-[1.5] mt-[4px]">Tu as prévu autre chose ? Ajoute-le ici.</div>
@@ -771,7 +771,7 @@ function EtapeActivites({
       {total > 0 && (
         <section className="mt-8 pt-6 border-t border-border" aria-labelledby="ton-programme">
           <div className="flex items-baseline justify-between gap-3">
-            <div id="ton-programme" className="font-serif text-[19px] text-ink leading-[1.25]">
+            <div id="ton-programme" className="t-titre-section text-ink">
               Ton programme <span className="text-muted text-[15px]">· {total}</span>
             </div>
             {total > 1 && (
@@ -1556,7 +1556,7 @@ export default function ValiseScreen() {
             </div>
             <Card className="mt-5 p-[16px]">
               <div className="flex items-baseline justify-between">
-                <span className="font-serif text-[20px] text-ink">
+                <span className="t-titre-section text-ink">
                   {Math.min(dressing.length, MINIMUM_PIECES_VALISE)} / {MINIMUM_PIECES_VALISE} pièces
                 </span>
                 {pret.manquePieces > 0 && (
@@ -2659,7 +2659,7 @@ function Resultat({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-serif text-[20px] text-ink leading-[1.2]" style={{ textWrap: "balance" }}>
+            <div className="t-titre-section text-ink" style={{ textWrap: "balance" }}>
               {p.name}
             </div>
             <div className="text-[12px] text-terracotta mt-[6px]">
@@ -2744,7 +2744,7 @@ function Resultat({
         <Surtitre>
           Look {numero(vue.index)} · {looks.length} dans ta valise
         </Surtitre>
-        <div className="font-serif text-[22px] text-ink leading-[1.25] mt-[6px]" style={{ textWrap: "balance" }}>
+        <div className="t-titre-section text-ink mt-[6px]" style={{ textWrap: "balance" }}>
           {resumeLook(items)}
         </div>
         {occ.length > 0 && (
@@ -3525,7 +3525,7 @@ function Resultat({
                   <div className="t-label text-terracotta">
                     Look {index + 1} / {looks.length}
                   </div>
-                  <div className="font-serif text-[20px] text-ink leading-[1.25] mt-[5px]">{resumeLook(exterieurDuLook(l).principal)}</div>
+                  <div className="t-titre-section text-ink mt-[5px]">{resumeLook(exterieurDuLook(l).principal)}</div>
 
                   <div className="flex flex-wrap items-center gap-[6px] mt-[10px]">
                     {(() => {

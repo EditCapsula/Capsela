@@ -32,7 +32,7 @@ export function RenduMarkdown({ blocs }: { blocs: Block[] }) {
           case "heading":
             if (b.niveau === 1) return <h1 key={i} className="t-titre-ecran text-ink"><Inlines items={b.children} /></h1>;
             if (b.niveau === 2) return <h2 key={i} className="t-titre-section text-ink mt-8"><Inlines items={b.children} /></h2>;
-            return <h3 key={i} className="text-[15px] font-semibold text-ink mt-6"><Inlines items={b.children} /></h3>;
+            return <h3 key={i} className="t-titre-ligne text-ink mt-6"><Inlines items={b.children} /></h3>;
           case "paragraph":
             return <p key={i} className="text-[14px] leading-[1.6] text-ink mt-3"><Inlines items={b.children} /></p>;
           case "quote":

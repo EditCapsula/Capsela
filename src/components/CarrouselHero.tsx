@@ -89,7 +89,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
         </div>
         {/* Un cran plus petit depuis que le titre nomme les pièces de la tenue (17/10/2026, titreDeLaTenue) : à 27 px, « La robe
             portefeuille et les baskets blanches » prenait cinq lignes. */}
-        <div className="relative font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
+        <div className="relative t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
           {titre.a}
           {titre.b && (
             <>

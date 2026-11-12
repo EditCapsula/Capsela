@@ -156,9 +156,9 @@ function Associations({
 }
 
 /** Titre de section en serif, sous son surtitre. */
-function TitreSerif({ children, taille = 18 }: { children: React.ReactNode; taille?: number }) {
+function TitreSerif({ children }: { children: React.ReactNode }) {
   return (
-    <div className="font-serif text-ink mt-[6px]" style={{ fontSize: taille, lineHeight: 1.25 }}>
+    <div className="t-titre-carte text-ink mt-[6px]">
       {children}
     </div>
   );
@@ -627,7 +627,7 @@ export default function WardrobeScreen() {
           </div>
         ) : (
           <div className="pt-9 pb-7 px-3 text-center">
-            <div className="font-serif text-ink" style={{ fontSize: 18, lineHeight: 1.25 }}>
+            <div className="t-titre-carte text-ink">
               {terme ? `Aucune pièce pour « ${recherche.trim()} »` : "Rien dans cette catégorie pour l'instant"}
             </div>
             <div className="text-[12.5px] text-muted-3 leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
@@ -650,7 +650,7 @@ export default function WardrobeScreen() {
             {looksCarrousel.length > 0 && (
               <section className="mt-8" aria-label="Tes looks">
                 <div className="flex items-center justify-between gap-3">
-                  <TitreSerif taille={18}>Tes looks</TitreSerif>
+                  <TitreSerif>Tes looks</TitreSerif>
                   <Lien onClick={actions.goLooks} label="Voir mes looks">Voir mes looks</Lien>
                 </div>
                 <div className="grid grid-cols-2 gap-[10px] mt-1 items-start">
@@ -665,7 +665,7 @@ export default function WardrobeScreen() {
                         >
                           <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} ombre="marquee" />
                         </div>
-                        <div className="font-serif text-ink mt-2" style={{ fontSize: 15 }}>{occasionShortLabel(idee.occasion)}</div>
+                        <div className="t-titre-vignette text-ink mt-2">{occasionShortLabel(idee.occasion)}</div>
                         {/* La piste sur une ligne, le nombre de pièces toujours sur la suivante (14/10/2026, demandé) : deux lignes fixes, cartes de même hauteur. */}
                         <div className="text-[11.5px] text-muted-3 mt-[2px] leading-[1.35]">
                           <div className="truncate">{phrasePiste(piece)}</div>
@@ -697,7 +697,7 @@ export default function WardrobeScreen() {
                     <span className="text-terracotta">{ETOILE}</span>
                     L&apos;inspiration du moment
                   </span>
-                  <span className="block font-serif text-ink mt-[5px]" style={{ fontSize: 16.5, lineHeight: 1.2 }}>
+                  <span className="block t-titre-carte text-ink mt-[5px]">
                     Tes nouvelles pièces, <span className="italic text-terracotta">déjà en looks</span>
                   </span>
                   <span className="block text-[12px] font-semibold mt-[6px] text-terracotta-deep">Voir ce look</span>
@@ -717,7 +717,7 @@ export default function WardrobeScreen() {
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block t-surtitre text-terracotta-hover">À redécouvrir · {weather.saisons?.length ? weather.saisons.join(" · ") : saisonDeLaDate(maintenant)}</span>
-                  <span className="block font-serif text-ink mt-[5px]" style={{ fontSize: 16.5, lineHeight: 1.2 }}>
+                  <span className="block t-titre-carte text-ink mt-[5px]">
                     {`${designationPiece(aRedecouvrirUne.piece).replace(/^t(on|a|es) /, (m) => `T${m.slice(1)}`)} `}
                     <span className="italic text-terracotta">{pluriel ? "attendent leur moment" : "attend son moment"}</span>
                   </span>
