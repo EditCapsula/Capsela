@@ -17,7 +17,8 @@ import type { Item } from "./types";
  * accord) et le score (R-S19, bonus d'un accord à plusieurs couleurs). Le levier de mesure `sansAccordsWada` rend le comportement
  * d'avant, pour l'audit avant / après (AGENTS.md).
  *
- * SEUILS — ARBITRAGE ÉDITORIAL du 12/11/2026, des ordres de grandeur sur la saturation et la clarté HSL du hex de la pièce :
+ * SEUILS — ARBITRAGE ÉDITORIAL du 12/11/2026, validé par la propriétaire le même jour après l'audit accords-wada (scripts/), des
+ * ordres de grandeur sur la saturation et la clarté HSL du hex de la pièce :
  *   · franche : saturation ≥ SEUIL_FRANCHE et clarté moyenne (ni très claire ni très foncée) — un rouge, un bleu roi, un jaune vif ;
  *   · rompue : toute autre couleur non neutre — vieux rose, olive, ocre, bleu gris, lilas, terracotta ;
  *   · écart de clarté : au moins ECART_CLARTE entre la plus claire et la plus foncée des couleurs de la tenue, neutres compris.
