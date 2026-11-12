@@ -1,3 +1,4 @@
+import { estDansLUnivers } from "./univers";
 import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_ENTRETIEN, PREFS_SOIREE_HABILLEE, effectiveFormality, isBag, isRainy, isSunny, necessiteLeSoleil } from "./data";
@@ -942,9 +943,13 @@ export function generateOutfit(
   // ni par le repli « hors saison » d'une catégorie essentielle (poolFor), ni par le pool entier quand moins de quatre pièces sont de
   // saison. Sans chaussures de saison, la tenue n'a pas de chaussures — mieux que des sandales par 11°. Les pièces du CATALOGUE gardent
   // ces replis : personne n'y a déclaré de saison. La pièce imposée par l'appelant (pinnedId) reste tirable.
+  // L'UNIVERS DU PROFIL D'ABORD (12/11/2026, univers.ts) : une pièce du catalogue taguée pour l'autre univers ne fait jamais partie du
+  // tirage, quel que soit le pool reçu (capsule, valise, idées, suggestions) — aucun score ne la rattrape. Seule la pièce imposée par
+  // l'appelant (pinnedId, la pièce que la personne a ouverte) reste tirable.
+  const poolUnivers = poolBrut.filter((i) => i.id === pinnedId || estDansLUnivers(i, gender));
   const pool = leviers?.saisonDeclareeRelachee
-    ? poolBrut
-    : poolBrut.filter((i) => isCatalogId(i.id) || i.id === pinnedId || estDeSaison(i, contexteSaison));
+    ? poolUnivers
+    : poolUnivers.filter((i) => isCatalogId(i.id) || i.id === pinnedId || estDeSaison(i, contexteSaison));
   const sandaleDeFete = (i: Item): boolean =>
     !leviers?.sansSandalesDeFeteEnAutomne &&
     automne &&

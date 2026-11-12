@@ -47,6 +47,7 @@ import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import DateNaissanceScreen from "./screens/DateNaissanceScreen";
 import { doitDemanderNaissance } from "@/lib/ageMinimum";
+import { decisionSession, PREMIERE_ETAPE } from "@/lib/onboarding";
 import ProfileScreen from "./screens/ProfileScreen";
 import PreferencesScreen from "./screens/PreferencesScreen";
 import LegalScreen from "./screens/LegalScreen";
@@ -74,7 +75,6 @@ initialiserLangue();
 
 /** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) — la barre d'onglets n'y a pas de sens. */
 const NO_TABBAR_SCREENS = new Set(["welcome", "onboarding", "auth", "login", "profileSetup"]);
-const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth", "login"]);
 /**
  * Parcours guidés qui portent leur PROPRE action principale en pied d'écran
  * (23/09/2026, maquette « Planifier une tenue »). Ensemble distinct de
@@ -141,18 +141,10 @@ function Screens() {
     };
   }, []);
 
-  // Session déjà ouverte (connexion, retour OAuth ou rechargement) : saute les écrans
-  // d'accueil, direction la Homepage — jamais le questionnaire, même si le profil est
-  // incomplet (règle métier 17/08/2026 : un compte existant n'est jamais renvoyé vers
-  // l'onboarding, quelle que soit la complétude du profil). Seule exception : la
-  // connexion Google qui vient tout juste de créer le compte (justSignedUp, posé via
-  // markSignupIntent avant l'appel — la création de compte par e-mail navigue déjà
-  // directement vers le questionnaire dans AuthScreen, sans passer par cet effet).
-  // Seule source de vérité pour la navigation post-connexion — le profil arrive de façon
-  // asynchrone (state React, ou requête réseau en mode réel), donc profileCompleted et
-  // justSignedUp doivent rester en dépendance pour que l'effet se redéclenche dès qu'ils
-  // sont prêts, même si signedIn est passé à true avant que le profil ne soit chargé.
-  const { ready, signedIn, justSignedUp } = auth;
+  // Session ouverte (connexion, retour Apple/Google, rechargement) : la décision suit le PROFIL, pas l'âge du compte (12/11/2026,
+  // onboarding.ts — remplace la règle du 17/08/2026). Profil non terminé : le questionnaire, repris à l'étape enregistrée ; terminé :
+  // l'écran retenu ou l'accueil. Elle attend que le profil soit lu : dans l'app, la session arrive avant lui.
+  const { ready, signedIn } = auth;
   // Rechargement sur le web : on garde l'écran de premier niveau courant pour le retrouver (cf. ecranRestaure.ts).
   useEffect(() => {
     memoriserEcran(state.screen);
@@ -193,13 +185,20 @@ function Screens() {
   }, []);
   const [refusAge, setRefusAge] = useState<string | null>(null);
   const profileCompleted = auth.profile.completed;
+  const etapeEnregistree = auth.profile.prefs.onboardingEtape;
   useEffect(() => {
-    if (ready && signedIn && PRE_AUTH_SCREENS.has(state.screen)) {
-      if (justSignedUp && !profileCompleted) actions.goProfileSetup("genre");
-      else actions.go(ecranARestaurer() ?? "home");
-    }
+    if (!ready) return;
+    const decision = decisionSession({
+      signedIn,
+      profileLoaded: auth.profileLoaded,
+      profilIllisible: auth.profilIllisible,
+      completed: profileCompleted,
+      screen: state.screen,
+    });
+    if (decision === "questionnaire") actions.goProfileSetup(etapeEnregistree ?? PREMIERE_ETAPE);
+    else if (decision === "accueil") actions.go(ecranARestaurer() ?? "home");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, signedIn, justSignedUp, profileCompleted]);
+  }, [ready, signedIn, auth.profileLoaded, auth.profilIllisible, profileCompleted, state.screen]);
 
   // Récupération du mot de passe (recette du 26/09/2026) : ouverte depuis le
   // lien de l'e-mail, elle passe devant tout le reste — la session qu'elle

@@ -46,6 +46,11 @@ export interface AuthContextValue {
    * date de naissance », « profil incomplet »). Toujours vrai en mode démo.
    */
   profileLoaded: boolean;
+  /**
+   * La lecture du profil a échoué (réseau, 12/11/2026). On n'en conclut pas « profil incomplet » : l'onboarding n'est jamais imposé
+   * sur une lecture ratée (onboarding.ts).
+   */
+  profilIllisible: boolean;
   /** Mode démo : pas de credentials Supabase configurés. */
   demoMode: boolean;
   email: string | null;
@@ -165,10 +170,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [justSignedUp, setJustSignedUp] = useState(false);
   const [profilChargeReel, setProfilChargeReel] = useState(false);
+  const [profilIllisible, setProfilIllisible] = useState(false);
   const [recuperation, setRecuperation] = useState<AuthContextValue["recuperation"]>("aucune");
 
   const loadProfile = useCallback(async (authUser: User) => {
-    const { data } = await getSupabase().from("profiles").select("*").eq("id", authUser.id).maybeSingle();
+    const { data, error: errLecture } = await getSupabase().from("profiles").select("*").eq("id", authUser.id).maybeSingle();
+    // Lecture ratée (12/11/2026) : le profil n'est pas « chargé » — on ne le confond pas avec un profil vide, qui ouvrirait le questionnaire.
+    setProfilIllisible(Boolean(errLecture));
+    if (errLecture) return;
     const loaded = data ? rowToProfile(data) : EMPTY_PROFILE;
     // Repli sur les métadonnées Supabase Auth (correctif 20/08/2026) — nom et
     // date de naissance saisis à l'inscription (signUpEmail) ne sont écrits
@@ -239,6 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setProfile(EMPTY_PROFILE);
         setProfilChargeReel(false);
+        setProfilIllisible(false);
       }
     });
     // LE RETOUR DANS L'APP (17/10/2026) : le lien profond `app.capsela://auth/callback`, à l'ouverture de l'app (getLaunchUrl) ou
@@ -492,6 +502,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signedIn: Boolean(user || demoUser),
     justSignedUp,
     profileLoaded: !isSupabaseConfigured || profilChargeReel,
+    profilIllisible: isSupabaseConfigured && profilIllisible,
     demoMode: !isSupabaseConfigured,
     email: user?.email ?? demoUser?.email ?? null,
     inscritLe: user?.created_at ?? demoUser?.creeLe ?? null,

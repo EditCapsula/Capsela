@@ -1,3 +1,4 @@
+import { estDansLUnivers } from "./univers";
 import { estDeSaison } from "./capsule";
 import { STYLE_ID_TO_CATALOG_LABEL, styleLabel, type Gender, type StyleId } from "./profile";
 import type { Weather } from "./data";
@@ -20,13 +21,12 @@ export function piecesDAutresStyles(
   cat: CategoryKey,
   args: { gender: Gender | null; dejaProposees: ReadonlySet<number>; exclues: readonly number[]; meteo: Weather },
 ): Item[] {
-  const genreOppose = args.gender === "homme" ? "femme" : args.gender === "femme" ? "homme" : null;
   return catalogue.filter(
     (it) =>
       it.cat === cat &&
       !args.dejaProposees.has(it.id) &&
       !args.exclues.includes(it.id) &&
-      (genreOppose == null || (it as Item & { genre?: string }).genre !== genreOppose) &&
+      estDansLUnivers(it, args.gender) &&
       estDeSaison(it, args.meteo),
   );
 }

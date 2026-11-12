@@ -1,3 +1,4 @@
+import { estDansLUnivers, filtrerParUnivers } from "./univers";
 import { CATALOG, type CatalogItem } from "./catalog";
 import { chaussureHabillee, fermetureMaille, formalityOf, intensiteOf, isStatement, suggestOccasions, tonsOf } from "./attributes";
 import { isSunny, necessiteLeSoleil, type Weather } from "./data";
@@ -896,26 +897,11 @@ export function computeDefaultCapsule(
     base = base.filter((it) => !necessiteLeSoleil(it));
   }
 
-  // Filtrage genre symétrique (recette 18/08/2026, distinction homme/femme
-  // dans le catalogue) : un profil homme ne voit jamais les pièces taguées
-  // femme, et réciproquement — les pièces unisexe restent visibles des deux
-  // côtés. Le garde-fou "≥16" évite de trop restreindre le pool si le
-  // catalogue manque encore de pièces genrées dans un sens.
-  // oppositeGenre réutilisé plus bas par les filets de sécurité ensure()
-  // (correctif 21/08/2026, signalé — cabas femme visible sur un profil
-  // homme) : ces filets retombent volontairement sur sourcePool (non
-  // filtré par genre à ce stade) pour ne jamais laisser une catégorie
-  // essentielle totalement vide, mais oubliaient le genre, réintroduisant
-  // ainsi une pièce de l'autre genre dès qu'aucune pièce genrée ne passait
-  // les filtres précédents (température/style/palette).
-  const oppositeGenre = profile.gender === "homme" ? "femme" : profile.gender === "femme" ? "homme" : null;
-  if (profile.gender === "homme") {
-    const noFem = base.filter((it) => it.genre !== "femme");
-    if (noFem.length >= 16) base = noFem;
-  } else if (profile.gender === "femme") {
-    const noHomme = base.filter((it) => it.genre !== "homme");
-    if (noHomme.length >= 16) base = noHomme;
-  }
+  // L'UNIVERS DU PROFIL FILTRE AVANT TOUT (12/11/2026, univers.ts — reprend le filtrage symétrique du 18/08/2026 et le correctif des
+  // filets de sécurité du 21/08/2026). Plus de garde-fou « au moins 16 pièces » qui annulait le filtre, plus de catalogue entier pour un
+  // profil sans genre : les filets ensure() plus bas repiochent dans `sourcePool` avec la même règle.
+  base = filtrerParUnivers(base, profile.gender);
+  const dansLUnivers = (it: CatalogItem) => estDansLUnivers(it, profile.gender);
 
   const bucket = seasonKey ? capsuleSeasonBucket(seasonKey) : weatherSeasonBucket(weather.temp);
 
@@ -1115,7 +1101,7 @@ export function computeDefaultCapsule(
       (it) =>
         it.cat === cat &&
         !excluded.has(it.id) &&
-        it.genre !== oppositeGenre &&
+        dansLUnivers(it) &&
         (isSunny(weather) || !necessiteLeSoleil(it)) &&
         (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) &&
         (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp) &&
@@ -1153,7 +1139,7 @@ export function computeDefaultCapsule(
   // retenue par la sélection cède sa place : une seule paire d'intérieur, comme avant.
   {
     const estInterieur = (it: Item) => it.cat === "chaussures" && it.shoeType === "Chaussures d'intérieur";
-    const pool = sourcePool.filter((it) => estInterieur(it) && !excluded.has(it.id) && it.genre !== oppositeGenre);
+    const pool = sourcePool.filter((it) => estInterieur(it) && !excluded.has(it.id) && dansLUnivers(it));
     const rang = (it: CatalogItem): number[] => [
       styles.length && it.styleTags?.some((t) => styles.includes(t)) ? 0 : 1,
       it.styleTags?.length || 99,
@@ -1197,7 +1183,7 @@ export function computeDefaultCapsule(
         it.cat === "accessoire" &&
         it.accessoireType === "Collants" &&
         !excluded.has(it.id) &&
-        it.genre !== oppositeGenre
+        dansLUnivers(it)
     );
     const tempOk = (it: CatalogItem) =>
       (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) && (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp);
@@ -1239,7 +1225,7 @@ export function computeDefaultCapsule(
       (it) =>
         chaussureHabillee(it) &&
         !excluded.has(it.id) &&
-        it.genre !== oppositeGenre &&
+        dansLUnivers(it) &&
         deSaison(it) &&
         tempOk(it) &&
         !eteSousLeSeuil(it) &&

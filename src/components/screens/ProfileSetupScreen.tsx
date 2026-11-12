@@ -266,6 +266,9 @@ export default function ProfileSetupScreen() {
   const { profile, saveProfile, saveColorimetrie } = useAuth();
   const { state, actions } = useCapsela();
   const [draft, setDraft] = useState<Profile>(profile);
+  // Figé à l'ouverture (12/11/2026) : la progression est désormais enregistrée à chaque étape, prénom compris ; relire le profil
+  // retirerait l'étape « prénom » de la liste en cours de route et décalerait toutes les suivantes.
+  const [prenomDemande] = useState(() => !profile.displayName.trim());
   // Étape "prenom" masquée dès qu'un prénom est déjà connu (saisi à
   // l'inscription par e-mail, ou repris des métadonnées Google) — jamais
   // redemandé pour rien (correctif 24/08/2026).
@@ -285,7 +288,7 @@ export default function ProfileSetupScreen() {
       // L'étape prénom n'est posée qu'à qui n'en a pas — sauf quand on vient
       // explicitement la modifier (Mon compte → Prénom, 26/09/2026) : sans
       // cette exception, l'édition ouvrait l'étape « genre ».
-      (s.key !== "prenom" || !profile.displayName.trim() || (state.profileSetupFromEdit && state.profileSetupStep === "prenom")) &&
+      (s.key !== "prenom" || prenomDemande || (state.profileSetupFromEdit && state.profileSetupStep === "prenom")) &&
       (s.key !== "colorimetrie_resultat" || colorimetrieUtilisable(draft.colorimetrie)) &&
       // GENRE ET TAILLES SUR UN ÉCRAN (31/10/2026, brief) : les tailles sont posées sous le genre. L'étape « taille » seule ne sert
       // plus qu'à les modifier depuis Mon profil.
@@ -350,8 +353,18 @@ export default function ProfileSetupScreen() {
   const editGroupEndIndex = STEPS.findIndex((s) => s.key === editGroupEndKey);
   const isLast = step >= STEPS.length - 1 || (state.profileSetupFromEdit && step >= editGroupEndIndex);
 
+  // LA PROGRESSION EST GARDÉE EN BASE (12/11/2026, onboarding.ts) : à chaque étape franchie pendant l'inscription, le brouillon et
+  // l'étape atteinte sont enregistrés (`completed` reste faux). Fermer l'app ou se déconnecter reprend là. Jamais en modification depuis
+  // Mon profil, ni pour un profil déjà terminé.
+  const enregistrerProgression = (cle: string | undefined) => {
+    if (state.profileSetupFromEdit || profile.completed || !cle) return;
+    void saveProfile({ ...draft, completed: false, prefs: { ...draft.prefs, onboardingEtape: cle } });
+  };
   const finish = async () => {
-    await saveProfile({ ...draft, completed: true });
+    // La fin du parcours efface l'étape gardée : un profil terminé n'a plus rien à reprendre.
+    const { onboardingEtape: _fini, ...prefs } = draft.prefs;
+    void _fini;
+    await saveProfile({ ...draft, prefs, completed: true });
     if (state.profileSetupFromEdit) actions.go(state.profileSetupReturn);
     // Le parcours mène au dressing : l'écran Dressing vide (01/11/2026, demandé), qui explique par quoi commencer, garde « Ajouter ma
     // première pièce » et propose la capsule et des idées de looks. Avant (07/10/2026) : l'ajout d'une pièce s'ouvrait directement.
@@ -362,12 +375,15 @@ export default function ProfileSetupScreen() {
   const next = () => {
     if (retourRecap && indexRecap >= 0 && STEPS[step]?.key !== "pal_recap") {
       setRetourRecap(false);
+      enregistrerProgression(STEPS[indexRecap]?.key);
       return setStep(indexRecap);
     }
     if (isLast) return finish();
     // En arrivant sur la colorimétrie PAR L'AVANT, on retrouve le formulaire (réponses déjà données gardées).
     if (STEPS[step + 1]?.key === "colorimetrie") setColo((p) => ({ ...p, vue: "formulaire" }));
-    setStep(sansPresentationDejaFaite(step + 1));
+    const suivante = sansPresentationDejaFaite(step + 1);
+    enregistrerProgression(STEPS[suivante]?.key);
+    setStep(suivante);
   };
 
   /*
@@ -488,6 +504,9 @@ export default function ProfileSetupScreen() {
   // autres étapes gardent leur comportement existant, jamais bloquant.
   const canContinue =
     (meta.key !== "prenom" || draft.displayName.trim().length > 0) &&
+    // LE GENRE EST UNE RÉPONSE OBLIGATOIRE (12/11/2026, brief 2.3, point 2.3) : sans lui, le moteur ne sait pas quel univers du catalogue
+    // proposer (univers.ts) — on pouvait jusqu'ici « Continuer » sans choisir, et un profil homme recevait des pièces femme.
+    (meta.key !== "genre" || draft.gender !== null) &&
     (meta.key !== "style" || draft.styles.length > 0) &&
     (meta.key !== "pal_couleurs" || draft.paletteCouleurs.length >= MIN_PALETTE_COULEURS) &&
     // Les coupes demandent une réponse (« Cela dépend du vêtement » en est une) ; la mise en valeur est facultative.

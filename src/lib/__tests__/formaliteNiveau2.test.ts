@@ -35,7 +35,8 @@ describe("niveau 2 de formalité", () => {
       item({ id: 22, category: "chaussures", name: "Mocassins", sous_type: "Mocassins", couleur_dominante: "Camel", niveau_formalite: "casual_chic", saison_capsule: T }),
     ];
     const w = at(18, "Printemps / Été");
-    const avant = generateOutfitWithFallback(pool, w, "travail_formel", "Présentiel");
+    // Profil femme explicite (12/11/2026, univers.ts) : sans genre, la jupe taguée femme n'entre plus dans le tirage.
+    const avant = generateOutfitWithFallback(pool, w, "travail_formel", "Présentiel", "Verre", [], "femme");
     const apres = generateOutfitWithFallback(pool, w, "travail_formel", "Présentiel", "Verre", [], "femme", null, { chaineDeRepli: { 3: [3, 2, 1] } });
     // Depuis le 11/11/2026, le repli du moteur passe lui-même par le casual chic : le levier ne change plus rien ici.
     expect(avant.resolvedFormality).toBe(2);
