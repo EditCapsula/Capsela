@@ -992,11 +992,12 @@ export default function TenuesScreen() {
                 </div>
               </div>
             )}
-            {/* À AJOUTER POUR L'EXTÉRIEUR (04/11/2026, « Séparer la tenue principale du manteau » ; formulation du 12/11/2026, brief, 3D) :
-                sous le flat lay, entre deux filets, une ligne secondaire — jamais une seconde grande carte, jamais dans les pièces du look. */}
+            {/* POUR L'EXTÉRIEUR (04/11/2026, « Séparer la tenue principale du manteau ») : sous le flat lay, entre deux filets, une ligne
+                secondaire — jamais une seconde grande carte, jamais dans les pièces du look. La même formulation que l'accueil et Planifier
+                (12/11/2026, demandé : « la formulation doit rester la même pour toute l'application »). */}
             {exterieur && tempReelle != null && (
               <div className="mb-[6px]">
-                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} formulation="tenue" />
+                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} />
               </div>
             )}
             {!exterieur && conseilManteauPlusLong && (
