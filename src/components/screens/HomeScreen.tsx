@@ -485,6 +485,7 @@ export default function HomeScreen() {
             ouvre les réglages « Localisation & météo » (BarreDuJour, maquette V9). */}
         <BarreDuJour
           className="mt-1"
+          meteoEnLigne
           retro={{
             jours: retroActif,
             date: dateRetro,
