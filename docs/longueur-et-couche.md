@@ -17,11 +17,21 @@ Choisi par la propriétaire : demander ces deux attributs à l'ajout de la pièc
   VÊTEMENT, jamais de la personne). Les listes sont partagées avec `_shared/enumsPiece.ts`, un test le verrouille. La fonction Edge doit
   être redéployée pour que la photo les remplisse.
 
-## Ce qui reste à arbitrer, puis à mesurer avant d'être branché
+## Les règles (12/11/2026)
 
-Aucune règle du moteur ne lit encore ces attributs. Propositions :
-
-1. Une veste fluide ne se porte pas sous un manteau : par le froid, le manteau la remplace au lieu de s'y ajouter.
-2. Les proportions robe / manteau : ce qui est exclu doit être dit précisément (une veste courte sur une robe longue est un accord courant).
-
-Chaque règle passera par un levier inactif et une mesure avant / après dans la même exécution (règle d'audit, AGENTS.md).
+- **Un kimono se porte sous un manteau**, à condition d'être porté sur une pièce principale (arbitré) : c'est déjà R-B9. La couche
+  (structurée / fluide) ne crée donc aucune règle ; le kimono n'est l'exemple d'aucune des deux (il peut être l'un ou l'autre).
+- **R-B25, la longueur des couches** (validé : « une veste portée sous un manteau ne doit pas être plus longue que lui »). La longueur
+  se renseigne aussi pour les vestes. ACTIVE (levier de mesure `sansLongueurDesCouches`), seulement quand les deux longueurs sont connues :
+  1. le moteur prend un autre manteau, assez long, parmi ceux que les règles admettent — la tenue garde sa veste ;
+  2. à défaut, la veste qui dépasse quitte la tenue — sauf la veste qui compense la formalité de l'occasion (un blazer en travail ou en
+     soirée) ;
+  3. dans ce dernier cas (arbitré), « Pour l'extérieur » propose un manteau de la CAPSULE assez long (longueur connue) qui fonctionne avec
+     la tenue ; sinon, par le froid seulement, il affiche « Pour finaliser ta tenue — Tu devrais porter un manteau plus long pour rester au
+     chaud tout en conservant l'harmonie de ta silhouette. » (`separerCoucheExterieure`, `ConseilManteauPlusLong`).
+- Mesure (`scripts/longueur-couches.audit.ts`, exécution n° 33, pire cas : vestes longues, manteaux courts) : vestes qui dépassent
+  48,8 → 0 % en quotidien, 46,5 → 0 % en rendez-vous ; travail et soirée inchangés (la veste de formalité reste, le point 3 s'applique) ;
+  0 tenue incomplète, aucune occasion relâchée de plus. DÉMONTRÉ sur ce scénario ; en usage réel, NON DÉMONTRÉ tant que les longueurs ne
+  sont pas saisies.
+- Le catalogue n'a pas de longueur : un manteau de la capsule n'est proposé comme « assez long » que si sa longueur est connue. Tant que
+  `vestiaire_universel` n'a pas cette colonne, c'est le conseil qui s'affiche.

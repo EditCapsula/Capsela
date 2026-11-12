@@ -75,7 +75,7 @@ describe("R-B25 — longueur des couches", () => {
               const c = cumul.get(`${scenario.nom}|${nom}`) ?? vide();
               const co = cumul.get(`${scenario.nom}|${nom}|${occasion}`) ?? vide();
               for (let k = 0; k < TIRAGES; k++) {
-                const r = generateOutfitWithFallback(pool, { ...meteo, seasons: [...meteo.seasons] }, occasion, "Présentiel", undefined, [], profil.genre, undefined, { longueurDesCouches });
+                const r = generateOutfitWithFallback(pool, { ...meteo, seasons: [...meteo.seasons] }, occasion, "Présentiel", undefined, [], profil.genre, undefined, { sansLongueurDesCouches: !longueurDesCouches });
                 c.tenues++;
                 co.tenues++;
                 if (r.noCompleteOutfit || !r.ids.length) c.incompletes++;

@@ -51,3 +51,19 @@ export default function PourLExterieur({
     </button>
   );
 }
+
+/**
+ * « POUR FINALISER TA TENUE » (12/11/2026, arbitré par la propriétaire ; coucheExterieure.ts, conseilManteauPlusLong) : à la place de
+ * « Pour l'extérieur », par le froid seulement, quand le manteau de la tenue est plus court que la veste qu'il couvre (R-B25) et que ni le
+ * dressing ni la capsule n'en ont un assez long. La même ligne secondaire entre deux filets ; rien à toucher, un conseil.
+ */
+export function ConseilManteauPlusLong({ compact = false }: { compact?: boolean }) {
+  return (
+    <div role="note" className={"w-full border-y border-border " + (compact ? "py-[8px]" : "py-[10px]")}>
+      <span className={"block t-titre-ligne text-ink " + (compact ? "text-[13px]" : "")}>Pour finaliser ta tenue</span>
+      <span className={"block text-muted-3 leading-[1.4] mt-[2px] " + (compact ? "text-[11px]" : "text-[12px]")} style={{ textWrap: "pretty" }}>
+        Tu devrais porter un manteau plus long pour rester au chaud tout en conservant l&apos;harmonie de ta silhouette.
+      </span>
+    </div>
+  );
+}

@@ -449,9 +449,10 @@ export interface LeviersMesure {
    * R-B25, LA LONGUEUR DES COUCHES (12/11/2026, validé par la propriétaire : « une veste portée sous un manteau ne doit pas être plus
    * longue que lui » ; retour d'une testeuse : « robe longue noire + kimono + manteau court »). Une veste plus longue que le manteau tiré
    * par-dessus quitte la tenue — le manteau reste, la pièce principale dessous aussi (R-B9). Seulement quand les DEUX longueurs sont
-   * connues (forme.ts) : sans elles, rien ne change. INACTIVE tant qu'elle n'est pas mesurée (scripts/longueur-couches.audit.ts).
+   * connues (forme.ts) : sans elles, rien ne change. Mesurée par scripts/longueur-couches.audit.ts (n° 33), ACTIVE depuis le 12/11/2026
+   * (validé). Levier de mesure : reproduit l'avant (aucune règle de longueur).
    */
-  longueurDesCouches?: boolean;
+  sansLongueurDesCouches?: boolean;
 }
 
 /**
@@ -1650,10 +1651,12 @@ export function generateOutfit(
     const manteau = pick(["manteau"], false);
     if (manteau && !ids.includes(manteau.id)) ids.push(manteau.id);
   }
-  // R-B25 — la longueur des couches (levier longueurDesCouches) : une veste ne dépasse pas sous le manteau. D'abord un AUTRE MANTEAU,
+  // R-B25 — la longueur des couches (levier de mesure sansLongueurDesCouches) : une veste ne dépasse pas sous le manteau. D'abord un AUTRE MANTEAU,
   // assez long, parmi ceux que les règles admettent (la tenue garde sa veste) ; à défaut, la veste qui dépasse quitte la tenue — jamais
-  // celle qui compense la formalité de la tenue (compensatingVeste) : sans elle, la tenue retomberait sous le niveau de l'occasion.
-  if (leviers?.longueurDesCouches) {
+  // celle qui compense la formalité de la tenue (compensatingVeste) : sans elle, la tenue retomberait sous le niveau de l'occasion. Ce
+  // cas-là (arbitré le 12/11/2026) se règle À L'AFFICHAGE : « Pour l'extérieur » propose un manteau de la capsule assez long, sinon
+  // conseille un manteau plus long (coucheExterieure.ts).
+  if (!leviers?.sansLongueurDesCouches) {
     const portees = ids.map((id) => pool.find((x) => x.id === id) ?? chosen.find((x) => x.id === id)).filter((x): x is Item => !!x);
     const manteauPorte = portees.find((x) => x.cat === "manteau");
     const vestes = portees.filter((x) => x.cat === "veste");

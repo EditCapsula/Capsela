@@ -19,7 +19,7 @@ import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
-import PourLExterieur from "@/components/PourLExterieur";
+import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { RailPiecesTenue } from "@/components/HeroTenue";
 import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
@@ -184,7 +184,7 @@ export default function TenuesScreen() {
   // Sous 380 px de large, « Autre tenue » ne garde que son icône (libellé lu par les lecteurs d'écran) : la ligne de provenance tient
   // alors sur une ligne avec les deux pastilles (30/10/2026). L'app n'est rendue que côté client (AppLoader, ssr: false).
   const etroit = typeof window !== "undefined" && window.innerWidth < 380;
-  const { state, weather, meteoDuJour, jourConsulte, geoLoading, wardrobePool, vestiairePool, actions, sourceMeteo } = useCapsela();
+  const { state, weather, meteoDuJour, jourConsulte, geoLoading, wardrobePool, vestiairePool, defaultCapsule, actions, sourceMeteo } = useCapsela();
   // En attente tant que la météo du jour consulté n'est pas connue : position,
   // ou prévision d'un jour à venir (navigation par date, 27/09/2026).
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
@@ -351,14 +351,33 @@ export default function TenuesScreen() {
     return choisi ? [choisi, ...c.filter((i) => i.id !== choisi.id)] : c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tempReelle, state.outfit, displayPool, state.occasion, state.workMode, state.dateContext, meteoDuJour, manteauChoisi]);
-  const { principal: piecesDuLook, exterieur, suggere: exterieurSuggere } = separerCoucheExterieure(outfitPieces, tempReelle, candidatsManteau);
+  // Les manteaux de la CAPSULE admis pour la tenue (12/11/2026, R-B25 arbitré) : proposés quand le manteau de la tenue est plus court que
+  // sa veste et que le dressing n'en a pas d'assez long ; sinon « Pour finaliser ta tenue » (separerCoucheExterieure).
+  const candidatsCapsule = useMemo(
+    () =>
+      tempReelle == null || tempReelle >= SEUIL_MANTEAU
+        ? []
+        : candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tempReelle, state.outfit, defaultCapsule, state.occasion, state.workMode, state.dateContext, meteoDuJour]
+  );
+  const {
+    principal: piecesDuLook,
+    exterieur,
+    suggere: exterieurSuggere,
+    remplace: manteauRemplace,
+    conseilManteauPlusLong,
+  } = separerCoucheExterieure(outfitPieces, tempReelle, candidatsManteau, candidatsCapsule);
   const [exterieurOuvert, setExterieurOuvert] = useState(false);
   // « Je le porte aussi » : le manteau n'est compté comme porté que si on le choisit. Revient à non à chaque nouveau manteau.
   const [porterPour, setPorterPour] = useState<number | null>(null);
   const porterExterieur = exterieur != null && porterPour === exterieur.id;
   // Un manteau seulement PROPOSÉ n'est pas dans la tenue : rien à exclure ; le porter l'y ajoute (« Je le porte aussi »).
-  const sauf = exterieur && !exterieurSuggere && !porterExterieur ? [exterieur.id] : undefined;
-  const autresExterieurs = exterieur
+  // Le manteau trop court qu'une proposition remplace (R-B25) ne se compte jamais d'office.
+  const saufIds = [...(exterieur && !exterieurSuggere && !porterExterieur ? [exterieur.id] : []), ...(manteauRemplace ? [manteauRemplace.id] : [])];
+  const sauf = saufIds.length ? saufIds : undefined;
+  // Une proposition qui remplace un manteau trop court n'a pas d'autre proposition : les autres candidats n'ont pas de longueur connue.
+  const autresExterieurs = exterieur && !manteauRemplace
     ? autresManteaux(
         exterieurSuggere
           ? candidatsManteau
@@ -927,6 +946,11 @@ export default function TenuesScreen() {
             {exterieur && tempReelle != null && (
               <div className="mb-[6px]">
                 <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} />
+              </div>
+            )}
+            {!exterieur && conseilManteauPlusLong && (
+              <div className="mb-[6px]">
+                <ConseilManteauPlusLong />
               </div>
             )}
             {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.
@@ -1534,7 +1558,9 @@ export default function TenuesScreen() {
                 <Toggle
                   on={porterExterieur}
                   onClick={() => {
-                    if (!porterExterieur && exterieurSuggere) actions.addPieceToOutfit(exterieur.id);
+                    // Porter la proposition qui remplace un manteau trop court (R-B25) : elle prend sa place dans la tenue.
+                    if (!porterExterieur && exterieurSuggere && manteauRemplace) actions.remplacerDansTenue(manteauRemplace.id, exterieur.id);
+                    else if (!porterExterieur && exterieurSuggere) actions.addPieceToOutfit(exterieur.id);
                     setPorterPour(porterExterieur ? null : exterieur.id);
                   }}
                   label="Je le porte aussi aujourd'hui"

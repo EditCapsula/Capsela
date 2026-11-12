@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { generateOutfit, SEUIL_MANTEAU } from "../logic";
 import { vestePlusLongueQueLeManteau } from "../forme";
+import { separerCoucheExterieure } from "../coucheExterieure";
 import { at, item } from "./fixtures";
 import type { CatalogItem } from "../catalog";
 
 /**
- * R-B25, LA LONGUEUR DES COUCHES (12/11/2026, validé : « une veste portée sous un manteau ne doit pas être plus longue que lui »). Levier
- * longueurDesCouches, inactif tant qu'il n'est pas mesuré. Sans longueur connue, rien ne change.
+ * R-B25, LA LONGUEUR DES COUCHES (12/11/2026, validé : « une veste portée sous un manteau ne doit pas être plus longue que lui »). Active ;
+ * levier de mesure sansLongueurDesCouches. Sans longueur connue, rien ne change.
  */
 
 const manteauCourt: CatalogItem = { ...item({ id: 1, category: "manteau", name: "Manteau court en laine", sous_type: "Manteau" }), longueur: "courte" };
@@ -22,7 +23,7 @@ const pool: CatalogItem[] = [
 const lesDeux = (longueurDesCouches: boolean, p: CatalogItem[] = pool) => {
   let n = 0;
   for (let k = 0; k < 40; k++) {
-    const { ids } = generateOutfit(p, at(SEUIL_MANTEAU - 6), "quotidien", "Présentiel", "Verre", [], "femme", undefined, undefined, null, { longueurDesCouches });
+    const { ids } = generateOutfit(p, at(SEUIL_MANTEAU - 6), "quotidien", "Présentiel", "Verre", [], "femme", undefined, undefined, null, { sansLongueurDesCouches: !longueurDesCouches });
     if (ids.includes(manteauCourt.id) && ids.includes(kimonoLong.id)) n++;
   }
   return n;
@@ -47,10 +48,30 @@ describe("R-B25 — longueur des couches", () => {
     const avecLong = [...pool, manteauLong];
     let gardee = 0;
     for (let k = 0; k < 40; k++) {
-      const { ids } = generateOutfit(avecLong, at(SEUIL_MANTEAU - 6), "quotidien", "Présentiel", "Verre", [], "femme", undefined, undefined, null, { longueurDesCouches: true });
+      const { ids } = generateOutfit(avecLong, at(SEUIL_MANTEAU - 6), "quotidien", "Présentiel", "Verre", [], "femme", undefined, undefined, null, {});
       expect(ids.includes(manteauCourt.id) && ids.includes(kimonoLong.id)).toBe(false);
       if (ids.includes(kimonoLong.id) && ids.includes(manteauLong.id)) gardee++;
     }
     expect(gardee).toBeGreaterThan(0);
+  });
+});
+
+describe("Pour l'extérieur — le manteau trop court pour la veste (12/11/2026, arbitré)", () => {
+  const piece = (id: number, cat: "manteau" | "veste" | "haut", longueur?: "courte" | "midi" | "longue") => ({ ...item({ id, category: cat === "haut" ? "hauts" : cat, name: `P${id}`, sous_type: cat === "haut" ? "Top" : cat === "veste" ? "Blazer" : "Manteau" }), ...(longueur ? { longueur } : {}) });
+  const tenue = [piece(10, "haut"), piece(11, "veste", "longue"), piece(12, "manteau", "courte")];
+  it("un manteau assez long de la capsule est proposé à la place", () => {
+    const long = piece(13, "manteau", "longue");
+    const r = separerCoucheExterieure(tenue, SEUIL_MANTEAU - 5, [], [long]);
+    expect(r.exterieur?.id).toBe(long.id);
+    expect(r.remplace?.id).toBe(tenue[2].id);
+    expect(r.conseilManteauPlusLong).toBe(false);
+  });
+  it("sans manteau assez long (longueur connue), le conseil remplace le manteau trop court", () => {
+    const r = separerCoucheExterieure(tenue, SEUIL_MANTEAU - 5, [], [piece(14, "manteau")]);
+    expect(r.exterieur).toBeNull();
+    expect(r.conseilManteauPlusLong).toBe(true);
+  });
+  it("seulement par le froid", () => {
+    expect(separerCoucheExterieure(tenue, SEUIL_MANTEAU + 3).conseilManteauPlusLong).toBe(false);
   });
 });

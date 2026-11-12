@@ -25,7 +25,7 @@ import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
 import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/components/CarrouselHero";
-import PourLExterieur from "@/components/PourLExterieur";
+import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
 import { titreDeLaTenue } from "@/lib/dressingSections";
@@ -114,7 +114,7 @@ const FANTOME_CHAUSSURES: CategoryKey[] = ["chaussures"];
 const AUCUN_FANTOME: CategoryKey[] = [];
 
 export default function HomeScreen() {
-  const { state, geoLoading, vestiairePool, wardrobePool, meteoDuJour, jourConsulte, valiseConsultee, actions, weather, sourceMeteo } = useCapsela();
+  const { state, geoLoading, vestiairePool, wardrobePool, defaultCapsule, meteoDuJour, jourConsulte, valiseConsultee, actions, weather, sourceMeteo } = useCapsela();
   const rappelValise = useRappelValise();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
@@ -199,14 +199,31 @@ export default function HomeScreen() {
     tempReelle != null && tempReelle < SEUIL_MANTEAU && pieces.length
       ? candidatsDeRemplacement(pieces, wardrobePool, -1, "manteau", occasion, state.workMode, state.dateContext, meteoDuJour)
       : [];
-  const tenueSeparee = separerCoucheExterieure(hasOutfit ? piecesResolues : [], tempReelle, manteauxPour(hasOutfit ? piecesResolues : [], occasionKey));
+  // Les manteaux de la CAPSULE admis pour la tenue (12/11/2026, R-B25 arbitré) : proposés quand le manteau de la tenue est plus court que
+  // sa veste et que le dressing n'en a pas d'assez long (separerCoucheExterieure).
+  const manteauxCapsulePour = (pieces: Item[], occasion: OccasionKey) =>
+    tempReelle != null && tempReelle < SEUIL_MANTEAU && pieces.length
+      ? candidatsDeRemplacement(pieces, defaultCapsule, -1, "manteau", occasion, state.workMode, state.dateContext, meteoDuJour)
+      : [];
+  const tenueSeparee = separerCoucheExterieure(
+    hasOutfit ? piecesResolues : [],
+    tempReelle,
+    manteauxPour(hasOutfit ? piecesResolues : [], occasionKey),
+    manteauxCapsulePour(hasOutfit ? piecesResolues : [], occasionKey)
+  );
   const outfitPieces = tenueSeparee.principal;
   const exterieur = tenueSeparee.exterieur;
-  const sansExterieur = exterieur && !tenueSeparee.suggere ? [exterieur.id] : undefined;
+  // Ni le manteau montré à part, ni celui que la proposition remplace (trop court, R-B25) ne se comptent comme portés d'office.
+  const sansExterieurIds = [...(exterieur && !tenueSeparee.suggere ? [exterieur.id] : []), ...(tenueSeparee.remplace ? [tenueSeparee.remplace.id] : [])];
+  const sansExterieur = sansExterieurIds.length ? sansExterieurIds : undefined;
   const blocExterieur =
     exterieur && tempReelle != null ? (
       <div className="mt-[6px]">
         <PourLExterieur piece={exterieur} temperature={tempReelle} quand={jourConsulte.decalage === 0 ? "aujourd'hui" : "prévus"} onClick={actions.goTenues} compact />
+      </div>
+    ) : tenueSeparee.conseilManteauPlusLong ? (
+      <div className="mt-[6px]">
+        <ConseilManteauPlusLong compact />
       </div>
     ) : null;
   // LA VESTE CONSEILLÉE PAR TEMPS FRAIS, SUR L'ACCUEIL AUSSI (14/10/2026, demandé) : la même suggestion que la page Tenue (computeLookScore,
@@ -367,11 +384,13 @@ export default function HomeScreen() {
     const duJour = slide.source !== "proposition";
     // Chaque slide a sa couche extérieure (04/11/2026, signalé : « quand je swipe je dois voir la strate extérieur pour les occasions
     // concernées ») : la tenue du jour est déjà séparée plus haut ; une proposition d'une autre occasion l'est ici, même règle, même météo.
-    const sepSlide = duJour ? { principal: outfitPieces, exterieur } : separerCoucheExterieure(piecesDe(slide.ids), tempReelle, manteauxPour(piecesDe(slide.ids), slide.occasion));
+    const sepSlide = duJour
+      ? tenueSeparee
+      : separerCoucheExterieure(piecesDe(slide.ids), tempReelle, manteauxPour(piecesDe(slide.ids), slide.occasion), manteauxCapsulePour(piecesDe(slide.ids), slide.occasion));
     const pieces = sepSlide.principal;
     const exterieurSlide = sepSlide.exterieur;
-    // Le look qu'on sauvegarde est celui qu'on voit : sans le manteau montré à part.
-    const idsDuLook = exterieurSlide ? slide.ids.filter((id) => id !== exterieurSlide.id) : slide.ids; // sans effet pour un manteau seulement proposé
+    // Le look qu'on sauvegarde est celui qu'on voit : sans le manteau montré à part, ni celui qu'une proposition remplace (R-B25).
+    const idsDuLook = slide.ids.filter((id) => id !== exterieurSlide?.id && id !== sepSlide.remplace?.id); // sans effet pour un manteau seulement proposé
     const blocSlide =
       exterieurSlide && tempReelle != null ? (
         <div className="mt-[6px]">
@@ -382,6 +401,10 @@ export default function HomeScreen() {
             onClick={() => (duJour ? actions.goTenues() : actions.consulterTenue(slide.ids, slide.occasion, null))}
             compact
           />
+        </div>
+      ) : sepSlide.conseilManteauPlusLong ? (
+        <div className="mt-[6px]">
+          <ConseilManteauPlusLong compact />
         </div>
       ) : null;
     const titre = slide.source === "plan" && planHero ? { a: titreDuPlan(planHero), b: "" } : titreDe(pieces);

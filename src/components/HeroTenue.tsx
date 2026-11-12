@@ -1,7 +1,7 @@
 "use client";
 
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
-import PourLExterieur from "@/components/PourLExterieur";
+import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { separerCoucheExterieure } from "@/lib/coucheExterieure";
 import { BoutonDiscret } from "@/components/Button";
 import { isCatalogId } from "@/lib/catalog";
@@ -55,7 +55,7 @@ export function HeroTenue({
   badge?: React.ReactNode;
 }) {
   const ouvrirPiece = useOuvrirPiece();
-  const { principal, exterieur } = separerCoucheExterieure(piecesRecues, temperature, candidatsExterieur);
+  const { principal, exterieur, conseilManteauPlusLong } = separerCoucheExterieure(piecesRecues, temperature, candidatsExterieur);
   const pieces = principal;
   const total = pieces.length;
   const capsule = pieces.filter((p) => isCatalogId(p.id)).length;
@@ -104,6 +104,12 @@ export function HeroTenue({
       {exterieur && temperature != null && (
         <div className="mt-[6px] flex-shrink-0">
           <PourLExterieur piece={exterieur} temperature={temperature} quand={quand ?? "prévus"} onClick={() => ouvrirPiece(exterieur)} />
+        </div>
+      )}
+      {/* Le manteau de la tenue est plus court que sa veste, et aucun manteau connu assez long (R-B25, 12/11/2026). */}
+      {!exterieur && conseilManteauPlusLong && (
+        <div className="mt-[6px] flex-shrink-0">
+          <ConseilManteauPlusLong />
         </div>
       )}
 

@@ -38,7 +38,7 @@ describe("la tenue et sa couche extérieure", () => {
 
   it("5. aucun manteau dans la tenue ni de candidat : aucun bloc", () => {
     const t = [haut, pantalon, ballerines];
-    expect(separerCoucheExterieure(t, 5)).toEqual({ principal: t, exterieur: null, suggere: false });
+    expect(separerCoucheExterieure(t, 5)).toEqual({ principal: t, exterieur: null, suggere: false, remplace: null, conseilManteauPlusLong: false });
   });
 
   it("2 bis. tenue sans manteau, manteau disponible par le froid : il est proposé, hors du look", () => {
