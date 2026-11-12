@@ -94,7 +94,7 @@ import { ideesGardees, ideesPourDestination } from "@/lib/ideesSejour";
 import { appliquerPeriode, arriveeAuMilieu, destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, periodeValide, periodesDesDestinations, ETAPES_MAX, type EtapeSejour, type Periode } from "@/lib/etapesSejour";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
-import { activitesAPlanifier, cleDeplacement, deplacerActivite, deplacerActiviteDatee, joursPossibles, planificationManuelle, planningDeLaValise, sousIdDuChoix, type CreneauPlanning, type PlacementsPlanning } from "@/lib/planningValise";
+import { activitesAPlanifier, cleDeplacement, looksDesActivites, deplacerActivite, deplacerActiviteDatee, joursPossibles, planificationManuelle, planningDeLaValise, sousIdDuChoix, type CreneauPlanning, type PlacementsPlanning } from "@/lib/planningValise";
 import { FantomeSaisie, useGlisserVersJour } from "@/components/GlisserVersJour";
 import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
 import {
@@ -1269,8 +1269,10 @@ export default function ValiseScreen() {
     // LA VALISE CONSTRUITE SUR TOUT LE SÉJOUR (11/11/2026, validé : leviers A, B, P et R, mesurés par scripts/valise-variete.audit.ts) :
     // composerValiseVariee remplace composerValise puis completerAvecCapsule — variété des pièces principales, tenues adaptées à leur
     // activité, la capsule en suggestions quand le dressing convient mal. « Uniquement mon dressing » : la capsule n'entre pas.
+    // Tenues complètes seulement (12/11/2026, levier `complets`, mesuré par scripts/valise-complets.audit.ts : trajets d'un séjour avec
+    // randonnée couverts 0 → 100 % en S et M, sans recul ailleurs).
     const seulDressing = rep.uniquementDressing ?? (idCible ? state.valises.find((v) => v.id === idCible)?.uniquementDressing === true : false);
-    const r = composerValiseVariee(dressing, seulDressing ? [] : capsuleDe(situations), situations, capaciteDe(rep.bagage), generer, { variete: true, adaptation: !seulDressing }, undefined, cibleDeVolume(rep.bagage));
+    const r = composerValiseVariee(dressing, seulDressing ? [] : capsuleDe(situations), situations, capaciteDe(rep.bagage), generer, { variete: true, adaptation: !seulDressing, complets: true }, undefined, cibleDeVolume(rep.bagage));
     setFaites(2);
     await pause(300);
     if (!actif.current) return;
@@ -1990,6 +1992,32 @@ function Resultat({
   };
   /** Planification manuelle : les activités sans date (« À planifier »), et celle dont on choisit les jours. */
   const aPlanifier = manuelle ? activitesAPlanifier(valise.choix ?? [], joursDuSejourValise) : [];
+  /**
+   * LA TENUE DE CHAQUE ACTIVITÉ SANS DATE (12/11/2026, demandé : « afficher une tenue pour chaque activité choisie sans attendre de les
+   * avoir planifiées, en proposant des tenues composées avec les pièces de la valise », « sans jour indiqué »). Le look de la valise qui
+   * répond à l'activité (looksDesActivites) ; sinon une tenue que le moteur compose avec les seules pièces de la valise, complète
+   * (chaussures et sac) — rien n'est ajouté à la valise.
+   */
+  const tenuesSansDate = looksDesActivites(aPlanifier, valise.choix ?? [], valise.situations, looks, planning);
+  const cleComposees = `${valise.id}|${ids.join(",")}|${tenuesSansDate.map((t) => `${t.situation}:${t.look}`).join(",")}`;
+  const tenuesComposees = useMemo(() => {
+    const out = new Map<number, number[]>();
+    for (const t of tenuesSansDate) {
+      if (t.look != null || t.situation == null) continue;
+      const s = valise.situations[t.situation];
+      for (let n = 0; n < 8; n++) {
+        const r = generer(pieces, s);
+        const tenue = r ? [...new Set(r.ids)].filter((id) => ids.includes(id)) : [];
+        if (tenue.length && lookAChaussuresEtSac(tenue, pieces, lookChezSoi({ situations: [t.situation] }, valise.situations))) {
+          out.set(t.choix, tenue);
+          break;
+        }
+      }
+    }
+    return out;
+    // La clé dit tout ce dont la tenue dépend (la valise, ses pièces, les activités sans tenue) : le moteur ne retire pas à chaque rendu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleComposees, generer]);
   const [aDater, setADater] = useState<number | null>(null);
   const { saisie, poignee } = useGlisserVersJour(deplacer);
   const [aDeplacer, setADeplacer] = useState<{ sousId: string; de: string; libelle: string } | null>(null);
@@ -2849,6 +2877,9 @@ function Resultat({
                 filtre: c.evenement ? "Événements" : c.libelle,
               },
             ]
+      ).concat(
+        // Les activités sans date (12/11/2026, demandé : « on affiche toutes les tenues par activité mais sans jour indiqué »).
+        tenuesSansDate.flatMap((t) => (t.look == null ? [] : [{ cle: `activite-${t.choix}`, look: t.look, quand: "Sans date", quoi: t.libelle, filtre: t.libelle }]))
       )
     : looks.map((lk, i) => {
         const quoi = occasionsDuLook(lk, valise.situations).map((o) => occasionShortLabel(o))[0] ?? "";
@@ -3074,6 +3105,73 @@ function Resultat({
       </div>
     </Card>
   );
+  /**
+   * LES ACTIVITÉS SANS DATE (06/11/2026 ; 12/11/2026, demandé : une tenue pour chaque activité choisie, « sans jour indiqué », puis
+   * « pas besoin de faire une section dédiée aux activités sans date, affiche les entre les deux trajets »). Une carte sans jour, entre
+   * le trajet aller et le jour du retour : chaque activité y montre sa tenue — un look de la valise, ou une tenue composée avec ses
+   * pièces. Un toucher l'ouvre ; « Jours » la date, sans obligation.
+   */
+  const carteSansDate =
+    tenuesSansDate.length > 0 ? (
+      <Card key="sans-date" rayon="carte" className="px-[14px] pt-[6px] pb-[6px]">
+        <div className="flex flex-col">
+          {tenuesSansDate.map((t) => {
+            const composee = tenuesComposees.get(t.choix);
+            const lk = t.look != null ? looks[t.look] : composee ? { ids: composee, situations: [], elargie: false } : null;
+            const items = lk ? piecesDuLook(lk) : [];
+            const contenu = (
+              <>
+                {items.length > 0 && (
+                  <span className="flex gap-[3px] flex-shrink-0">
+                    {items.slice(0, 3).map((p) => (
+                      <Vignette key={p.id} it={p} taille={42} />
+                    ))}
+                  </span>
+                )}
+                <span className="flex-1 min-w-0">
+                  <span className="block t-label text-muted">{t.libelle}</span>
+                  <span className={"block leading-[1.3] mt-[2px] " + (items.length ? "text-[13px] text-ink truncate" : "text-[12px] text-muted-3")}>
+                    {items.length ? resumeLook(items) : "Aucune tenue de ta valise ne répond encore à cette activité."}
+                  </span>
+                </span>
+              </>
+            );
+            return (
+              <div key={t.choix} className="flex items-center gap-1 border-t border-divider first:border-t-0">
+                {t.look != null ? (
+                  <button
+                    type="button"
+                    onClick={() => setVue({ nom: "look", index: t.look as number })}
+                    aria-label={`${t.libelle} : voir le look ${numero(t.look)}`}
+                    className="flex-1 min-w-0 flex items-center gap-3 py-[8px] text-left cursor-pointer min-h-[60px] transition-opacity active:opacity-70"
+                  >
+                    {contenu}
+                  </button>
+                ) : (
+                  <div className="flex-1 min-w-0 flex items-center gap-3 py-[8px] min-h-[60px]">{contenu}</div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setADater(t.choix)}
+                  aria-label={`${t.libelle} : choisir les jours`}
+                  className="flex-shrink-0 text-[12px] text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[44px] px-[6px]"
+                >
+                  Jours
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    ) : null;
+  /** Les journées, la carte sans date avant celle du retour (le dernier jour du séjour) ; sans jour du retour, à la fin. */
+  const cartesJours = (() => {
+    const cartes = planningParJour.map(carteJour);
+    if (!carteSansDate) return cartes;
+    const retour = planningParJour.findIndex((j) => j.jour === joursDuSejourValise[joursDuSejourValise.length - 1]);
+    const k = retour > 0 ? retour : cartes.length;
+    return [...cartes.slice(0, k), carteSansDate, ...cartes.slice(k)];
+  })();
   const nbPieces = (n: number) => `${n} ${n > 1 ? "pièces" : "pièce"}`;
 
   return (
@@ -3278,7 +3376,7 @@ function Resultat({
             <>
               <div className="flex items-baseline justify-between gap-3">
                 <h2 id="titre-looks" className="t-titre-section text-ink">
-                  Tes tenues jour par jour
+                  Tes tenues par activité
                 </h2>
                 <span className="text-[12px] text-muted flex-shrink-0">{looks.length} {looks.length > 1 ? "tenues" : "tenue"}</span>
               </div>
@@ -3286,27 +3384,7 @@ function Resultat({
               {planning.some((c) => c.deplacable) && (
                 <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]">Appuie longuement sur une activité pour la glisser vers un autre jour.</div>
               )}
-              <div className="flex flex-col gap-2 mt-3">{planningParJour.map(carteJour)}</div>
-              {/* À PLANIFIER (06/11/2026) : les activités sans date comptent pour la valise, sur aucune journée ; un toucher les date. */}
-              {aPlanifier.length > 0 && (
-                <section className="mt-4" aria-labelledby="a-planifier">
-                  <div id="a-planifier" className="t-surtitre text-muted">À planifier</div>
-                  <Card rayon="carte" className="mt-2 px-[14px] py-[2px]">
-                    {aPlanifier.map((a) => (
-                      <button
-                        key={a.choix}
-                        aria-label={`${a.libelle} : à planifier. Indiquer les jours`}
-                        type="button"
-                        onClick={() => setADater(a.choix)}
-                        className="w-full flex items-center gap-3 py-[10px] min-h-[52px] border-t border-divider first:border-t-0 text-left cursor-pointer"
-                      >
-                        <span className="flex-1 min-w-0 text-[13px] text-ink leading-[1.3]">{a.libelle}</span>
-                        <span aria-hidden="true" className="text-muted flex-shrink-0">{chevron("d")}</span>
-                      </button>
-                    ))}
-                  </Card>
-                </section>
-              )}
+              <div className="flex flex-col gap-2 mt-3">{cartesJours}</div>
               <FeuilleJoursActivite
                 libelle={aDater != null ? (valise.choix?.[aDater]?.libelle ?? null) : null}
                 jours={joursDuSejourValise}

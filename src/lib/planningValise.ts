@@ -81,6 +81,34 @@ export function activitesAPlanifier(choix: readonly ActiviteChoisie[], jours: re
   return choix.flatMap((c, i) => (sousIdDuChoix(c) && !(c.jours ?? []).some((j) => jours.includes(j)) ? [{ choix: i, libelle: c.libelle }] : []));
 }
 
+/**
+ * LA TENUE DE CHAQUE ACTIVITÉ SANS DATE (12/11/2026, demandé : « afficher une tenue pour chaque activité choisie sans attendre de les
+ * avoir planifiées », « sans jour indiqué »). Pour chaque activité « À planifier », le look de la valise qui répond à son activité
+ * (sa sous-occasion), quel que soit le jour ; entre plusieurs, le moins porté par le planning et par les activités précédentes, pour
+ * varier. `situation` : la situation de l'activité, pour composer une tenue avec les pièces de la valise quand aucun look n'y répond
+ * (null : l'activité ne décrit aucune occasion du séjour).
+ */
+export function looksDesActivites(
+  aPlanifier: readonly { choix: number; libelle: string }[],
+  choix: readonly ActiviteChoisie[],
+  situations: readonly SituationValise[],
+  looks: readonly Pick<LookValise, "situations">[],
+  planning: readonly Pick<CreneauPlanning, "look">[]
+): { choix: number; libelle: string; situation: number | null; look: number | null }[] {
+  const usage = looks.map((_, k) => planning.filter((c) => c.look === k).length);
+  return aPlanifier.map((a) => {
+    const c = choix[a.choix];
+    const sousId = c ? sousIdDuChoix(c) : null;
+    const siennes = sousId ? situations.flatMap((s, i) => ((s.sousIds ?? []).includes(sousId) ? [i] : [])) : [];
+    let look: number | null = null;
+    looks.forEach((l, k) => {
+      if (l.situations.some((i) => siennes.includes(i)) && (look == null || usage[k] < usage[look])) look = k;
+    });
+    if (look != null) usage[look]++;
+    return { choix: a.choix, libelle: a.libelle, situation: siennes[0] ?? null, look };
+  });
+}
+
 /** L'identité d'un créneau pour le déplacer : l'activité choisie (manuel) ou l'entrée du programme (réparti). */
 export const cleDeplacement = (c: Pick<CreneauPlanning, "choix" | "sousId">): string => (c.choix != null ? `choix:${c.choix}` : c.sousId);
 
