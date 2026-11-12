@@ -1,7 +1,8 @@
 "use client";
 
 import { messageCadrage } from "@/lib/cadragePhoto";
-import { estPhotoDetouree, motifDisponible } from "@/lib/dressing";
+import { estPhotoDetouree, formeDisponible, motifDisponible } from "@/lib/dressing";
+import { aUneCouche, aUneLongueur, COUCHES, LONGUEURS } from "@/lib/forme";
 import { aDesManches, MANCHES } from "@/lib/manches";
 import { aUnMotif, MOTIFS } from "@/lib/motifs";
 import { confierPhoto, confierTicket } from "@/lib/importTenue";
@@ -386,6 +387,20 @@ export default function AddScreen() {
       : motifModifie
         ? { texte: "Modifié par toi", couleur: "#5C5648" }
         : { texte: "Facultatif", couleur: "#8B8375" };
+
+  // ── Longueur (robe, jupe, manteau) et couche (veste), 12/11/2026 : facultatives, d'où vient la valeur affichée (forme.ts).
+  const metaDe = (ia: string | null, touchee: boolean, valeur: string | null) =>
+    analyseEnCours
+      ? { texte: "Analyse en cours…", couleur: "#8B8375", modifiee: false }
+      : ia != null && !touchee && valeur === ia
+        ? { texte: "Détecté par Capsela", couleur: "#9E5B43", modifiee: false }
+        : ia != null && valeur !== ia
+          ? { texte: "Modifié par toi", couleur: "#5C5648", modifiee: true }
+          : { texte: "Facultatif", couleur: "#8B8375", modifiee: false };
+  const avecLongueur = formeDisponible() && aUneLongueur(state.addCat);
+  const avecCouche = formeDisponible() && aUneCouche(state.addCat);
+  const longueurMeta = metaDe(state.addLongueurIA, state.addLongueurTouched, state.addLongueur);
+  const coucheMeta = metaDe(state.addCoucheIA, state.addCoucheTouched, state.addCouche);
 
   // ── Ce qui bloque l'ajout, dans l'ordre où on le dit.
   const manquantes: string[] = [];
@@ -861,6 +876,61 @@ export default function AddScreen() {
               })}
             </div>
           </>
+        )}
+
+        {/* 5 ter. La longueur d'une robe, d'une jupe, d'un manteau, et la couche d'une veste (12/11/2026) : facultatives, lues sur la photo
+            quand c'est net. Elles servent aux règles d'association des tenues (une veste fluide ne se porte pas sous un manteau). */}
+        {[
+          avecLongueur && {
+            cle: "longueur",
+            titre: "Longueur",
+            meta: longueurMeta,
+            retablir: actions.retablirAddLongueur,
+            options: LONGUEURS.map((l) => ({ valeur: l.valeur, libelle: l.libelle, on: state.addLongueur === l.valeur, choisir: () => actions.setAddLongueur(l.valeur) })),
+          },
+          avecCouche && {
+            cle: "couche",
+            titre: "Structure",
+            meta: coucheMeta,
+            retablir: actions.retablirAddCouche,
+            options: COUCHES.map((c) => ({ valeur: c.valeur, libelle: `${c.libelle} · ${c.aide}`, on: state.addCouche === c.valeur, choisir: () => actions.setAddCouche(c.valeur) })),
+          },
+        ].map(
+          (champ) =>
+            champ && (
+              <div key={champ.cle}>
+                <div className="flex items-center justify-between gap-3 mt-[22px] min-h-[24px]">
+                  <span className={EYEBROW}>{champ.titre}</span>
+                  <span className="flex items-center gap-[10px] text-[11.5px] font-medium" style={{ color: champ.meta.couleur }}>
+                    {champ.meta.texte}
+                    {champ.meta.modifiee && (
+                      <button
+                        type="button"
+                        onClick={champ.retablir}
+                        className="min-h-[44px] -my-[10px] text-[11.5px] font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer"
+                      >
+                        Rétablir
+                      </button>
+                    )}
+                  </span>
+                </div>
+                <div role="radiogroup" aria-label={champ.titre} className="flex flex-wrap gap-2 mt-[10px]">
+                  {champ.options.map((o) => (
+                    <button
+                      key={o.valeur}
+                      type="button"
+                      role="radio"
+                      aria-checked={o.on}
+                      disabled={analyseEnCours}
+                      onClick={o.choisir}
+                      className={chip(o.on) + " disabled:opacity-60 disabled:cursor-default"}
+                    >
+                      {o.libelle}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
         )}
 
         {/* 6. Les détails facultatifs : repliés, entre deux filets. Replié, le sous-titre rappelle ce qui est déjà renseigné. */}

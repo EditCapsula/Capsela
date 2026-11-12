@@ -145,6 +145,10 @@ export interface Item {
   manches?: Manches;
   /** Motif (11/10/2026, colonne `motif`, migration 0051). Absent = inconnu : rien n'est affiché, rien n'est déduit. */
   motif?: Motif;
+  /** Longueur d'une robe, d'une jupe, d'un manteau (12/11/2026, colonne `longueur`, migration 0062, forme.ts). Absent = inconnue. */
+  longueur?: Longueur;
+  /** Couche d'une veste : structurée ou fluide (12/11/2026, colonne `couche`, migration 0062, forme.ts). Absent = inconnue. */
+  couche?: Couche;
   /** Days since last worn. null = never worn. 0 = worn today. */
   worn: number | null;
   /** Value of `worn` before the most recent "worn today" action, for Corriger/undo. */
@@ -233,6 +237,11 @@ export type Manches = "sans" | "courtes" | "trois_quarts" | "longues";
 /** Le motif d'une pièce (11/10/2026, colonne `motif`, migration 0051) — la liste est celle de MOTIFS (motifs.ts). */
 export type Motif = "uni" | "rayures" | "carreaux" | "pois" | "fleurs" | "animalier" | "graphique" | "autre";
 
+/** La longueur d'une robe, d'une jupe, d'un manteau (12/11/2026, forme.ts). */
+export type Longueur = "courte" | "midi" | "longue";
+/** La couche d'une veste (12/11/2026, forme.ts) : structurée (blazer) ou fluide (kimono). */
+export type Couche = "structuree" | "fluide";
+
 export type ChoixRevente = "gardee" | "de_cote";
 
 export interface City {
@@ -292,6 +301,10 @@ export interface PhotoAnalysis {
   manches?: Manches;
   /** Motif (11/10/2026, colonne `motif`, migration 0051). Absent = inconnu : rien n'est affiché, rien n'est déduit. */
   motif?: Motif;
+  /** Longueur lue sur la photo (12/11/2026), seulement pour une robe, une jupe, un manteau. */
+  longueur?: Longueur;
+  /** Couche lue sur la photo (12/11/2026), seulement pour une veste. */
+  couche?: Couche;
   /** Saisons proposées d'après la photo (09/10/2026) : une suggestion modifiable, absente quand le modèle n'est pas sûr. */
   saisons?: CapsuleSeason[];
 }
@@ -436,6 +449,13 @@ export interface AppState {
   addMotifTouched: boolean;
   /** Le motif lu par l'analyse de la photo (null si rien n'a été lu) : « Détecté par Capsela » et « Rétablir ». */
   addMotifIA: Motif | null;
+  /** La longueur et la couche (12/11/2026, forme.ts), comme le motif : la valeur choisie, touchée ou non, et celle lue sur la photo. */
+  addLongueur: Longueur | null;
+  addLongueurTouched: boolean;
+  addLongueurIA: Longueur | null;
+  addCouche: Couche | null;
+  addCoucheTouched: boolean;
+  addCoucheIA: Couche | null;
   /** La pièce vient d'être ajoutée : le bouton le dit un court instant avant le retour au dressing. */
   addDone: boolean;
   addCoupeTouched: boolean;

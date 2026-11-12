@@ -3,6 +3,7 @@ import { accessoireTypeFor } from "./attributes";
 import { type Verdict, clePieces, jourLocal, litteralTableau } from "./outfitFeedback";
 import { manchesDepuis } from "./manches";
 import { motifDepuis } from "./motifs";
+import { coucheDepuis, longueurDepuis } from "./forme";
 import type { ObjetRepere } from "./importTenue";
 import { normaliserOccasion, normaliserOccasions } from "./occasions";
 import { ordonnerSaisons } from "./saisons";
@@ -13,9 +14,11 @@ import type {
   BijouType,
   CategoryKey,
   ChoixRevente,
+  Couche,
   Coupe,
   HistoryEntry,
   Item,
+  Longueur,
   Manches,
   Motif,
   Matiere,
@@ -66,6 +69,9 @@ export interface DressingItemRow {
   /** Migration 0042 — absente de la ligne tant qu'elle n'est pas exécutée. */
   manches?: string | null;
   motif?: string | null;
+  /** Migration 0062 — absentes de la ligne tant qu'elle n'est pas exécutée. */
+  longueur?: string | null;
+  couche?: string | null;
 }
 
 export function rowToItem(row: DressingItemRow): Item {
@@ -82,6 +88,8 @@ export function rowToItem(row: DressingItemRow): Item {
     saisons: row.saisons?.length ? ordonnerSaisons(row.saisons) : undefined,
     manches: manchesDepuis(row.manches),
     motif: motifDepuis(row.motif),
+    longueur: longueurDepuis(row.longueur),
+    couche: coucheDepuis(row.couche),
     occasion: row.occasion ? normaliserOccasions(row.occasion) : undefined,
     shoeType: (row.shoe_type as ShoeType | null) ?? undefined,
     matiere: (row.matiere as Matiere | null) ?? undefined,
@@ -131,6 +139,16 @@ function itemToRow(item: Omit<Item, "id">, userId: string) {
  */
 let colonneMotif: boolean | null = null;
 export const motifDisponible = (): boolean => colonneMotif !== false;
+/**
+ * LES COLONNES `longueur` ET `couche` EXISTENT-ELLES ? (12/11/2026, migration 0062) — le même principe que le motif : tant que la migration
+ * n'est pas exécutée, l'app le sait à la lecture du dressing ou au premier refus, cesse de proposer ces deux champs, sans erreur technique.
+ */
+let colonnesForme: boolean | null = null;
+export const formeDisponible = (): boolean => colonnesForme !== false;
+const colonnesFormeAbsentes = (err: unknown): boolean => {
+  const e = err as { code?: string; message?: string } | null;
+  return e?.code === "PGRST204" || /'(longueur|couche)' column|column .*(longueur|couche)/i.test(e?.message ?? "");
+};
 const colonneMotifAbsente = (err: unknown): boolean => {
   const e = err as { code?: string; message?: string } | null;
   return e?.code === "PGRST204" || /'motif' column|column .*motif/i.test(e?.message ?? "");
@@ -150,6 +168,7 @@ export async function fetchDressingItems(userId: string): Promise<Item[]> {
     }
     const lignes = data as DressingItemRow[];
     if (lignes.length > 0) colonneMotif = "motif" in lignes[0];
+    if (lignes.length > 0) colonnesForme = "longueur" in lignes[0];
     return await signerPhotosDressing(lignes.map(rowToItem));
   } catch (err) {
     console.error("[dressing] échec fetchDressingItems", err);
@@ -567,6 +586,22 @@ export async function updateDressingItemMotif(id: number, motif: Motif | null): 
   if (error) {
     if (colonneMotifAbsente(error)) {
       colonneMotif = false;
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Enregistre la longueur ou la couche d'une pièce (migration 0062). Même règle que le motif : écriture ISOLÉE, jamais dans `itemToRow`, et
+ * rien à écrire ni à dire tant que les colonnes n'existent pas (formeDisponible). Un autre échec est rendu à l'appelant, qui le signale.
+ */
+export async function updateDressingItemForme(id: number, champ: { longueur: Longueur | null } | { couche: Couche | null }): Promise<void> {
+  if (colonnesForme === false) return;
+  const { error } = await getSupabase().from("dressing_items").update(champ).eq("id", id);
+  if (error) {
+    if (colonnesFormeAbsentes(error)) {
+      colonnesForme = false;
       return;
     }
     throw error;

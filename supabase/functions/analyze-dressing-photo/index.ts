@@ -52,6 +52,9 @@ import {
   BIJOU_TYPES,
   CATEGORY_KEYS,
   MATIERES,
+  CATEGORIES_A_LONGUEUR,
+  COUCHES,
+  LONGUEURS,
   MOTIFS,
   nearestPaletteColor,
   PALETTE,
@@ -87,6 +90,8 @@ interface AnalysisRaw {
   photo_type?: string | null;
   manches?: string | null;
   motif?: string | null;
+  longueur?: string | null;
+  couche?: string | null;
   saisons?: string[] | null;
 }
 
@@ -197,10 +202,13 @@ function buildPrompt(): string {
     "Si l'article est porté par une personne, concentre-toi uniquement sur l'article lui-même, jamais sur la personne ou le décor.",
     `Si cat est l'une de : ${CATEGORIES_A_MANCHES.join(", ")}, indique aussi manches EXACTEMENT parmi : sans, courtes, trois_quarts, longues (sans = sans manches ou bretelles, courtes = jusqu'au coude, trois_quarts = jusqu'à mi-avant-bras, longues = jusqu'au poignet ou au-delà), sinon null. Pour toute autre catégorie, manches = null.`,
     `Si cat n'est pas "bijou", indique aussi motif EXACTEMENT parmi : ${MOTIFS.join(", ")} (uni = une seule couleur, sans dessin ; rayures ; carreaux ; pois ; fleurs ; animalier ; graphique = formes, lettres, logos ou dessin abstrait ; autre = tout autre motif visible), sinon null. Ne donne un motif que s'il est net : en cas de doute entre uni et motif discret, null. Pour un article à motif, color_hex reste la teinte DOMINANTE de l'article.`,
+    // La longueur et la couche (12/11/2026, src/lib/forme.ts) : des attributs du VÊTEMENT, jamais de la personne qui le porte.
+    `Si cat est l'une de : ${CATEGORIES_A_LONGUEUR.join(", ")}, indique aussi longueur EXACTEMENT parmi : ${LONGUEURS.join(", ")} (courte = au-dessus du genou, ou à la hanche pour un manteau ; midi = du genou au mollet, ou à mi-cuisse pour un manteau ; longue = la cheville, ou sous le genou pour un manteau), d'après le vêtement lui-même, sinon null. Pour toute autre catégorie, longueur = null.`,
+    `Si cat = "veste", indique aussi couche EXACTEMENT parmi : ${COUCHES.join(", ")} (structuree = une veste qui tient sa forme : blazer, perfecto, veste en jean, veste épaisse ; fluide = une veste souple et légère qui tombe : kimono, veste en voile ou en maille fine), sinon null. Pour toute autre catégorie, couche = null.`,
     "Indique aussi saisons : la liste des saisons où cet article se porte, parmi Printemps, Été, Automne, Hiver (une ou plusieurs ; ex. un manteau en laine : Automne, Hiver ; un débardeur en lin : Printemps, Été), d'après la matière, l'épaisseur et la coupe visibles. Si tu n'es pas raisonnablement sûr, saisons = null.",
     "Indique aussi photo_type : \"seule\" si la photo montre UN SEUL article, posé à plat, sur un cintre ou en gros plan, sans personne ; \"portee\" si une personne le porte ; \"plusieurs\" si la photo montre plusieurs articles ou une tenue entière. Null si tu n'es pas sûr.",
     "Si tu n'es pas raisonnablement sûr d'un champ, mets null plutôt que de deviner au hasard — une suggestion fausse est pire qu'aucune suggestion.",
-    'Réponds UNIQUEMENT en JSON strict, un seul objet, avec exactement ces clés : {"cat": string|null, "color_hex": string|null, "matiere": string|null, "subtype": string|null, "shoe_type": string|null, "sac_type": string|null, "bijou_type": string|null, "accessoire_type": string|null, "photo_type": string|null, "manches": string|null, "motif": string|null, "saisons": string[]|null}.',
+    'Réponds UNIQUEMENT en JSON strict, un seul objet, avec exactement ces clés : {"cat": string|null, "color_hex": string|null, "matiere": string|null, "subtype": string|null, "shoe_type": string|null, "sac_type": string|null, "bijou_type": string|null, "accessoire_type": string|null, "photo_type": string|null, "manches": string|null, "motif": string|null, "longueur": string|null, "couche": string|null, "saisons": string[]|null}.',
   ].join("\n");
 }
 
@@ -229,6 +237,10 @@ function sanitize(raw: AnalysisRaw): Record<string, unknown> {
 
   // Le motif : dans la liste, jamais pour un bijou.
   if (cat && aUnMotif(cat) && raw.motif && (MOTIFS as readonly string[]).includes(raw.motif)) out.motif = raw.motif;
+
+  // La longueur (robe, jupe, manteau) et la couche (veste) : seulement pour leurs catégories, et dans la liste.
+  if (cat && (CATEGORIES_A_LONGUEUR as readonly string[]).includes(cat) && raw.longueur && (LONGUEURS as readonly string[]).includes(raw.longueur)) out.longueur = raw.longueur;
+  if (cat === "veste" && raw.couche && (COUCHES as readonly string[]).includes(raw.couche)) out.couche = raw.couche;
 
   // Les saisons : seulement celles de la liste, sans doublon, dans l'ordre de l'année.
   if (Array.isArray(raw.saisons)) {

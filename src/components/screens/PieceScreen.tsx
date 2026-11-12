@@ -9,6 +9,7 @@ import { daysSinceWorn, inactivityInfo } from "@/lib/selectors";
 import { aDesManches, libelleManches } from "@/lib/manches";
 import { champsManquants, phraseQuandPorter, titreEnDeuxTemps } from "@/lib/pieceFiche";
 import { libelleMotif } from "@/lib/motifs";
+import { libelleCouche, libelleLongueur } from "@/lib/forme";
 import { libelleSaisons, saisonsDe } from "@/lib/saisons";
 import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
@@ -205,6 +206,8 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
     ...(coupeApplicable && active.coupe ? [{ label: "Coupe", value: active.coupe }] : []),
     ...(typeValue ? [{ label: isLength ? "Longueur" : "Modèle", value: typeValue }] : []),
     ...(active.motif ? [{ label: "Motif", value: libelleMotif(active.motif) }] : []),
+    ...(active.longueur ? [{ label: "Longueur", value: libelleLongueur(active.longueur) }] : []),
+    ...(active.couche ? [{ label: "Structure", value: libelleCouche(active.couche) }] : []),
   ];
   const quandPorter = phraseQuandPorter(saisonsDe(active), active.occasion);
 
