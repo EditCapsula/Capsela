@@ -88,7 +88,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
         </div>
         {/* Un cran plus petit depuis que le titre nomme les pièces de la tenue (17/10/2026, titreDeLaTenue) : à 27 px, « La robe
             portefeuille et les baskets blanches » prenait cinq lignes. */}
-        <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
+        <div className="relative font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
           {titre.a}
           {titre.b && (
             <>
@@ -96,10 +96,10 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
               <span className="italic text-terracotta">{titre.b}</span>
             </>
           )}
+          {/* La pertinence derrière le « i » du titre (12/11/2026, PourquoiCetteTenue). */}
+          {pourquoi && <PourquoiCetteTenue texte={sousTitre} />}
         </div>
-        {pourquoi ? (
-          <PourquoiCetteTenue texte={sousTitre} className="mt-[10px] self-start" />
-        ) : (
+        {!pourquoi && (
           <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
             {sousTitre}
           </div>

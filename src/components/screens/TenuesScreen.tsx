@@ -1004,9 +1004,11 @@ export default function TenuesScreen() {
                 pensée (sousTitreLookDuJour) et ce que la météo du jour en dit (qualificatifLook, seulement quand la température est réelle). */}
             {signature && (
               <div className="px-[6px] mb-[8px]">
-                <div className="t-titre-ligne text-ink">{signature.accroche}</div>
-                {/* La pertinence attend sous « Pourquoi cette tenue ? » (12/11/2026), jamais ouverte d'office. */}
-                <PourquoiCetteTenue texte={signature.phrase} className="mt-[4px]" />
+                {/* La pertinence derrière le « i » du titre (12/11/2026, PourquoiCetteTenue), jamais ouverte d'office. */}
+                <div className="relative t-titre-ligne text-ink">
+                  {signature.accroche}
+                  <PourquoiCetteTenue texte={signature.phrase} />
+                </div>
               </div>
             )}
             {/* POUR L'EXTÉRIEUR (04/11/2026, « Séparer la tenue principale du manteau ») : sous le flat lay, entre deux filets, une ligne

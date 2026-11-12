@@ -557,7 +557,9 @@ export default function HomeScreen() {
           ) : hasOutfit ? (
             <>
               <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
-                <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
+                {/* La pertinence de la tenue attend derrière le « i » du titre (12/11/2026, PourquoiCetteTenue) ; le texte d'un plan ou d'une
+                    valise reste affiché sous le titre. */}
+                <div className="relative font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
                   {titreHero.a}
                   {titreHero.b && (
                     <>
@@ -565,14 +567,12 @@ export default function HomeScreen() {
                       <span className="italic text-terracotta">{titreHero.b}</span>
                     </>
                   )}
+                  {!texteHero && <PourquoiCetteTenue texte={sousTitreHero} />}
                 </div>
-                {/* La pertinence de la tenue attend sous « Pourquoi cette tenue ? » (12/11/2026) ; le texte d'un plan ou d'une valise reste affiché. */}
-                {texteHero ? (
+                {texteHero && (
                   <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
                     {sousTitreHero}
                   </div>
-                ) : (
-                  <PourquoiCetteTenue texte={sousTitreHero} className="mt-[10px] self-start" />
                 )}
                 {porteeAujourdhui && <MentionPortee />}
               </div>
