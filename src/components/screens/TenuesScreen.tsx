@@ -1,5 +1,7 @@
 "use client";
 
+import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
+import { styleDuLook, texteEditorialLook, titreEnLigne } from "@/lib/editorialLook";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
@@ -22,7 +24,7 @@ import { useCapsela } from "@/lib/store";
 import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { RailPiecesTenue } from "@/components/HeroTenue";
-import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, qualificatifLook, SEUIL_MANTEAU, sousTitreLookDuJour, titreEditorialOccasion, violatesOuterwearRule } from "@/lib/logic";
+import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
 
 /** Première lettre en capitale : « il va faire frais ce soir » en tête de phrase. */
@@ -520,10 +522,10 @@ export default function TenuesScreen() {
   const signature =
     piecesDuLook.length > 0 && !planApplique
       ? {
-          accroche: titreEditorialOccasion(occasionSignature),
-          phrase: [sousTitreLookDuJour(occasionSignature, state.workMode, state.dateContext), qualificatifLook(tempReelle, piecesDuLook)]
-            .filter(Boolean)
-            .join(" "),
+          // Le bloc éditorial des tenues recommandées (12/11/2026, editorialLook.ts) : le style réel du look, puis sa pertinence pour
+          // l'occasion — plus le titre fixe de l'occasion ni la phrase de la météo, déjà sur la ligne du jour.
+          accroche: titreEnLigne(texteEditorialLook(piecesDuLook, occasionSignature, state.workMode, state.dateContext).titre),
+          phrase: texteEditorialLook(piecesDuLook, occasionSignature, state.workMode, state.dateContext, styleDuLook(piecesDuLook, profile.styles, profile.gender)).phrase,
         }
       : null;
 
@@ -1003,9 +1005,8 @@ export default function TenuesScreen() {
             {signature && (
               <div className="px-[6px] mb-[8px]">
                 <div className="t-titre-ligne text-ink">{signature.accroche}</div>
-                <div className="text-[12.5px] text-ink-soft leading-[1.4] mt-[2px]" style={{ textWrap: "pretty" }}>
-                  {signature.phrase}
-                </div>
+                {/* La pertinence attend sous « Pourquoi cette tenue ? » (12/11/2026), jamais ouverte d'office. */}
+                <PourquoiCetteTenue texte={signature.phrase} className="mt-[4px]" />
               </div>
             )}
             {/* POUR L'EXTÉRIEUR (04/11/2026, « Séparer la tenue principale du manteau ») : sous le flat lay, entre deux filets, une ligne
