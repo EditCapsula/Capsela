@@ -1223,6 +1223,14 @@ export interface LeviersValise {
    * tenue tient dans le bagage — la capsule propose alors une pièce de plus. Sans autre tenue possible, le plafond cède.
    */
   plafond?: boolean;
+  /**
+   * DES TENUES COMPLÈTES SEULEMENT (12/11/2026, signalé sur une valise « Polynesia » : les deux trajets sans tenue). Le moteur ajoute à
+   * certaines tenues des pièces réservées à la valise (chaussures de randonnée, maillot) ; une tenue tirée sur un pool qui ne les a pas
+   * (le dressing seul) les perdait, et gardait « robe + sac à dos » sans chaussures. La moins encombrante, elle était retenue, puis
+   * l'écran la masquait (un look de valise a des chaussures et un sac) : ses créneaux restaient vides. Avec ce levier, une tenue qui perd
+   * ses chaussures ou son sac en quittant les pièces hors du pool n'est pas candidate. Mesuré par scripts/valise-complets.audit.ts.
+   */
+  complets?: boolean;
 }
 
 const CATEGORIES_PRINCIPALES: readonly CategoryKey[] = ["pantalon", "jean", "jupe", "short", "robe", "combinaison"];
@@ -1256,13 +1264,15 @@ interface CandidatVarie extends Candidat {
   adapteA: Set<number>;
 }
 
-function tirerAvecAdaptation(pool: Item[], situations: SituationValise[], generer: Generateur, tirages: number, dans: Map<string, CandidatVarie>): void {
+function tirerAvecAdaptation(pool: Item[], situations: SituationValise[], generer: Generateur, tirages: number, dans: Map<string, CandidatVarie>, complets = false): void {
   situations.forEach((s, i) => {
     for (let n = 0; n < tirages; n++) {
       const t = generer(pool, s);
       if (!t) continue;
       const ids = [...new Set(t.ids)].filter((id) => pool.some((p) => p.id === id)).sort((a, b) => a - b);
       if (!ids.length) continue;
+      // Levier `complets` : une tenue réduite aux pièces du pool doit garder ses chaussures et son sac (lookAChaussuresEtSac).
+      if (complets && !lookAChaussuresEtSac(ids, pool, estContexteMaison(s.occasion))) continue;
       const cle = clePrincipale(ids, pool) || ids.join(",");
       const c = dans.get(cle) ?? { cle, ids, situations: new Set<number>(), elargie: true, adapteA: new Set<number>() };
       c.situations.add(i);
@@ -1296,15 +1306,15 @@ export function composerValiseVariee(
   const possede = new Set(dressing.map((i) => i.id));
   const tous = new Map<number, Item>([...capsule, ...dressing].map((i) => [i.id, i]));
   const candidats = new Map<string, CandidatVarie>();
-  tirerAvecAdaptation(dressing, situations, generer, tirages, candidats);
+  tirerAvecAdaptation(dressing, situations, generer, tirages, candidats, leviers.complets);
   if (leviers.adaptation) {
     // La capsule du séjour, mêlée au dressing : le moteur compose librement entre les deux ; puis, occasion par occasion, le pool habituel
     // de l'app (la capsule complète les catégories où le dressing n'a rien d'adapté).
-    tirerAvecAdaptation([...tous.values()], situations, generer, tirages, candidats);
+    tirerAvecAdaptation([...tous.values()], situations, generer, tirages, candidats, leviers.complets);
     situations.forEach((s, i) => {
       const pool = composeWardrobePool(dressing, capsule, TOUTES_CATEGORIES, { completerPourOccasion: s.occasion });
       const local = new Map<string, CandidatVarie>();
-      tirerAvecAdaptation(pool, [s], generer, tirages, local);
+      tirerAvecAdaptation(pool, [s], generer, tirages, local, leviers.complets);
       for (const c of local.values()) {
         const d = candidats.get(c.cle) ?? { ...c, situations: new Set<number>(), adapteA: new Set<number>() };
         d.situations.add(i);
@@ -1319,7 +1329,7 @@ export function composerValiseVariee(
     for (const i of sansLook) {
       const pool = composeWardrobePool(dressing, capsule, TOUTES_CATEGORIES, { completerPourOccasion: situations[i].occasion });
       const local = new Map<string, CandidatVarie>();
-      tirerAvecAdaptation(pool, [situations[i]], generer, tirages, local);
+      tirerAvecAdaptation(pool, [situations[i]], generer, tirages, local, leviers.complets);
       for (const c of local.values()) {
         const d = candidats.get(c.cle) ?? { ...c, situations: new Set<number>(), adapteA: new Set<number>() };
         d.situations.add(i);
@@ -1435,7 +1445,7 @@ export function composerValiseVariee(
     const poolSac = [...sac].map((id) => tous.get(id)).filter((p): p is Item => !!p);
     for (const i of restantes) {
       const local = new Map<string, CandidatVarie>();
-      tirerAvecAdaptation(poolSac, [situations[i]], generer, tirages, local);
+      tirerAvecAdaptation(poolSac, [situations[i]], generer, tirages, local, leviers.complets);
       const t = [...local.values()].sort((a, b) => b.adapteA.size - a.adapteA.size)[0];
       if (!t) continue;
       const c: CandidatVarie = { ...t, situations: new Set([i]), adapteA: t.adapteA.size ? new Set([i]) : new Set<number>() };
