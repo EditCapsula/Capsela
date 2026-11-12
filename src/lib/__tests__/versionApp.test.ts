@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { libelleVersion } from "../versionApp";
 
-describe("libelleVersion — date et commit du build, sans numéro (15/10/2026)", () => {
+describe("libelleVersion — date et commit du build sur le web (15/10/2026), nom et numéro dans les apps (12/11/2026)", () => {
   it("date à l'heure de Paris et commit court", () => {
     expect(libelleVersion("f5524dc1d6492f4c", "2026-10-15T04:15:25Z")).toBe("15/10/2026 · f5524dc");
   });
@@ -12,5 +12,11 @@ describe("libelleVersion — date et commit du build, sans numéro (15/10/2026)"
     expect(libelleVersion("", "2026-10-15T04:15:25Z")).toBe("15/10/2026");
     expect(libelleVersion("abc1234", "")).toBe("abc1234");
     expect(libelleVersion("", "pas une date")).toBe("de développement");
+  });
+
+  it("dans les apps, le nom et le numéro de version du store, puis la date (12/11/2026)", () => {
+    expect(libelleVersion("f04abd0", "2026-11-12T17:05:00Z", "2.3", "52")).toBe("2.3 (52) · 12/11/2026");
+    expect(libelleVersion("f04abd0", "2026-11-12T17:05:00Z", "2.3", "")).toBe("2.3 · 12/11/2026");
+    expect(libelleVersion("f04abd0", "", "2.3", "52")).toBe("2.3 (52)");
   });
 });

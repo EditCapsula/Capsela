@@ -40,6 +40,10 @@ const nextConfig: NextConfig = {
   env: {
     CAPSELA_BUILD_COMMIT: commitDuBuild(),
     CAPSELA_BUILD_DATE: new Date().toISOString(),
+    // Le nom et le numéro de version des apps (12/11/2026, versionApp.ts) : posés par les workflows de build iOS et Android, absents
+    // sur le web (Vercel), qui garde la date et le commit.
+    CAPSELA_VERSION_NOM: process.env.CAPSELA_VERSION_NAME ?? "",
+    CAPSELA_VERSION_NUMERO: process.env.CAPSELA_VERSION_CODE ?? "",
   },
 };
 
