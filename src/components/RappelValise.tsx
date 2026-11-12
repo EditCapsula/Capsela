@@ -42,7 +42,7 @@ export function IconeValise({ taille = 20 }: { taille?: number }) {
  * La carte compacte de l'accueil (revue le 12/11/2026, demandé : « nouvelle organisation »). À gauche l'icône valise ; au centre
  * « Ton prochain départ », la destination et les dates, puis les pièces à ajouter et la barre d'avancement (avancementValise) ; à
  * droite le compte à rebours, en format court (« J-3 », « Demain ») pour laisser la place au voyage, et une flèche ; les dates aussi
- * en format court (« 15 → 19 nov. »). Le nom complet reste dans le libellé lu par le lecteur d'écran. Retirés : le grand titre (« Plus que 3 jours avant le départ ! »), qui redisait le compte
+ * en format court (« 15–19 nov. »). Le surtitre dit « Prochain départ », et s'efface sous 360 px. Le nom complet reste dans le libellé lu par le lecteur d'écran. Retirés : le grand titre (« Plus que 3 jours avant le départ ! »), qui redisait le compte
  * à rebours, la phrase sur les pièces manquantes, que le nombre remplace, et le lien « Voir ma valise » : toute la carte ouvre la valise.
  * Une valise dont l'état n'est pas connu n'a ni nombre ni barre.
  */
@@ -55,20 +55,22 @@ export function CarteProchainDepart({ rappel, className = "" }: { rappel: Rappel
       type="button"
       onClick={() => void actions.ouvrirValise(rappel.valise.id)}
       aria-label={`Ton prochain départ : ${rappel.voyage}, ${rappel.badge.toLowerCase()}${detail ? `, ${detail.toLowerCase()}` : ""}. Voir ma valise`}
-      className={"w-full flex items-center gap-3 rounded-carte bg-card border border-border px-4 py-[14px] text-left cursor-pointer active:opacity-80 " + className}
+      className={"w-full flex items-center gap-3 rounded-carte bg-card border border-border px-4 py-[11px] text-left cursor-pointer active:opacity-80 " + className}
     >
       <span aria-hidden="true" className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
         <IconeValise />
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block t-surtitre text-muted">Ton prochain départ</span>
-        <span className="block mt-[4px] truncate">
+        {/* Sous 360 px, le surtitre s'efface (12/11/2026, demandé) : l'icône et le compte à rebours disent déjà le départ. */}
+        <span className="block t-surtitre text-muted max-[359px]:hidden">Prochain départ</span>
+        <span className="block mt-[2px] max-[359px]:mt-0 truncate">
           <span className="t-titre-ligne text-ink">{rappel.valise.destination}</span>
           <span className="text-[12.5px] text-muted"> · {periodeCourte(rappel.valise.depart, rappel.valise.retour)}</span>
         </span>
         {avancement && detail && (
-          <span className="flex items-center gap-[10px] mt-[8px]">
-            <span className="flex-shrink-0 text-[12px] text-muted-3">{detail}</span>
+          // La même ligne dans les deux états (12/11/2026, demandé) : le libellé a une largeur fixe, la barre commence au même endroit.
+          <span className="flex items-center gap-[10px] mt-[6px]">
+            <span className="flex-shrink-0 min-w-[106px] text-[12px] text-muted-3 whitespace-nowrap">{detail}</span>
             <span className="flex-1 min-w-[40px] h-[5px] rounded-full bg-warm-bg overflow-hidden" aria-hidden="true">
               <span className="block h-full rounded-full bg-terracotta" style={{ width: `${avancement.pourcentage}%` }} />
             </span>

@@ -72,8 +72,8 @@ describe("avancementValise", () => {
 
 describe("formats courts de la carte de l'accueil", () => {
   it("dates et compte à rebours", () => {
-    expect(periodeCourte("2026-11-15", "2026-11-19")).toBe("15 → 19 nov.");
-    expect(periodeCourte("2026-11-28", "2026-12-03")).toBe("28 nov. → 3 déc.");
+    expect(periodeCourte("2026-11-15", "2026-11-19")).toBe("15–19 nov.");
+    expect(periodeCourte("2026-11-28", "2026-12-03")).toBe("28 nov.–3 déc.");
     expect(periodeCourte("2026-11-11", "2026-11-11")).toBe("11 nov.");
     expect([compteAReboursCourt(1), compteAReboursCourt(3)]).toEqual(["Demain", "J-3"]);
   });

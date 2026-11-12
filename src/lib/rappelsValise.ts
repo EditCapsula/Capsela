@@ -50,14 +50,14 @@ export function periodeEnLettres(depart: string, retour: string): string {
 
 const MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
-/** « 15 → 19 nov. », « 28 nov. → 3 déc. », « 11 nov. » : la carte de l'accueil, où la place est comptée (12/11/2026). */
+/** « 15–19 nov. », « 28 nov.–3 déc. », « 11 nov. » : la carte de l'accueil, où la place est comptée (12/11/2026, demandé). */
 export function periodeCourte(depart: string, retour: string): string {
   const a = dateDe(depart);
   const b = dateDe(retour);
   if (depart === retour) return `${a.getDate()} ${MOIS_COURTS[a.getMonth()]}`;
   return a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()
-    ? `${a.getDate()} → ${b.getDate()} ${MOIS_COURTS[b.getMonth()]}`
-    : `${a.getDate()} ${MOIS_COURTS[a.getMonth()]} → ${b.getDate()} ${MOIS_COURTS[b.getMonth()]}`;
+    ? `${a.getDate()}–${b.getDate()} ${MOIS_COURTS[b.getMonth()]}`
+    : `${a.getDate()} ${MOIS_COURTS[a.getMonth()]}–${b.getDate()} ${MOIS_COURTS[b.getMonth()]}`;
 }
 
 /** Le compte à rebours court de la carte de l'accueil : « Demain », « J-5 ». */
