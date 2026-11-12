@@ -5,6 +5,7 @@ import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 import LogoCapsela from "@/components/LogoCapsela";
 import { PointRappel, useRappelValise } from "@/components/RappelValise";
+import { useNotifications } from "@/lib/notificationsStore";
 
 /**
  * Bandeau de marque : logo Capsela centré, avatar profil à
@@ -27,6 +28,7 @@ export default function AppHeader({
   backLabel = "Revenir à l'écran précédent",
   action,
   gauche,
+  cloche = false,
 }: {
   showAvatar?: boolean;
   dark?: boolean;
@@ -40,6 +42,11 @@ export default function AppHeader({
   action?: React.ReactNode;
   /** Un bouton dans la gouttière gauche quand il n'y a pas de retour (calendrier de l'accueil, 07/10/2026). */
   gauche?: React.ReactNode;
+  /**
+   * La cloche du centre de notifications (12/11/2026), à gauche de l'avatar — sur l'accueil seulement (arbitré le 12/11/2026). Les
+   * deux gouttières s'élargissent ensemble pour garder le logo centré.
+   */
+  cloche?: boolean;
 }) {
   const { profile, email } = useAuth();
   const { actions } = useCapsela();
@@ -50,10 +57,12 @@ export default function AppHeader({
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
   // Un départ dans les sept jours (rappelsValise.ts) : un point sur le calendrier, le même que sur l'onglet Planifier.
   const rappelValise = useRappelValise();
+  const { nonLues } = useNotifications();
+  const gouttiere = cloche ? "w-[76px] h-[34px] flex-shrink-0 flex items-center" : "w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center";
 
   return (
     <div className="flex items-center justify-between mb-[10px]">
-      <div className="w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center">
+      <div className={gouttiere + (cloche ? " justify-start" : "")}>
         {onBack && (
           /* Même bouton que partout ailleurs depuis le 24/09 (cf.
              BoutonRetour) : ce bandeau portait jusque-là un chevron NU, sans
@@ -90,7 +99,24 @@ export default function AppHeader({
       ) : (
         <LogoCapsela />
       )}
-      <div className="w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center">
+      <div className={gouttiere + (cloche ? " justify-end gap-2" : "")}>
+        {cloche && (
+          <button
+            onClick={actions.goNotifications}
+            aria-label={nonLues ? `Notifications, ${nonLues} non ${nonLues === 1 ? "lue" : "lues"}` : "Notifications"}
+            className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70"
+          >
+            <span className="relative block">
+              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6.5 16.5V11a5.5 5.5 0 0111 0v5.5l1.5 2h-14l1.5-2z" />
+                  <path d="M10 20.5a2 2 0 004 0" />
+                </g>
+              </svg>
+              {nonLues > 0 && <PointRappel />}
+            </span>
+          </button>
+        )}
         {action ?? (showAvatar && (
           <button
             onClick={actions.goProfile}

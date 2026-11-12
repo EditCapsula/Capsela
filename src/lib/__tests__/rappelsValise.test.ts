@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { departsParJour, etatDeLaValise, joursAvantDepart, messageDEcheance, periodeEnLettres, prochainRappel } from "../rappelsValise";
+import { avancementValise, compteAReboursCourt, departsParJour, periodeCourte, etatDeLaValise, joursAvantDepart, messageDEcheance, periodeEnLettres, prochainRappel } from "../rappelsValise";
 import type { ValiseGardee } from "../valises";
 
 // LES RAPPELS CONTEXTUELS DES VALISES (06/11/2026) : une seule source pour la carte, les points et le planning.
@@ -56,5 +56,25 @@ describe("departsParJour", () => {
     const m = departsParJour([valise("a", "2026-11-11", "2026-11-20"), valise("b", "2026-11-11", "2026-11-12"), valise("c", "2026-12-01", "2026-12-02")]);
     expect(m.get("2026-11-11")?.map((v) => v.id)).toEqual(["a", "b"]);
     expect(m.get("2026-12-01")?.map((v) => v.id)).toEqual(["c"]);
+  });
+});
+
+describe("avancementValise", () => {
+  it("les pièces déjà dans le dressing sur celles de la valise ; les suggestions restent à ajouter", () => {
+    expect(avancementValise(valise("a", AUJ, AUJ, { pieceIds: [1, 2, 3, 4, 5, 6, 7, 8], suggestionIds: [7, 8] }))).toEqual({ aAjouter: 2, pourcentage: 75 });
+    expect(avancementValise(valise("a", AUJ, AUJ, { pieceIds: [1, 2] }))).toEqual({ aAjouter: 0, pourcentage: 100 });
+  });
+  it("état inconnu ou valise sans pièce : pas de barre", () => {
+    expect(avancementValise(valise("a", AUJ, AUJ, { looks: [] }))).toBeNull();
+    expect(avancementValise(valise("a", AUJ, AUJ, { pieceIds: [], suggestionIds: [3] }))).toBeNull();
+  });
+});
+
+describe("formats courts de la carte de l'accueil", () => {
+  it("dates et compte à rebours", () => {
+    expect(periodeCourte("2026-11-15", "2026-11-19")).toBe("15–19 nov.");
+    expect(periodeCourte("2026-11-28", "2026-12-03")).toBe("28 nov.–3 déc.");
+    expect(periodeCourte("2026-11-11", "2026-11-11")).toBe("11 nov.");
+    expect([compteAReboursCourt(1), compteAReboursCourt(3)]).toEqual(["Demain", "J-3"]);
   });
 });

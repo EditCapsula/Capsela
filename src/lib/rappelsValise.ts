@@ -48,6 +48,21 @@ export function periodeEnLettres(depart: string, retour: string): string {
     : `du ${a.getDate()} ${MONTHS_FR[a.getMonth()]} au ${b.getDate()} ${MONTHS_FR[b.getMonth()]}`;
 }
 
+const MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+
+/** « 15–19 nov. », « 28 nov.–3 déc. », « 11 nov. » : la carte de l'accueil, où la place est comptée (12/11/2026, demandé). */
+export function periodeCourte(depart: string, retour: string): string {
+  const a = dateDe(depart);
+  const b = dateDe(retour);
+  if (depart === retour) return `${a.getDate()} ${MOIS_COURTS[a.getMonth()]}`;
+  return a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()
+    ? `${a.getDate()}–${b.getDate()} ${MOIS_COURTS[b.getMonth()]}`
+    : `${a.getDate()} ${MOIS_COURTS[a.getMonth()]}–${b.getDate()} ${MOIS_COURTS[b.getMonth()]}`;
+}
+
+/** Le compte à rebours court de la carte de l'accueil : « Demain », « J-5 ». */
+export const compteAReboursCourt = (jours: number): string => (jours <= 1 ? "Demain" : `J-${jours}`);
+
 /** « Demain », « Dans 5 jours ». */
 export const compteARebours = (jours: number): string => (jours <= 1 ? "Demain" : `Dans ${jours} jours`);
 
@@ -76,6 +91,19 @@ export interface RappelValise {
 }
 
 /** Le rappel à montrer aujourd'hui : le départ le plus proche dans la fenêtre J-7 à J-1, ou null. */
+/**
+ * L'AVANCEMENT DE LA VALISE (12/11/2026, carte « Ton prochain départ » revue) : sur les pièces de la valise (pieceIds), celles qui sont
+ * déjà dans le dressing — les suggestions à ajouter (suggestionIds) ne le sont pas encore. Rien d'autre n'entre dans le calcul. Null
+ * quand l'état de la valise n'est pas connu (etatDeLaValise) ou qu'elle n'a aucune pièce : on n'affiche pas une barre inventée.
+ */
+export function avancementValise(v: Pick<ValiseGardee, "pieceIds" | "suggestionIds" | "situationsSansLook" | "looks">): { aAjouter: number; pourcentage: number } | null {
+  const etat = etatDeLaValise(v);
+  const total = v.pieceIds.length;
+  if (!etat || !total) return null;
+  const aAjouter = Math.min(total, v.suggestionIds?.length ?? 0);
+  return { aAjouter, pourcentage: Math.round(((total - aAjouter) / total) * 100) };
+}
+
 export function prochainRappel(valises: readonly ValiseGardee[], aujourdhui: string): RappelValise | null {
   let meilleur: { v: ValiseGardee; jours: number } | null = null;
   for (const v of valises) {

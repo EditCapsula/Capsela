@@ -340,6 +340,8 @@ export interface AppState {
   preferencesDirect: boolean;
   /** Écran vers lequel revenir en quittant Informations légales (toujours "profile" en pratique). */
   legalReturn: Screen;
+  /** Écran vers lequel revenir en quittant le centre de notifications (12/11/2026). */
+  notificationsRetour: Screen;
   /**
    * Texte légal ouvert (slug de legal/documents.ts), ou null. Affiché en
    * calque par-dessus l'écran courant (01/10/2026, demandé : « dans la même
@@ -707,4 +709,6 @@ export type Screen =
   // Avis de styliste enregistré, rouvert depuis le Journal.
   | "avisEnregistre"
   // Tous les avis enregistrés (« Voir tout » de « Mes avis de styliste »).
-  | "avisTous";
+  | "avisTous"
+  // Le centre de notifications (12/11/2026), ouvert par la cloche de l'accueil.
+  | "notifications";

@@ -60,6 +60,8 @@ import { ecrireVotes, fusionnerVotes, lireVotes, piecesEcarteesParVotes, voter, 
 import { ecrireVoteDuCompte, envoyerVotesAuCompte, lireVotesDuCompte } from "./votesSuggestionsCompte";
 import { basculerSaison, saisonsDe, seasonDepuisSaisons } from "./saisons";
 import { composeWardrobePool } from "./selectors";
+import { notifLookSauvegarde, notifPieceAjoutee, notifValiseEnregistree } from "./centreNotifications";
+import { noterNotifications } from "./notificationsStore";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
 import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSuggeree, type ResultatDemande } from "./avisStylisteClient";
@@ -184,6 +186,7 @@ function buildInitialState(): AppState {
     preferencesSection: null,
     preferencesDirect: false,
     legalReturn: "profile",
+    notificationsRetour: "home",
     legalDoc: null,
     premiumReturn: "home",
     premiumOrigine: null,
@@ -344,6 +347,9 @@ export interface Actions {
   /** « Gérer mon compte » (Profil) : la sous-page Compte et sécurité de Réglages. */
   goAccount: () => void;
   goLegal: () => void;
+  /** Le centre de notifications (12/11/2026), en mémorisant d'où l'on vient ; son retour y ramène. */
+  goNotifications: () => void;
+  quitterNotifications: () => void;
   /** Ouvre un texte légal par-dessus l'écran courant (01/10/2026) — sans quitter l'app ni perdre la saisie en cours. */
   openLegalDoc: (slug: string) => void;
   closeLegalDoc: () => void;
@@ -2029,6 +2035,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: "preferences",
       })),
     goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),
+    goNotifications: () =>
+      setState((s) => ({ ...s, notificationsRetour: s.screen === "notifications" ? s.notificationsRetour : s.screen, screen: "notifications" })),
+    quitterNotifications: () => setState((s) => ({ ...s, screen: s.notificationsRetour || "home" })),
     goPremium: (origine) =>
       setState((s) => ({
         ...s,
@@ -2052,6 +2061,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     quitterValise: () => setState((s) => ({ ...s, screen: s.valiseRetour ?? "home", valiseRetour: null, valiseOuverte: null })),
     afficherValise: (id) => setState((s) => ({ ...s, valiseOuverte: id })),
     sauverValise: (v) => {
+      // « Valise enregistrée » (centre de notifications, 12/11/2026) : à la première sauvegarde d'une valise, pas à chaque retouche.
+      if (!stateRef.current.valises.some((x) => x.id === v.id)) noterNotifications(notifValiseEnregistree(v));
       garderValisesLocales(userId, avecValise(stateRef.current.valises, v));
       setState((s) => ({ ...s, valises: avecValise(s.valises, v) }));
       if (!userId || !isSupabaseConfigured) {
@@ -3020,6 +3031,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             setState((st) => ({ ...st, addSaving: false, addDone: true, items: [{ ...item, saisons, manches: base.manches, motif: base.motif }, ...st.items] }));
             quitterApresAjout();
             annoncerPieceAjoutee(item.name);
+            noterNotifications(notifPieceAjoutee(item.id, item.name));
             // « Je possède déjà cette pièce » : la possession n'est enregistrée qu'une fois la pièce du dressing sauvée (02/11/2026).
             if (remplacee != null) void enregistrerVote(remplacee, "possedee");
             enregistrerSaisons(item.id, saisons);
@@ -3041,12 +3053,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           });
         return;
       }
+      const idLocal = Math.max(0, ...stateRef.current.items.map((i) => i.id)) + 1;
       setState((st) => {
         const item: Item = { id: Math.max(0, ...st.items.map((i) => i.id)) + 1, ...base };
         return { ...st, addDone: true, items: [item, ...st.items] };
       });
       quitterApresAjout();
       annoncerPieceAjoutee(base.name);
+      noterNotifications(notifPieceAjoutee(idLocal, base.name));
       if (remplacee != null) void enregistrerVote(remplacee, "possedee");
     },
     dismissDressingError: () => setState((s) => ({ ...s, dressingError: null })),
@@ -3497,6 +3511,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         try {
           const look = await insertSavedLook(userId, base);
           setState((st) => ({ ...resetDraft(st), savedLooks: [look, ...st.savedLooks] }));
+          noterNotifications(notifLookSauvegarde(look.id, look.name));
           return "ok";
         } catch (err) {
           console.error("[looks] échec insertSavedLook", err);
@@ -3505,6 +3520,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }
       const look: SavedLook = { id: "look" + Date.now(), ...base };
       setState((st) => ({ ...resetDraft(st), savedLooks: [look, ...st.savedLooks] }));
+      noterNotifications(notifLookSauvegarde(look.id, look.name));
       return "ok";
     },
     // "Enregistrer cette tenue" (Tenue du jour, recette 23/08/2026) — atterrit
@@ -3544,12 +3560,16 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       };
       if (isSupabaseConfigured && userId) {
         insertSavedLook(userId, base)
-          .then((look) => setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] })))
+          .then((look) => {
+            setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
+            noterNotifications(notifLookSauvegarde(look.id, look.name));
+          })
           .catch((err) => reportDressingError("insertSavedLook", err));
         return;
       }
       const look: SavedLook = { id: "look" + Date.now(), ...base };
       setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
+      noterNotifications(notifLookSauvegarde(look.id, look.name));
     },
     openLook: (id) =>
       setState((s) => ({ ...s, activeLookId: id, lookReturn: s.screen === "looks" ? "looks" : "wardrobe", screen: "lookDetail" })),
