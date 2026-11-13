@@ -25,13 +25,10 @@ export default function AvisTousScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <AppHeader onBack={actions.goHistory} backLabel="Revenir au journal" />
-      <div className="t-surtitre text-muted mt-[18px]">Journal</div>
-      <div className="t-titre-ecran text-ink mt-[6px]">
-        Tous mes <span className="italic text-terracotta">avis</span>
-      </div>
+      {/* « Mes avis. » dans le bandeau, sans surtitre (13/11/2026, tableau validé). */}
+      <AppHeader onBack={actions.goHistory} backLabel="Revenir au journal" titre={<>Mes <span className="italic">avis</span></>} />
       {avis.length > 0 && (
-        <div className="t-chapeau text-muted-3 mt-[8px]">
+        <div className="t-chapeau text-muted-3">
           {avis.length} {avis.length > 1 ? "avis gardés" : "avis gardé"} dans ton Journal, du plus récent au plus ancien.
         </div>
       )}

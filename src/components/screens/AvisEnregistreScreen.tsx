@@ -98,14 +98,11 @@ export default function AvisEnregistreScreen() {
             </span>
           </button>
         }
+        titre={<>L&apos;œil de <span className="italic">Capsela</span></>}
       />
 
-      {/* Surtitre, titre en deux temps et chapeau (la date de l'avis) : le même en-tête que les autres écrans (02/10/2026). */}
-      <div className="t-surtitre text-muted mt-[18px]">Journal</div>
-      <div className="mt-[6px] flex items-start justify-between gap-3">
-        <div className="t-titre-ecran text-ink">
-          L&apos;œil de <span className="italic text-terracotta">Capsela</span>
-        </div>
+      {/* Le titre dans le bandeau, sans surtitre (13/11/2026) ; le badge Premium reste à droite, sur la ligne dessous. */}
+      <div className="flex items-start justify-end gap-3">
         {premiumRequis("AVIS_DE_STYLISTE") && (
           <span className="mt-[6px]">
             <BadgePremium />

@@ -186,7 +186,7 @@ const SOUS_PAGES: Record<VueReglages, { titre: [string, string]; chapeau: string
   notifications: { titre: ["Mes ", "notifications"], chapeau: "Ta tenue du jour, à l'heure que tu choisis." },
   quotidien: { titre: ["Mon ", "quotidien"], chapeau: "Tes jours travaillés et tes congés orientent tes tenues." },
   localisation: { titre: ["Météo et ", "localisation"], chapeau: "D'où vient la météo de tes tenues." },
-  compte: { titre: ["Compte et ", "sécurité"], chapeau: "Ton adresse e-mail et ton mot de passe." },
+  compte: { titre: ["Mon ", "compte"], chapeau: "Ton adresse e-mail et ton mot de passe." },
   donnees: { titre: ["Confidentialité et ", "données"], chapeau: "Tes consentements, tes données et ton compte." },
   centreAide: { titre: ["Centre ", "d'aide"], chapeau: "Les réponses aux questions fréquentes." },
 };
@@ -287,13 +287,19 @@ export default function PreferencesScreen() {
 
   return (
     <div ref={zoneRef} className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <AppHeader showAvatar={false} onBack={actions.closePreferences} backLabel={retourLabel} />
-      <div className="t-surtitre text-muted mt-[18px]">{vue ? "Réglages" : "Profil"}</div>
-      <h1 className="t-titre-ecran text-ink mt-[6px]">
-        {titre ? titre.titre[0] : "Réglages "}
-        <span className="italic text-terracotta">{titre ? titre.titre[1] : "Capsela"}</span>
-      </h1>
-      <div className="t-chapeau text-muted-3 mt-[8px]">{titre ? titre.chapeau : "Personnalise ton expérience et gère ton compte."}</div>
+      {/* Le titre dans le bandeau, sans surtitre (13/11/2026, tableau validé : « Mes réglages. », « Mon compte. »). */}
+      <AppHeader
+        showAvatar={false}
+        onBack={actions.closePreferences}
+        backLabel={retourLabel}
+        titre={
+          <>
+            {titre ? titre.titre[0] : "Mes "}
+            <span className="italic">{titre ? titre.titre[1] : "réglages"}</span>
+          </>
+        }
+      />
+      <div className="t-chapeau text-muted-3">{titre ? titre.chapeau : "Personnalise ton expérience et gère ton compte."}</div>
 
       {!vue && (
         <>

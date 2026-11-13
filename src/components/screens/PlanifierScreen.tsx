@@ -235,7 +235,8 @@ function Surtitre({ children }: { children: React.ReactNode }) {
 /** Titre éditorial en deux temps — la seconde moitié en italique terracotta. */
 function TitreEtape({ a, b }: { a: string; b: string }) {
   return (
-    <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+    // Sous « Mon agenda. » du bandeau (13/11/2026) : la question d'une étape est un titre de section, plus un second titre de page.
+    <div className="t-titre-section text-ink mt-[6px]" style={{ textWrap: "balance" }}>
       {a} <span className="italic text-terracotta">{b}</span>
     </div>
   );
@@ -1534,9 +1535,9 @@ export default function PlanifierScreen() {
                 ? "Revenir à Planifier"
                 : "Revenir à l'étape précédente"
           }
-          // Sur le hub seulement : « Mon agenda. » dans le bandeau et le calendrier, ferré à droite (13/11/2026, demandé). Les vues
-          // du parcours gardent leur bandeau et leur titre propres.
-          titre={vue === "intro" ? <>Mon <span className="italic">agenda</span></> : undefined}
+          // « Mon agenda. » dans le bandeau, sur le hub comme dans le parcours (13/11/2026) ; le calendrier, ferré à droite, sur le hub
+          // seulement.
+          titre={<>Mon <span className="italic">agenda</span></>}
           calendrier={vue === "intro"}
         />
       </div>
@@ -2234,7 +2235,7 @@ export default function PlanifierScreen() {
               {/* LE STATUT, DISCRET (04/11/2026, maquette « Look planifié ») : « Planifié », ou « Confirmé » après « Je porterai cette
                   tenue ». Un look passé n'en a pas. */}
               <div className="flex items-center justify-between gap-3 mt-[18px]">
-                <div className="t-titre-ecran text-ink">
+                <div className="t-titre-section text-ink">
                   Look <span className="italic text-terracotta">planifié</span>
                 </div>
                 {!passee && (

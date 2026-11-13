@@ -626,12 +626,9 @@ export default function HistoryScreen() {
             setAvis(null);
           }}
           backLabel="Revenir au journal"
+          titre={<>Mes pièces <span className="italic">à vendre</span></>}
         />
-        <Surtitre className="mt-[18px]">Faire de la place</Surtitre>
-        <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-          Pièces <span className="italic text-terracotta">à vendre</span>
-        </div>
-        <div className="t-chapeau text-muted-3 mt-[10px]">
+        <div className="t-chapeau text-muted-3">
           Ces pièces n&apos;ont pas trouvé leur moment depuis longtemps. Tu décides, pièce par pièce : rien ne quitte
           ton dressing sans toi.
         </div>

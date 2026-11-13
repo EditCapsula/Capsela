@@ -15,8 +15,8 @@ export default function LegalScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <AppHeader onBack={actions.backFromLegal} />
-      <div className="t-titre-ecran text-ink mt-[18px]">Informations légales</div>
+      {/* Le titre dans le bandeau (13/11/2026, tableau validé). */}
+      <AppHeader onBack={actions.backFromLegal} titre={<>Informations <span className="italic">légales</span></>} />
 
       <Card rayon="tuile" className="overflow-hidden mt-5">
         {LEGAL_ROWS.map((r) => (

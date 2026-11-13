@@ -687,18 +687,14 @@ export default function AvisStylisteScreen() {
           logo centré, profil à droite — sur l'entrée, l'analyse et le
           résultat. Le retour descend dans le contenu. */}
       {/* Le retour dans le bandeau, comme sur Compte, Profil, Préférences, Premium, Planifier, Valise (02/10/2026). */}
-      <AppHeader onBack={actions.goHome} backLabel="Revenir à l'accueil" />
-      {/* Le même en-tête que les autres écrans : surtitre, titre de 27 px dont le second temps est en italique
-          terracotta, chapeau (02/10/2026, signalé : la ligne en serif gras ne ressemblait à aucune autre page). */}
-      <div className="flex items-center justify-between gap-3 mt-[18px]">
-        <div className="t-surtitre text-muted">Ton look, vu par Capsela</div>
-        {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
-      </div>
-      <div className="t-titre-ecran text-ink mt-[6px]">
-        {/* « L'œil de Capsela » depuis le 30/10/2026, choisi par la propriétaire (avant : « Avis de styliste »). */}
-        L&apos;œil de <span className="italic text-terracotta">Capsela</span>
-      </div>
-      <div className="t-chapeau text-muted-3 mt-[8px]">
+      {/* « L'œil de Capsela » (30/10/2026, choisi par la propriétaire) dans le bandeau, sans surtitre (13/11/2026, tableau validé). */}
+      <AppHeader onBack={actions.goHome} backLabel="Revenir à l'accueil" titre={<>L&apos;œil de <span className="italic">Capsela</span></>} />
+      {premiumRequis("AVIS_DE_STYLISTE") && (
+        <div className="mb-[6px]">
+          <BadgePremium />
+        </div>
+      )}
+      <div className="t-chapeau text-muted-3">
         {introAffichee
           ? "Un regard personnalisé sur ta silhouette, tes couleurs et l'harmonie de ta tenue."
           : "Un regard expert sur ta tenue, pensé pour ton style."}

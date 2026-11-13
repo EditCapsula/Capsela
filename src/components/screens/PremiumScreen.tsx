@@ -160,20 +160,18 @@ export default function PremiumScreen() {
             une croix, mais tout écran secondaire de l'app se ferme par le
             chevron depuis le 24/09. Deux gestes pour une même sortie
             n'apporteraient rien. */}
-        <AppHeader showAvatar={false} onBack={() => actions.go(state.premiumReturn)} backLabel="Fermer" />
+        <AppHeader
+          showAvatar={false}
+          onBack={() => actions.go(state.premiumReturn)}
+          backLabel="Fermer"
+          titre={<>Capsela <span className="italic">Premium</span></>}
+        />
       </div>
 
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-2 pb-5">
-        <div className="flex items-center gap-[10px]">
-          <span aria-hidden="true" style={{ width: 22, height: 1, background: "var(--color-terracotta)" }} />
-          <span className="t-surtitre text-muted">Capsela Premium</span>
-        </div>
-
-        <div className="t-titre-ecran text-ink mt-[10px]" style={{ textWrap: "balance" }}>
-          Un peu plus de place, <span className="italic text-terracotta">un peu d&apos;avance</span>
-        </div>
-        <div className="t-chapeau text-muted-3 mt-2" style={{ textWrap: "pretty" }}>
-          Des outils pour aller plus loin avec ta garde-robe.
+        {/* « Capsela Premium. » dans le bandeau (13/11/2026, tableau validé) ; la promesse passe dans la phrase dessous. */}
+        <div className="t-chapeau text-muted-3" style={{ textWrap: "pretty" }}>
+          Un peu plus de place, un peu d&apos;avance : des outils pour aller plus loin avec ta garde-robe.
         </div>
 
         {/* « CE QUE TU VOULAIS FAIRE » (maquette Premium Gates). Quelqu'un qui

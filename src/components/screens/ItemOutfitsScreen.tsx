@@ -16,7 +16,7 @@ import { CATLABEL, CATS, isBag } from "@/lib/data";
 import { enSaisons, pourLaSaison, saisonPourIdees, saisonsDe } from "@/lib/saisons";
 import { composeWardrobePool } from "@/lib/selectors";
 import { avecTirageDeterministe, graineIdees } from "@/lib/looks";
-import { FAMILLES_LOOK, cleLook, decrireLooks, fusionnerAvecOuSansVeste, ideesDressingDAbord, ordonnerLooks, titreCommentPorter, type FamilleLook, type LookNumerote } from "@/lib/ideesLooks";
+import { FAMILLES_LOOK, cleLook, decrireLooks, fusionnerAvecOuSansVeste, ideesDressingDAbord, ordonnerLooks, pronomCommentPorter, type FamilleLook, type LookNumerote } from "@/lib/ideesLooks";
 import type { ItemOutfitVariation } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur, type ColorimetrieMoteur } from "@/lib/colorimetrieMoteur";
@@ -240,22 +240,22 @@ export default function ItemOutfitsScreen() {
   // Des miniatures de même taille sur toutes les slides : autant de colonnes que le look le plus fourni, entre 4 et 5 — à 6 colonnes,
   // une vignette tombait à 40 px. Un look de 6 pièces ou plus passe alors sur deux rangées, lui seul.
   const colonnesCarrousel = Math.max(4, Math.min(5, Math.max(0, ...filtres.map((l) => piecesDe(l.variation.ids).length))));
-  const titre = titreCommentPorter(pivot, alreadyOwned);
-  const DEBUT = "Comment porter ";
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto overflow-x-hidden px-6 pt-[6px] pb-safe-nav">
-      {/* Le bandeau de marque (12/10/2026, signalé : « il manque le logo et l'icône du profil »). */}
-      <AppHeader onBack={() => actions.go(state.itemOutfitsReturn)} />
+      {/* « Comment la porter ? » dans le bandeau, accordé à la pièce, sans point après « ? » (13/11/2026, tableau validé) ; le nom de la
+          pièce passe dans la colonne de la pièce, dessous. */}
+      <AppHeader
+        onBack={() => actions.go(state.itemOutfitsReturn)}
+        point={false}
+        titre={
+          <>
+            Comment <span className="italic">{pronomCommentPorter(pivot)} porter</span> ?
+          </>
+        }
+      />
 
-      {/* L'EN-TÊTE DE LA PAGE, gardé (01/11/2026, demandé) : « Idées de looks » et le titre accordé à la pièce (titreCommentPorter). */}
-      <div className="t-surtitre text-muted mt-[14px]">Idées de looks</div>
-      <h1 className="t-titre-ecran text-ink mt-[6px]">
-        {DEBUT}
-        <em className="text-terracotta">{titre.slice(DEBUT.length)}</em>
-      </h1>
-
-      {/* ── LA PIÈCE CHOISIE ─ compacte, sans répéter son nom (il est dans le titre) : les looks restent près de la ligne de flottaison. */}
+      {/* ── LA PIÈCE CHOISIE ─ compacte, avec son nom (le titre court ne le porte plus, 13/11/2026) : les looks restent près de la ligne de flottaison. */}
       <section className="flex gap-[14px] items-center mt-[14px]" aria-label={`La pièce choisie : ${pivot.name}`}>
         <button type="button" onClick={() => actions.openItem(pivot.id, !alreadyOwned)} className="flex-none w-[76px] cursor-pointer" aria-label={`Voir la fiche : ${pivot.name}`}>
           <PhotoPiece piece={pivot} ratio={0.8} rayon={12} />
@@ -264,6 +264,7 @@ export default function ItemOutfitsScreen() {
           <Badge tone={alreadyOwned ? "possede" : "plein"} taille="s">
             {alreadyOwned ? "Ton dressing" : "Suggestion"}
           </Badge>
+          <div className="t-titre-carte text-ink mt-[7px]">{pivot.name}</div>
           {infos && <div className="text-[12px] text-muted-3 mt-[7px]">{infos}</div>}
           {!alreadyOwned && <div className="text-[11.5px] text-muted mt-[3px]">{libelleCapsule}</div>}
           {/* Pièce de la capsule, pas encore au dressing : ses deux actions d'origine restent, discrètes, dans la colonne de la pièce. */}

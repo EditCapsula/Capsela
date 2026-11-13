@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
-import BoutonRetour, { LienRetour } from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
+import { LienRetour } from "@/components/BoutonRetour";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { BAS_CATS, CATS, OCCASIONS, occasionShortLabel } from "@/lib/data";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
@@ -311,11 +312,8 @@ export default function CreateLookScreen() {
     return (
       <>
         <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]" style={paddingBas}>
-          <div className="flex items-center gap-[14px] mt-[10px]">
-            <BoutonRetour onClick={actions.cancelCreateLook} label="Annuler et revenir au dressing" className="flex-shrink-0" />
-            <div className="t-titre-section text-ink">Créer un look</div>
-          </div>
-          <div className="t-chapeau text-muted mt-4">Pour quelle occasion, quelle saison, et avec quelle envie ?</div>
+          <AppHeader showAvatar={false} onBack={actions.cancelCreateLook} backLabel={"Annuler et revenir au dressing"} titre={<>Créer <span className="italic">un look</span></>} />
+          <div className="t-chapeau text-muted-3">Pour quelle occasion, quelle saison, et avec quelle envie ?</div>
 
           <section aria-labelledby="look-occasion" className="mt-6">
             <div id="look-occasion" className="t-surtitre text-muted">
@@ -371,10 +369,7 @@ export default function CreateLookScreen() {
     const piecesLook = look ? look.pieceIds.map((id) => items.find((i) => i.id === id)).filter((it): it is Item => Boolean(it)) : [];
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 24px)" }}>
-        <div className="flex items-center gap-[14px] mt-[10px]">
-          <BoutonRetour onClick={actions.cancelCreateLook} label="Revenir au dressing" className="flex-shrink-0" />
-          <div className="t-titre-section text-ink">Créer un look</div>
-        </div>
+        <AppHeader showAvatar={false} onBack={actions.cancelCreateLook} backLabel={"Revenir au dressing"} titre={<>Créer <span className="italic">un look</span></>} />
         <div role="status" className="mt-6">
           <div className="t-titre-ecran text-ink">
             Ton look est <span className="italic text-terracotta">enregistré</span>
@@ -414,15 +409,8 @@ export default function CreateLookScreen() {
         // Réserve la barre du bas ET le bouton principal qui flotte au-dessus (même calcul que la Capsule).
         style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 112px)" }}
       >
-        <div className="flex items-center gap-[14px] mt-[10px]">
-          <BoutonRetour
-            onClick={items.length > 0 ? () => setEtape("contexte") : actions.cancelCreateLook}
-            label={items.length > 0 ? "Revenir au contexte du look" : "Annuler et revenir au dressing"}
-            className="flex-shrink-0"
-          />
-          <div className="t-titre-section text-ink">Créer un look</div>
-        </div>
-        <div className="t-chapeau text-muted mt-4">Choisis les pièces de ton dressing à combiner.</div>
+        <AppHeader showAvatar={false} onBack={items.length > 0 ? () => setEtape("contexte") : actions.cancelCreateLook} backLabel={items.length > 0 ? "Revenir au contexte du look" : "Annuler et revenir au dressing"} titre={<>Créer <span className="italic">un look</span></>} />
+        <div className="t-chapeau text-muted-3">Choisis les pièces de ton dressing à combiner.</div>
 
         {items.length === 0 ? (
           <Card rayon="tuile" className="mt-6 px-4 py-[18px] text-center text-[13px] text-muted leading-[1.5]">
