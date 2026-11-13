@@ -67,16 +67,23 @@ export function caseDeLaPiece(
 }
 
 /**
- * SIGNATURE DISCRÈTE (27/09/2026, brief « Avis d’un proche ») : « L’édit
- * Capsela » centré dans la marge du bas — aucune pièce n'y est jamais posée
- * (caseDeLaPiece s'arrête à MARGE du bord) —, en crème à 70 %, dans la serif
- * de l'application quand elle est chargée. Ni logo ni slogan : la tenue reste
- * le contenu. Une police indisponible n'empêche rien : repli sur la serif du
- * système.
+ * LE LOGO SUR CHAQUE IMAGE PARTAGÉE (13/11/2026, demandé : « que systématiquement tu affiches le logo Capsela lorsque on envoie la
+ * photo »). Avant, une signature en texte (« Capsela » en italique, 27/09/2026, « ni logo ni slogan »). Désormais le logo « capsela. »
+ * dans sa version claire, centré dans la marge du bas — aucune pièce n'y est jamais posée (caseDeLaPiece s'arrête à MARGE du bord).
+ * Un logo qui ne se charge pas n'empêche rien : la signature en texte d'avant le remplace.
  */
 export const SIGNATURE_IMAGE = "Capsela";
+export const LOGO_IMAGE = "/brand/capsela-logo-claire.png";
+/** Hauteur du logo dans l'image, en pixels : lisible en vignette dans une conversation, sans prendre la place de la tenue. */
+export const HAUTEUR_LOGO = 46;
 
 async function signer(ctx: CanvasRenderingContext2D) {
+  const logo = await charge(LOGO_IMAGE);
+  if (logo && logo.naturalHeight > 0) {
+    const largeur = (logo.naturalWidth / logo.naturalHeight) * HAUTEUR_LOGO;
+    ctx.drawImage(logo, (COTE - largeur) / 2, COTE - MARGE / 2 - HAUTEUR_LOGO / 2, largeur, HAUTEUR_LOGO);
+    return;
+  }
   const famille = getComputedStyle(document.documentElement).getPropertyValue("--font-bodoni").trim();
   const police = `italic 30px ${famille ? `${famille}, ` : ""}serif`;
   try {
