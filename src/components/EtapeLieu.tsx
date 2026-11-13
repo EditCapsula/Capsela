@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { IconeTuile, type IconePlanifier } from "@/components/PlanifierUI";
 import { chargerRecentes, garderRecentes, ajouterRecente, libelleDestination, presenterResultats, villesDuPaysDabord, type VilleRecente } from "@/lib/lieux";
-import { fetchVilleParPosition, fetchVilles, getBrowserPosition, type VilleSuggeree } from "@/lib/weather";
+import { fetchVilleParPosition, fetchVilles, lirePosition, type RaisonPosition, type VilleSuggeree } from "@/lib/weather";
 import { degres } from "@/lib/unites";
 
 /*
@@ -100,6 +100,7 @@ export function ChoixVille({
   const [reponse, setReponse] = useState<{ q: string; liste: VilleSuggeree[] | null } | null>(null);
   const [recentes, setRecentes] = useState<VilleRecente[]>(() => chargerRecentes());
   const [position, setPosition] = useState<"repos" | "encours">("repos");
+  const [echecPosition, setEchecPosition] = useState<RaisonPosition | "introuvable" | null>(null);
   const champ = useRef<HTMLInputElement>(null);
 
   const q = requete.trim();
@@ -139,13 +140,15 @@ export function ChoixVille({
 
   const utiliserPosition = async () => {
     setPosition("encours");
+    setEchecPosition(null);
     try {
-      // La permission du système n'est demandée qu'ici, après le tap — jamais à l'ouverture de l'écran. Un refus ne dit rien :
-      // la recherche reste là.
-      const pos = await getBrowserPosition();
-      if (!pos) return;
-      const v = await fetchVilleParPosition(pos.coords.latitude, pos.coords.longitude);
+      // La permission du système n'est demandée qu'ici, après le tap — jamais à l'ouverture de l'écran. Un échec se dit désormais
+      // (13/11/2026, signalé : « cela n'est pas pris en compte ») ; la recherche reste là.
+      const r = await lirePosition();
+      if (!("pos" in r)) return setEchecPosition(r.raison);
+      const v = await fetchVilleParPosition(r.pos.coords.latitude, r.pos.coords.longitude);
       if (v) choisir(v, libelleDestination(v));
+      else setEchecPosition("introuvable");
     } finally {
       setPosition("repos");
     }
@@ -275,6 +278,11 @@ export function ChoixVille({
                   <Cible />
                   {position === "encours" ? "Je cherche ta position…" : "Utiliser ma position actuelle"}
                 </button>
+              )}
+              {avecPosition && echecPosition && (
+                <p className="text-[12px] text-muted-3 leading-[1.45] mt-[2px]" role="status">
+                  {MESSAGE_POSITION[echecPosition]}
+                </p>
               )}
               {/* Première utilisation : aucune section vide. */}
               {avecRecentes && recentes.length > 0 && (
@@ -406,3 +414,12 @@ function MeteoDuLieu({ meteo }: { meteo: MeteoEtapeLieu }) {
     </div>
   );
 }
+
+/** Ce que l'écran dit quand la position n'est pas prise en compte (13/11/2026) : la cause, et ce qui reste possible. */
+const MESSAGE_POSITION: Record<RaisonPosition | "introuvable", string> = {
+  refusee: "Capsela n'a pas accès à ta position. Autorise-la dans les réglages du téléphone (Applications, Capsela, Autorisations), ou cherche ta ville.",
+  desactivee: "La localisation de ton téléphone est désactivée. Active-la, puis réessaie, ou cherche ta ville.",
+  delai: "Ta position n'a pas pu être trouvée à temps. Réessaie, ou cherche ta ville.",
+  indisponible: "Ta position n'a pas pu être lue. Cherche ta ville.",
+  introuvable: "Ta position est trouvée, mais pas la ville qui lui correspond. Cherche-la dans la recherche.",
+};
