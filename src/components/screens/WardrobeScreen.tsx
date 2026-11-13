@@ -302,11 +302,9 @@ export default function WardrobeScreen() {
   // ── MON DRESSING ─────────────────────────────────────────────────────
   const enTete = (
     <>
-      <AppHeader />
+      <AppHeader titre={<>Mon <span className="italic">dressing</span></>} />
       {/* Une seule ligne : le nombre de pièces et de catégories, calculés. Plus de « places restantes » (08/10/2026). */}
-      <TitrePage chapeau={!dressingLoaded ? " " : items.length > 0 ? ligneDressing(items.length, groupes.length) : synthese.texte}>
-        Mon <span className="italic text-terracotta">dressing</span>
-      </TitrePage>
+      <TitrePage chapeau={!dressingLoaded ? " " : items.length > 0 ? ligneDressing(items.length, groupes.length) : synthese.texte} />
     </>
   );
 
@@ -494,10 +492,9 @@ export default function WardrobeScreen() {
         <AppHeader
           onBack={filtre?.retour === "tenue" ? actions.goTenues : filtre?.retour === "journal" ? actions.goHistory : undefined}
           backLabel={filtre?.retour === "journal" ? "Revenir au Journal" : "Revenir à ma tenue"}
+          titre={<>Mon <span className="italic">dressing</span></>}
         />
-        <TitrePage chapeau={pl(items.length)}>
-          Mon <span className="italic text-terracotta">dressing</span>
-        </TitrePage>
+        <TitrePage chapeau={pl(items.length)} />
         {/* data-tour : la recherche et les catégories, cible de la visite guidée « Dressing » (lib/visites.ts). */}
         <div data-tour="dressing-filtres">
         <label className="mt-3 flex items-center gap-[10px] h-[44px] pl-[14px] pr-[6px] rounded-full bg-card border" style={{ borderColor: recherche ? "var(--color-terracotta-deep)" : "var(--color-border)" }}>

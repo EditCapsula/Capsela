@@ -470,7 +470,7 @@ export default function CalendrierScreen() {
       <div className="scrollarea flex-1 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
         <div className="flex items-center justify-between mb-3">
           <BoutonRetour onClick={actions.goHome} label="Revenir à l'accueil" taille={34} />
-          <h1 className="t-titre-carte text-ink">Mon planning</h1>
+          <h1 className="t-titre-carte text-ink">Mon calendrier</h1>
           <button
             onClick={planifierSel}
             aria-label="Planifier une tenue"

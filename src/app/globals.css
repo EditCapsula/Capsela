@@ -122,6 +122,19 @@
   font-size: 24px;
   line-height: 1.12;
 }
+/* Le titre d'une page (13/11/2026, TitrePage.tsx) : 24 px comme t-titre-ecran, en graisse 500, tout en noir — l'italique du second
+   temps garde sa forme mais perd le terracotta. */
+@utility t-titre-page {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  line-height: 1.12;
+  font-weight: 500;
+  font-synthesis: none;
+  & * {
+    color: inherit;
+    font-weight: inherit;
+  }
+}
 @utility t-titre-section {
   font-family: var(--font-serif);
   font-size: 21px;

@@ -1534,6 +1534,10 @@ export default function PlanifierScreen() {
                 ? "Revenir à Planifier"
                 : "Revenir à l'étape précédente"
           }
+          // Sur le hub seulement : « Mon agenda. » dans le bandeau et le calendrier, ferré à droite (13/11/2026, demandé). Les vues
+          // du parcours gardent leur bandeau et leur titre propres.
+          titre={vue === "intro" ? <>Mon <span className="italic">agenda</span></> : undefined}
+          calendrier={vue === "intro"}
         />
       </div>
 
@@ -1560,9 +1564,7 @@ export default function PlanifierScreen() {
                 défile, d'où une marge plus courte ici) ; le surtitre « Planifier », qui répétait
                 l'onglet, est retiré (TitrePage, 12/11/2026). */}
             {/* Sur une ligne comme les autres titres (13/11/2026, validé) : « Capsela s'occupe du look » passe en tête de la phrase. */}
-            <TitrePage decalage={2} chapeau="Capsela s'occupe du look : des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing.">
-              Anticipe <span className="italic text-terracotta">tes moments</span>
-            </TitrePage>
+            <TitrePage chapeau="Capsela s'occupe du look : des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing." />
 
             {/* LES DEUX VISUELS ÉDITORIAUX sont ceux d'avant (recette du 26/09/2026, fournis par la propriétaire) : une tenue
                 pour « Planifier une tenue », la valise ouverte pour « Préparer ma valise » — les deux pour un profil femme,
