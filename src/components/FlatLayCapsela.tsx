@@ -278,7 +278,8 @@ export function FlatLayCapsela({
                 key={it.id}
                 type="button"
                 onClick={() => onFantome(it.cat)}
-                aria-label={`Ajouter ${LIBELLE_AJOUT[it.cat] ?? "une pièce"} à ton dressing`}
+                // Les chaussures ouvrent le choix d'une paire adaptée (13/11/2026), les autres catégories l'ajout au dressing.
+                aria-label={it.cat === "chaussures" ? "Choisir une paire de chaussures pour ce look" : `Ajouter ${LIBELLE_AJOUT[it.cat] ?? "une pièce"} à ton dressing`}
                 className="cursor-pointer"
                 style={{ ...base, filter: "none", padding: 6, border: "1.5px dashed color-mix(in srgb, var(--color-terracotta) 60%, transparent)", borderRadius: 14, background: "color-mix(in srgb, var(--color-terracotta) 4%, transparent)" }}
               >

@@ -54,6 +54,8 @@ export interface CarteHeroProps {
   autreDesactive?: boolean;
   /** Pièces manquantes posées en silhouette (les chaussures, 14/10/2026), comme sur la page Tenue. */
   fantomes?: CategoryKey[];
+  /** Le « + » d'une silhouette (13/11/2026) : la chaussure manquante invite à choisir une paire (Ma tenue du jour). */
+  onFantome?: (cat: CategoryKey) => void;
   /** Une pièce conseillée posée dans la composition avec un « + » (la veste du soir, 14/10/2026). */
   ajouts?: { item: Item; onAjouter: () => void }[];
   /** Sous les actions, sur toute la largeur (alerte météo d'un look planifié). */
@@ -71,7 +73,7 @@ export interface CarteHeroProps {
  * seul, arbitré le 14/10/2026 (option 3h), puis Tenue le même jour ; les autres hero gardent --color-hero-background. Le texte réduit à gauche, la composition — point focal — à droite, deux actions
  * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
  */
-export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, ajouts, portee, onPiece, pourquoi = false }: CarteHeroProps) {
+export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, onFantome, ajouts, portee, onPiece, pourquoi = false }: CarteHeroProps) {
   const ouvrirFiche = useOuvrirPiece();
   const ouvrirPiece = onPiece ?? ouvrirFiche;
   return (
@@ -115,9 +117,9 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
 
       <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "4px -10px 0 -6px" }}>
         {categoriesAttendues ? (
-          <ZoneLookDuJour pieces={pieces} categoriesAttendues={categoriesAttendues} graine={graine} onPiece={ouvrirPiece} fantomes={fantomes} ajouts={ajouts} />
+          <ZoneLookDuJour pieces={pieces} categoriesAttendues={categoriesAttendues} graine={graine} onPiece={ouvrirPiece} fantomes={fantomes} onFantome={onFantome} ajouts={ajouts} />
         ) : (
-          <FlatLayCapsela items={pieces} context="hero-home" layoutSeed={graine} onPiece={ouvrirPiece} fantomes={fantomes} ajouts={ajouts} />
+          <FlatLayCapsela items={pieces} context="hero-home" layoutSeed={graine} onPiece={ouvrirPiece} fantomes={fantomes} onFantome={onFantome} ajouts={ajouts} />
         )}
       </div>
 

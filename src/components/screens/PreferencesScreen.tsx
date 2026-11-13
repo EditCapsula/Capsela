@@ -30,7 +30,7 @@ import { CENTRE_AIDE, CENTRE_AIDE_VALIDE } from "@/lib/centreAide";
 import { DEFAULT_PREFS, WORK_DAYS, type ProfilePrefs } from "@/lib/profile";
 import { ajouterPeriode, jourLocal, libellePeriode, periodesAVenir, periodesDe, periodeValide, retirerPeriode } from "@/lib/conges";
 import Input from "@/components/Input";
-import { diagnostiquerNotifications, envoyerNotificationEssai, notificationsDisponiblesIci, synchroniserNotifications, type DiagnosticNotifications, type EtatNotifications } from "@/lib/notifications";
+import { diagnostiquerNotifications, envoyerNotificationEssai, erreurNotifications, notificationsDisponiblesIci, synchroniserNotifications, type DiagnosticNotifications, type EtatNotifications } from "@/lib/notifications";
 import { useCapsela } from "@/lib/store";
 import type { VueReglages } from "@/lib/types";
 import Button from "@/components/Button";
@@ -141,7 +141,7 @@ function DiagnosticNotif({
       <Ligne>
         <span className="text-[13px] text-ink">Prochaine notification</span>
         <span className="text-[13px] text-muted-3 text-right">
-          {!notifEnabled ? "Désactivée" : !diag ? "…" : !diag.autorisee ? "Bloquée par le téléphone" : diag.prochaine ? quandNotification(diag.prochaine) : "Aucune programmée"}
+          {!notifEnabled ? "Désactivée" : !diag ? (erreurNotifications() ? "Lecture impossible" : "…") : !diag.autorisee ? "Bloquée par le téléphone" : diag.prochaine ? quandNotification(diag.prochaine) : "Aucune programmée"}
         </span>
       </Ligne>
       <div className="px-4 py-[12px]">
@@ -164,7 +164,7 @@ function DiagnosticNotif({
             : essai === "refusee"
               ? "Ton téléphone bloque les notifications de Capsela. Autorise-les dans ses réglages (Applications, Capsela, Notifications)."
               : essai === "indisponible"
-                ? "Le téléphone n'a pas pu programmer la notification d'essai."
+                ? `Le téléphone n'a pas pu programmer la notification d'essai${erreurNotifications() ? ` (code ${erreurNotifications()})` : ""}.`
                 : "Android peut retarder la notification de la tenue du jour pour économiser la batterie. Si elle n'arrive pas, retire Capsela des applications mises en veille, dans les réglages de batterie du téléphone."}
         </div>
       </div>
