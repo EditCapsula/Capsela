@@ -15,12 +15,16 @@ import Vignette from "@/components/VignettePiece";
 import FicheSuggestion, { type AssociationFiche } from "@/components/FicheSuggestion";
 import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
+import { generateOutfitWithFallback } from "@/lib/logic";
+import { avecTirageDeterministe, graineIdees } from "@/lib/looks";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { CATLABEL } from "@/lib/data";
 import {
   CAPSULE_SEASONS,
   computeDefaultCapsule,
   currentSeasonKey,
+  representativeWeatherFor,
+  saisonCapsuleDuJour,
   morphologieOrienteLaSelection,
   type CapsuleSeason,
 } from "@/lib/capsule";
@@ -49,6 +53,7 @@ import {
   position,
   criteresDeSelection,
   selectionDeDepart,
+  selectionDepuisTenue,
   type CleEmplacement,
   type EntreeCapsule,
   type FiltresExplorer,
@@ -307,6 +312,8 @@ export default function CapsuleScreen() {
     defilement: number;
     /** Le parcours des suggestions en cours ; `rouvrir` : la fiche se rouvre au retour (après « J'aime », « Je possède déjà »…). */
     parcours: Parcours | null;
+    /** Le numéro du tirage du moteur (« Autre tenue ») : la même tenue au retour. */
+    tirage?: number;
   };
   const repris = useContexteRepris<ContexteCapsule>("capsule");
   // Ce qui est gardé au départ de l'écran : le parcours, et s'il faut rouvrir la fiche au retour.
@@ -322,10 +329,45 @@ export default function CapsuleScreen() {
   const cleComposition = `${capsuleSeason}|${exploredStyleId ?? ""}`;
   const groupes = useMemo(() => piecesParEmplacement(entrees), [entrees]);
   const [composition, setComposition] = useState<ContexteCapsule["composition"]>(repris?.composition ?? null);
+  // LA TENUE DE DÉPART EST CELLE DU MOTEUR (13/11/2026, demandé : « afficher le vêtement dans le flat lay selon les règles du moteur. Car
+  // tout n'est pas compatible ensemble ») : generateOutfitWithFallback, le seul moteur de tenues, tiré dans les pièces de la capsule —
+  // occasion du jour, palette, colorimétrie, saison de la capsule. Une maille ou une veste n'y est que si la tenue la demande. Tirage
+  // stable (même capsule, même numéro : même tenue) ; « Autre tenue » passe au tirage suivant. La météo : celle du jour pour la capsule
+  // de la saison en cours, sinon une météo représentative de la saison choisie (une capsule d'été consultée en novembre). Une tenue
+  // retouchée à la main (les emplacements) reste le choix de la personne.
+  const [tirage, setTirage] = useState(repris?.tirage ?? 0);
+  const tenueDuMoteur = useMemo(() => {
+    const pool = entrees.map((e) => e.item);
+    if (!pool.length) return null;
+    const meteo = saisonCapsuleDuJour(weather.temp) === capsuleSeason ? weather : representativeWeatherFor(capsuleSeason);
+    const r = avecTirageDeterministe(graineIdees(tirage, cleComposition, pool), () =>
+      generateOutfitWithFallback(
+        pool,
+        meteo,
+        state.occasion || "all",
+        state.workMode,
+        state.dateContext,
+        paletteHexes(profile),
+        profile.gender,
+        capsuleSeason,
+        undefined,
+        colorimetrieMoteur(profile.colorimetrie)
+      )
+    );
+    return r.ids.length ? r.ids : null;
+  }, [entrees, weather, capsuleSeason, tirage, cleComposition, state.occasion, state.workMode, state.dateContext, profile]);
   const selection = useMemo<SelectionComposer>(
-    () => (composition && composition.cle === cleComposition ? composition.sel : selectionDeDepart(groupes, capsuleSeason)),
-    [composition, cleComposition, groupes, capsuleSeason]
+    () =>
+      composition && composition.cle === cleComposition
+        ? composition.sel
+        : ((tenueDuMoteur && selectionDepuisTenue(groupes, tenueDuMoteur)) ?? selectionDeDepart(groupes, capsuleSeason)),
+    [composition, cleComposition, groupes, capsuleSeason, tenueDuMoteur]
   );
+  /** « Autre tenue » : le tirage suivant du moteur ; la retouche manuelle en cours est oubliée. */
+  const autreTenueComposer = () => {
+    setTirage((n) => n + 1);
+    setComposition(null);
+  };
   const presents = EMPLACEMENTS.filter((e) => groupes[e.cle].length > 0);
   const actifDemande = composition && composition.cle === cleComposition ? composition.actif : null;
   const emplacementActif = presents.find((e) => e.cle === actifDemande) ?? presents[0] ?? null;
@@ -349,7 +391,7 @@ export default function CapsuleScreen() {
   const cleTenue = clePieces(piecesTenue.map((it) => it.id)).join(",");
   const tenueEnregistree = state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue);
 
-  useGarderContexte("capsule", (): ContexteCapsule => ({ onglet, filtres, grille, composition, defilement: defilement.position.current, parcours: parcoursAGarder.lire() }));
+  useGarderContexte("capsule", (): ContexteCapsule => ({ onglet, filtres, grille, composition, defilement: defilement.position.current, parcours: parcoursAGarder.lire(), tirage }));
 
   const avancerActif = (pas: 1 | -1) => {
     if (!emplacementActif) return;
@@ -842,6 +884,24 @@ export default function CapsuleScreen() {
                 </>
               )}
             </div>
+
+            {/* « Autre tenue » (13/11/2026) : la tenue suivante du moteur, dans les pièces de la capsule — les emplacements dessous
+                restent là pour la retoucher. */}
+            {tenueDuMoteur && (
+              <div className="flex justify-end mt-[8px]">
+                <button
+                  type="button"
+                  onClick={autreTenueComposer}
+                  className="inline-flex items-center gap-[7px] min-h-[44px] px-[4px] text-[13px] text-ink cursor-pointer active:opacity-70"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+                    <path d="M20 4v5h-5" />
+                  </svg>
+                  Autre tenue
+                </button>
+              </div>
+            )}
 
             {/* Les emplacements : le choisi en terracotta, sa position discrète dessous (« 3 / 11 », « Sans » pour un emplacement vide). */}
             {/* data-tour : la 3e étape de la visite guidée de la Capsule (lib/visites.ts). */}

@@ -119,6 +119,24 @@ export function selectionDeDepart(groupes: Record<CleEmplacement, EntreeCapsule[
   return sel;
 }
 
+/**
+ * LA COMPOSITION DE DÉPART VIENT DU MOTEUR (13/11/2026, demandé : « afficher le vêtement dans le flat lay selon les règles du moteur. Car
+ * tout n'est pas compatible ensemble. Je ne veux pas forcément voir de mailles »). La tenue tirée par generateOutfitWithFallback dans
+ * les pièces de la capsule devient la sélection : chaque emplacement prend la pièce que le moteur y a mise, « Sans » sinon — une maille
+ * ou une veste n'est donc là que si la tenue la demande. `null` si la tenue n'a ni haut et bas, ni robe : l'appelant garde alors la
+ * sélection d'avant (selectionDeDepart), jamais une planche vide.
+ */
+export function selectionDepuisTenue(groupes: Record<CleEmplacement, EntreeCapsule[]>, ids: readonly number[]): SelectionComposer | null {
+  const dans = new Set(ids);
+  const sel: SelectionComposer = {};
+  for (const e of EMPLACEMENTS) {
+    if (!groupes[e.cle].length) continue;
+    sel[e.cle] = groupes[e.cle].findIndex((x) => dans.has(x.item.id));
+  }
+  const base = ((sel.haut ?? -1) >= 0 && (sel.bas ?? -1) >= 0) || (sel.robe ?? -1) >= 0;
+  return base ? sel : null;
+}
+
 /** La position d'un emplacement, bornée à ses pièces (une capsule recalculée peut en avoir moins). */
 export function position(sel: SelectionComposer, cle: CleEmplacement, n: number): number {
   const p = sel[cle] ?? -1;
