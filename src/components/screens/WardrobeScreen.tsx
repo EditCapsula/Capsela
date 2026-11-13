@@ -1,5 +1,6 @@
 "use client";
 
+import TitrePage from "@/components/TitrePage";
 import { masquerMenuActions } from "@/lib/menuActions";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
@@ -302,13 +303,10 @@ export default function WardrobeScreen() {
   const enTete = (
     <>
       <AppHeader />
-      <div className="t-titre-ecran text-ink mt-[18px]" style={{ textWrap: "balance" }}>
-        Mon <span className="italic text-terracotta">dressing</span>
-      </div>
       {/* Une seule ligne : le nombre de pièces et de catégories, calculés. Plus de « places restantes » (08/10/2026). */}
-      <div className="text-[13px] text-muted mt-[8px]">
-        {!dressingLoaded ? " " : items.length > 0 ? ligneDressing(items.length, groupes.length) : synthese.texte}
-      </div>
+      <TitrePage chapeau={!dressingLoaded ? " " : items.length > 0 ? ligneDressing(items.length, groupes.length) : synthese.texte}>
+        Mon <span className="italic text-terracotta">dressing</span>
+      </TitrePage>
     </>
   );
 
@@ -497,10 +495,9 @@ export default function WardrobeScreen() {
           onBack={filtre?.retour === "tenue" ? actions.goTenues : filtre?.retour === "journal" ? actions.goHistory : undefined}
           backLabel={filtre?.retour === "journal" ? "Revenir au Journal" : "Revenir à ma tenue"}
         />
-        <div className="t-titre-ecran text-ink mt-[18px]">
+        <TitrePage chapeau={pl(items.length)}>
           Mon <span className="italic text-terracotta">dressing</span>
-        </div>
-        <div className="text-[13px] text-muted-3 mt-[4px]">{pl(items.length)}</div>
+        </TitrePage>
         {/* data-tour : la recherche et les catégories, cible de la visite guidée « Dressing » (lib/visites.ts). */}
         <div data-tour="dressing-filtres">
         <label className="mt-3 flex items-center gap-[10px] h-[44px] pl-[14px] pr-[6px] rounded-full bg-card border" style={{ borderColor: recherche ? "var(--color-terracotta-deep)" : "var(--color-border)" }}>

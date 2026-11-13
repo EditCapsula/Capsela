@@ -44,7 +44,7 @@ export default function BarreDuJour({
 }: {
   className?: string;
   retro?: RetroJour;
-  /** La température et la condition sur UNE ligne (« 9° · Nuageux », 12/11/2026, page « Ma tenue du jour »). L'accueil garde les deux lignes. */
+  /** La température et la condition sur UNE ligne (« 9° · Nuageux », 12/11/2026) : Ma tenue du jour, puis l'accueil le même jour (demandé). */
   meteoEnLigne?: boolean;
 }) {
   const { actions } = useCapsela();

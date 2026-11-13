@@ -1,5 +1,6 @@
 "use client";
 
+import TitrePage from "@/components/TitrePage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import AppHeader from "@/components/AppHeader";
@@ -646,8 +647,16 @@ export default function CapsuleScreen() {
           sur le choix des saisons (brief, 2.2) : ni pastilles permanentes, ni chevron. « N looks possibles » reste retiré
           (22/09/2026, compteur faux de ×0,5 à ×1,7) : le nombre affiché est compté, pas estimé.
         */}
-        <div className="mt-[18px]">
-          <h1 className="t-titre-ecran text-ink">
+        <TitrePage
+          chapeau={
+            <>
+              {pieces(capsule.length)} {capsule.length > 1 ? "sélectionnées" : "sélectionnée"}{" "}
+              {exploredStyleLabel ? "dans ce style" : "pour composer ton style"}
+              {possedees.length > 0 && <>, et {pieces(possedees.length)} de ton dressing.</>}
+              {!possedees.length && "."}
+            </>
+          }
+        >
             Ma Capsule{" "}
             <button
               type="button"
@@ -658,13 +667,8 @@ export default function CapsuleScreen() {
             >
               {capsuleSeason}
             </button>
-          </h1>
-          <div className="t-chapeau text-ink-soft mt-[6px]">
-            {pieces(capsule.length)} {capsule.length > 1 ? "sélectionnées" : "sélectionnée"}{" "}
-            {exploredStyleLabel ? "dans ce style" : "pour composer ton style"}
-            {possedees.length > 0 && <>, et {pieces(possedees.length)} de ton dressing.</>}
-            {!possedees.length && "."}
-          </div>
+        </TitrePage>
+        <div>
           <div className="text-[12px] text-muted leading-[1.5] mt-[4px]">
             {exploredStyleLabel ? (
               <>

@@ -20,7 +20,7 @@ import { useCapsela } from "@/lib/store";
 /**
  * LE CENTRE DE NOTIFICATIONS (12/11/2026, brief « Implémentation du centre de notifications », lib/centreNotifications.ts).
  *
- * Ouvert par la cloche de l'accueil (AppHeader). En tête : le retour (vers l'écran d'où l'on vient), le titre centré, le menu « ••• »
+ * Ouvert par la cloche des pages majeures (AppHeader : Accueil, Dressing, Capsule, Planifier, Journal). En tête : le retour (vers l'écran d'où l'on vient), le titre centré, le menu « ••• »
  * (une feuille, le seul composant posé par-dessus l'écran — règle du 22/10/2026) avec « Tout marquer comme lu ». Dessous, quatre
  * filtres (Toutes, Actions, Conseils, Valise), puis les notifications par période : Aujourd'hui, Cette semaine, Plus anciennes.
  *

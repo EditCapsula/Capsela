@@ -1,5 +1,6 @@
 "use client";
 
+import TitrePage from "@/components/TitrePage";
 import { t } from "@/lib/langue";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
 import { styleDuLook, texteEditorialLook } from "@/lib/editorialLook";
@@ -469,20 +470,22 @@ export default function HomeScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-safe-nav">
       <div className="px-6">
         {/* Le calendrier est une entrée GLOBALE, pas un onglet : un bouton dans la gouttière gauche du bandeau (05/10/2026). */}
-        <AppHeader cloche />
+        <AppHeader />
       </div>
 
       {/* ══ MAQUETTE « ACCUEIL V9 » (07/10/2026), reprise intégralement : salutation, jour et météo, look du jour sur fond
           sable, puis une seule section « Tout pour ton style ». Les sections « Pour aller plus loin », « Ton dressing » (catégories)
           et « Ta capsule » (bannière) et la carte Avis de styliste n'y figurent pas : l'avis reste accessible depuis le Journal. */}
-      <div className="px-6 mt-[18px]">
-        <div className="t-display text-ink">
+      <div className="px-6">
+        {/* Le titre des pages majeures (TitrePage, 12/11/2026) : la salutation quitte t-display (28 px) pour la taille des autres. */}
+        <TitrePage>
           {t("Bonjour,")} <span className="italic text-terracotta">{firstNameOrYou}</span>
-        </div>
+        </TitrePage>
         {/* LE JOUR ET SA MÉTÉO (navigation par date, partagée avec Tenue) : le jour se change par ses chevrons, la météo
             ouvre les réglages « Localisation & météo » (BarreDuJour, maquette V9). */}
         <BarreDuJour
           className="mt-1"
+          meteoEnLigne
           retro={{
             jours: retroActif,
             date: dateRetro,
