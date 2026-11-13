@@ -7,6 +7,7 @@ import { styleDuLook, texteEditorialLook, titreEnLigne } from "@/lib/editorialLo
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import { lireChoixChaussures, oublierChoixChaussures } from "@/lib/intentionTenue";
 import BarreDuJour from "@/components/BarreDuJour";
 import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
@@ -589,7 +590,9 @@ export default function TenuesScreen() {
   const idsAutresStyles = new Set(chaussuresAutresStyles.map((i) => i.id));
   /** La provenance dite sur la vignette : le style nommé pour une pièce d'un autre style. */
   const autreStyle = (it: Item) => (idsAutresStyles.has(it.id) ? (styleAffiche(it, profile.styles, profile.gender) ?? undefined) : undefined);
-  const [choixChaussuresOuvert, setChoixChaussuresOuvert] = useState(false);
+  // Arrivée par le « + » de la silhouette de l'accueil (13/11/2026, intentionTenue.ts) : la feuille s'ouvre d'elle-même.
+  const [choixChaussuresOuvert, setChoixChaussuresOuvert] = useState(lireChoixChaussures);
+  useEffect(() => oublierChoixChaussures(), []);
   // LES PAIRES PROPOSÉES ONT LEUR VISUEL (30/10/2026, signalé : les sabots d'intérieur, dont l'image avait été retirée pour être refaite,
   // restaient sans image) : comme les pièces de la tenue ci-dessus, une pièce du catalogue montrée sans visuel en déclenche la
   // génération — les vignettes de la rangée, et toutes celles de la feuille quand elle est ouverte. Même garde que plus haut.

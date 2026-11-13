@@ -8,6 +8,7 @@ import { styleDuLook, texteEditorialLook } from "@/lib/editorialLook";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
 import { useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import { demanderChoixChaussures } from "@/lib/intentionTenue";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
 import { useOuvrirPiece } from "@/components/useOuvrirPiece";
@@ -437,6 +438,14 @@ export default function HomeScreen() {
         graine={cleSlide(slide.ids)}
         categoriesAttendues={duJour ? categoriesAttendues : undefined}
         fantomes={sansChaussures(pieces)}
+        // LA SILHOUETTE DE CHAUSSURES EST ACTIONNABLE (13/11/2026, demandé) : son « + » ouvre la tenue et sa feuille « Choisir des
+        // chaussures », les paires adaptées du dressing, de la capsule puis du catalogue — le composant de Ma tenue du jour, tel quel.
+        onFantome={(cat) => {
+          if (cat !== "chaussures") return;
+          demanderChoixChaussures();
+          if (duJour) actions.goTenues();
+          else actions.consulterTenue(slide.ids, slide.occasion, null);
+        }}
         ajouts={duJour ? conseilVeste : undefined}
         onVoir={() => actions.consulterTenue(slide.ids, slide.occasion, slide.source === "plan" ? (planHero?.id ?? null) : null)}
         sauvegardee={duJour ? sauvegardee : dejaSauvegardee(idsDuLook)}
@@ -620,7 +629,7 @@ export default function HomeScreen() {
           {passee ? (
             <FlatLayCapsela items={piecesPassee} context="hero-home" layoutSeed={clePieces(piecesPassee.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
           ) : aucuneTenuePossible ? null : (
-            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={toucherPiece(outfitPieces, remplacerTenueDuJour)} fantomes={sansChaussures(outfitPieces)} ajouts={conseilVeste} />
+            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={toucherPiece(outfitPieces, remplacerTenueDuJour)} fantomes={sansChaussures(outfitPieces)} onFantome={(cat) => cat === "chaussures" && (demanderChoixChaussures(), actions.goTenues())} ajouts={conseilVeste} />
           )}
         </div>
 
