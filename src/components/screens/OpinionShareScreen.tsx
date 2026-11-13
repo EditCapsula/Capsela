@@ -9,6 +9,7 @@ import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { OCC_LABELS } from "@/lib/data";
 import { composeOutfitImage } from "@/lib/outfitImage";
+import { partageNatifDisponible, partagerNatif } from "@/lib/partageNatif";
 import { buildOpinionMessageParts, formatOpinionMessage } from "@/lib/selectors";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -93,7 +94,7 @@ import { degres } from "@/lib/unites";
  * quand elle est connue, et qu'il suffit de répondre dans la conversation —
  * jamais un lien ni un bouton vers l'application. Section « Ce que ton proche
  * recevra » : l'aperçu est rendu depuis les mêmes parties que le texte
- * partagé et copié (buildOpinionMessageParts). L'image partagée porte une
+ * partagé et copié (buildOpinionMessageParts). L'image partagée porte le logo (13/11/2026) ; avant, une
  * signature discrète (outfitImage.ts).
  *
  * AUCUNE PROMESSE SUR LE RETOUR. La réponse du proche arrive là où il l'a
@@ -105,7 +106,8 @@ import { degres } from "@/lib/unites";
 /** Capacités lues par useSyncExternalStore : l'export statique rend le HTML sans navigateur. */
 const abonnementInerte = () => () => {};
 const faux = () => false;
-const litPartage = () => typeof navigator !== "undefined" && typeof navigator.share === "function";
+// Dans l'app, la feuille de partage du téléphone (partageNatif.ts, 13/11/2026) : message ET image, toujours.
+const litPartage = () => partageNatifDisponible() || (typeof navigator !== "undefined" && typeof navigator.share === "function");
 const litCopie = () => typeof navigator !== "undefined" && Boolean(navigator.clipboard?.writeText);
 
 /**
@@ -115,6 +117,7 @@ const litCopie = () => typeof navigator !== "undefined" && Boolean(navigator.cli
  * fichier témoin, seule façon d'obtenir une réponse fiable.
  */
 const litPartageFichier = () => {
+  if (partageNatifDisponible()) return true;
   if (typeof navigator === "undefined" || typeof navigator.canShare !== "function") return false;
   try {
     return navigator.canShare({ files: [new File([new Uint8Array(1)], "t.png", { type: "image/png" })] });
@@ -298,6 +301,20 @@ export default function OpinionShareScreen() {
     setEtat("partage");
     setNote(null);
     try {
+      // DANS L'APP (13/11/2026) : la feuille de partage du téléphone, avec l'image signée du logo.
+      if (partageNatifDisponible()) {
+        const fichierNatif = imageJointe ? await composeOutfitImage(urlsPieces) : null;
+        const r = await partagerNatif(message, fichierNatif);
+        if (r.resultat === "annule") return;
+        if (r.resultat === "echec") {
+          if (await copier(true)) setToast("Partage indisponible — message copié");
+          else setNote("Le partage n'a pas abouti. Sélectionne le message pour le copier à la main.");
+          return;
+        }
+        if (imageJointe && !r.avecImage) setNote("L'image n'a pas pu être jointe — seul le texte est parti.");
+        setToast(r.avecImage ? "Tenue et image partagées" : "Tenue partagée");
+        return;
+      }
       const fichier = imageJointe ? await composeOutfitImage(urlsPieces) : null;
       // Re-vérifié AVEC le vrai fichier : canShare peut refuser ce type ou
       // cette taille précise, là où le fichier témoin passait.

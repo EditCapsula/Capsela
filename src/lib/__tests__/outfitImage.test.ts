@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { caseDeLaPiece, grillePour } from "../outfitImage";
+import { caseDeLaPiece, grillePour, MARGE_BAS } from "../outfitImage";
 
 /**
  * La grille de la planche partagée.
@@ -37,6 +37,15 @@ describe("placement des pièces", () => {
         expect(x + taille, `n=${n} i=${i} droite`).toBeLessThanOrEqual(COTE + 0.001);
         expect(y + taille, `n=${n} i=${i} bas`).toBeLessThanOrEqual(COTE + 0.001);
         expect(taille, `n=${n} taille`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("laisse la marge du bas au logo (13/11/2026)", () => {
+    for (let n = 1; n <= 8; n++) {
+      for (let i = 0; i < n; i++) {
+        const { y, taille } = caseDeLaPiece(i, n, COTE);
+        expect(y + taille, `n=${n} i=${i}`).toBeLessThanOrEqual(COTE - MARGE_BAS + 0.001);
       }
     }
   });
