@@ -19,7 +19,6 @@ import { dressingPhotoPath, estPhotoMiseAPlat, type CodeMiseAPlat } from "@/lib/
 import { isSupabaseConfigured } from "@/lib/supabase";
 import BottomSheet from "@/components/BottomSheet";
 import AppHeader from "@/components/AppHeader";
-import LogoCapsela from "@/components/LogoCapsela";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -226,7 +225,8 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
               <CroixFiche onClick={revenir} />
             </div>
           ) : (
-            <AppHeader onBack={revenir} />
+            // Sans logo (13/11/2026, option b) : la photo reste en tête, le nom de la pièce en titre juste dessous.
+            <AppHeader onBack={revenir} sansLogo />
           )}
 
           <div
@@ -336,10 +336,8 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
                 {/* UNE SEULE FAÇON DE FERMER UNE FICHE (13/11/2026, harmonisation des fiches) : en feuille, la croix en haut à droite,
                     comme toutes les feuilles ; en page, le retour à gauche, comme tous les écrans. */}
                 {enFeuille ? <span /> : <BoutonRetour onClick={revenir} label="Revenir à l'écran précédent" />}
-                {/* Pas de logo dans une feuille (17/10/2026, demandé) : la marque est déjà sur l'écran, juste dessous. */}
-                {!enFeuille && (
-                  <LogoCapsela />
-                )}
+                {/* Plus de logo, ni en feuille (17/10/2026) ni en page (13/11/2026, option b : le logo ne reste que sur l'accueil ; la photo
+                    reste en tête et le nom de la pièce en titre juste dessous). */}
                 <span className="flex items-center gap-[6px]">
                   <button
                     onClick={() => setMenuOpen(true)}
@@ -365,7 +363,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
                   {wornStatusLabel}
                 </span>
               </div>
-              <h1 className="t-titre-ecran text-ink mt-[6px]">
+              <h1 className="t-titre-page text-ink mt-[6px]">
                 {titre.debut}
                 {titre.fin && (
                   <>

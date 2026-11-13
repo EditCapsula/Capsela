@@ -31,6 +31,7 @@ export default function AppHeader({
   gauche,
   cloche,
   titre,
+  sansLogo = false,
   calendrier = false,
   point = true,
 }: {
@@ -58,6 +59,11 @@ export default function AppHeader({
    * retour s'il y en a un. Un point final le signe, comme celui du logo (`point={false}` pour un titre qui finit par « ? » ou « ! »).
    */
   titre?: React.ReactNode;
+  /**
+   * Le bandeau sans logo ni titre (13/11/2026, option b) : la fiche d'une pièce du dressing, page produit dont le titre est le nom
+   * de la pièce, sous la photo. Le retour et l'avatar gardent leur place.
+   */
+  sansLogo?: boolean;
   point?: boolean;
   /**
    * L'icône calendrier (13/11/2026) : sur l'accueil, dans la gouttière gauche du logo centré ; dans Planifier, ferrée à droite avant
@@ -168,7 +174,7 @@ export default function AppHeader({
         {!onBack && gauche}
         {calendrier && boutonCalendrier}
       </div>
-      {dark ? (
+      {sansLogo ? null : dark ? (
         <LogoCapsela taille="sm" claire />
       ) : (
         <LogoCapsela />
