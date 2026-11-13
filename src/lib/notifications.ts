@@ -155,6 +155,18 @@ export function prochaineTenueProgrammee(attente: readonly { id: number; schedul
   return dates[0] ?? null;
 }
 
+/**
+ * LA DERNIÈRE ERREUR DU TÉLÉPHONE (13/11/2026, signalé sur Android : « Le téléphone n'a pas pu programmer la notification d'essai »,
+ * et « Prochaine notification » restée sur « … ») : son code (OS-PLUG-LNOT-…) ou son message, affiché par Réglages pour que la
+ * prochaine panne se diagnostique sans débogueur. null tant que tout va bien.
+ */
+let derniereErreur: string | null = null;
+export const erreurNotifications = () => derniereErreur;
+function noterErreur(e: unknown): void {
+  const err = e as { code?: unknown; message?: unknown } | null;
+  derniereErreur = (typeof err?.code === "string" && err.code) || (typeof err?.message === "string" && err.message) || String(e);
+}
+
 /** Ce que le téléphone sait ; null sur le web ou si le téléphone ne répond pas. Ne demande jamais l'autorisation. */
 export async function diagnostiquerNotifications(): Promise<DiagnosticNotifications | null> {
   if (!notificationsDisponiblesIci()) return null;
@@ -162,9 +174,11 @@ export async function diagnostiquerNotifications(): Promise<DiagnosticNotificati
     const { LocalNotifications } = await import("@capacitor/local-notifications");
     const autorisee = (await LocalNotifications.checkPermissions()).display === "granted";
     const { notifications } = await LocalNotifications.getPending();
+    derniereErreur = null;
     return { autorisee, prochaine: prochaineTenueProgrammee(notifications, new Date()) };
   } catch (e) {
     console.warn("[notifications] diagnostic impossible", e);
+    noterErreur(e);
     return null;
   }
 }
@@ -177,12 +191,17 @@ export async function envoyerNotificationEssai(): Promise<"envoyee" | "refusee" 
     let permission = (await LocalNotifications.checkPermissions()).display;
     if (permission !== "granted") permission = (await LocalNotifications.requestPermissions()).display;
     if (permission !== "granted") return "refusee";
+    // INEXACTE, COMME LES AUTRES (13/11/2026) : sans `isExactNotification: false`, le module la croit exacte (sa valeur par défaut) et,
+    // sur Android 12 et plus, ouvre la demande « Alarmes et rappels » — autorisation que le manifeste retire (cf. l'en-tête) : l'essai
+    // échouait alors (« Le téléphone n'a pas pu programmer la notification d'essai »). Elle part tout de suite : rien à exactifier.
     await LocalNotifications.schedule({
-      notifications: [{ id: ID_ESSAI, title: "Notification d'essai", body: "Les notifications de Capsela arrivent bien sur ce téléphone.", smallIcon: "ic_stat_capsela" }],
+      notifications: [{ id: ID_ESSAI, title: "Notification d'essai", body: "Les notifications de Capsela arrivent bien sur ce téléphone.", smallIcon: "ic_stat_capsela", isExactNotification: false }],
     });
+    derniereErreur = null;
     return "envoyee";
   } catch (e) {
     console.warn("[notifications] essai impossible", e);
+    noterErreur(e);
     return "indisponible";
   }
 }
