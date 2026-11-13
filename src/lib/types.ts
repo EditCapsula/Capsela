@@ -648,14 +648,17 @@ export interface AppState {
   lookReturn: "wardrobe" | "looks";
   /** Carte du vestiaire qui filtre « Mes pièces » sur ses catégories techniques ; null = toutes les pièces. */
   filtrePieces: FiltrePieces | null;
-  /** L'aperçu d'une pièce ouvert depuis un hero (14/10/2026) : une feuille posée sur l'écran, pas une page. Id de la pièce, ou null. */
-  pieceApercu: number | null;
   /**
    * La fiche détaillée d'une pièce ouverte EN FEUILLE (15/10/2026, demandé : « depuis la homepage, au clic sur une pièce, ouvrir la fiche
    * détaillée dans une feuille ») : l'écran d'où elle a été ouverte, qui reste dessous. null : aucune. Une navigation vers un autre écran
    * la referme (App).
    */
   ficheEnFeuille: { ecran: Screen } | null;
+  /**
+   * LA FICHE D'UNE SUGGESTION, depuis n'importe quel écran (13/11/2026, harmonisation des fiches) : la même que dans la Capsule
+   * (FicheSuggestion, votes compris), sans le parcours. L'écran d'où elle a été ouverte reste dessous. null : aucune.
+   */
+  ficheSuggestion: { id: number; ecran: Screen } | null;
 }
 
 /**

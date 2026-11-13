@@ -59,7 +59,8 @@ import LoginScreen from "./screens/LoginScreen";
 import OpinionShareScreen from "./screens/OpinionShareScreen";
 import CreateLookScreen from "./screens/CreateLookScreen";
 import FicheEnFeuille from "@/components/FicheEnFeuille";
-import ApercuPiece from "./ApercuPiece";
+import FicheSuggestionGlobale from "@/components/FicheSuggestionGlobale";
+import FeuillePieceGlobale from "@/components/FeuillePieceGlobale";
 import LookDetailScreen from "./screens/LookDetailScreen";
 import ItemOutfitsScreen from "./screens/ItemOutfitsScreen";
 import IdeeLookScreen from "./screens/IdeeLookScreen";
@@ -322,8 +323,11 @@ function Screens() {
       <MenuActions />
       <LegalDocOverlay />
       <ConfirmationAjout auDessusDeLaBarre={showTabbar} />
-      <ApercuPiece />
       <FicheEnFeuille />
+      {/* La fiche d'une suggestion, la même que dans la Capsule, depuis tous les écrans (13/11/2026). */}
+      <FicheSuggestionGlobale />
+      {/* La feuille courte d'une pièce vue dans un look qui ne se modifie pas (13/11/2026). */}
+      <FeuillePieceGlobale />
       {/* Les visites guidées (lib/visites.ts) : un seul composant, le seul qui manipule Driver.js. */}
       <VisiteGuidee />
       <Analytics />

@@ -487,4 +487,6 @@ export const EN: Record<string, string> = {
   "{n} pièce à ajouter": "{n} piece to add",
   "{n} pièces à ajouter": "{n} pieces to add",
   "Ton prochain départ : {voyage}, {quand}{detail}. Voir ma valise": "Your next trip: {voyage}, {quand}{detail}. See my suitcase",
+  // --- Harmonisation des fiches (13/11/2026) ---
+  Suggestion: "Suggestion",
 };

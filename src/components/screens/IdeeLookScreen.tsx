@@ -131,7 +131,7 @@ export default function IdeeLookScreen() {
             <button
               key={it.id}
               type="button"
-              onClick={() => actions.openItem(it.id, !possedee)}
+              onClick={() => ouvrirPiece(it)}
               className="w-full text-left flex items-center gap-[12px] bg-card border border-border rounded-bloc p-[10px] cursor-pointer"
             >
               <div

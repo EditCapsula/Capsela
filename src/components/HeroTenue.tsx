@@ -10,7 +10,6 @@ import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { CATLABEL, isBag } from "@/lib/data";
 import { clePieces } from "@/lib/outfitFeedback";
-import { useCapsela } from "@/lib/store";
 import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import type { Item } from "@/lib/types";
 
@@ -200,9 +199,15 @@ export function RailPiecesTenue({
   misEnAvant = null,
   chargement = false,
   disposition = "rail",
+  onPiece,
 }: {
   pieces: Item[];
   onRemplacer?: (piece: Item) => void;
+  /**
+   * Le toucher d'une pièce (13/11/2026, harmonisation des fiches) : la feuille courte de la pièce, avec « Remplacer » quand l'écran passe
+   * le sien (useRemplacementPiece) ; sinon la feuille de consultation commune (useOuvrirPiece). Plus la fiche complète directement.
+   */
+  onPiece?: (piece: Item) => void;
   misEnAvant?: number | null;
   chargement?: boolean;
   /**
@@ -211,7 +216,8 @@ export function RailPiecesTenue({
    */
   disposition?: "rail" | "grille";
 }) {
-  const { actions } = useCapsela();
+  const ouvrirParDefaut = useOuvrirPiece();
+  const ouvrir = onPiece ?? ouvrirParDefaut;
   if (disposition === "grille" && !chargement) {
     if (!pieces.length) return null;
     return (
@@ -226,7 +232,7 @@ export function RailPiecesTenue({
               <li key={it.id} className="relative min-w-0">
                 <button
                   type="button"
-                  onClick={() => actions.openItem(it.id, suggested)}
+                  onClick={() => ouvrir(it)}
                   aria-label={`${it.name} — ${categorie}, ${suggested ? "capsule" : "dressing"}. Voir le détail`}
                   className="w-full text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer active:opacity-80 transition-shadow duration-[1200ms] ease-out"
                   style={{ boxShadow: misEnAvant === it.id ? "0 0 0 1.5px var(--color-terracotta)" : "0 0 0 1.5px rgba(166,105,80,0)" }}
@@ -256,7 +262,7 @@ export function RailPiecesTenue({
                     <span className="block text-[11px] text-muted mt-[2px]">{categorie}</span>
                     {/* Provenance à la pièce — la même séparation que la ligne du hero (isCatalogId), jamais un second calcul. */}
                     <span className="block text-[11px] mt-[1px]" style={{ color: suggested ? "var(--color-sand-text)" : "var(--color-muted)" }}>
-                      {suggested ? t("Capsule") : t("Dressing")}
+                      {suggested ? t("Suggestion") : t("Ton dressing")}
                     </span>
                   </span>
                 </button>
@@ -304,7 +310,7 @@ export function RailPiecesTenue({
             <div key={it.id} className="flex-none w-[112px]" style={{ scrollSnapAlign: "start" }}>
               <div className="relative">
                 <button
-                  onClick={() => actions.openItem(it.id, suggested)}
+                  onClick={() => ouvrir(it)}
                   aria-label={`${it.name} — ${CATLABEL[isBag(it) ? "sac" : it.cat]}. Voir le détail`}
                   className="relative block w-[112px] h-[112px] rounded-bloc overflow-hidden cursor-pointer transition-shadow duration-[1200ms] ease-out"
                   style={{

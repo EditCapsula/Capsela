@@ -1,17 +1,15 @@
-import { isCatalogId } from "@/lib/catalog";
-import { useCapsela } from "@/lib/store";
+import { ouvrirFeuillePiece } from "@/components/FeuillePieceGlobale";
 import type { Item } from "@/lib/types";
 
 /**
- * L'OUVERTURE D'UNE PIÈCE depuis un hero (accueil, carrousel, Tenue, look planifié…). Du 14/10/2026 au 15/10/2026 : un APERÇU en
- * feuille (ApercuPiece), puis « Voir la fiche ». Depuis le 15/10/2026 (demandé : « au clic sur une pièce depuis le hero, affiche la
- * page détaillée de la pièce ») : la FICHE directement, en suggestion pour une pièce de la capsule — la même destination que le
- * bouton « Voir la fiche » de l'aperçu, une étape de moins. La flèche de la fiche ramène à l'écran du hero (pieceReturn). Depuis
- * l'accueil, la fiche s'ouvre dans une feuille (FicheEnFeuille, 15/10/2026).
+ * L'OUVERTURE D'UNE PIÈCE VUE DANS UN LOOK (hero, flat lay, grille, rail, idée de look, avis d'un proche).
+ *
+ * Historique : un aperçu en feuille (14/10/2026), puis la fiche complète directement (15/10/2026), puis, sur les flat lays de l'accueil,
+ * de Tenue et de Planifier, la feuille courte avec « Remplacer » (12/11/2026, RemplacementPiece). Depuis le 13/11/2026 (harmonisation
+ * des fiches, validée : « une pièce vue dans un look ouvre la feuille courte partout ») : la même feuille courte, sans « Remplacer »
+ * là où le look ne se modifie pas (FeuillePieceGlobale) ; « Voir » ouvre la fiche complète, ou la fiche de suggestion. Un écran dont
+ * le look se modifie passe son propre `onPiece` (useRemplacementPiece).
  */
 export function useOuvrirPiece() {
-  const { actions } = useCapsela();
-  // Dans une feuille posée sur l'écran courant (FicheEnFeuille) : depuis l'accueil le 15/10/2026, depuis toutes les pages le 04/11/2026
-  // (openItem, store.tsx).
-  return (it: Item) => actions.openItem(it.id, isCatalogId(it.id));
+  return (it: Item) => ouvrirFeuillePiece(it);
 }

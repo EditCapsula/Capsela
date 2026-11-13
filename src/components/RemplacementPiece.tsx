@@ -43,7 +43,12 @@ export interface ConfigRemplacement {
 const DUREE_ANNULER_MS = 6000;
 
 /** Une seule feuille par écran ; chaque flat lay passe SON look au toucher (`ouvrir(piece, config)`) — le carrousel en a plusieurs. */
-export function useRemplacementPiece(): { ouvrir: (it: Item, config: ConfigRemplacement) => void; rendu: React.ReactNode } {
+export function useRemplacementPiece(): {
+  ouvrir: (it: Item, config: ConfigRemplacement) => void;
+  /** Les alternatives d'emblée (« ⇄ » sur une carte de pièce, 13/11/2026) : la même grille que « Remplacer », sans passer par la pièce. */
+  remplacer: (it: Item, config: ConfigRemplacement) => void;
+  rendu: React.ReactNode;
+} {
   const { actions } = useCapsela();
   const [piece, setPiece] = useState<Item | null>(null);
   const [vue, setVue] = useState<"piece" | "remplacer">("piece");
@@ -102,7 +107,6 @@ export function useRemplacementPiece(): { ouvrir: (it: Item, config: ConfigRempl
   };
 
   const suggestion = piece ? estSuggestion(piece) : false;
-  const lien = piece && suggestion ? lienAffiliationValide(piece.affLink) : null;
 
   const rendu = (
     <>
@@ -111,47 +115,15 @@ export function useRemplacementPiece(): { ouvrir: (it: Item, config: ConfigRempl
           étiquette (le mode `surtitre` de BottomSheet, celui des fiches de suggestion) : « ✦ Suggestion Capsela » ou « Ton dressing ». La
           photo prend toute la largeur, en entier (bornée en hauteur pour laisser voir les actions) ; dessous, la marque en surtitre si elle
           est connue, puis le nom en Bodoni. */}
-      <BottomSheet title={suggestion ? "✦ Suggestion Capsela" : "Ton dressing"} surtitre open={Boolean(piece) && vue === "piece"} onClose={fermer}>
-        {piece && (
-          <>
-            <div className="mx-auto" style={{ width: "min(100%, calc(46vh * 0.8))" }}>
-              <PhotoPiece piece={piece} ratio={0.8} rayon={22} entiere />
-            </div>
-            <div className="text-center mt-[18px]">
-              {piece.brand && <div className="t-surtitre text-muted-3">{piece.brand}</div>}
-              <h2 className={"t-titre-ecran text-ink " + (piece.brand ? "mt-[6px]" : "")} style={{ textWrap: "balance" }}>
-                {piece.name}
-              </h2>
-            </div>
-            <div className="grid grid-cols-2 gap-[10px] mt-5">
-              <Button
-                variante="contour"
-                onClick={() => {
-                  const id = piece.id;
-                  fermer();
-                  actions.openItem(id, suggestion);
-                }}
-              >
-                Voir
-              </Button>
-              <Button variante="principal" onClick={ouvrirRemplacement}>
-                Remplacer
-              </Button>
-            </div>
-            {lien && (
-              <a
-                href={lien}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-[10px] flex items-center justify-center rounded-full border border-border text-terracotta t-bouton cursor-pointer"
-                style={{ minHeight: 52 }}
-              >
-                Acheter cette pièce
-              </a>
-            )}
-          </>
-        )}
-      </BottomSheet>
+      <VuePiece
+        piece={vue === "piece" ? piece : null}
+        onFermer={fermer}
+        onVoir={(p) => {
+          fermer();
+          actions.openItem(p.id, estSuggestion(p));
+        }}
+        onRemplacer={ouvrirRemplacement}
+      />
 
       <BottomSheet title="Remplacer" open={Boolean(piece) && vue === "remplacer"} onClose={fermer}>
         {piece && alternatives.length === 0 && (
@@ -199,6 +171,12 @@ export function useRemplacementPiece(): { ouvrir: (it: Item, config: ConfigRempl
       setVue("piece");
       setPiece(it);
     },
+    remplacer: (it: Item, config: ConfigRemplacement) => {
+      configRef.current = config;
+      setAlternatives(alternativesClassees(config.look, it, poolDeRemplacement(it, config.dressing, config.suggestions), config.contexte));
+      setPiece(it);
+      setVue("remplacer");
+    },
     rendu,
   };
 }
@@ -217,4 +195,53 @@ export function useContexteLook(p: { occasion: ContexteLook["occasion"]; weather
     colorimetrie: colorimetrieMoteur(profile.colorimetrie),
     gender: profile.gender,
   };
+}
+
+/**
+ * LA VUE D'UNE PIÈCE DU LOOK (13/11/2026, harmonisation des fiches) : la même feuille courte partout où une pièce est vue dans un look —
+ * flat lays, grille « Les pièces de ton look », idée de look, avis d'un proche. La provenance en tête, la photo entière, la marque, le
+ * nom ; « Voir » (la fiche complète, ou la fiche de suggestion), « Remplacer » seulement là où la tenue se modifie, « Acheter cette pièce »
+ * pour une suggestion au lien valide.
+ */
+export function VuePiece({ piece, onFermer, onVoir, onRemplacer }: { piece: Item | null; onFermer: () => void; onVoir: (p: Item) => void; onRemplacer?: () => void }) {
+  const suggestion = piece ? estSuggestion(piece) : false;
+  const lien = piece && suggestion ? lienAffiliationValide(piece.affLink) : null;
+  return (
+    <BottomSheet title={suggestion ? "✦ Suggestion Capsela" : "Ton dressing"} surtitre open={Boolean(piece)} onClose={onFermer}>
+      {piece && (
+        <>
+          <div className="mx-auto" style={{ width: "min(100%, calc(46vh * 0.8))" }}>
+            <PhotoPiece piece={piece} ratio={0.8} rayon={22} entiere />
+          </div>
+          <div className="text-center mt-[18px]">
+            {piece.brand && <div className="t-surtitre text-muted-3">{piece.brand}</div>}
+            <h2 className={"t-titre-ecran text-ink " + (piece.brand ? "mt-[6px]" : "")} style={{ textWrap: "balance" }}>
+              {piece.name}
+            </h2>
+          </div>
+          <div className={"grid gap-[10px] mt-5 " + (onRemplacer ? "grid-cols-2" : "grid-cols-1")}>
+            <Button variante={onRemplacer ? "contour" : "principal"} onClick={() => onVoir(piece)}>
+              Voir
+            </Button>
+            {onRemplacer && (
+              <Button variante="principal" onClick={onRemplacer}>
+                Remplacer
+              </Button>
+            )}
+          </div>
+          {lien && (
+            <a
+              href={lien}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="mt-[10px] flex items-center justify-center rounded-full border border-border text-terracotta t-bouton cursor-pointer"
+              style={{ minHeight: 52 }}
+            >
+              Acheter cette pièce
+            </a>
+          )}
+        </>
+      )}
+    </BottomSheet>
+  );
 }

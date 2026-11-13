@@ -302,8 +302,8 @@ function buildInitialState(): AppState {
     activeLookId: null,
     lookReturn: "wardrobe",
     filtrePieces: null,
-    pieceApercu: null,
     ficheEnFeuille: null,
+    ficheSuggestion: null,
   };
 }
 
@@ -327,12 +327,8 @@ export interface Actions {
   goNeverWorn: () => void;
   /** `filtre` : carte du vestiaire — n'affiche que les pièces de ses catégories techniques. */
   goWardrobePieces: (filtre?: FiltrePieces) => void;
-  /** Ouvre / ferme l'aperçu d'une pièce (feuille) depuis un hero. */
-  ouvrirApercuPiece: (id: number) => void;
-  /** La fiche complète d'une pièce, dans une feuille posée sur l'écran courant (accueil). */
-  ouvrirFicheEnFeuille: (id: number, suggested: boolean) => void;
+  fermerFicheSuggestion: () => void;
   fermerFicheEnFeuille: () => void;
-  fermerApercuPiece: () => void;
   goLooks: () => void;
   goProfile: () => void;
   /**
@@ -1987,11 +1983,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     oublierPlanDirect: () => setState((s) => (s.planDirect ? { ...s, planDirect: false } : s)),
     goNeverWorn: () => go("neverworn"),
     // « Mes pièces » est fusionné dans le Dressing (14/10/2026) : le filtre (catégorie, couleur venue de Tenue) s'applique à la grille du Dressing.
-    ouvrirApercuPiece: (id) => setState((s) => ({ ...s, pieceApercu: id })),
-    ouvrirFicheEnFeuille: (id, suggested) =>
-      setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, ficheEnFeuille: { ecran: s.screen } })),
+    // L'aperçu d'une pièce (ApercuPiece, 14/10/2026) et l'ouverture « fiche en feuille » à part sont retirés le 13/11/2026 : plus aucun
+    // écran ne les ouvrait (harmonisation des fiches) — la feuille courte (VuePiece) et openItem les remplacent.
     fermerFicheEnFeuille: () => setState((s) => (s.ficheEnFeuille ? { ...s, ficheEnFeuille: null } : s)),
-    fermerApercuPiece: () => setState((s) => (s.pieceApercu == null ? s : { ...s, pieceApercu: null })),
+    fermerFicheSuggestion: () => setState((s) => (s.ficheSuggestion ? { ...s, ficheSuggestion: null } : s)),
     goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobe" })),
     // Ouvrir Mes looks depuis le Dressing repart à neuf ; seul le retour du détail d'un look retrouve le filtre et le défilement.
     goLooks: () => {
@@ -2320,9 +2315,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // pièce, capsule ou dressing, elle s'ouvre dans une bottom sheet sans logo Capsela en en-tête »). Le mécanisme de l'accueil
     // (FicheEnFeuille, 15/10/2026) devient celui de tous les écrans : la page reste dessous, intacte, et la retrouve à la fermeture.
     // Seule la fiche plein écran déjà ouverte (screen « piece ») garde la navigation d'avant.
+    // Une SUGGESTION ouvre sa fiche de suggestion, la même partout (13/11/2026, FicheSuggestionGlobale) ; une pièce du dressing, la fiche
+    // complète en feuille. Depuis la fiche d'une pièce (enchaînement), la page reste celle de la fiche.
     openItem: (id, suggested = false) =>
       setState((s) =>
-        s.screen === "piece"
+        suggested && s.screen !== "piece"
+          ? { ...s, ficheSuggestion: { id, ecran: s.screen }, ficheEnFeuille: null }
+          : s.screen === "piece"
           ? { ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" }
           : { ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, ficheEnFeuille: { ecran: s.screen } }
       ),

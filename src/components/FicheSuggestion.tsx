@@ -1,5 +1,6 @@
 "use client";
 
+import { lienAffiliationValide } from "@/lib/remplacementPiece";
 import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
@@ -63,7 +64,8 @@ export default function FicheSuggestion({
   onAimer: () => void;
   onRejeter: () => void;
   onPossede: () => void;
-  onRemplacer: () => void;
+  /** « Remplacer cette pièce » : dans la Capsule seulement (elle recompose la capsule d'une saison) ; absent, l'entrée du menu aussi. */
+  onRemplacer?: () => void;
   onVoirTenues: () => void;
   /** « Composer avec cette pièce » (onglet Composer) — absent quand la pièce n'a pas d'emplacement dans la composition. */
   onComposer?: () => void;
@@ -111,12 +113,12 @@ export default function FicheSuggestion({
       onClose={onFermer}
       entete={
         <>
-          <span
-            className="text-[12px] text-muted tabular-nums flex-shrink-0"
-            aria-label={`Suggestion ${position} sur ${total}`}
-          >
-            {position} / {total}
-          </span>
+          {/* Le parcours (« 3 / 10 », barre) dans la Capsule seulement : ouverte d'ailleurs, la fiche montre une pièce (13/11/2026). */}
+          {total > 1 && (
+            <span className="text-[12px] text-muted tabular-nums flex-shrink-0" aria-label={`Suggestion ${position} sur ${total}`}>
+              {position} / {total}
+            </span>
+          )}
           <button
             type="button"
             onClick={() => setMenu((m) => !m)}
@@ -139,6 +141,7 @@ export default function FicheSuggestion({
         </>
       }
       bandeau={
+        total > 1 && (
         <div
           className="h-[3px] flex-shrink-0"
           style={{ background: "var(--color-chip-soft-bg)" }}
@@ -153,6 +156,7 @@ export default function FicheSuggestion({
             style={{ width: `${progression * 100}%` }}
           />
         </div>
+        )
       }
       pied={
         <>
@@ -182,8 +186,9 @@ export default function FicheSuggestion({
                 </svg>
                 Pas pour moi
               </span>
+              {/* Hors de la Capsule, pas de suivante : la pièce sort de la capsule (13/11/2026). */}
               <span className="text-[11px] text-muted">
-                Passer à la suivante
+                {total > 1 ? "Passer à la suivante" : "La retirer de ma capsule"}
               </span>
             </button>
             <button
@@ -247,14 +252,16 @@ export default function FicheSuggestion({
           >
             Voir des tenues avec cette pièce
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => (setMenu(false), onRemplacer())}
-            className="w-full text-left px-4 py-[13px] text-[13px] text-ink cursor-pointer"
-          >
-            Remplacer cette pièce
-          </button>
+          {onRemplacer && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => (setMenu(false), onRemplacer())}
+              className="w-full text-left px-4 py-[13px] text-[13px] text-ink cursor-pointer"
+            >
+              Remplacer cette pièce
+            </button>
+          )}
         </div>
       )}
 
@@ -347,16 +354,16 @@ export default function FicheSuggestion({
       </div>
 
       {/* Le lien marchand, quand il existe (aucun au 02/11/2026) : discret, la recommandation passe avant la vente. */}
-      {piece.affLink && (
+      {lienAffiliationValide(piece.affLink) && (
         <div className="text-center mt-[14px]">
           <a
-            href={piece.affLink}
+            href={lienAffiliationValide(piece.affLink)!}
             target="_blank"
             rel="noopener noreferrer sponsored"
             onClick={onClicAffilie}
             className="inline-block text-[13px] text-terracotta underline underline-offset-4 py-[6px]"
           >
-            Découvrir la pièce
+            Acheter cette pièce
           </a>
           <div className="text-[11px] text-muted">
             Lien partenaire : Capsela peut percevoir une commission, sans

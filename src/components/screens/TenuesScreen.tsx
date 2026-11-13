@@ -123,7 +123,7 @@ function VignetteChoix({
           />
         )}
         <Badge tone={suggeree ? "plein" : "possede"} taille="s" className="absolute top-[7px] left-[7px]">
-          {autreStyle ?? (suggeree ? t("Suggérée") : t("Ton dressing"))}
+          {autreStyle ?? (suggeree ? t("Suggestion") : t("Ton dressing"))}
         </Badge>
       </button>
       <div className="text-[12.5px] text-ink leading-[1.3] mt-[7px] line-clamp-2 min-h-[2.6em]">{it.name}</div>
@@ -789,6 +789,18 @@ export default function TenuesScreen() {
     if (sens) actions.setOccasion(occasionVoisine(OCCASIONS.map(([k]) => k), state.occasion, sens));
   };
 
+  // Le remplacement d'une pièce de la tenue du jour : une seule configuration pour le flat lay, la grille et ⇄ (13/11/2026).
+  const configTenue = {
+    look: piecesDuLook,
+    contexte: contexteRemplacement,
+    dressing: state.items,
+    suggestions: defaultCapsule,
+    appliquer: (a: number, n: number) => {
+      actions.remplacerDansTenue(a, n);
+      return true;
+    },
+  };
+
   return (
     <div
       className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav"
@@ -977,18 +989,7 @@ export default function TenuesScreen() {
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
             <div className="absolute inset-y-0 left-2 right-2">
-              <FlatLayCapsela items={piecesDuLook} context="look-detail" layoutSeed={clePieces(piecesDuLook.map((p) => p.id)).join(",")} fantomes={fantomesHero} onFantome={(cat) => (cat === "chaussures" ? completerChaussures() : actions.openAddForCategory(cat))} onPiece={(it) =>
-                  remplacement.ouvrir(it, {
-                    look: piecesDuLook,
-                    contexte: contexteRemplacement,
-                    dressing: state.items,
-                    suggestions: defaultCapsule,
-                    appliquer: (a, n) => {
-                      actions.remplacerDansTenue(a, n);
-                      return true;
-                    },
-                  })
-                } ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
+              <FlatLayCapsela items={piecesDuLook} context="look-detail" layoutSeed={clePieces(piecesDuLook.map((p) => p.id)).join(",")} fantomes={fantomesHero} onFantome={(cat) => (cat === "chaussures" ? completerChaussures() : actions.openAddForCategory(cat))} onPiece={(it) => remplacement.ouvrir(it, configTenue)} ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
             </div>
           </div>
           <div className="flex-shrink-0">
@@ -1327,7 +1328,7 @@ export default function TenuesScreen() {
                             />
                           )}
                           <Badge tone={suggereeDuCatalogue ? "plein" : "possede"} taille="s" className="absolute top-[7px] left-[7px]">
-                            {suggereeDuCatalogue ? t("Suggérée") : t("Ton dressing")}
+                            {suggereeDuCatalogue ? t("Suggestion") : t("Ton dressing")}
                           </Badge>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1443,7 +1444,10 @@ export default function TenuesScreen() {
         pieces={piecesDuLook}
         chargement={meteoEnAttente}
         misEnAvant={recentlyAddedId}
-        onRemplacer={(it) => actions.swapPiece(it.id, it.cat)}
+        // ⇄ ouvre la grille d'alternatives, la même que « Remplacer » (13/11/2026, harmonisation des fiches, validée) ; avant : un
+        // échange immédiat au hasard (swapPiece), sans choix. Le toucher d'une pièce, la même feuille courte que le flat lay.
+        onRemplacer={(it) => remplacement.remplacer(it, configTenue)}
+        onPiece={(it) => remplacement.ouvrir(it, configTenue)}
         disposition="grille"
       />
 
