@@ -60,8 +60,8 @@ export default function AppHeader({
   titre?: React.ReactNode;
   point?: boolean;
   /**
-   * L'icône calendrier (13/11/2026) : sur l'accueil, dans la gouttière gauche du logo centré ; dans Planifier, ferrée à droite avant
-   * la cloche, le titre de la page occupant la gauche. Plus sur les autres pages.
+   * L'icône calendrier (13/11/2026) : sur l'accueil seul, dans la gouttière gauche du logo centré. Dans Mon agenda, elle est passée
+   * dans la page (« Voir mon calendrier ») pour ne jamais prendre la place de la cloche, qui reste au même endroit partout.
    */
   calendrier?: boolean;
 }) {
@@ -70,7 +70,7 @@ export default function AppHeader({
   // L'entrée GLOBALE du calendrier (05/10/2026), posée dans la gouttière gauche de TOUS les écrans de premier niveau
   // (Accueil, Dressing, Capsule, Journal, Planifier) : un même bandeau partout (07/10/2026). Un écran à retour, à action
   // ou d'avant-connexion garde sa gouttière.
-  // Depuis le 13/11/2026, le calendrier ne vit plus que sur l'accueil et dans Planifier (`calendrier`).
+  // Depuis le 13/11/2026, le calendrier du bandeau ne vit plus que sur l'accueil (`calendrier`).
   const premierNiveau = !onBack && gauche === undefined && !action && showAvatar && !dark;
   const avecCloche = cloche ?? premierNiveau;
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
@@ -142,7 +142,6 @@ export default function AppHeader({
           </TitreDePage>
         </div>
         <div className="flex-shrink-0 flex items-center gap-2">
-          {calendrier && boutonCalendrier}
           {boutonCloche}
           {boutonAvatar}
         </div>

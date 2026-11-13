@@ -10,6 +10,7 @@ import { useContexteRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { sansBarre } from "@/lib/phraseOccasion";
 import AgendaLooks, { type EtatAgenda } from "@/components/AgendaLooks";
 import AppHeader from "@/components/AppHeader";
+import { PointRappel, useRappelValise } from "@/components/RappelValise";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
@@ -521,6 +522,8 @@ const cleDesCriteres = (c: Pick<ResultatGarde, "choisies" | "dressingSeul" | "hu
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, vestiairePool, wardrobePool, etatPremium, actions } = useCapsela();
   const { profile, userId } = useAuth();
+  // Le point de rappel d'un départ proche, sur le lien « Voir mon calendrier » du hub (13/11/2026).
+  const rappelValise = useRappelValise();
   // « Adapter mon look » (12/10/2026) : le parcours s'ouvre sur la composition adaptée à la météo prévue, au pas « quand » du plan, avec ses
   // pièces et son lieu déjà posés (même mécanisme que « Modifier ce look » / « Tenue déjà planifiée » : la composition est imposée, le plan
   // est remplacé à l'enregistrement). Lu UNE fois, à l'ouverture ; l'état global est vidé par l'effet plus bas.
@@ -1534,10 +1537,10 @@ export default function PlanifierScreen() {
                 ? "Revenir à Planifier"
                 : "Revenir à l'étape précédente"
           }
-          // Sur le hub seulement : « Mon agenda. » dans le bandeau et le calendrier, ferré à droite (13/11/2026, demandé). Les vues
-          // du parcours gardent leur bandeau et leur titre propres.
+          // Sur le hub seulement : « Mon agenda. » dans le bandeau (13/11/2026, demandé). Les vues du parcours gardent leur bandeau.
+          // Le calendrier n'est pas dans le bandeau : la cloche y reste, comme sur toutes les pages majeures, et le calendrier passe
+          // dans la page (« Voir mon calendrier », sous la phrase d'introduction).
           titre={vue === "intro" ? <>Mon <span className="italic">agenda</span></> : undefined}
-          calendrier={vue === "intro"}
         />
       </div>
 
@@ -1565,6 +1568,28 @@ export default function PlanifierScreen() {
                 l'onglet, est retiré (TitrePage, 12/11/2026). */}
             {/* Sur une ligne comme les autres titres (13/11/2026, validé) : « Capsela s'occupe du look » passe en tête de la phrase. */}
             <TitrePage chapeau="Capsela s'occupe du look : des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing." />
+            {/* LE CALENDRIER DANS LA PAGE (13/11/2026, arbitré : pas à la place de la cloche, qui reste au même endroit partout) : on
+                passe de ses projets à la vue du mois ou de la semaine. Le point de rappel d'un départ proche le suit. */}
+            <button
+              type="button"
+              onClick={actions.goCalendrier}
+              aria-label={rappelValise ? "Voir mon calendrier, un départ approche" : "Voir mon calendrier"}
+              className="mt-[12px] w-full min-h-[48px] flex items-center gap-[12px] px-[14px] rounded-bloc border border-border bg-card text-left cursor-pointer active:opacity-70"
+            >
+              <span className="relative block text-ink flex-shrink-0">
+                <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                  <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
+                    <path d="M3.5 10h17M8 3.5v4M16 3.5v4" />
+                  </g>
+                </svg>
+                {rappelValise && <PointRappel />}
+              </span>
+              <span className="flex-1 min-w-0 text-[14px] font-semibold text-ink">Voir mon calendrier</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="text-muted-3 flex-shrink-0">
+                <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
 
             {/* LES DEUX VISUELS ÉDITORIAUX sont ceux d'avant (recette du 26/09/2026, fournis par la propriétaire) : une tenue
                 pour « Planifier une tenue », la valise ouverte pour « Préparer ma valise » — les deux pour un profil femme,
