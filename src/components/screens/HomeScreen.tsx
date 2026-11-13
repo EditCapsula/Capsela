@@ -515,10 +515,10 @@ export default function HomeScreen() {
       <div
         // data-tour : la tenue du jour sans carrousel (une seule proposition) est aussi la cible de la visite (lib/visites.ts).
         data-tour="accueil-tenue"
-        className="mx-4 mt-3 rounded-hero grid gap-2"
+        className="mx-4 mt-3 rounded-hero grid gap-2 grille-hero"
         // 358 × 307 px sur 390 (calibrage du 08/10/2026) : la marge du hero est de 16 px, 8 px de moins que la gouttière du reste de
         // l'écran. La colonne de la composition fait 181 px (zone 181 × 203), moins sur un écran étroit : le texte garde sa place.
-        style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
+        style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", minHeight: 307 }}
       >
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-[7px]">

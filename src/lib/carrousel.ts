@@ -1,3 +1,4 @@
+import { aTraduire } from "./langue";
 import type { OccasionKey } from "./types";
 
 /*
@@ -16,14 +17,14 @@ import type { OccasionKey } from "./types";
 export type SlideId = "travail" | "quotidien" | "sport" | "soiree" | "date" | "voyage" | "cocooning" | "ceremonie";
 
 export const SLIDES: readonly { id: SlideId; occasion: OccasionKey; surtitre: string }[] = [
-  { id: "travail", occasion: "travail_formel", surtitre: "Pour le travail" },
-  { id: "quotidien", occasion: "quotidien", surtitre: "Pour ton quotidien" },
-  { id: "sport", occasion: "sport", surtitre: "Pour ton sport" },
-  { id: "soiree", occasion: "soiree", surtitre: "Pour ta soirée" },
-  { id: "date", occasion: "date", surtitre: "Pour ton rendez-vous" },
-  { id: "voyage", occasion: "voyage", surtitre: "Pour ton voyage" },
-  { id: "cocooning", occasion: "cocooning", surtitre: "Pour ton cocooning" },
-  { id: "ceremonie", occasion: "evenement_perso", surtitre: "Pour une cérémonie" },
+  { id: "travail", occasion: "travail_formel", surtitre: aTraduire("Pour le travail") },
+  { id: "quotidien", occasion: "quotidien", surtitre: aTraduire("Pour ton quotidien") },
+  { id: "sport", occasion: "sport", surtitre: aTraduire("Pour ton sport") },
+  { id: "soiree", occasion: "soiree", surtitre: aTraduire("Pour ta soirée") },
+  { id: "date", occasion: "date", surtitre: aTraduire("Pour ton rendez-vous") },
+  { id: "voyage", occasion: "voyage", surtitre: aTraduire("Pour ton voyage") },
+  { id: "cocooning", occasion: "cocooning", surtitre: aTraduire("Pour ton cocooning") },
+  { id: "ceremonie", occasion: "evenement_perso", surtitre: aTraduire("Pour une cérémonie") },
 ];
 
 export type TypeDeJour = "travail" | "repos" | "conges";

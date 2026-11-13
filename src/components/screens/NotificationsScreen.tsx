@@ -90,7 +90,8 @@ export default function NotificationsScreen() {
         </button>
       </div>
 
-      <div role="tablist" aria-label="Catégories de notifications" className="scrollarea flex gap-2 overflow-x-auto pt-[18px] pb-[6px] -mx-6 px-6" style={{ scrollbarWidth: "none" }}>
+      {/* Quatre pastilles de même largeur, toujours sur la largeur de l'écran (13/11/2026) : à 320 px, la rangée défilait. */}
+      <div role="tablist" aria-label="Catégories de notifications" className="grid grid-cols-4 gap-[6px] pt-[18px] pb-[6px]">
         {FILTRES.map((f) => {
           const actif = filtre === f.id;
           return (
@@ -101,7 +102,7 @@ export default function NotificationsScreen() {
               aria-selected={actif}
               onClick={() => setFiltre(f.id)}
               className={
-                "flex-shrink-0 h-[40px] px-[15px] rounded-full border text-[12.5px] font-medium whitespace-nowrap cursor-pointer " +
+                "h-[40px] px-1 rounded-full border text-[12.5px] font-medium whitespace-nowrap cursor-pointer min-w-0 " +
                 (actif ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
               }
             >

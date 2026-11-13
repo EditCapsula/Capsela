@@ -1,4 +1,5 @@
 import { miseEnValeurDuGenre, miseEnValeurPosee, PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
+import { langue, t } from "./langue";
 import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
 import type { PeriodeConges } from "./conges";
 export { PAL_COULEURS } from "./palCouleurs";
@@ -376,8 +377,10 @@ export function stylesLabels(styles: readonly string[], gender: Gender | null): 
 
 /** « Preppy », « Preppy et Casual chic », « Preppy, Casual chic et Bohème » : le texte d'un profil à un, deux ou trois styles. */
 export function libelleStyles(styles: readonly string[], gender: Gender | null): string {
-  const l = stylesLabels(styles, gender);
-  return l.length <= 1 ? (l[0] ?? "") : `${l.slice(0, -1).join(", ")} et ${l[l.length - 1]}`;
+  // Traduits à l'affichage (13/11/2026, libellesDonnees.ts) : « Minimalist and Streetwear » en anglais.
+  const l = stylesLabels(styles, gender).map((x) => t(x));
+  const et = langue() === "en" ? "and" : "et";
+  return l.length <= 1 ? (l[0] ?? "") : `${l.slice(0, -1).join(", ")} ${et} ${l[l.length - 1]}`;
 }
 
 /**

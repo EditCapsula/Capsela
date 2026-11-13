@@ -1,5 +1,6 @@
 import { DAYS_FR, MONTHS_FR } from "./data";
 import { dansUnePeriode } from "./conges";
+import { langue } from "./langue";
 import type { ProfilePrefs } from "./profile";
 import type { OccasionKey } from "./types";
 
@@ -31,8 +32,20 @@ export function dateDuJour(decalage: number, maintenant: Date = new Date()): Dat
 
 const jourSemaine = (d: Date) => DAYS_FR[d.getDay()].toLowerCase();
 
+// L'anglais (13/11/2026, docs/traduction.md) : les mêmes libellés, dans l'ordre et la grammaire de l'anglais — pas un mot à mot.
+const DAYS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const anglais = () => langue() === "en";
+
 /** « Aujourd'hui · dimanche 27 », « Demain · lundi 28 », « Mardi 29 septembre ». */
 export function libelleJour(decalage: number, d: Date): string {
+  if (anglais()) {
+    const jour = `${DAYS_EN[d.getDay()]} ${d.getDate()}`;
+    if (decalage === 0) return `Today · ${jour}`;
+    if (decalage === 1) return `Tomorrow · ${jour}`;
+    if (decalage === -1) return `Yesterday · ${jour}`;
+    return `${jour} ${MONTHS_EN[d.getMonth()]}`;
+  }
   if (decalage === 0) return `Aujourd'hui · ${jourSemaine(d)} ${d.getDate()}`;
   if (decalage === 1) return `Demain · ${jourSemaine(d)} ${d.getDate()}`;
   if (decalage === -1) return `Hier · ${jourSemaine(d)} ${d.getDate()}`;
@@ -43,6 +56,12 @@ const JOURS_ABREGES = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 
 /** Libellé court, sur la ligne de la localisation : « Aujourd'hui », « Demain », « Mar. 29 ». */
 export function libelleJourCourt(decalage: number, d: Date): string {
+  if (anglais()) {
+    if (decalage === 0) return "Today";
+    if (decalage === 1) return "Tomorrow";
+    if (decalage === -1) return "Yesterday";
+    return `${DAYS_EN[d.getDay()].slice(0, 3)} ${d.getDate()}`;
+  }
   if (decalage === 0) return "Aujourd'hui";
   if (decalage === 1) return "Demain";
   if (decalage === -1) return "Hier";
@@ -51,6 +70,8 @@ export function libelleJourCourt(decalage: number, d: Date): string {
 
 /** Le second temps du titre de Tenue : « du jour », « de demain », « du mardi 29 ». */
 export function complementTenue(decalage: number, d: Date): string {
+  // « My outfit of the day », « My outfit for tomorrow », « My outfit for Tuesday 29 ».
+  if (anglais()) return decalage === 0 ? "of the day" : decalage === 1 ? "for tomorrow" : `for ${DAYS_EN[d.getDay()]} ${d.getDate()}`;
   if (decalage === 0) return "du jour";
   if (decalage === 1) return "de demain";
   return `du ${jourSemaine(d)} ${d.getDate()}`;

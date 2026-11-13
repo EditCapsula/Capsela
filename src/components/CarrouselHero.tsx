@@ -77,15 +77,15 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
   return (
     <div
       // flex-1 : toutes les slides prennent la hauteur de la plus haute (la piste les étire) — pas de saut de hauteur au glissé (18/10/2026).
-      className="rounded-hero grid gap-2 flex-1"
-      style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
+      className="rounded-hero grid gap-2 flex-1 grille-hero"
+      style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", minHeight: 307 }}
     >
       <div className="flex flex-col min-w-0">
         <div className="flex items-center gap-[7px]">
           <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
             <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <span className="t-surtitre text-ink whitespace-nowrap">{surtitre}</span>
+          <span className="t-surtitre text-ink whitespace-nowrap">{t(surtitre)}</span>
         </div>
         {/* Un cran plus petit depuis que le titre nomme les pièces de la tenue (17/10/2026, titreDeLaTenue) : à 27 px, « La robe
             portefeuille et les baskets blanches » prenait cinq lignes. */}

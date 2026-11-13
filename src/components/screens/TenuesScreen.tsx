@@ -498,10 +498,12 @@ export default function TenuesScreen() {
     if (!total) return null;
     const capsule = suggestedCount;
     const dressing = total - capsule;
-    const pieces = (n: number) => `${n} ${n <= 1 ? "pièce" : "pièces"}`;
+    const deux = dressing > 0 && capsule > 0;
     const lignes: { cle: string; glyphe: string; texte: string }[] = [];
-    if (dressing > 0) lignes.push({ cle: "dressing", glyphe: "◔", texte: `${pieces(dressing)} de ton dressing` });
-    if (capsule > 0) lignes.push({ cle: "capsule", glyphe: "⬚", texte: `${pieces(capsule)} de ta capsule` });
+    if (dressing > 0)
+      lignes.push({ cle: "dressing", glyphe: "◔", texte: deux ? t("{n} de ton dressing", { n: dressing }) : tn(dressing, "{n} pièce de ton dressing", "{n} pièces de ton dressing") });
+    if (capsule > 0)
+      lignes.push({ cle: "capsule", glyphe: "⬚", texte: deux ? t("{n} de ta capsule", { n: capsule }) : tn(capsule, "{n} pièce de ta capsule", "{n} pièces de ta capsule") });
     if (!lignes.length) return null;
     /*
      * UNE SEULE SOURCE : la phrase s'ouvre (22/09/2026). « Une sélection de
@@ -512,7 +514,6 @@ export default function TenuesScreen() {
      */
     // Compactes depuis le 30/10/2026 : les deux pastilles et « Autre tenue » tiennent sur une ligne (demandé). « 3 de ton dressing »,
     // « 1 de ta capsule » ; une seule source garde son nombre de pièces, sans « Une sélection de ».
-    if (lignes.length === 2) return lignes.map((l) => ({ ...l, texte: l.texte.replace(/ pièces? /, " ") }));
     return lignes;
   })();
 
@@ -946,11 +947,11 @@ export default function TenuesScreen() {
                 {badgesAffiches.map((key) =>
                   key === "recommande" ? (
                     <Badge key={key} tone="surTerracotta" taille="s">
-                      {BADGE_RECOMMANDE}
+                      {t(BADGE_RECOMMANDE)}
                     </Badge>
                   ) : (
                     <Badge key={key} tone="surTerracottaContour" taille="s">
-                      {BADGE_REGISTRE}
+                      {t(BADGE_REGISTRE)}
                     </Badge>
                   )
                 )}

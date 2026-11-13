@@ -1,5 +1,6 @@
 "use client";
 
+import { libelle } from "@/lib/traductions/libellesDonnees";
 import { useState } from "react";
 import { IconeTuile } from "@/components/PlanifierUI";
 import { useDonneesJour, type RetroJour } from "@/components/JourMeteo";
@@ -111,16 +112,16 @@ export default function BarreDuJour({
         </div>
 
         {!enAttente && temp != null && (
-          <div className="flex-shrink-0 text-right" aria-label={`${degres(temp)}${label ? `, ${label}` : ""}`}>
+          <div className="flex-shrink-0 text-right" aria-label={`${degres(temp)}${label ? `, ${libelle(label)}` : ""}`}>
             <div className="flex items-center justify-end gap-[6px] text-terracotta">
               <IconeTuile nom={soleil ? "apresmidi" : "nuage"} taille={meteoEnLigne ? 18 : 22} />
               <span className={(meteoEnLigne ? "text-[15px]" : "text-[20px]") + " font-medium text-ink tabular-nums whitespace-nowrap"}>
                 {degres(temp)}
                 {/* Sur une ligne dès 360 px ; plus étroit, la condition repasse dessous pour laisser la ville lisible. */}
-                {meteoEnLigne && label && <span className="hidden min-[360px]:inline text-[13px] font-normal text-muted"> · {label}</span>}
+                {meteoEnLigne && label && <span className="hidden min-[360px]:inline text-[13px] font-normal text-muted"> · {libelle(label)}</span>}
               </span>
             </div>
-            {label && <div className={"text-[11px] text-muted mt-[2px] whitespace-nowrap" + (meteoEnLigne ? " min-[360px]:hidden" : "")}>{label}</div>}
+            {label && <div className={"text-[11px] text-muted mt-[2px] whitespace-nowrap" + (meteoEnLigne ? " min-[360px]:hidden" : "")}>{libelle(label)}</div>}
             {amplitude && <div className="text-[11px] text-muted-3 whitespace-nowrap tabular-nums">Max {degres(amplitude.max)} · min {degres(amplitude.min)}</div>}
           </div>
         )}
@@ -191,12 +192,12 @@ export function BarreDuPlan({
           </span>
         </div>
         {temp != null && (
-          <div className="flex-shrink-0 text-right" aria-label={`${degres(temp)}${label ? `, ${label}` : ""}`}>
+          <div className="flex-shrink-0 text-right" aria-label={`${degres(temp)}${label ? `, ${libelle(label)}` : ""}`}>
             <div className="flex items-center justify-end gap-[6px] text-terracotta">
               <IconeTuile nom={soleil ? "apresmidi" : "nuage"} taille={22} />
               <span className="text-[20px] font-medium text-ink tabular-nums">{degres(temp)}</span>
             </div>
-            {label && <div className="text-[11px] text-muted mt-[2px] whitespace-nowrap">{label}</div>}
+            {label && <div className="text-[11px] text-muted mt-[2px] whitespace-nowrap">{libelle(label)}</div>}
             {prevision && <div className="text-[11px] text-muted-3 whitespace-nowrap tabular-nums">Max {degres(prevision.tempMax)} · min {degres(prevision.tempMin)}</div>}
           </div>
         )}
