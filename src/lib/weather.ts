@@ -18,6 +18,29 @@ export interface PositionLue {
  * (NSLocationWhenInUseUsageDescription). Le site web garde l'API du navigateur.
  */
 export async function getBrowserPosition(): Promise<PositionLue | null> {
+  const r = await lirePosition();
+  return "pos" in r ? r.pos : null;
+}
+
+/**
+ * POURQUOI LA POSITION N'A PAS ÉTÉ LUE (13/11/2026, signalé : « quand je clique sur utiliser ma position actuelle […] cela n'est pas pris
+ * en compte »). « Utiliser ma position actuelle » échouait en silence : rien ne disait si l'autorisation manquait, si la localisation
+ * du téléphone était coupée ou si elle avait mis trop de temps. `lirePosition` rend la raison, que l'écran dit.
+ */
+export type RaisonPosition = "refusee" | "desactivee" | "delai" | "indisponible";
+
+/** La raison d'une erreur du plugin ou du navigateur, d'après son code ou son message. */
+export function raisonErreurPosition(e: unknown): RaisonPosition {
+  const err = e as { code?: unknown; message?: unknown } | null;
+  if (typeof err?.code === "number") return err.code === 1 ? "refusee" : err.code === 3 ? "delai" : "indisponible";
+  const texte = `${typeof err?.code === "string" ? err.code : ""} ${typeof err?.message === "string" ? err.message : String(e)}`.toLowerCase();
+  if (/denied|permission|refus/.test(texte)) return "refusee";
+  if (/disabled|not enabled|services|désactiv/.test(texte)) return "desactivee";
+  if (/timeout|timed out|time out|délai/.test(texte)) return "delai";
+  return "indisponible";
+}
+
+export async function lirePosition(): Promise<{ pos: PositionLue } | { raison: RaisonPosition }> {
   if (estNatif()) {
     try {
       const { Geolocation } = await import("@capacitor/geolocation");
@@ -25,23 +48,30 @@ export async function getBrowserPosition(): Promise<PositionLue | null> {
       const accordee = statut.location === "granted" || statut.coarseLocation === "granted";
       if (!accordee) {
         const demande = await Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] });
-        if (demande.location !== "granted" && demande.coarseLocation !== "granted") return null;
+        if (demande.location !== "granted" && demande.coarseLocation !== "granted") return { raison: "refusee" };
       }
-      const pos = await Geolocation.getCurrentPosition({ timeout: 8000, maximumAge: 10 * 60 * 1000, enableHighAccuracy: false });
-      return { coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } };
-    } catch {
+      try {
+        const pos = await Geolocation.getCurrentPosition({ timeout: 8000, maximumAge: 10 * 60 * 1000, enableHighAccuracy: false });
+        return { pos: { coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } } };
+      } catch (e) {
+        // Sans position récente, la localisation « économe » (réseau) peut ne rien rendre à temps : un second essai par le GPS.
+        if (raisonErreurPosition(e) !== "delai" && raisonErreurPosition(e) !== "indisponible") throw e;
+        const pos = await Geolocation.getCurrentPosition({ timeout: 15000, maximumAge: 10 * 60 * 1000, enableHighAccuracy: true });
+        return { pos: { coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } } };
+      }
+    } catch (e) {
       // Refus, service de localisation coupé, délai : la ville du profil prend le relais, comme sur le web.
-      return null;
+      return { raison: raisonErreurPosition(e) };
     }
   }
   return new Promise((resolve) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      resolve(null);
+      resolve({ raison: "indisponible" });
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } }),
-      () => resolve(null),
+      (pos) => resolve({ pos: { coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } } }),
+      (e) => resolve({ raison: raisonErreurPosition(e) }),
       { timeout: 8000, maximumAge: 10 * 60 * 1000 }
     );
   });

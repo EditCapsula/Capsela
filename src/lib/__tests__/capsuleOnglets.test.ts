@@ -17,6 +17,7 @@ import {
   piecesParEmplacement,
   raisonsComposition,
   selectionDeDepart,
+  selectionDepuisTenue,
   type EntreeCapsule,
 } from "../capsuleOnglets";
 import { EMPTY_PROFILE, type Profile } from "../profile";
@@ -51,6 +52,19 @@ describe("Composer", () => {
   it("au départ : haut, bas et chaussures ; la robe attend s'il y a un haut et un bas ; la veste hors été", () => {
     expect(piecesComposees(groupes, selectionDeDepart(groupes, "Automne")).map((e) => e.item.id)).toEqual([3, 4, 7, 6]);
     expect(piecesComposees(groupes, selectionDeDepart(groupes, "Été")).map((e) => e.item.id)).toEqual([3, 4, 6]);
+  });
+
+  it("la tenue du moteur devient la sélection : « Sans » là où il n'a rien mis (13/11/2026)", () => {
+    const sel = selectionDepuisTenue(groupes, [1, 4, 6]);
+    expect(sel).not.toBeNull();
+    expect(piecesComposees(groupes, sel!).map((e) => e.item.id)).toEqual([1, 4, 6]);
+    expect(sel!.dessus).toBe(-1);
+    expect(piecesComposees(groupes, selectionDepuisTenue(groupes, [5, 6])!).map((e) => e.item.id)).toEqual([5, 6]);
+  });
+
+  it("une tenue sans haut et bas ni robe ne remplace pas la sélection de départ", () => {
+    expect(selectionDepuisTenue(groupes, [6, 7])).toBeNull();
+    expect(selectionDepuisTenue(groupes, [])).toBeNull();
   });
 
   it("une flèche ne change QUE son emplacement, en boucle", () => {

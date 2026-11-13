@@ -1683,7 +1683,10 @@ export default function ValiseScreen() {
           <div className="mt-5">
             <CarteInfo glyphe={G_CINTRE}>
               {dressing.length
-                ? `Ta valise sera composée avec les ${dressing.length} ${dressing.length > 1 ? "pièces" : "pièce"} de ton dressing, complétées si besoin par ta capsule.`
+                ? // Accordé au nombre (13/11/2026, vu sur une capture : « avec les 1 pièce de ton dressing, complétées »).
+                  dressing.length > 1
+                  ? `Ta valise sera composée avec les ${dressing.length} pièces de ton dressing, complétées si besoin par ta capsule.`
+                  : "Ta valise sera composée avec la pièce de ton dressing, complétée si besoin par ta capsule."
                 : "Ton dressing est encore vide : ta valise sera composée avec les pièces de ta capsule."}{" "}
               <button onClick={actions.openAddEtRevenir} className="text-terracotta cursor-pointer">
                 Ajouter des pièces
