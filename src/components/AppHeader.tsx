@@ -31,7 +31,6 @@ export default function AppHeader({
   gauche,
   cloche,
   titre,
-  logo,
   calendrier = false,
   point = true,
 }: {
@@ -55,14 +54,15 @@ export default function AppHeader({
   cloche?: boolean;
   /**
    * LE TITRE DE LA PAGE À LA PLACE DU LOGO (13/11/2026, demandé ; planche « option A », graisse 500, tout en noir). Le logo ne reste
-   * que sur l'accueil (`logo="gauche"`) ; ailleurs, le titre remonte dans le bandeau, à gauche de la cloche et de l'avatar, après le
+   * que sur l'accueil, centré ; ailleurs, le titre remonte dans le bandeau, à gauche de la cloche et de l'avatar, après le
    * retour s'il y en a un. Un point final le signe, comme celui du logo (`point={false}` pour un titre qui finit par « ? » ou « ! »).
    */
   titre?: React.ReactNode;
   point?: boolean;
-  /** L'accueil seul : le logo ferré à gauche, sans calendrier (13/11/2026). */
-  logo?: "gauche";
-  /** L'icône calendrier, dans Planifier seulement, ferrée à droite avant la cloche (13/11/2026). */
+  /**
+   * L'icône calendrier (13/11/2026) : sur l'accueil, dans la gouttière gauche du logo centré ; dans Planifier, ferrée à droite avant
+   * la cloche, le titre de la page occupant la gauche. Plus sur les autres pages.
+   */
   calendrier?: boolean;
 }) {
   const { profile, email } = useAuth();
@@ -70,7 +70,7 @@ export default function AppHeader({
   // L'entrée GLOBALE du calendrier (05/10/2026), posée dans la gouttière gauche de TOUS les écrans de premier niveau
   // (Accueil, Dressing, Capsule, Journal, Planifier) : un même bandeau partout (07/10/2026). Un écran à retour, à action
   // ou d'avant-connexion garde sa gouttière.
-  // Depuis le 13/11/2026, le calendrier ne vit plus que dans Planifier (`calendrier`), ferré à droite : il servait à planifier.
+  // Depuis le 13/11/2026, le calendrier ne vit plus que sur l'accueil et dans Planifier (`calendrier`).
   const premierNiveau = !onBack && gauche === undefined && !action && showAvatar && !dark;
   const avecCloche = cloche ?? premierNiveau;
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
@@ -129,23 +129,17 @@ export default function AppHeader({
       </button>
     ));
 
-  // LE TITRE OU LE LOGO FERRÉ À GAUCHE (13/11/2026) : le bloc de gauche prend la place, les icônes restent groupées à droite. Une
+  // LE TITRE À LA PLACE DU LOGO (13/11/2026) : le bloc de gauche prend la place, les icônes restent groupées à droite. Une
   // légère marge au-dessus (demandée) ; la zone sûre d'iOS (encoche, Dynamic Island) est déjà laissée libre par la coque de l'app
   // (globals.css), le bandeau n'a donc rien à y ajouter.
-  if (titre !== undefined || logo === "gauche") {
+  if (titre !== undefined) {
     return (
       <div className="flex items-start justify-between gap-3 pt-[8px] mb-[10px]">
         <div className="flex items-start gap-[10px] min-w-0 flex-1">
           {onBack && <BoutonRetour onClick={onBack} label={backLabel} taille={34} sombre={dark} />}
-          {titre !== undefined ? (
-            <TitreDePage point={point} className="pt-[4px]">
-              {titre}
-            </TitreDePage>
-          ) : (
-            <div className="h-[34px] flex items-center">
-              <LogoCapsela />
-            </div>
-          )}
+          <TitreDePage point={point} className="pt-[4px]">
+            {titre}
+          </TitreDePage>
         </div>
         <div className="flex-shrink-0 flex items-center gap-2">
           {calendrier && boutonCalendrier}

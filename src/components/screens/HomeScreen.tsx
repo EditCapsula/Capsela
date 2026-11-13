@@ -477,8 +477,9 @@ export default function HomeScreen() {
   return (
     <div ref={zoneAccueil} onScroll={defilementAccueil.onScroll} className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-safe-nav">
       <div className="px-6">
-        {/* Le logo ferré à gauche, l'accueil seul le garde ; le calendrier n'est plus ici mais dans Planifier (13/11/2026, demandé). */}
-        <AppHeader logo="gauche" />
+        {/* L'accueil seul garde le logo, CENTRÉ, avec le calendrier à gauche (13/11/2026 : d'abord ferré à gauche, puis « remets le logo
+            au centre c'est mieux et l'icône Calendrier à gauche ») ; ailleurs le titre de la page prend sa place. */}
+        <AppHeader calendrier />
       </div>
 
       {/* ══ MAQUETTE « ACCUEIL V9 » (07/10/2026), reprise intégralement : salutation, jour et météo, look du jour sur fond
