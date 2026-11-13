@@ -1,5 +1,6 @@
 "use client";
 
+import { lienAffiliationValide } from "@/lib/remplacementPiece";
 import { MISE_A_PLAT_DISPONIBLE } from "@/lib/miseAPlat";
 import { useEffect, useState } from "react";
 import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
@@ -82,7 +83,7 @@ function BulbIcon() {
   );
 }
 
-/** `onFermer` : la fiche est dans une feuille (FicheEnFeuille) — le retour la referme au lieu de changer d'écran. */
+/** `onFermer` : la fiche posée dans une feuille. Depuis le 13/11/2026, la fiche complète est une page (openItem) : plus aucun appelant. */
 export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}) {
   const { state, actions, vestiairePool } = useCapsela();
   const revenir = onFermer ?? (() => actions.go(state.pieceReturn));
@@ -192,6 +193,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
   };
 
   const addableLooks = state.savedLooks.filter((l) => !l.pieceIds.includes(active.id));
+  const looksAvecLaPiece = state.savedLooks.filter((l) => l.pieceIds.includes(active.id));
 
   const manquants = champsManquants(active);
   const titre = titreEnDeuxTemps(displayName);
@@ -220,7 +222,9 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
           style={enFeuille ? { paddingBottom: "calc(max(env(safe-area-inset-bottom), 14px) + 24px)" } : undefined}
         >
           {enFeuille ? (
-            <BoutonRetour onClick={revenir} label="Fermer la fiche" />
+            <div className="flex justify-end">
+              <CroixFiche onClick={revenir} />
+            </div>
           ) : (
             <AppHeader onBack={revenir} />
           )}
@@ -284,16 +288,16 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
           </Card>
 
           <Button variante="principal" className="mt-[18px]" onClick={() => actions.startReplace(active)}>
-            J&apos;ai déjà ça
+            Je possède déjà cette pièce
           </Button>
-          {active.affLink && (
+          {lienAffiliationValide(active.affLink) && (
             <a
-              href={active.affLink}
+              href={lienAffiliationValide(active.affLink)!}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-[10px] block w-full text-center border border-border text-terracotta rounded-full py-[13px] text-[12px] cursor-pointer"
             >
-              Acheter
+              Acheter cette pièce
             </a>
           )}
         </div>
@@ -329,22 +333,27 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
                 </button>
               )}
               <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-[18px] pt-[14px]">
-                <BoutonRetour onClick={revenir} label={onFermer ? "Fermer la fiche" : "Revenir à l'écran précédent"} />
+                {/* UNE SEULE FAÇON DE FERMER UNE FICHE (13/11/2026, harmonisation des fiches) : en feuille, la croix en haut à droite,
+                    comme toutes les feuilles ; en page, le retour à gauche, comme tous les écrans. */}
+                {enFeuille ? <span /> : <BoutonRetour onClick={revenir} label="Revenir à l'écran précédent" />}
                 {/* Pas de logo dans une feuille (17/10/2026, demandé) : la marque est déjà sur l'écran, juste dessous. */}
                 {!enFeuille && (
                   <LogoCapsela />
                 )}
-                <button
-                  onClick={() => setMenuOpen(true)}
-                  aria-label="Options"
-                  className="w-[44px] h-[44px] flex items-center justify-center cursor-pointer"
-                >
-                  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" className="text-ink" aria-hidden="true">
-                    <circle cx="12" cy="5.5" r="1.5" />
-                    <circle cx="12" cy="12" r="1.5" />
-                    <circle cx="12" cy="18.5" r="1.5" />
-                  </svg>
-                </button>
+                <span className="flex items-center gap-[6px]">
+                  <button
+                    onClick={() => setMenuOpen(true)}
+                    aria-label="Options"
+                    className="w-[44px] h-[44px] flex items-center justify-center cursor-pointer"
+                  >
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" className="text-ink" aria-hidden="true">
+                      <circle cx="12" cy="5.5" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="12" cy="18.5" r="1.5" />
+                    </svg>
+                  </button>
+                  {enFeuille && <CroixFiche onClick={revenir} />}
+                </span>
               </div>
             </div>
 
@@ -428,6 +437,26 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
                   </svg>
                   Ajouter {manquants.join(", ")}
                 </button>
+              )}
+
+              {/* SES LOOKS (13/11/2026, mission « Harmonisation du système de fiches ») : les looks enregistrés qui la contiennent ; aucun :
+                  pas de section. Un look s'ouvre dans son détail, dont le retour revient ici. */}
+              {looksAvecLaPiece.length > 0 && (
+                <>
+                  <div className="t-surtitre text-muted mt-[24px]">Dans tes looks · {looksAvecLaPiece.length}</div>
+                  <Card className="overflow-hidden mt-[8px]">
+                    <ul>
+                      {looksAvecLaPiece.slice(0, 5).map((l) => (
+                        <li key={l.id} className="border-b border-divider last:border-b-0">
+                          <button type="button" onClick={() => actions.openLook(l.id)} className="w-full flex items-center justify-between gap-3 px-4 min-h-[52px] text-left cursor-pointer active:bg-warm-bg">
+                            <span className="t-titre-vignette text-ink truncate">{l.name}</span>
+                            <span className="flex-shrink-0 text-[12px] text-muted-3">{l.pieceIds.length} pièces ›</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                </>
               )}
             </div>
           </div>
@@ -619,5 +648,21 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
         </BottomSheet>
       )}
     </div>
+  );
+}
+
+/** La croix d'une fiche ouverte en feuille (13/11/2026) : sur la photo, un rond clair pour rester visible ; cible tactile de 44 px. */
+function CroixFiche({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Fermer la fiche"
+      className="relative w-[38px] h-[38px] rounded-full bg-card border border-border text-ink flex items-center justify-center cursor-pointer before:absolute before:-inset-[3px] before:content-['']"
+    >
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style={{ display: "block" }}>
+        <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    </button>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useVotesSuggestion } from "@/components/useVotesSuggestion";
 import TitrePage from "@/components/TitrePage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
@@ -587,28 +588,46 @@ export default function CapsuleScreen() {
   // Un vote en cours de transition : pas de second vote (double appui, glissement suivi d'un appui).
   const [occupe, setOccupe] = useState(false);
 
+  // LES GESTES D'UNE SUGGESTION (13/11/2026, useVotesSuggestion) : les mêmes que partout ailleurs, messages et « Annuler » compris.
+  // Dans le parcours, un vote passe à la suggestion suivante (le parcours lui-même) ; il n'ouvre plus d'autre écran : « Voir comment
+  // la porter » est un bouton à part.
+  const votes = useVotesSuggestion();
+  // « J'aime » reste sur la pièce (planche du 13/11/2026 : l'état après un vote) ; la suivante est à une flèche.
   const aimer = (piece: Item) => {
     if (occupe) return;
-    setOccupe(true);
-    if (votesSuggestions[String(piece.id)] !== "aimee") void actions.voterSuggestion(piece.id, "aimee").then(signalerSiNonSynchronise);
-    // « Découvrir les associations » : l'écran « Comment porter » de la pièce ; au retour, la fiche reprend à la suggestion suivante.
-    setTimeout(() => {
-      setOccupe(false);
-      if (parcours) reprendreAuRetour(parcours.index + 1);
-      setFiche(null);
-      actions.openItemOutfits(piece.id);
-    }, 260);
+    votes.aimer(piece);
   };
 
   const rejeter = (piece: Item) => {
     if (occupe) return;
     setOccupe(true);
-    void actions.voterSuggestion(piece.id, "rejetee").then(signalerSiNonSynchronise);
-    setToast("Retirée de ta capsule");
+    votes.pasPourMoi(piece);
     setTimeout(() => {
       setOccupe(false);
       suivante(piece.id);
     }, 260);
+  };
+
+  const nePlusProposer = (piece: Item) => {
+    votes.nePlusProposer(piece);
+    suivante(piece.id);
+  };
+
+  /** La suggestion précédente du parcours encore dans la capsule ; -1 : aucune. */
+  const indexPrecedent = (): number => {
+    if (!parcours) return -1;
+    for (let i = parcours.index - 1; i >= 0; i--) if (!state.suggestedExcluded.includes(parcours.ids[i])) return i;
+    return -1;
+  };
+  const indexSuivant = (): number => {
+    if (!parcours) return -1;
+    for (let i = parcours.index + 1; i < parcours.ids.length; i++) if (!state.suggestedExcluded.includes(parcours.ids[i])) return i;
+    return -1;
+  };
+  const allerA = (i: number) => {
+    if (!parcours || i < 0) return;
+    setParcours({ ...parcours, index: i });
+    setFiche({ id: parcours.ids[i], vue: "detail" });
   };
 
   const possede = (piece: Item) => {
@@ -1353,6 +1372,14 @@ export default function CapsuleScreen() {
           onFermer={fermerFiche}
           onAimer={() => aimer(pieceFiche)}
           onRejeter={() => rejeter(pieceFiche)}
+          onNePlusProposer={() => nePlusProposer(pieceFiche)}
+          onPrecedente={indexPrecedent() >= 0 ? () => allerA(indexPrecedent()) : undefined}
+          onSuivante={indexSuivant() >= 0 ? () => allerA(indexSuivant()) : undefined}
+          dejaPossedee={votesSuggestions[String(pieceFiche.id)] === "possedee"}
+          onVoirDressing={() => {
+            fermerFiche();
+            actions.goWardrobe();
+          }}
           onPossede={() => possede(pieceFiche)}
           onRemplacer={() => setFiche({ id: pieceFiche.id, vue: "remplacer" })}
           onComposer={

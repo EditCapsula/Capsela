@@ -645,17 +645,15 @@ export interface AppState {
   /** Id du look actuellement ouvert dans l'écran de détail. */
   activeLookId: string | null;
   /** Écran où revient le détail d'un look : le Dressing, ou « Mes looks » d'où il a été ouvert. */
-  lookReturn: "wardrobe" | "looks";
+  /** D'où le détail d'un look a été ouvert : le Dressing, Mes looks, ou la fiche d'une pièce (« Dans tes looks », 13/11/2026). */
+  lookReturn: "wardrobe" | "looks" | "piece";
   /** Carte du vestiaire qui filtre « Mes pièces » sur ses catégories techniques ; null = toutes les pièces. */
   filtrePieces: FiltrePieces | null;
-  /** L'aperçu d'une pièce ouvert depuis un hero (14/10/2026) : une feuille posée sur l'écran, pas une page. Id de la pièce, ou null. */
-  pieceApercu: number | null;
   /**
-   * La fiche détaillée d'une pièce ouverte EN FEUILLE (15/10/2026, demandé : « depuis la homepage, au clic sur une pièce, ouvrir la fiche
-   * détaillée dans une feuille ») : l'écran d'où elle a été ouverte, qui reste dessous. null : aucune. Une navigation vers un autre écran
-   * la referme (App).
+   * LA FICHE D'UNE SUGGESTION, depuis n'importe quel écran (13/11/2026, harmonisation des fiches) : la même que dans la Capsule
+   * (FicheSuggestion, votes compris), sans le parcours. L'écran d'où elle a été ouverte reste dessous. null : aucune.
    */
-  ficheEnFeuille: { ecran: Screen } | null;
+  ficheSuggestion: { id: number; ecran: Screen } | null;
 }
 
 /**

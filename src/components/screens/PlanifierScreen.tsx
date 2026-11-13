@@ -886,6 +886,14 @@ export default function PlanifierScreen() {
     else setChoixBrut({ cle: cleParams, ids });
     return true;
   };
+  // La tenue proposée : une seule configuration de remplacement pour son flat lay et la liste de ses pièces (13/11/2026).
+  const configResultat = (look: Item[]) => ({
+    look,
+    contexte: contexteResultat,
+    dressing: state.items,
+    suggestions: dressingSeul ? [] : capsuleDeLaDate,
+    appliquer: remplacerDansResultat,
+  });
   const remplacerDansPlan = async (plan: TenuePlanifiee, a: number, n: number) => {
     if (!userId) return false;
     const { id: _id, ...sansId } = plan;
@@ -2016,15 +2024,7 @@ export default function PlanifierScreen() {
                 {/* LE MÊME HERO QUE LE LOOK PLANIFIÉ (04/11/2026, demandé : « harmonise aussi l'affichage sur cette page ») : surtitre,
                     flat lay du look (sans phrase manuscrite, comme les autres heros : 04/11/2026), provenance, indicateurs et « Pour l'extérieur » (HeroTenue). Ses actions restent en pied d'écran. */}
                 <HeroTenue
-                  onPiece={(it, look) =>
-                    remplacement.ouvrir(it, {
-                      look,
-                      contexte: contexteResultat,
-                      dressing: state.items,
-                      suggestions: dressingSeul ? [] : capsuleDeLaDate,
-                      appliquer: remplacerDansResultat,
-                    })
-                  }
+                  onPiece={(it, look) => remplacement.ouvrir(it, configResultat(look))}
                   statut={composition ? (depuisPlan ? "Tenue déjà planifiée" : "Tenue de ta photo") : "Ta tenue proposée"}
                   pieces={pieces}
                   temperature={tempResultat}
@@ -2075,7 +2075,7 @@ export default function PlanifierScreen() {
                 {/* LES PIÈCES DU LOOK (04/11/2026, brief « Évolution du parcours de planification ») : le composant de la page Tenue
                     (RailPiecesTenue) — visuel, nom, catégorie, « Ton dressing » ou « Capsule », la fiche au toucher. Sans l'échange ⇄ : la
                     tenue se change en entier (« Autre tenue ») ou par ses critères. Le manteau montré à part n'y est pas. */}
-                <RailPiecesTenue pieces={piecesDuLook} />
+                <RailPiecesTenue pieces={piecesDuLook} onPiece={(it) => remplacement.ouvrir(it, configResultat(piecesDuLook))} />
 
                 {/* « POURQUOI CE LOOK ? » : une liste, sans carte (non cliquable). Seuls les critères réellement utilisés par le
                     moteur y figurent — le type de lieu n'y est pas, il n'entre pas dans le calcul. */}
@@ -2196,6 +2196,20 @@ export default function PlanifierScreen() {
               ? candidatsDeRemplacement(pieces, wardrobePool, -1, "manteau", t.occasion, (t.sousChoix ?? "Présentiel") as WorkMode, (t.sousChoix ?? DATE_CONTEXTS[0][0]) as DateContext, meteoMoteurPlan)
               : [];
           const sepPlan = separerCoucheExterieure(pieces, tempPlan, candidatsPlan);
+          // Une tenue planifiée : la même configuration pour son flat lay et la liste de ses pièces (13/11/2026).
+          const configPlan = (look: Item[]) => ({
+            look,
+            contexte: {
+              ...contexteResultat,
+              occasion: t.occasion,
+              weather: meteoMoteurPlan ?? meteoUtilisee,
+              workMode: (t.sousChoix ?? "Présentiel") as WorkMode,
+              dateContext: (t.sousChoix ?? DATE_CONTEXTS[0][0]) as DateContext,
+            },
+            dressing: state.items,
+            suggestions: t.dressingSeul ? [] : wardrobePool,
+            appliquer: (a: number, n: number) => remplacerDansPlan(t, a, n),
+          });
           const colo = colorimetrieMoteur(profile.colorimetrie);
           const indicateursPlan = [
             // Le style : seulement si le look tire des pièces de la capsule, qui est bâtie sur les styles du profil.
@@ -2292,24 +2306,7 @@ export default function PlanifierScreen() {
                   (04/11/2026) ; « Avis d'un proche » reste ici, comme sur Tenue. */}
               <HeroTenue
                 // Une tenue passée ne se modifie plus : la fiche directe, comme avant.
-                onPiece={
-                  passee
-                    ? undefined
-                    : (it, look) =>
-                        remplacement.ouvrir(it, {
-                          look,
-                          contexte: {
-                            ...contexteResultat,
-                            occasion: t.occasion,
-                            weather: meteoMoteurPlan ?? meteoUtilisee,
-                            workMode: (t.sousChoix ?? "Présentiel") as WorkMode,
-                            dateContext: (t.sousChoix ?? DATE_CONTEXTS[0][0]) as DateContext,
-                          },
-                          dressing: state.items,
-                          suggestions: t.dressingSeul ? [] : wardrobePool,
-                          appliquer: (a, n) => remplacerDansPlan(t, a, n),
-                        })
-                }
+                onPiece={passee ? undefined : (it, look) => remplacement.ouvrir(it, configPlan(look))}
                 statut={passee ? "Ton look était planifié" : "Ta tenue planifiée"}
                 pieces={pieces}
                 temperature={tempPlan}
@@ -2351,7 +2348,7 @@ export default function PlanifierScreen() {
 
               {/* LES PIÈCES DU LOOK : le composant de la page Tenue, comme au résultat (04/11/2026 : une seule source pour les pièces d'un
                   look). Le manteau montré à part n'y est pas. */}
-              <RailPiecesTenue pieces={sepPlan.principal} />
+              <RailPiecesTenue pieces={sepPlan.principal} onPiece={passee ? undefined : (it) => remplacement.ouvrir(it, configPlan(sepPlan.principal))} />
 
               {/* LES DEUX ACTIONS (04/11/2026, maquette). « Je porterai cette tenue » CONFIRME le plan (colonne `confirme`, 0057) —
                   ce n'est pas « portée » : le Journal ne l'enregistre que le jour même, depuis la tenue du jour. « Modifier ma tenue »
