@@ -607,7 +607,7 @@ export default function HistoryScreen() {
   if (!dressingLoaded) {
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-        <AppHeader />
+        <AppHeader titre={<>Mon <span className="italic">journal</span></>} />
         <div className="flex justify-center mt-16" aria-live="polite">
           <LoadingSpinner size={56} />
           <span className="sr-only">Chargement de ton journal…</span>
@@ -626,12 +626,9 @@ export default function HistoryScreen() {
             setAvis(null);
           }}
           backLabel="Revenir au journal"
+          titre={<>Mes pièces <span className="italic">à vendre</span></>}
         />
-        <Surtitre className="mt-[18px]">Faire de la place</Surtitre>
-        <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-          Pièces <span className="italic text-terracotta">à vendre</span>
-        </div>
-        <div className="t-chapeau text-muted-3 mt-[10px]">
+        <div className="t-chapeau text-muted-3">
           Ces pièces n&apos;ont pas trouvé leur moment depuis longtemps. Tu décides, pièce par pièce : rien ne quitte
           ton dressing sans toi.
         </div>
@@ -740,10 +737,8 @@ export default function HistoryScreen() {
   if (entries.length === 0) {
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-        <AppHeader />
-        <TitrePage chapeau="Chaque tenue que tu portes enrichit ton journal et aide Capsela à mieux comprendre ton style.">
-          Ton style <span className="italic text-terracotta">commence ici</span>
-        </TitrePage>
+        <AppHeader titre={<>Mon <span className="italic">journal</span></>} />
+        <TitrePage chapeau="Chaque tenue que tu portes enrichit ton journal et aide Capsela à mieux comprendre ton style." />
 
         {/* VISUEL D'ÉTAT VIDE (fournis le 25/09/2026) : des vêtements à
             plat, sans personne — §2 du brief. Choisi sur le genre déclaré,
@@ -868,7 +863,8 @@ export default function HistoryScreen() {
 
   return (
     <div ref={zoneJournal} onScroll={defilementJournal.onScroll} className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <AppHeader />
+      {/* « Mon journal. » dans le bandeau (13/11/2026) ; le nombre de tenues portées, qui était le titre, ouvre la phrase dessous. */}
+      <AppHeader titre={<>Mon <span className="italic">journal</span></>} />
 
       {/* EN-TÊTE */}
       {/* EN-TÊTE (15/10/2026, maquette du Journal) : le titre à gauche, la période en menu à droite (« Octobre 2026 »). Ce menu est le
@@ -876,7 +872,14 @@ export default function HistoryScreen() {
           système, au clavier et au lecteur d'écran aussi. */}
       <TitrePage
         ariaLive
-        chapeau={phraseEnTete}
+        chapeau={
+          <>
+            <span className="text-ink font-semibold">
+              {chiffres.tenues} {pl(chiffres.tenues, "tenue portée", "tenues portées")}
+            </span>
+            {phraseEnTete ? <> · {phraseEnTete}</> : null}
+          </>
+        }
         droite={
           <label className="relative">
             <span className="sr-only">Période du journal</span>
@@ -896,9 +899,7 @@ export default function HistoryScreen() {
             </svg>
           </label>
         }
-      >
-        {chiffres.tenues} <span className="italic text-terracotta">{pl(chiffres.tenues, "tenue portée", "tenues portées")}</span>
-      </TitrePage>
+      />
 
       {/* BILAN DU MOIS d'abord (A), puis les chiffres clés (B) et le dressing en chiffres (C) — ordre du brief du 12/10/2026. */}
       {/* LA CARTE ÉDITORIALE (26/09/2026 ; moteur de commentaires du 16/10/2026). Le commentaire vient de commentaireJournal (règles et

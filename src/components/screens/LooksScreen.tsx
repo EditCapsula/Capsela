@@ -42,12 +42,9 @@ export default function LooksScreen() {
   return (
     <div ref={zone} onScroll={defilement.onScroll} className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       {/* Le bandeau commun des écrans secondaires (14/10/2026) : retour dans sa gouttière, logo, avatar. */}
-      <AppHeader onBack={actions.goWardrobe} backLabel="Revenir au dressing" />
-      <div className="t-surtitre text-muted mt-[18px]">Dressing</div>
-      <div className="flex items-end justify-between gap-3 mt-[6px]">
-        <div className="t-titre-ecran text-ink">
-          Mes <span className="italic text-terracotta">looks</span>
-        </div>
+      {/* Le titre dans le bandeau, sans surtitre (13/11/2026, tableau validé). */}
+      <AppHeader onBack={actions.goWardrobe} backLabel="Revenir au dressing" titre={<>Mes <span className="italic">looks</span></>} />
+      <div className="flex justify-end">
         <button
           onClick={() => actions.goCreateLook()}
           className="text-[12px] text-terracotta cursor-pointer flex-shrink-0 py-[13px] -my-[13px]"

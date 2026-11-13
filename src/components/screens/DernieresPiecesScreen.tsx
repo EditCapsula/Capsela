@@ -98,12 +98,9 @@ export default function DernieresPiecesScreen() {
         className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]"
         style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}
       >
-        <AppHeader onBack={actions.goWardrobe} backLabel="Revenir au dressing" />
-        <div className="t-surtitre text-muted mt-[14px]">Ajoutées récemment</div>
-        <div className="t-titre-ecran text-ink mt-[6px]">
-          Tes dernières <span className="italic text-terracotta">pièces</span>
-        </div>
-        <div className="text-[13px] mt-[6px]" style={{ color: "var(--color-muted-3)" }}>Elles font déjà partie de tes looks.</div>
+        {/* Le titre dans le bandeau, sans surtitre (13/11/2026, tableau validé : « Mes dernières pièces. »). */}
+        <AppHeader onBack={actions.goWardrobe} backLabel="Revenir au dressing" titre={<>Mes <span className="italic">dernières pièces</span></>} />
+        <div className="t-chapeau text-muted-3">Ajoutées récemment, elles font déjà partie de tes looks.</div>
 
         {groupes.length > 1 && (
           // Les mêmes pastilles que « Comment porter … ? » : une rangée qui défile, chaque libellé en entier (jamais tronqué), la

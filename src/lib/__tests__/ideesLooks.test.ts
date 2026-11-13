@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nounInfoDuNom, type ItemOutfitVariation } from "../logic";
 import { avecTirageDeterministe, graineIdees } from "../looks";
-import { familleDe, ideesDressingDAbord, ordonnerLooks, provenanceLook, sourcePiece, texteProvenance, titreCommentPorter } from "../ideesLooks";
+import { familleDe, ideesDressingDAbord, ordonnerLooks, provenanceLook, sourcePiece, texteProvenance, pronomCommentPorter, titreCommentPorter } from "../ideesLooks";
 import type { CategoryKey, Item, OccasionKey } from "../types";
 
 const piece = (id: number, cat: CategoryKey, name: string): Item => ({ id, name, cat, color: "Noir", hex: "#2A2724", season: "Toutes saisons", worn: 1 });
@@ -160,5 +160,16 @@ describe("idées de looks stables (12/10/2026)", () => {
     const avant = Math.random;
     calcul();
     expect(Math.random).toBe(avant);
+  });
+});
+
+// LE TITRE COURT « Comment la porter ? » (13/11/2026) : le pronom s'accorde au nom de la pièce.
+describe("pronomCommentPorter", () => {
+  const piece = (name: string) => ({ id: 1, name, cat: "tops" }) as unknown as Item;
+  it("le, la, les selon le nom ; la par défaut", () => {
+    expect(pronomCommentPorter(piece("Chemisier rayé"))).toBe("le");
+    expect(pronomCommentPorter(piece("Jupe midi"))).toBe("la");
+    expect(pronomCommentPorter(piece("Baskets blanches"))).toBe("les");
+    expect(pronomCommentPorter(piece("Zorglub"))).toBe("la");
   });
 });

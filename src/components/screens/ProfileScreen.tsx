@@ -140,12 +140,10 @@ export default function ProfileScreen() {
             <Icone taille={24}>{I_REGLAGES}</Icone>
           </button>
         }
+        titre={<>Mon <span className="italic">profil</span></>}
       />
-      <div className="t-surtitre text-muted mt-[18px]">Profil</div>
-      <div className="t-titre-ecran text-ink mt-[6px]">
-        Mon <span className="italic text-terracotta">profil</span>
-      </div>
-      <div className="t-chapeau text-muted-3 mt-[8px]">Tout ce qui aide Capsela à mieux te conseiller.</div>
+      {/* Le titre dans le bandeau, sans surtitre (13/11/2026, tableau des écrans secondaires validé). */}
+      <div className="t-chapeau text-muted-3">Tout ce qui aide Capsela à mieux te conseiller.</div>
 
       {/* IDENTITÉ — « Gérer mon compte » mène au compte, jamais à l'édition du
           profil : ce sont deux espaces différents. */}

@@ -205,16 +205,17 @@ export default function NeverWornScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <AppHeader onBack={actions.goTenues} backLabel="Revenir à la tenue du jour" />
-
-      <div className="t-surtitre text-muted mt-[18px]">À redécouvrir</div>
+      {/* « Mes pièces à redécouvrir. » dans le bandeau, sans surtitre (13/11/2026, tableau validé) ; la phrase d'avant passe dessous. */}
+      <AppHeader
+        onBack={actions.goTenues}
+        backLabel="Revenir à la tenue du jour"
+        titre={<>Mes pièces <span className="italic">à redécouvrir</span></>}
+      />
 
       {n === 0 ? (
         <>
-          <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-            Ton dressing est déjà <span className="italic text-terracotta">bien exploré</span>
-          </div>
-          <div className="t-chapeau text-muted-3 mt-[10px]">
+          <div className="t-chapeau text-muted-3">
+            Ton dressing est déjà bien exploré.{" "}
             {state.items.length > 0
               ? "Capsela te proposera ici les pièces qui méritent une seconde chance."
               : "Les pièces de ton dressing que tu n'as pas encore portées apparaîtront ici."}
@@ -230,11 +231,8 @@ export default function NeverWornScreen() {
         </>
       ) : (
         <>
-          <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-            Des pièces qui attendent <span className="italic text-terracotta">leur moment</span>
-          </div>
-          <div className="t-chapeau text-muted-3 mt-[8px]" style={{ textWrap: "pretty" }}>
-            Ton dressing contient déjà plus de possibilités que tu ne le penses.
+          <div className="t-chapeau text-muted-3" style={{ textWrap: "pretty" }}>
+            Des pièces qui attendent leur moment : ton dressing contient déjà plus de possibilités que tu ne le penses.
           </div>
 
           {/* SYNTHÈSE — le chiffre en grand, dans l'esprit d'une page de

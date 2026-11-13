@@ -35,8 +35,8 @@ export default function LookDetailScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <AppHeader onBack={actions.closeLookDetail} />
-      <div className="t-titre-ecran text-ink mt-[18px]">{look.name}</div>
+      {/* Le nom du look dans le bandeau (13/11/2026, même règle que les autres écrans secondaires). */}
+      <AppHeader onBack={actions.closeLookDetail} titre={look.name} />
 
       <div className={"t-label mt-[10px] " + (wishlist ? "text-terracotta" : look.source === "saved" ? "text-terracotta" : "text-muted")}>
         {wishlist ? "✦ Suggéré (Wishlist)" : look.source === "saved" ? "♡ Enregistré" : "✦ Créé par moi"}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
 import Card from "@/components/Card";
 import { useAuth } from "@/lib/auth";
 import {
@@ -74,9 +74,12 @@ export default function NotificationsScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <div className="grid grid-cols-[44px_1fr_44px] items-center gap-2 -mx-[10px]">
-        <BoutonRetour onClick={actions.quitterNotifications} label="Revenir à l'écran précédent" />
-        <h1 className="text-center t-titre-section text-ink">Notifications</h1>
+      {/* « Mes notifications. » dans le bandeau commun, le menu « ••• » à la place de l'avatar (13/11/2026, tableau validé). */}
+      <AppHeader
+        onBack={actions.quitterNotifications}
+        backLabel="Revenir à l'écran précédent"
+        titre={<>Mes <span className="italic">notifications</span></>}
+        action={
         <button
           type="button"
           onClick={() => setMenu(true)}
@@ -88,7 +91,8 @@ export default function NotificationsScreen() {
             •••
           </span>
         </button>
-      </div>
+        }
+      />
 
       {/* Quatre pastilles de même largeur, toujours sur la largeur de l'écran (13/11/2026) : à 320 px, la rangée défilait. */}
       <div role="tablist" aria-label="Catégories de notifications" className="grid grid-cols-4 gap-[6px] pt-[18px] pb-[6px]">

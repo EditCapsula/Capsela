@@ -160,6 +160,17 @@ export function titreCommentPorter(piece: Item, possedee: boolean): string {
   return `Comment porter ${article}${nom} ?`;
 }
 
+/**
+ * Le pronom du titre court « Comment la porter ? » (13/11/2026, tableau des écrans secondaires validé : le titre de la page tient dans
+ * le bandeau, le nom de la pièce passe dessous). Accordé au nom comme titreCommentPorter : « le » chemisier, « la » jupe, « les »
+ * baskets ; sans nom reconnu, « la » (cette pièce).
+ */
+export function pronomCommentPorter(piece: Item): "le" | "la" | "les" {
+  const info = nounInfoDuNom(piece.name);
+  if (!info) return "la";
+  return info.plural ? "les" : info.gender === "m" ? "le" : "la";
+}
+
 /** Clé d'un look : ses pièces, dans l'ordre du moteur. */
 export const cleLook = (ids: number[]) => ids.join("-");
 

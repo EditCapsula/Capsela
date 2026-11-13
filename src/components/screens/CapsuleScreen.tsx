@@ -659,7 +659,23 @@ export default function CapsuleScreen() {
         onScroll={defilement.onScroll}
         className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav"
       >
-        <AppHeader />
+        {/* « Ma capsule automne. » dans le bandeau (13/11/2026) : minuscules, tout en noir ; la saison reste le bouton du choix. */}
+        <AppHeader
+          titre={
+            <>
+              Ma capsule{" "}
+              <button
+                type="button"
+                onClick={() => setFeuille("saison")}
+                data-tour="capsule-saison"
+                className="italic cursor-pointer"
+                aria-label={`Saison ${capsuleSeason}, changer de saison`}
+              >
+                {capsuleSeason.toLowerCase()}
+              </button>
+            </>
+          }
+        />
 
         {/*
           EN-TÊTE (refonte du 01/11/2026). La saison est le second temps du titre, en italique terracotta, et c'est ELLE qui s'ouvre
@@ -675,18 +691,7 @@ export default function CapsuleScreen() {
               {!possedees.length && "."}
             </>
           }
-        >
-            Ma Capsule{" "}
-            <button
-              type="button"
-              onClick={() => setFeuille("saison")}
-              data-tour="capsule-saison"
-              className="italic text-terracotta cursor-pointer"
-              aria-label={`Saison ${capsuleSeason}, changer de saison`}
-            >
-              {capsuleSeason}
-            </button>
-        </TitrePage>
+        />
         <div>
           <div className="text-[12px] text-muted leading-[1.5] mt-[4px]">
             {exploredStyleLabel ? (
@@ -800,7 +805,7 @@ export default function CapsuleScreen() {
               <div className="absolute inset-x-0 top-0 flex items-start justify-between px-[14px] pt-[12px] pointer-events-none">
                 <div>
                   <div className="text-[12px] font-semibold text-ink leading-[16px]">
-                    <span aria-hidden="true" className="text-terracotta mr-[5px]">✦</span>Ta sélection du moment
+                    <span aria-hidden="true" className="text-terracotta mr-[5px]">✦</span>Ma sélection du moment
                   </div>
                   {piecesTenue.length > 0 && <div className="text-[11px] text-muted leading-[14px] mt-[2px]">{pieces(piecesTenue.length)}</div>}
                 </div>

@@ -324,25 +324,17 @@ export default function OpinionShareScreen() {
 
   const enTete = (
     <div className="flex-shrink-0 px-6 pt-[6px]">
-      <AppHeader onBack={actions.closeOpinionShare} backLabel={retourLibelle} />
+      {/* « Demander un avis. » dans le bandeau, sans surtitre (13/11/2026, tableau validé). */}
+      <AppHeader onBack={actions.closeOpinionShare} backLabel={retourLibelle} titre={<>Demander <span className="italic">un avis</span></>} />
     </div>
   );
 
-  const titre = (
-    <>
-      <div className="t-surtitre text-muted mt-3">Demander un avis</div>
-      <div className="t-titre-ecran text-ink mt-[6px]">
-        Un avis de <span className="italic text-terracotta">confiance</span>
-      </div>
-    </>
-  );
 
   if (pieces.length === 0) {
     return (
       <div className="absolute inset-0 flex flex-col">
         {enTete}
         <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 pb-safe-nav">
-          {titre}
           <div className="text-[13px] text-muted mt-6 leading-[1.5]">
             Il n&apos;y a pas de tenue à partager pour l&apos;instant.
           </div>
@@ -361,7 +353,6 @@ export default function OpinionShareScreen() {
       {enTete}
 
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 pb-5">
-        {titre}
         <div className="t-chapeau text-muted mt-[6px]" style={{ textWrap: "pretty" }}>
           Envoie ta tenue à quelqu&apos;un de confiance et demande-lui ce qu&apos;il en pense.
         </div>

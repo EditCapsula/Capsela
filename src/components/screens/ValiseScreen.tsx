@@ -432,7 +432,8 @@ function Surtitre({ children }: { children: React.ReactNode }) {
 
 function TitreEtape({ a, b }: { a: string; b: string }) {
   return (
-    <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+    // Sous « Ma valise. » du bandeau (13/11/2026) : la question de l'étape est un titre de section, plus un second titre de page.
+    <div className="t-titre-section text-ink mt-[6px]" style={{ textWrap: "balance" }}>
       {avecTraitsDUnion(a)} <span className="italic text-terracotta">{avecTraitsDUnion(b)}</span>
     </div>
   );
@@ -1533,7 +1534,8 @@ export default function ValiseScreen() {
   return (
     <div className="absolute inset-0 flex flex-col bg-cream">
       <div className="flex-shrink-0 px-6 pt-[6px]">
-        <AppHeader onBack={vue.nom === "calcul" ? undefined : revenir} backLabel={libelleRetour} />
+        {/* « Ma valise. » dans le bandeau, sur toutes les vues (13/11/2026, tableau validé) ; la question de l'étape reste dessous. */}
+        <AppHeader onBack={vue.nom === "calcul" ? undefined : revenir} backLabel={libelleRetour} titre={<>Ma <span className="italic">valise</span></>} />
       </div>
       {questions && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
@@ -1548,7 +1550,6 @@ export default function ValiseScreen() {
         {/* ── AVANT LA PREMIÈRE QUESTION : LE MINIMUM ── */}
         {bloquee && (
           <>
-            <Surtitre>Ta valise</Surtitre>
             <TitreEtape a="Ton dressing" b="d'abord" />
             <div className="t-chapeau text-muted-3 mt-2">
               Ta valise se compose uniquement avec tes pièces. Pour la préparer, il en faut au moins {MINIMUM_PIECES_VALISE}
@@ -1595,7 +1596,7 @@ export default function ValiseScreen() {
         {/* ── 1. DESTINATION ── */}
         {questions && etape === 1 && (
           <>
-            <Surtitre>Ta valise · 1 / 3</Surtitre>
+            <Surtitre>Étape 1 / 3</Surtitre>
             <TitreEtape a="Ton prochain" b="voyage" />
             <div className="text-[13px] text-muted leading-[1.5] mt-2">Choisis tes destinations et les dates de ton voyage.</div>
             {/* L'ORGANISATION DE LA CAPTURE PARTAGÉE (30/10/2026, demandé) : chaque destination, sa ville puis ses dates
@@ -1694,7 +1695,7 @@ export default function ValiseScreen() {
         {/* ── 2. VALISE ── */}
         {questions && etape === 2 && (
           <>
-            <Surtitre>Ta valise · 2 / 3</Surtitre>
+            <Surtitre>Étape 2 / 3</Surtitre>
             <TitreEtape a="Quel bagage" b="emportes-tu ?" />
             <div className="text-[13px] text-muted leading-[1.5] mt-2">Capsela adapte ta sélection à sa place.</div>
             {/* TROIS FORMATS CONCRETS (12/11/2026, brief 2.3, point 9, valise.ts FORMATS_BAGAGE) au lieu des quatre tailles S à XL. Plus de
@@ -1787,7 +1788,7 @@ export default function ValiseScreen() {
             retombe sur le quotidien (programmeDesActivites), comme le moteur le faisait déjà. */}
         {questions && etape === 3 && (
           <>
-            <Surtitre>Ta valise · 3 / 3</Surtitre>
+            <Surtitre>Étape 3 / 3</Surtitre>
             <TitreEtape
               a="Qu'as-tu prévu"
               b={`${roadTrip ? "pendant ton road trip" : (destinationAvecPreposition(ville?.capitaleDe ?? nomVille) ?? "pendant ton séjour")} ?`}
@@ -2834,7 +2835,6 @@ function Resultat({
         <Surtitre>
           {valise.destination} · {libellePeriode(valise.depart, valise.retour)}
         </Surtitre>
-        <TitreEtape a="Ta" b="valise" />
         <EmptyState forme="carte" className="mt-4" titre="Ton dressing est vide" action={{ libelle: "Ajouter une pièce →", onClick: ajouterAuDressing }}>
           La valise se prépare avec les pièces que tu possèdes. Ajoute-les à ton dressing, et Capsela choisira celles à emporter.
         </EmptyState>

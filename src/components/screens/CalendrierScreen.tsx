@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
 import Button from "@/components/Button";
 import { IconeTuile } from "@/components/PlanifierUI";
 import SegmentedControl from "@/components/SegmentedControl";
@@ -430,11 +430,7 @@ export default function CalendrierScreen() {
     return (
       <div className="absolute inset-0 flex flex-col bg-cream">
         <div className="scrollarea flex-1 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-          <div className="flex items-center justify-between mb-3">
-            <BoutonRetour onClick={() => setHistoriqueOuvert(false)} label="Revenir à la liste" taille={34} />
-            <h1 className="t-titre-carte text-ink">Mon historique</h1>
-            <span aria-hidden="true" className="w-[34px]" />
-          </div>
+          <AppHeader showAvatar={false} onBack={() => setHistoriqueOuvert(false)} backLabel="Revenir à la liste" titre={<>Mon <span className="italic">historique</span></>} />
           <div role="tablist" aria-label="Filtrer les tenues" className="flex items-center gap-5 mt-2">
             {FILTRES.map((f) => (
               <button
@@ -468,9 +464,12 @@ export default function CalendrierScreen() {
   return (
     <div className="absolute inset-0 flex flex-col bg-cream">
       <div className="scrollarea flex-1 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-        <div className="flex items-center justify-between mb-3">
-          <BoutonRetour onClick={actions.goHome} label="Revenir à l'accueil" taille={34} />
-          <h1 className="t-titre-carte text-ink">Mon planning</h1>
+        {/* « Mon calendrier. » dans le bandeau commun, « + Planifier » à la place de l'avatar (13/11/2026, tableau validé). */}
+        <AppHeader
+          onBack={actions.goHome}
+          backLabel="Revenir à l'accueil"
+          titre={<>Mon <span className="italic">calendrier</span></>}
+          action={
           <button
             onClick={planifierSel}
             aria-label="Planifier une tenue"
@@ -478,6 +477,9 @@ export default function CalendrierScreen() {
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           </button>
+          }
+        />
+        <div>
         </div>
 
         <SegmentedControl

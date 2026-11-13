@@ -477,8 +477,9 @@ export default function HomeScreen() {
   return (
     <div ref={zoneAccueil} onScroll={defilementAccueil.onScroll} className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-safe-nav">
       <div className="px-6">
-        {/* Le calendrier est une entrée GLOBALE, pas un onglet : un bouton dans la gouttière gauche du bandeau (05/10/2026). */}
-        <AppHeader />
+        {/* L'accueil seul garde le logo, CENTRÉ, avec le calendrier à gauche (13/11/2026 : d'abord ferré à gauche, puis « remets le logo
+            au centre c'est mieux et l'icône Calendrier à gauche ») ; ailleurs le titre de la page prend sa place. */}
+        <AppHeader calendrier />
       </div>
 
       {/* ══ MAQUETTE « ACCUEIL V9 » (07/10/2026), reprise intégralement : salutation, jour et météo, look du jour sur fond
@@ -487,7 +488,7 @@ export default function HomeScreen() {
       <div className="px-6">
         {/* Le titre des pages majeures (TitrePage, 12/11/2026) : la salutation quitte t-display (28 px) pour la taille des autres. */}
         <TitrePage>
-          {t("Bonjour,")} <span className="italic text-terracotta">{firstNameOrYou}</span>
+          {t("Bonjour,")} <span className="italic">{firstNameOrYou}</span>
         </TitrePage>
         {/* LE JOUR ET SA MÉTÉO (navigation par date, partagée avec Tenue) : le jour se change par ses chevrons, la météo
             ouvre les réglages « Localisation & météo » (BarreDuJour, maquette V9). */}
