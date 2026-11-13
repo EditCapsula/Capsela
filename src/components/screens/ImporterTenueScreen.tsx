@@ -293,6 +293,17 @@ export default function ImporterTenueScreen() {
     // Dressing gratuit : jamais plus de pièces que de places restantes.
     if (places !== null) pretes = pretes.slice(0, Math.max(0, places));
     if (!pretes.length) return;
+    // LE VISUEL INDICATIF ILLUSTRE LA PIÈCE (13/11/2026, signalé : un sac ajouté depuis un ticket sans toucher « Confirmer ce visuel »
+    // entrait au dressing sans image, en aplat noir, et son visuel était supprimé en quittant l'écran). Un article de ticket sans photo
+    // part avec le visuel créé pour lui, s'il correspond toujours à sa description ; une photo personnelle, elle, passe toujours avant.
+    if (ticket) {
+      pretes = pretes.map((b) => {
+        const v = visuels[b.cle];
+        if (b.photoUrl || v?.etat !== "propose" || !v.url || v.desc !== cleDescription(b)) return b;
+        confirmerVisuel(b.cle, v.url);
+        return { ...b, photoUrl: v.url };
+      });
+    }
     setErreurAjout(null);
     setProgression({ fait: 0, total: pretes.length });
     setPhase("ajout");
@@ -670,7 +681,7 @@ export default function ImporterTenueScreen() {
                     <div className="px-3 pb-3 -mt-1">
                       <p className="text-[12px] text-muted-3 leading-[1.45]">
                         {visuel?.etat === "propose"
-                          ? "Un visuel indicatif, créé par Capsela d'après ton ticket : ce n'est pas la photo de ton article."
+                          ? "Un visuel indicatif, créé par Capsela d'après ton ticket : ce n'est pas la photo de ton article. Il illustrera ta pièce, sauf si tu ajoutes ta photo."
                           : b.categorieAConfirmer
                             ? "Choisis la catégorie : Capsela créera un visuel indicatif, ou ajoute ta photo."
                             : "Pas de visuel pour cet article : ajoute ta photo."}

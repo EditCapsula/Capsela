@@ -15,8 +15,11 @@ Il n'est jamais présenté comme la photo du produit : badge « Visuel indicatif
 
 1. Dès que la liste s'affiche, chaque article dont la catégorie est connue reçoit son visuel, deux à la fois (« Création du visuel… »).
    Une catégorie encore à choisir attend : le visuel en dépend.
-2. **Visuel créé** : affiché sur la carte, avec « Confirmer ce visuel », « Prendre une photo », « Choisir dans la galerie ». Il n'est
-   associé à la pièce qu'après « Confirmer ce visuel ». Si le nom, la couleur ou la catégorie changent ensuite : « Recréer le visuel ».
+2. **Visuel créé** : affiché sur la carte, avec « Confirmer ce visuel », « Prendre une photo », « Choisir dans la galerie ». Si le nom,
+   la couleur ou la catégorie changent ensuite : « Recréer le visuel ». **Depuis le 13/11/2026** (signalé : un sac ajouté sans toucher
+   « Confirmer ce visuel » entrait au dressing sans image), l'article ajouté sans photo part avec son visuel indicatif, même non
+   confirmé, tant qu'il correspond à sa description ; une photo personnelle passe toujours avant. La carte le dit : « Il illustrera ta
+   pièce, sauf si tu ajoutes ta photo. »
 3. **Aucun visuel** (échec, plafond du jour, délai dépassé, mode démo) : « Prendre une photo », « Choisir dans la galerie », ou garder
    la pastille de couleur. Rien n'est bloqué : la pièce s'ajoute avec ou sans photo.
 4. Une fois la pièce ajoutée, le visuel confirmé (ou la photo) est sa photo principale, dans le dressing et sur sa fiche. Une photo
