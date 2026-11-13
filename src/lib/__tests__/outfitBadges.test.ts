@@ -94,8 +94,9 @@ describe("libellés — l'écran rend la décision partagée, sans la contourner
   // le jour où quelqu'un le change d'un seul côté.
   it("les deux badges sont rendus depuis les constantes partagées", () => {
     const s = source();
-    expect(s).toContain("{BADGE_RECOMMANDE}");
-    expect(s).toContain("{BADGE_REGISTRE}");
+    // Traduits à l'affichage depuis le 13/11/2026 (t(), langue.ts) : toujours la constante partagée, jamais un texte recopié.
+    expect(s).toContain("{t(BADGE_RECOMMANDE)}");
+    expect(s).toContain("{t(BADGE_REGISTRE)}");
     expect(s).toMatch(/import \{[^}]*outfitBadges[^}]*\} from "@\/lib\/outfitBadges"/);
     expect(BADGE_RECOMMANDE).toBe("Recommandé");
     expect(BADGE_REGISTRE).toBe("Plus sobre");

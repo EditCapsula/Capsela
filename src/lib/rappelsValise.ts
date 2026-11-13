@@ -1,4 +1,5 @@
 import { MONTHS_FR } from "./data";
+import { langue } from "./langue";
 import type { ValiseGardee } from "./valises";
 
 /*
@@ -48,12 +49,19 @@ export function periodeEnLettres(depart: string, retour: string): string {
     : `du ${a.getDate()} ${MONTHS_FR[a.getMonth()]} au ${b.getDate()} ${MONTHS_FR[b.getMonth()]}`;
 }
 
+const MOIS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
 /** « 15–19 nov. », « 28 nov.–3 déc. », « 11 nov. » : la carte de l'accueil, où la place est comptée (12/11/2026, demandé). */
 export function periodeCourte(depart: string, retour: string): string {
   const a = dateDe(depart);
   const b = dateDe(retour);
+  // En anglais, le mois d'abord (« Nov 16–20 », « Nov 28–Dec 3 ») — 13/11/2026.
+  if (langue() === "en") {
+    const m = (d: Date) => MOIS_EN[d.getMonth()];
+    if (depart === retour) return `${m(a)} ${a.getDate()}`;
+    return a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear() ? `${m(a)} ${a.getDate()}–${b.getDate()}` : `${m(a)} ${a.getDate()}–${m(b)} ${b.getDate()}`;
+  }
   if (depart === retour) return `${a.getDate()} ${MOIS_COURTS[a.getMonth()]}`;
   return a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()
     ? `${a.getDate()}–${b.getDate()} ${MOIS_COURTS[b.getMonth()]}`
@@ -61,7 +69,8 @@ export function periodeCourte(depart: string, retour: string): string {
 }
 
 /** Le compte à rebours court de la carte de l'accueil : « Demain », « J-5 ». */
-export const compteAReboursCourt = (jours: number): string => (jours <= 1 ? "Demain" : `J-${jours}`);
+export const compteAReboursCourt = (jours: number): string =>
+  langue() === "en" ? (jours <= 1 ? "Tomorrow" : `${jours} days`) : jours <= 1 ? "Demain" : `J-${jours}`;
 
 /** « Demain », « Dans 5 jours ». */
 export const compteARebours = (jours: number): string => (jours <= 1 ? "Demain" : `Dans ${jours} jours`);

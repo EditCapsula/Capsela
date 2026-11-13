@@ -626,3 +626,19 @@ input.capin[type="date"]::-webkit-date-and-time-value {
     transition: none;
   }
 }
+
+/*
+ * LA GRILLE DES CARTES HERO (accueil, carrousel) : le texte à gauche, la composition à droite. Sous 360 px (13/11/2026, demandé :
+ * « resserre ») : la colonne du titre faisait 105 px quand « Décontracté », le mot le plus large des titres, en demande 120 — il
+ * débordait sur les pièces. La composition passe de 140 à 116 px et la marge intérieure se resserre : 124 px pour le titre.
+ */
+.grille-hero {
+  grid-template-columns: minmax(0, 1fr) clamp(140px, 55.5%, 181px);
+  padding: 20px 14px 10px 18px;
+}
+@media (max-width: 359px) {
+  .grille-hero {
+    grid-template-columns: minmax(0, 1fr) 116px;
+    padding: 20px 10px 10px 14px;
+  }
+}

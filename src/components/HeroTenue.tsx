@@ -1,5 +1,7 @@
 "use client";
 
+import { libelle } from "@/lib/traductions/libellesDonnees";
+import { nomAffiche, t, tn } from "@/lib/langue";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { separerCoucheExterieure } from "@/lib/coucheExterieure";
@@ -67,11 +69,13 @@ export function HeroTenue({
   const total = pieces.length;
   const capsule = pieces.filter((p) => isCatalogId(p.id)).length;
   const dressing = total - capsule;
-  const n = (k: number) => `${k} ${k <= 1 ? "pièce" : "pièces"}`;
+  // Une seule source : « Une sélection de N pièces de ta capsule » ; deux : chacune son nombre (traduit, 13/11/2026).
+  const seule = dressing === 0 || capsule === 0;
   const provenance: { cle: string; glyphe: string; texte: string }[] = [];
-  if (dressing > 0) provenance.push({ cle: "dressing", glyphe: "◔", texte: `${n(dressing)} de ton dressing` });
-  if (capsule > 0) provenance.push({ cle: "capsule", glyphe: "⬚", texte: `${n(capsule)} de ta capsule` });
-  if (provenance.length === 1) provenance[0] = { ...provenance[0], texte: `Une sélection de ${provenance[0].texte}` };
+  if (dressing > 0)
+    provenance.push({ cle: "dressing", glyphe: "◔", texte: seule ? tn(dressing, "Une sélection de {n} pièce de ton dressing", "Une sélection de {n} pièces de ton dressing") : tn(dressing, "{n} pièce de ton dressing", "{n} pièces de ton dressing") });
+  if (capsule > 0)
+    provenance.push({ cle: "capsule", glyphe: "⬚", texte: seule ? tn(capsule, "Une sélection de {n} pièce de ta capsule", "Une sélection de {n} pièces de ta capsule") : tn(capsule, "{n} pièce de ta capsule", "{n} pièces de ta capsule") });
 
   return (
     <div className="-mx-2 mt-[18px] rounded-hero flex flex-col text-ink" style={{ background: "var(--color-hero-background)", padding: 16, containerType: "inline-size", minHeight: 564 }}>
@@ -212,12 +216,12 @@ export function RailPiecesTenue({
     if (!pieces.length) return null;
     return (
       <>
-        <div className="t-surtitre text-muted mt-[26px] mb-[10px]">Les pièces de ton look · {pieces.length}</div>
+        <div className="t-surtitre text-muted mt-[26px] mb-[10px]">{t("Les pièces de ton look · {n}", { n: pieces.length })}</div>
         <ul className="grid grid-cols-2 gap-[10px] list-none p-0 m-0">
           {pieces.map((it) => {
             const suggested = isCatalogId(it.id);
             const img = resolveItemImage(it);
-            const categorie = CATLABEL[isBag(it) ? "sac" : it.cat];
+            const categorie = libelle(CATLABEL[isBag(it) ? "sac" : it.cat]);
             return (
               <li key={it.id} className="relative min-w-0">
                 <button
@@ -248,11 +252,11 @@ export function RailPiecesTenue({
                     {it.imageStatus === "generating" && <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />}
                   </span>
                   <span className="block px-[10px] pt-[8px] pb-[10px]">
-                    <span className="block t-titre-vignette text-ink line-clamp-2 break-words">{it.name}</span>
+                    <span className="block t-titre-vignette text-ink line-clamp-2 break-words">{nomAffiche(it)}</span>
                     <span className="block text-[11px] text-muted mt-[2px]">{categorie}</span>
                     {/* Provenance à la pièce — la même séparation que la ligne du hero (isCatalogId), jamais un second calcul. */}
                     <span className="block text-[11px] mt-[1px]" style={{ color: suggested ? "var(--color-sand-text)" : "var(--color-muted)" }}>
-                      {suggested ? "Capsule" : "Dressing"}
+                      {suggested ? t("Capsule") : t("Dressing")}
                     </span>
                   </span>
                 </button>

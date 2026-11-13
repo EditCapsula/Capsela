@@ -1,5 +1,7 @@
 "use client";
 
+import { t } from "@/lib/langue";
+import { libelle } from "@/lib/traductions/libellesDonnees";
 import { useLayoutEffect, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { GlypheSousChoix } from "@/components/GlyphesOccasion";
@@ -51,21 +53,21 @@ export default function SelecteurOccasion() {
     state.occasion === "travail_formel"
       ? {
           // « Où travailles-tu aujourd'hui ? » (brief) ne couvre pas « Entretien » : le titre d'avant reste (14/10/2026).
-          titre: "Quel type de journée ?",
+          titre: t("Quel type de journée ?"),
           valeurs: WORK_MODES,
           courant: state.workMode,
           choisir: (v) => actions.setWorkMode(v as WorkMode),
         }
       : state.occasion === "date"
         ? {
-            titre: "Quel type de date ?",
+            titre: t("Quel type de date ?"),
             valeurs: DATE_CONTEXTS.map(([m]) => m),
             courant: state.dateContext,
             choisir: (v) => actions.setDateContext(v as DateContext),
           }
         : state.occasion === "voyage"
           ? {
-              titre: "Quel type de trajet ?",
+              titre: t("Quel type de trajet ?"),
               valeurs: ["Court trajet", "Longue distance"] as const,
               courant: state.travelMode,
               choisir: (v) => actions.setTravelMode(v as TravelMode),
@@ -116,7 +118,7 @@ export default function SelecteurOccasion() {
                   (actif ? "font-semibold text-ink" : "font-medium text-muted")
                 }
               >
-                {label}
+                {libelle(label)}
                 {actif && <span aria-hidden="true" className="absolute left-0 right-0 bottom-0 h-[2px] bg-terracotta-deep" />}
               </button>
             );
@@ -137,7 +139,7 @@ export default function SelecteurOccasion() {
         <p aria-live="polite" className="min-w-0 t-titre-section text-ink" style={{ textWrap: "balance" }}>
           {phrase && (
             <>
-              {phrase.debut} <span className="italic" style={{ color: "var(--color-terracotta-deep)" }}>{phrase.fin}</span>
+              {libelle(phrase.debut)} <span className="italic" style={{ color: "var(--color-terracotta-deep)" }}>{libelle(phrase.fin)}</span>
             </>
           )}
         </p>
@@ -151,7 +153,7 @@ export default function SelecteurOccasion() {
             <span className="text-terracotta">
               <GlypheSousChoix valeur={sousChoix.courant} taille={15} />
             </span>
-            <span className="text-[12px] font-semibold text-ink whitespace-nowrap">{libelleDeclencheur(sousChoix.courant)}</span>
+            <span className="text-[12px] font-semibold text-ink whitespace-nowrap">{libelle(sansBarre(libelleDeclencheur(sousChoix.courant)))}</span>
             <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" className="text-muted" style={{ display: "block" }}>
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -181,7 +183,7 @@ export default function SelecteurOccasion() {
                   className={"flex-1 min-w-0 text-[14px] " + (actif ? "font-semibold" : "text-ink")}
                   style={actif ? { color: "var(--color-terracotta-deep)" } : undefined}
                 >
-                  {sansBarre(v)}
+                  {libelle(sansBarre(v))}
                 </span>
                 {actif && (
                   <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block", color: "var(--color-terracotta-deep)" }}>

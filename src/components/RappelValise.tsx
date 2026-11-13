@@ -4,6 +4,7 @@ import { dateDuJour } from "@/lib/jourConsulte";
 import { jourLocal } from "@/lib/outfitFeedback";
 import { avancementValise, compteAReboursCourt, periodeCourte, prochainRappel, type RappelValise } from "@/lib/rappelsValise";
 import { useCapsela } from "@/lib/store";
+import { t, tn } from "@/lib/langue";
 
 /*
  * LES RAPPELS DE VALISE À L'ÉCRAN (06/11/2026, lib/rappelsValise.ts pour les règles). Trois pièces, partagées par l'accueil, l'en-tête,
@@ -49,12 +50,12 @@ export function IconeValise({ taille = 20 }: { taille?: number }) {
 export function CarteProchainDepart({ rappel, className = "" }: { rappel: RappelValise; className?: string }) {
   const { actions } = useCapsela();
   const avancement = avancementValise(rappel.valise);
-  const detail = !avancement ? null : avancement.aAjouter === 0 ? "Valise prête" : avancement.aAjouter === 1 ? "1 pièce à ajouter" : `${avancement.aAjouter} pièces à ajouter`;
+  const detail = !avancement ? null : avancement.aAjouter === 0 ? t("Valise prête") : tn(avancement.aAjouter, "{n} pièce à ajouter", "{n} pièces à ajouter");
   return (
     <button
       type="button"
       onClick={() => void actions.ouvrirValise(rappel.valise.id)}
-      aria-label={`Ton prochain départ : ${rappel.voyage}, ${rappel.badge.toLowerCase()}${detail ? `, ${detail.toLowerCase()}` : ""}. Voir ma valise`}
+      aria-label={t("Ton prochain départ : {voyage}, {quand}{detail}. Voir ma valise", { voyage: `${rappel.valise.destination} · ${periodeCourte(rappel.valise.depart, rappel.valise.retour)}`, quand: compteAReboursCourt(rappel.jours), detail: detail ? `, ${detail.toLowerCase()}` : "" })}
       className={"w-full flex items-center gap-3 rounded-carte bg-card border border-border px-4 py-[11px] text-left cursor-pointer active:opacity-80 " + className}
     >
       <span aria-hidden="true" className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
@@ -62,7 +63,7 @@ export function CarteProchainDepart({ rappel, className = "" }: { rappel: Rappel
       </span>
       <span className="flex-1 min-w-0">
         {/* Sous 360 px, le surtitre s'efface (12/11/2026, demandé) : l'icône et le compte à rebours disent déjà le départ. */}
-        <span className="block t-surtitre text-muted max-[359px]:hidden">Prochain départ</span>
+        <span className="block t-surtitre text-muted max-[359px]:hidden">{t("Prochain départ")}</span>
         <span className="block mt-[2px] max-[359px]:mt-0 truncate">
           <span className="t-titre-ligne text-ink">{rappel.valise.destination}</span>
           <span className="text-[12.5px] text-muted"> · {periodeCourte(rappel.valise.depart, rappel.valise.retour)}</span>

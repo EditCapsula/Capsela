@@ -1,3 +1,4 @@
+import { aTraduire } from "./langue";
 import type { LookScore } from "./logic";
 
 /**
@@ -37,7 +38,7 @@ import type { LookScore } from "./logic";
  */
 
 /** Badge de qualité — le score, et lui seul, le décide. */
-export const BADGE_RECOMMANDE = "Recommandé";
+export const BADGE_RECOMMANDE = aTraduire("Recommandé");
 
 /**
  * Badge de registre — le repli de formalité, et lui seul, le décide.
@@ -56,7 +57,7 @@ export const BADGE_RECOMMANDE = "Recommandé";
  * décontracté » serait faux pour 4→3, et « sobre » est un compliment dans le
  * vocabulaire de la mode, jamais un manque.
  */
-export const BADGE_REGISTRE = "Plus sobre";
+export const BADGE_REGISTRE = aTraduire("Plus sobre");
 
 /** Badges à afficher, du plus structurant au plus secondaire. */
 export type OutfitBadgeKey = "recommande" | "registre";

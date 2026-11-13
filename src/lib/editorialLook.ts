@@ -2,6 +2,7 @@ import { accordAPlusieursCouleurs } from "./accordsCouleurs";
 import { formalityOf, isNeutralColor, isStatement, matiereOf } from "./attributes";
 import { STYLE_ID_TO_CATALOG_LABEL, styleLabel, type Gender, type StyleId } from "./profile";
 import type { DateContext, Item, OccasionKey, WorkMode } from "./types";
+import { langue, t } from "./langue";
 
 /**
  * LE BLOC ÉDITORIAL D'UNE TENUE RECOMMANDÉE (12/11/2026, brief « Optimiser le bloc éditorial des recommandations de tenues »).
@@ -41,6 +42,44 @@ const CARACTERES: Record<Caractere, { adjectif: string; sujet: string }> = {
   minimaliste: { adjectif: "minimaliste", sujet: "Une silhouette épurée" },
   intemporel: { adjectif: "intemporel", sujet: "Des pièces intemporelles" },
 };
+
+/*
+ * L'ANGLAIS (13/11/2026, docs/traduction.md) : les MÊMES lectures des pièces, écrites en anglais idiomatique — pas un mot à mot. Le
+ * registre et le caractère gardent leur sens (« Casual and structured », « Clean lines for a day at the office. »).
+ */
+const CARACTERES_EN: Record<Caractere, { adjectif: string; sujet: string }> = {
+  affirme: { adjectif: "bold", sujet: "A statement piece" },
+  nuance: { adjectif: "nuanced", sujet: "Coordinated colours" },
+  structure: { adjectif: "structured", sujet: "Clean lines" },
+  fluide: { adjectif: "fluid", sujet: "Light fabrics" },
+  urbain: { adjectif: "urban", sujet: "Modern cuts" },
+  minimaliste: { adjectif: "minimal", sujet: "A pared-back silhouette" },
+  intemporel: { adjectif: "timeless", sujet: "Timeless pieces" },
+};
+const REGISTRES_EN: Record<string, string> = { Sportif: "Sporty", Douillet: "Cosy", Décontracté: "Relaxed", Casual: "Casual", Chic: "Chic", Élégant: "Elegant" };
+
+function contexteEn(occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext): string {
+  switch (occasion) {
+    case "quotidien":
+      return "an effortless everyday";
+    case "travail_formel":
+      return workMode === "Télétravail" ? "a day working from home" : workMode === "Entretien" ? "an important meeting" : "a day at the office";
+    case "date":
+      return dateContext === "Restaurant / date romantique" ? "a dinner for two" : dateContext === "Soirée festive" ? "a festive evening" : "a date";
+    case "soiree":
+      return "a night out";
+    case "sport":
+      return "a workout";
+    case "cocooning":
+      return "a day at home";
+    case "voyage":
+      return "a travel day";
+    case "evenement_perso":
+      return "an occasion that matters";
+    default:
+      return "a busy day";
+  }
+}
 
 const VETEMENTS: Item["cat"][] = ["haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison", "veste", "manteau"];
 const MATIERES_FLUIDES = new Set(["Soie", "Lin", "Viscose", "Satin", "Mousseline"]);
@@ -107,7 +146,7 @@ export function contexteDeLOccasion(occasion: OccasionKey, workMode: WorkMode, d
 export function styleDuLook(pieces: readonly Item[], styles: readonly string[], gender: Gender | null): string | null {
   for (const id of styles) {
     const etiquette = STYLE_ID_TO_CATALOG_LABEL[id as StyleId];
-    if (etiquette && pieces.some((p) => p.styleTags?.includes(etiquette))) return styleLabel(id, gender).toLowerCase() || null;
+    if (etiquette && pieces.some((p) => p.styleTags?.includes(etiquette))) return t(styleLabel(id, gender)).toLowerCase() || null;
   }
   return null;
 }
@@ -117,6 +156,16 @@ export function styleDuLook(pieces: readonly Item[], styles: readonly string[], 
  * seule mention de la personne : c'est son style déclaré, pas un trait de caractère. Jamais au-delà de 12 mots : sinon, sans lui.
  */
 export function texteEditorialLook(pieces: readonly Item[], occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext, style: string | null = null): TexteLook {
+  if (langue() === "en") {
+    const contexteEnLigne = contexteEn(occasion, workMode, dateContext);
+    if (!pieces.length) return { titre: { a: "Your outfit", b: "of the day" }, phrase: `An outfit designed for ${contexteEnLigne}.` };
+    const ce = CARACTERES_EN[caractere(pieces)];
+    const baseEn = `${ce.sujet} for ${contexteEnLigne}`;
+    const avecStyleEn = style ? `${baseEn}, in your ${style} style.` : null;
+    const phraseEn = avecStyleEn && avecStyleEn.split(/\s+/).length <= 12 && avecStyleEn.length <= 100 ? avecStyleEn : `${baseEn}.`;
+    const r = registre(pieces, occasion);
+    return { titre: { a: REGISTRES_EN[r] ?? r, b: `and ${ce.adjectif}` }, phrase: phraseEn };
+  }
   const contexte = contexteDeLOccasion(occasion, workMode, dateContext);
   if (!pieces.length) return { titre: { a: "Ta tenue", b: "du jour" }, phrase: `Une tenue pensée pour ${contexte}.` };
   const c = CARACTERES[caractere(pieces)];

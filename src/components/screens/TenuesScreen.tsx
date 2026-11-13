@@ -1,5 +1,6 @@
 "use client";
 
+import TitrePage from "@/components/TitrePage";
 import { t, tn } from "@/lib/langue";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
 import { styleDuLook, texteEditorialLook, titreEnLigne } from "@/lib/editorialLook";
@@ -498,10 +499,12 @@ export default function TenuesScreen() {
     if (!total) return null;
     const capsule = suggestedCount;
     const dressing = total - capsule;
-    const pieces = (n: number) => `${n} ${n <= 1 ? "pièce" : "pièces"}`;
+    const deux = dressing > 0 && capsule > 0;
     const lignes: { cle: string; glyphe: string; texte: string }[] = [];
-    if (dressing > 0) lignes.push({ cle: "dressing", glyphe: "◔", texte: `${pieces(dressing)} de ton dressing` });
-    if (capsule > 0) lignes.push({ cle: "capsule", glyphe: "⬚", texte: `${pieces(capsule)} de ta capsule` });
+    if (dressing > 0)
+      lignes.push({ cle: "dressing", glyphe: "◔", texte: deux ? t("{n} de ton dressing", { n: dressing }) : tn(dressing, "{n} pièce de ton dressing", "{n} pièces de ton dressing") });
+    if (capsule > 0)
+      lignes.push({ cle: "capsule", glyphe: "⬚", texte: deux ? t("{n} de ta capsule", { n: capsule }) : tn(capsule, "{n} pièce de ta capsule", "{n} pièces de ta capsule") });
     if (!lignes.length) return null;
     /*
      * UNE SEULE SOURCE : la phrase s'ouvre (22/09/2026). « Une sélection de
@@ -512,7 +515,6 @@ export default function TenuesScreen() {
      */
     // Compactes depuis le 30/10/2026 : les deux pastilles et « Autre tenue » tiennent sur une ligne (demandé). « 3 de ton dressing »,
     // « 1 de ta capsule » ; une seule source garde son nombre de pièces, sans « Une sélection de ».
-    if (lignes.length === 2) return lignes.map((l) => ({ ...l, texte: l.texte.replace(/ pièces? /, " ") }));
     return lignes;
   })();
 
@@ -795,26 +797,16 @@ export default function TenuesScreen() {
     >
       <AppHeader onBack={actions.goHome} backLabel={t("Revenir à l'accueil")} />
 
-      <div className="mt-[10px]">
-        {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
-            (23/09/2026) : répété ici, il salue une deuxième fois dans la même
-            session et ne dit rien de l'écran. Le titre annonce désormais ce
-            qu'on vient y chercher. « Ma », et non « Ton » : c'est déjà le
-            registre des CTA qui y mènent — « Voir ma tenue » sur l'accueil et
-            la capsule, « Voir ma tenue du jour » dans le dressing. La mention
-            « Le look du jour » qui vivait
-            DANS la card terracotta est supprimée du même coup — elle ferait
-            doublon à deux cents pixels d'écart. */}
-        <div className="t-titre-ecran text-ink">
-          {t("Ma")} <span className="italic text-terracotta">{t("tenue")} {complementTenue(decalage, dateConsultee)}</span>
-        </div>
-      </div>
+      {/* LA MISE EN PAGE DE L'ACCUEIL (13/11/2026, demandé : « aligne la place de ma tenue du jour et l'accueil », option a, en
+          gardant le bouton retour) : le titre par TitrePage, 18 px sous le bandeau comme sur les pages majeures, puis la ligne du jour
+          et de la météo à la même distance que sur l'accueil. « Bonjour, <prénom> » reste à l'accueil seul (23/09/2026) : le titre
+          annonce ce qu'on vient chercher ici, « Ma tenue du jour ». */}
+      <TitrePage>
+        {t("Ma")} <span className="italic text-terracotta">{t("tenue")} {complementTenue(decalage, dateConsultee)}</span>
+      </TitrePage>
 
-      {/* LE JOUR ET SA MÉTÉO, SUR UNE LIGNE (27/09/2026) — le composant
-          partagé avec l'Accueil. Il remplace le surtitre qui répétait la
-          date : les chevrons changent le jour, la météo ouvre
-          « Localisation & météo ». */}
-      <BarreDuJour className="mt-2" meteoEnLigne />
+      {/* LE JOUR ET SA MÉTÉO, SUR UNE LIGNE (27/09/2026) — le composant partagé avec l'Accueil, aux mêmes marges. */}
+      <BarreDuJour className="mt-1" meteoEnLigne />
       {/* Ce qui est planifié ce jour-là (Planifier) — le même rappel que
           l'Accueil. Un plan de journée est devenu la tenue ci-dessous (option C,
           30/09/2026) ; restent ici la soirée et les plans écartés ou incomplets. */}
@@ -946,11 +938,11 @@ export default function TenuesScreen() {
                 {badgesAffiches.map((key) =>
                   key === "recommande" ? (
                     <Badge key={key} tone="surTerracotta" taille="s">
-                      {BADGE_RECOMMANDE}
+                      {t(BADGE_RECOMMANDE)}
                     </Badge>
                   ) : (
                     <Badge key={key} tone="surTerracottaContour" taille="s">
-                      {BADGE_REGISTRE}
+                      {t(BADGE_REGISTRE)}
                     </Badge>
                   )
                 )}

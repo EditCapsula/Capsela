@@ -30,7 +30,7 @@ import { CENTRE_AIDE, CENTRE_AIDE_VALIDE } from "@/lib/centreAide";
 import { DEFAULT_PREFS, WORK_DAYS, type ProfilePrefs } from "@/lib/profile";
 import { ajouterPeriode, jourLocal, libellePeriode, periodesAVenir, periodesDe, periodeValide, retirerPeriode } from "@/lib/conges";
 import Input from "@/components/Input";
-import { notificationsDisponiblesIci, synchroniserNotifications, type EtatNotifications } from "@/lib/notifications";
+import { diagnostiquerNotifications, envoyerNotificationEssai, notificationsDisponiblesIci, synchroniserNotifications, type DiagnosticNotifications, type EtatNotifications } from "@/lib/notifications";
 import { useCapsela } from "@/lib/store";
 import type { VueReglages } from "@/lib/types";
 import Button from "@/components/Button";
@@ -87,6 +87,91 @@ function Section({ titre, icone, children }: { titre: string; icone: React.React
   );
 }
 
+/** « aujourd'hui à 08:00 », « demain à 08:00 », « le 15 nov. à 08:00 ». */
+function quandNotification(d: Date, maintenant = new Date()): string {
+  const jour = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const ecart = Math.round((jour(d) - jour(maintenant)) / 86_400_000);
+  const heure = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+  return `${ecart === 0 ? "aujourd'hui" : ecart === 1 ? "demain" : `le ${d.getDate()} ${MOIS[d.getMonth()]}`} à ${heure}`;
+}
+
+/**
+ * Le diagnostic de la notification (13/11/2026) : la prochaine réellement programmée sur le téléphone, et un essai immédiat. Dans
+ * l'app seulement — le site n'envoie pas de notification. Lu à l'ouverture et après chaque changement de réglage ; activée et
+ * autorisée sans rien de programmé, la programmation est refaite (sans demande d'autorisation) avant d'être relue.
+ */
+function DiagnosticNotif({
+  prefs,
+  diag,
+  setDiag,
+  essai,
+  setEssai,
+  etat,
+}: {
+  prefs: ProfilePrefs;
+  diag: DiagnosticNotifications | null;
+  setDiag: (d: DiagnosticNotifications | null) => void;
+  essai: "envoi" | "envoyee" | "refusee" | "indisponible" | null;
+  setEssai: (e: "envoi" | "envoyee" | "refusee" | "indisponible" | null) => void;
+  etat: EtatNotifications | null;
+}) {
+  const natif = notificationsDisponiblesIci();
+  const { notifEnabled, notifTime } = prefs;
+  useEffect(() => {
+    if (!natif) return;
+    let fini = false;
+    void (async () => {
+      let d = await diagnostiquerNotifications();
+      if (d && d.autorisee && notifEnabled && !d.prochaine) {
+        await synchroniserNotifications(prefs, false);
+        d = await diagnostiquerNotifications();
+      }
+      if (!fini) setDiag(d);
+    })();
+    return () => {
+      fini = true;
+    };
+    // Relu quand le réglage change (l'interrupteur, l'heure) ou que la programmation répond.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [natif, notifEnabled, notifTime, etat]);
+  if (!natif) return null;
+  return (
+    <Card className="overflow-hidden mt-6">
+      <Ligne>
+        <span className="text-[13px] text-ink">Prochaine notification</span>
+        <span className="text-[13px] text-muted-3 text-right">
+          {!notifEnabled ? "Désactivée" : !diag ? "…" : !diag.autorisee ? "Bloquée par le téléphone" : diag.prochaine ? quandNotification(diag.prochaine) : "Aucune programmée"}
+        </span>
+      </Ligne>
+      <div className="px-4 py-[12px]">
+        <button
+          type="button"
+          disabled={essai === "envoi"}
+          onClick={async () => {
+            setEssai("envoi");
+            const r = await envoyerNotificationEssai();
+            setEssai(r);
+            setDiag(await diagnostiquerNotifications());
+          }}
+          className="min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer disabled:opacity-60"
+        >
+          {essai === "envoi" ? "Envoi…" : "M'envoyer une notification d'essai"}
+        </button>
+        <div className="text-[11px] text-muted-3 leading-[1.45] mt-[4px]" role="status">
+          {essai === "envoyee"
+            ? "Envoyée : elle doit apparaître dans quelques secondes. Si elle arrive, ton téléphone affiche bien les notifications de Capsela."
+            : essai === "refusee"
+              ? "Ton téléphone bloque les notifications de Capsela. Autorise-les dans ses réglages (Applications, Capsela, Notifications)."
+              : essai === "indisponible"
+                ? "Le téléphone n'a pas pu programmer la notification d'essai."
+                : "Android peut retarder la notification de la tenue du jour pour économiser la batterie. Si elle n'arrive pas, retire Capsela des applications mises en veille, dans les réglages de batterie du téléphone."}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function Ligne({ children }: { children: React.ReactNode }) {
   return <Rangee className="justify-between">{children}</Rangee>;
 }
@@ -127,6 +212,10 @@ export default function PreferencesScreen() {
   // La notification suit le réglage (04/11/2026, notifications.ts) : chaque changement de l'interrupteur ou de l'heure la
   // reprogramme. `etatNotif` dit ce que le téléphone a répondu — autorisation refusée, ou web, où rien n'est envoyé.
   const [etatNotif, setEtatNotif] = useState<EtatNotifications | null>(null);
+  // LE DIAGNOSTIC (13/11/2026, notifications.ts) : lu à l'ouverture de la page, sans rien demander — avant, un refus n'était dit
+  // qu'après un changement de réglage. `essai` : le résultat de la notification d'essai.
+  const [diagNotif, setDiagNotif] = useState<DiagnosticNotifications | null>(null);
+  const [essai, setEssai] = useState<"envoi" | "envoyee" | "refusee" | "indisponible" | null>(null);
   const [debutConges, setDebutConges] = useState("");
   const [finConges, setFinConges] = useState("");
   const aujourdhuiIso = jourLocal(new Date());
@@ -342,13 +431,14 @@ export default function PreferencesScreen() {
           </Ligne>
           {/* La phrase « Les notifications arrivent dans l'application Capsela sur Android. Le site n'en envoie pas. », affichée
               sur le site, a été retirée le 05/11/2026 (demandé : « cette phrase ne sert à rien »). */}
-          {prefs.notifEnabled && etatNotif === "refusee" && (
+          {prefs.notifEnabled && (etatNotif === "refusee" || (etatNotif === null && diagNotif && !diagNotif.autorisee)) && (
             <div className="px-4 py-[12px] text-[11px] text-rust leading-[1.45]" role="alert">
               Ton téléphone bloque les notifications de Capsela. Autorise-les dans ses réglages (Applications, Capsela, Notifications).
             </div>
           )}
         </Card>
       )}
+      {vue === "notifications" && <DiagnosticNotif prefs={prefs} diag={diagNotif} setDiag={setDiagNotif} essai={essai} setEssai={setEssai} etat={etatNotif} />}
 
       {vue === "quotidien" && (
         <Card className="overflow-hidden mt-6">

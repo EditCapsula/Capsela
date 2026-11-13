@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { heureDeNotification, JOURS_PROGRAMMES, prochainsMoments } from "../notifications";
+import { heureDeNotification, ID_ESSAI, JOURS_PROGRAMMES, prochaineTenueProgrammee, prochainsMoments } from "../notifications";
 
 describe("heure de la notification de la tenue du jour", () => {
   it("lit l'heure des Préférences", () => {
@@ -28,5 +28,22 @@ describe("prochainsMoments", () => {
     const m = prochainsMoments({ hour: 8, minute: 15 }, new Date(2026, 9, 24, 12, 0), 3);
     expect(m.map((d) => [d.getDate(), d.getHours(), d.getMinutes()])).toEqual([[25, 8, 15], [26, 8, 15], [27, 8, 15]]);
     expect(prochainsMoments({ hour: 8, minute: 0 }, new Date(2026, 10, 30, 9, 0), 1)[0]).toEqual(new Date(2026, 11, 1, 8, 0));
+  });
+});
+
+describe("prochaineTenueProgrammee (diagnostic, 13/11/2026)", () => {
+  const maintenant = new Date(2026, 10, 13, 9, 0);
+  it("la plus proche à venir des notifications de la tenue du jour, sans l'essai ni les rappels de reprise", () => {
+    const attente = [
+      { id: 2, schedule: { at: new Date(2026, 10, 15, 8, 0) } },
+      { id: 1, schedule: { at: new Date(2026, 10, 14, 8, 0).toISOString() } },
+      { id: ID_ESSAI, schedule: { at: new Date(2026, 10, 13, 9, 5) } },
+      { id: 100, schedule: { at: new Date(2026, 10, 13, 18, 0) } },
+    ];
+    expect(prochaineTenueProgrammee(attente, maintenant)).toEqual(new Date(2026, 10, 14, 8, 0));
+  });
+  it("rien de programmé, ou seulement du passé : null", () => {
+    expect(prochaineTenueProgrammee([], maintenant)).toBeNull();
+    expect(prochaineTenueProgrammee([{ id: 1, schedule: { at: new Date(2026, 10, 13, 8, 0) } }, { id: 3 }], maintenant)).toBeNull();
   });
 });

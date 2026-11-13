@@ -1551,8 +1551,9 @@ export default function PlanifierScreen() {
             {/* Le titre à la même hauteur que sur les autres onglets (mesuré en rendu : le bandeau de cet écran est hors de la zone qui
                 défile, d'où une marge plus courte ici) ; le surtitre « Planifier », qui répétait
                 l'onglet, est retiré (TitrePage, 12/11/2026). */}
-            <TitrePage decalage={2} chapeau="Des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing.">
-              Anticipe tes moments. <span className="italic text-terracotta">Capsela s&apos;occupe du look</span>
+            {/* Sur une ligne comme les autres titres (13/11/2026, validé) : « Capsela s'occupe du look » passe en tête de la phrase. */}
+            <TitrePage decalage={2} chapeau="Capsela s'occupe du look : des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing.">
+              Anticipe <span className="italic text-terracotta">tes moments</span>
             </TitrePage>
 
             {/* LES DEUX VISUELS ÉDITORIAUX sont ceux d'avant (recette du 26/09/2026, fournis par la propriétaire) : une tenue

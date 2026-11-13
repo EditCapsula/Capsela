@@ -128,3 +128,61 @@ export async function synchroniserNotifications(
     return "indisponible";
   }
 }
+
+/*
+ * LE DIAGNOSTIC DE LA NOTIFICATION (13/11/2026, signalé : « je n'ai reçu aucune notification de l'application à l'heure demandée »,
+ * dans l'app Android). Jusqu'ici, Réglages ne disait que le téléphone bloquait les notifications qu'après un changement de
+ * l'interrupteur ou de l'heure : à l'ouverture de la page, rien n'était vérifié, et un refus restait invisible. Ce diagnostic lit,
+ * sans rien demander, ce que le téléphone sait vraiment — l'autorisation et la prochaine notification programmée — et permet d'en
+ * recevoir une tout de suite, pour séparer un blocage (rien n'arrive) d'un retard d'Android (l'essai arrive, l'heure dérive).
+ */
+export const ID_ESSAI = 99;
+
+export interface DiagnosticNotifications {
+  /** L'autorisation d'afficher des notifications, telle que le téléphone la donne. */
+  autorisee: boolean;
+  /** La prochaine notification de la tenue du jour programmée sur le téléphone, ou null s'il n'y en a aucune. */
+  prochaine: Date | null;
+}
+
+/** La plus proche des notifications de la tenue du jour (identifiants 1 à JOURS_PROGRAMMES) encore à venir. */
+export function prochaineTenueProgrammee(attente: readonly { id: number; schedule?: { at?: Date | string } }[], maintenant: Date): Date | null {
+  const dates = attente
+    .filter((n) => n.id >= ID_TENUE_DU_JOUR && n.id < ID_TENUE_DU_JOUR + JOURS_PROGRAMMES && n.schedule?.at)
+    .map((n) => new Date(n.schedule!.at as Date | string))
+    .filter((d) => !Number.isNaN(d.getTime()) && d.getTime() > maintenant.getTime())
+    .sort((a, b) => a.getTime() - b.getTime());
+  return dates[0] ?? null;
+}
+
+/** Ce que le téléphone sait ; null sur le web ou si le téléphone ne répond pas. Ne demande jamais l'autorisation. */
+export async function diagnostiquerNotifications(): Promise<DiagnosticNotifications | null> {
+  if (!notificationsDisponiblesIci()) return null;
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    const autorisee = (await LocalNotifications.checkPermissions()).display === "granted";
+    const { notifications } = await LocalNotifications.getPending();
+    return { autorisee, prochaine: prochaineTenueProgrammee(notifications, new Date()) };
+  } catch (e) {
+    console.warn("[notifications] diagnostic impossible", e);
+    return null;
+  }
+}
+
+/** Une notification d'essai, affichée tout de suite (demande l'autorisation si elle n'a jamais été donnée). */
+export async function envoyerNotificationEssai(): Promise<"envoyee" | "refusee" | "indisponible"> {
+  if (!notificationsDisponiblesIci()) return "indisponible";
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    let permission = (await LocalNotifications.checkPermissions()).display;
+    if (permission !== "granted") permission = (await LocalNotifications.requestPermissions()).display;
+    if (permission !== "granted") return "refusee";
+    await LocalNotifications.schedule({
+      notifications: [{ id: ID_ESSAI, title: "Notification d'essai", body: "Les notifications de Capsela arrivent bien sur ce téléphone.", smallIcon: "ic_stat_capsela" }],
+    });
+    return "envoyee";
+  } catch (e) {
+    console.warn("[notifications] essai impossible", e);
+    return "indisponible";
+  }
+}
