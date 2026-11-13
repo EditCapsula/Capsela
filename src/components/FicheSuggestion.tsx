@@ -48,6 +48,11 @@ export default function FicheSuggestion({
   onComposer,
   onOuvrirAssociation,
   onClicAffilie,
+  onNePlusProposer,
+  onPrecedente,
+  onSuivante,
+  dejaPossedee = false,
+  onVoirDressing,
 }: {
   piece: Item;
   /** Position dans le parcours, à partir de 1. */
@@ -72,6 +77,14 @@ export default function FicheSuggestion({
   onOuvrirAssociation: (index: number) => void;
   /** « Découvrir la pièce » : seulement quand un lien marchand est configuré (affLink) ; mesuré, jamais compté comme un achat. */
   onClicAffilie: () => void;
+  /** « Ne plus me proposer cette pièce » (13/11/2026) : la préférence durable, dans le menu ⋯ ; « Pas pour moi » ne vaut que la saison. */
+  onNePlusProposer: () => void;
+  /** Le parcours de la Capsule : la suggestion précédente et la suivante (absentes hors parcours, ou en bout de liste). */
+  onPrecedente?: () => void;
+  onSuivante?: () => void;
+  /** Une pièce du dressing vient déjà de cette suggestion (vote « possedee ») : pas de second ajout, on le dit (13/11/2026, doublons). */
+  dejaPossedee?: boolean;
+  onVoirDressing?: () => void;
 }) {
   const [menu, setMenu] = useState(false);
   // Une nouvelle pièce repart d'une carte au centre, menu fermé : le décalage d'un vote par glissement (±420) ne la suit pas.
@@ -114,11 +127,6 @@ export default function FicheSuggestion({
       entete={
         <>
           {/* Le parcours (« 3 / 10 », barre) dans la Capsule seulement : ouverte d'ailleurs, la fiche montre une pièce (13/11/2026). */}
-          {total > 1 && (
-            <span className="text-[12px] text-muted tabular-nums flex-shrink-0" aria-label={`Suggestion ${position} sur ${total}`}>
-              {position} / {total}
-            </span>
-          )}
           <button
             type="button"
             onClick={() => setMenu((m) => !m)}
@@ -142,6 +150,21 @@ export default function FicheSuggestion({
       }
       bandeau={
         total > 1 && (
+        <>
+        {/* Le parcours sur sa ligne (planche, 13/11/2026) : l'en-tête garde la provenance lisible sur une ligne. */}
+          {total > 1 && (
+            <div className="flex items-center justify-center">
+              <button type="button" onClick={onPrecedente} disabled={!onPrecedente} aria-label="Suggestion précédente" className="w-[44px] h-[40px] flex items-center justify-center text-ink cursor-pointer disabled:opacity-30 disabled:cursor-default">
+                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+              <span className="text-[12px] text-muted tabular-nums min-w-[52px] text-center" aria-live="polite" aria-label={`Suggestion ${position} sur ${total}`}>
+                {position} / {total}
+              </span>
+              <button type="button" onClick={onSuivante} disabled={!onSuivante} aria-label="Suggestion suivante" className="w-[44px] h-[40px] flex items-center justify-center text-ink cursor-pointer disabled:opacity-30 disabled:cursor-default">
+                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+            </div>
+          )}
         <div
           className="h-[3px] flex-shrink-0"
           style={{ background: "var(--color-chip-soft-bg)" }}
@@ -156,9 +179,30 @@ export default function FicheSuggestion({
             style={{ width: `${progression * 100}%` }}
           />
         </div>
+        </>
         )
       }
       pied={
+        etat === "aimee" ? (
+          // L'ÉTAT APRÈS UN VOTE (13/11/2026, planche) : la fiche le dit elle-même, et propose la suite — jamais de navigation imposée.
+          <>
+            <div className="flex items-center justify-center gap-[8px] rounded-full bg-chip-soft-bg text-terracotta-deep text-[13px] font-semibold min-h-[40px]" role="status">
+              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" fill="currentColor" /></svg>
+              Ajoutée à ta sélection !
+            </div>
+            <button type="button" onClick={onVoirTenues} className="mt-[10px] w-full min-h-[48px] rounded-full bg-terracotta-deep text-on-terracotta t-bouton cursor-pointer">
+              Voir comment la porter
+            </button>
+            <div className="grid grid-cols-2 gap-[8px] mt-[8px]">
+              <button type="button" disabled={occupe} onClick={onAimer} className="min-h-[44px] rounded-full border border-border text-ink text-[12.5px] cursor-pointer disabled:opacity-60">
+                Retirer de ma sélection
+              </button>
+              <button type="button" disabled={occupe} onClick={onRejeter} className="min-h-[44px] rounded-full border border-border text-ink text-[12.5px] cursor-pointer disabled:opacity-60">
+                Retirer de la capsule
+              </button>
+            </div>
+          </>
+        ) : (
         <>
           <div className="text-center t-titre-carte text-ink">
             Alors, cette pièce te plaît ?
@@ -186,16 +230,14 @@ export default function FicheSuggestion({
                 </svg>
                 Pas pour moi
               </span>
-              {/* Hors de la Capsule, pas de suivante : la pièce sort de la capsule (13/11/2026). */}
-              <span className="text-[11px] text-muted">
-                {total > 1 ? "Passer à la suivante" : "La retirer de ma capsule"}
-              </span>
+              {/* Pour la saison en cours seulement (13/11/2026, pasPourMoi.ts) ; le refus définitif est dans le menu ⋯. */}
+              <span className="text-[11px] text-muted">Pour cette saison</span>
             </button>
             <button
               type="button"
               disabled={occupe}
               onClick={onAimer}
-              aria-pressed={etat === "aimee"}
+              aria-pressed={false}
               className="min-h-[64px] rounded-tuile bg-terracotta-deep text-cream flex flex-col items-center justify-center gap-[2px] px-2 py-[10px] cursor-pointer disabled:opacity-60"
             >
               <span className="flex items-center gap-[6px] text-[14px] font-semibold">
@@ -203,7 +245,7 @@ export default function FicheSuggestion({
                   width="16"
                   height="16"
                   viewBox="0 0 24 24"
-                  fill={etat === "aimee" ? "currentColor" : "none"}
+                  fill="none"
                   stroke="currentColor"
                   strokeWidth="1.8"
                   strokeLinejoin="round"
@@ -211,22 +253,32 @@ export default function FicheSuggestion({
                 >
                   <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
                 </svg>
-                {etat === "aimee" ? "Tu l'aimes" : "J'aime"}
+                J&apos;aime
               </span>
-              <span className="text-[11px] opacity-85">
-                Découvrir les associations
-              </span>
+              {/* Plus de navigation imposée (13/11/2026) : le vote, un message, et « Voir comment la porter » à part. Un second appui le retire. */}
+              <span className="text-[11px] opacity-85">Ajouter à ma sélection</span>
             </button>
           </div>
-          <button
-            type="button"
-            disabled={occupe}
-            onClick={onPossede}
-            className="mt-[6px] w-full text-center text-[13px] text-terracotta py-[10px] cursor-pointer disabled:opacity-60"
-          >
-            Je possède déjà cette pièce
-          </button>
+          {dejaPossedee ? (
+            <button
+              type="button"
+              onClick={onVoirDressing}
+              className="mt-[6px] w-full text-center text-[13px] text-muted-3 min-h-[44px] cursor-pointer"
+            >
+              Elle est déjà dans ton dressing · <span className="text-terracotta">Voir mon dressing</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={occupe}
+              onClick={onPossede}
+              className="mt-[6px] w-full text-center text-[13px] text-terracotta min-h-[44px] cursor-pointer disabled:opacity-60"
+            >
+              Je possède déjà cette pièce
+            </button>
+          )}
         </>
+        )
       }
     >
       {menu && (
@@ -247,10 +299,10 @@ export default function FicheSuggestion({
           <button
             type="button"
             role="menuitem"
-            onClick={() => (setMenu(false), onVoirTenues())}
+            onClick={() => (setMenu(false), onNePlusProposer())}
             className="w-full text-left px-4 py-[13px] text-[13px] text-ink border-b border-border cursor-pointer"
           >
-            Voir des tenues avec cette pièce
+            Ne plus me proposer cette pièce
           </button>
           {onRemplacer && (
             <button
@@ -335,15 +387,12 @@ export default function FicheSuggestion({
             <Vignette item={piece} arrondi={18} marge={0.08} />
           </div>
           <div className="text-center mt-[14px]">
+            {piece.brand && <div className="t-surtitre text-muted-3 mb-[4px]">{piece.brand}</div>}
             <div className="t-titre-section text-ink">{piece.name}</div>
             {synthese && (
               <div className="text-[12px] text-muted mt-[5px]">{synthese}</div>
             )}
-            {etat === "aimee" && (
-              <div className="text-[11px] text-terracotta mt-[6px]">
-                ♥ Dans tes favoris
-              </div>
-            )}
+
             {phrase && (
               <p className="font-serif italic text-[15px] text-ink leading-[1.4] mt-[12px] px-2">
                 {phrase}
@@ -375,7 +424,7 @@ export default function FicheSuggestion({
       {/* COMMENT LE PORTER ? Des idées du moteur de la pièce (calculerIdeesTenues), jamais un second moteur ; aucune : pas de section. */}
       {associations.length > 0 && (
         <div className="mt-[22px]">
-          <div className="t-surtitre text-muted">Comment le porter ?</div>
+          <div className="t-surtitre text-muted">Comment la porter</div>
           <div className="scrollarea -mx-6 px-6 flex gap-[10px] overflow-x-auto snap-x snap-mandatory mt-[10px] pb-[4px]">
             {associations.map((a, i) => (
               <button
@@ -398,6 +447,17 @@ export default function FicheSuggestion({
             ))}
           </div>
         </div>
+      )}
+      {/* « Voir comment la porter » : la page des idées de tenues avec la pièce, à la demande (13/11/2026) — plus après « J'aime ». */}
+      {/* Après « J'aime », ce bouton passe en bas de la fiche, en action principale : pas deux fois le même. */}
+      {etat !== "aimee" && (
+        <button
+          type="button"
+          onClick={onVoirTenues}
+          className="mt-[14px] w-full min-h-[44px] rounded-full border border-border text-terracotta t-bouton cursor-pointer"
+        >
+          Voir comment la porter
+        </button>
       )}
     </BottomSheet>
   );

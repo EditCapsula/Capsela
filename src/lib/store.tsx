@@ -56,6 +56,7 @@ import { aUneCouche, aUneLongueur } from "./forme";
 import { genererTenueDiversifiee, recentsDuJour } from "./diversite";
 import { ecrireRecommandation, lireRecommandations, type TableRecommandations } from "./recommandationsRecentes";
 import { ecrirePiecesEcartees, lirePiecesEcartees } from "./piecesEcartees";
+import { ajouterPasPourMoi, ecrirePasPourMoi, lirePasPourMoi, piecesPasPourMoi, retirerPasPourMoi, type TablePasPourMoi } from "./pasPourMoi";
 import { ecrireVotes, fusionnerVotes, lireVotes, piecesEcarteesParVotes, voter, type EtatSuggestion, type TableVotes } from "./votesSuggestions";
 import { ecrireVoteDuCompte, envoyerVotesAuCompte, lireVotesDuCompte } from "./votesSuggestionsCompte";
 import { basculerSaison, saisonsDe, seasonDepuisSaisons } from "./saisons";
@@ -302,7 +303,6 @@ function buildInitialState(): AppState {
     activeLookId: null,
     lookReturn: "wardrobe",
     filtrePieces: null,
-    ficheEnFeuille: null,
     ficheSuggestion: null,
   };
 }
@@ -328,7 +328,6 @@ export interface Actions {
   /** `filtre` : carte du vestiaire — n'affiche que les pièces de ses catégories techniques. */
   goWardrobePieces: (filtre?: FiltrePieces) => void;
   fermerFicheSuggestion: () => void;
-  fermerFicheEnFeuille: () => void;
   goLooks: () => void;
   goProfile: () => void;
   /**
@@ -469,6 +468,11 @@ export interface Actions {
    * le compte n'a pas pu l'enregistrer (le vote reste sur l'appareil et repart à la visite suivante).
    */
   voterSuggestion: (pieceId: number, etat: EtatSuggestion | null) => Promise<boolean>;
+  /**
+   * « Pas pour moi » (13/11/2026, pasPourMoi.ts) : retire la suggestion de la capsule pour la saison en cours, sans préférence durable ;
+   * `retirer` la remet (« Annuler »). Le refus définitif reste « Ne plus me proposer cette pièce » (voterSuggestion « rejetee »).
+   */
+  pasPourMoi: (pieceId: number, retirer?: boolean) => void;
   removeActive: () => void;
   /**
    * Enregistre le choix de l'utilisatrice face à une suggestion de revente
@@ -1420,10 +1424,24 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setEcarteesDuCompte(userId);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [userId]);
+  // « Pas pour moi » pour la saison (13/11/2026, pasPourMoi.ts) : ces pièces sont dans `suggestedExcluded` le temps de la saison, mais
+  // jamais écrites avec les pièces écartées pour de bon — elles reviennent d'elles-mêmes la saison suivante.
+  const pasPourMoiRef = useRef<TablePasPourMoi>({});
+  const [pasPourMoiTable, setPasPourMoiTable] = useState<TablePasPourMoi>({});
+  useEffect(() => {
+    const t = lirePasPourMoi(userId);
+    pasPourMoiRef.current = t;
+    const ids = piecesPasPourMoi(t, new Date());
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setPasPourMoiTable(t);
+    if (ids.length) setState((st) => ({ ...st, suggestedExcluded: [...new Set([...st.suggestedExcluded, ...ids])] }));
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [userId]);
   useEffect(() => {
     if (ecarteesDuCompte !== userId) return;
-    ecrirePiecesEcartees(userId, state.suggestedExcluded);
-  }, [userId, ecarteesDuCompte, state.suggestedExcluded]);
+    const saison = new Set(piecesPasPourMoi(pasPourMoiTable, new Date()));
+    ecrirePiecesEcartees(userId, state.suggestedExcluded.filter((id) => !saison.has(id)));
+  }, [userId, ecarteesDuCompte, state.suggestedExcluded, pasPourMoiTable]);
 
   // LES VOTES SUR LES SUGGESTIONS (02/11/2026, votesSuggestions.ts) : ceux de l'appareil d'abord, puis ceux du compte, qui l'emportent
   // (table suggestions_capsule, migration 0056 — absente, la lecture rend null et l'appareil fait foi). Les pièces qu'ils écartent
@@ -1457,12 +1475,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     };
   }, [userId]);
   const enregistrerVote = async (pieceId: number, etat: EtatSuggestion | null): Promise<boolean> => {
+    const avant = votesRef.current[String(pieceId)];
+    const ecartant = avant === "rejetee" || avant === "possedee" || avant === "remplacee";
     const suite = voter(votesRef.current, pieceId, etat);
     votesRef.current = suite;
     setVotesSuggestions(suite);
     ecrireVotes(userId, suite);
     if (etat === "rejetee" || etat === "possedee" || etat === "remplacee") {
       setState((st) => (st.suggestedExcluded.includes(pieceId) ? st : { ...st, suggestedExcluded: [...st.suggestedExcluded, pieceId] }));
+    } else if (ecartant && !piecesPasPourMoi(pasPourMoiRef.current, new Date()).includes(pieceId)) {
+      // Un refus défait (« Annuler », 13/11/2026) : la pièce revient dans la capsule.
+      setState((st) => ({ ...st, suggestedExcluded: st.suggestedExcluded.filter((id) => id !== pieceId) }));
     }
     if (!isSupabaseConfigured || !userId) return true;
     return ecrireVoteDuCompte(userId, pieceId, etat);
@@ -1985,7 +2008,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // « Mes pièces » est fusionné dans le Dressing (14/10/2026) : le filtre (catégorie, couleur venue de Tenue) s'applique à la grille du Dressing.
     // L'aperçu d'une pièce (ApercuPiece, 14/10/2026) et l'ouverture « fiche en feuille » à part sont retirés le 13/11/2026 : plus aucun
     // écran ne les ouvrait (harmonisation des fiches) — la feuille courte (VuePiece) et openItem les remplacent.
-    fermerFicheEnFeuille: () => setState((s) => (s.ficheEnFeuille ? { ...s, ficheEnFeuille: null } : s)),
     fermerFicheSuggestion: () => setState((s) => (s.ficheSuggestion ? { ...s, ficheSuggestion: null } : s)),
     goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobe" })),
     // Ouvrir Mes looks depuis le Dressing repart à neuf ; seul le retour du détail d'un look retrouve le filtre et le défilement.
@@ -2311,19 +2333,18 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     onbPasser: () => setState((s) => ({ ...s, onbStep: 4 })),
     onbAller: (etape) => setState((s) => ({ ...s, onbStep: Math.max(0, Math.min(4, Math.round(etape))) })),
 
-    // LA FICHE D'UNE PIÈCE EN FEUILLE, DEPUIS TOUTES LES PAGES (04/11/2026, demandé : « depuis toutes les pages, lorsque je clique sur une
-    // pièce, capsule ou dressing, elle s'ouvre dans une bottom sheet sans logo Capsela en en-tête »). Le mécanisme de l'accueil
-    // (FicheEnFeuille, 15/10/2026) devient celui de tous les écrans : la page reste dessous, intacte, et la retrouve à la fermeture.
-    // Seule la fiche plein écran déjà ouverte (screen « piece ») garde la navigation d'avant.
+    // Historique : la fiche en feuille depuis toutes les pages (04/11/2026, demandé : « elle s'ouvre dans une bottom sheet sans logo »),
+    // remplacée le 13/11/2026 par une page (arbitré dans la mission « Harmonisation du système de fiches » : une feuille courte, puis
+    // une vraie page, jamais deux feuilles l'une sur l'autre). La position de l'écran d'origine est gardée (memoireEcrans).
     // Une SUGGESTION ouvre sa fiche de suggestion, la même partout (13/11/2026, FicheSuggestionGlobale) ; une pièce du dressing, la fiche
-    // complète en feuille. Depuis la fiche d'une pièce (enchaînement), la page reste celle de la fiche.
+    // complète, en PAGE depuis le 13/11/2026 (mission « Harmonisation du système de fiches », arbitré : « une vraie page ») — avant, une
+    // feuille presque plein écran (FicheEnFeuille, 15/10/2026). Son retour ramène à l'écran d'origine, à sa position (memoireEcrans).
+    // Depuis la fiche d'une pièce (enchaînement), l'écran de retour reste celui d'origine.
     openItem: (id, suggested = false) =>
       setState((s) =>
         suggested && s.screen !== "piece"
-          ? { ...s, ficheSuggestion: { id, ecran: s.screen }, ficheEnFeuille: null }
-          : s.screen === "piece"
-          ? { ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" }
-          : { ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, ficheEnFeuille: { ecran: s.screen } }
+          ? { ...s, ficheSuggestion: { id, ecran: s.screen } }
+          : { ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen === "piece" ? s.pieceReturn : s.screen, screen: "piece" }
       ),
     openItemOutfits: (id, suggested = true, variations) =>
       setState((s) => ({
@@ -2362,6 +2383,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // tenue », sans doublon ni suppression (enregistrerTenueSiAbsente).
     enregistrerIdeeLook: (ids, occasion) => enregistrerTenueSiAbsente(ids, occasion),
     voterSuggestion: (pieceId, etat) => enregistrerVote(pieceId, etat),
+    pasPourMoi: (pieceId, retirer = false) => {
+      const t = retirer ? retirerPasPourMoi(pasPourMoiRef.current, pieceId) : ajouterPasPourMoi(pasPourMoiRef.current, pieceId, new Date());
+      pasPourMoiRef.current = t;
+      setPasPourMoiTable(t);
+      ecrirePasPourMoi(userId, t);
+      setState((st) =>
+        retirer
+          ? { ...st, suggestedExcluded: votesRef.current[String(pieceId)] ? st.suggestedExcluded : st.suggestedExcluded.filter((id) => id !== pieceId) }
+          : st.suggestedExcluded.includes(pieceId) ? st : { ...st, suggestedExcluded: [...st.suggestedExcluded, pieceId] }
+      );
+    },
     basculerIdeeLook: (ids, occasion) => {
       const cle = clePieces(ids).join(",");
       const existant = stateRef.current.savedLooks.find((l) => clePieces(l.pieceIds).join(",") === cle);
@@ -2458,7 +2490,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // dont l'exécution n'est pas garantie synchrone.
       const s = stateRef.current;
       if (s.activeSuggested) {
-        setState((st) => ({ ...st, suggestedExcluded: [...st.suggestedExcluded, st.activeId], screen: st.pieceReturn, ficheEnFeuille: null }));
+        setState((st) => ({ ...st, suggestedExcluded: [...st.suggestedExcluded, st.activeId], screen: st.pieceReturn }));
         // Retirer une suggestion de la capsule, c'est la rejeter (votesSuggestions.ts, 02/11/2026).
         void enregistrerVote(s.activeId, "rejetee");
         return;
@@ -2466,7 +2498,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       const deletedId = s.activeId;
       const retiree = s.items.filter((it) => it.id === deletedId);
       const photos = photosDevenuesOrphelines(retiree, s.items.filter((it) => it.id !== deletedId));
-      setState((st) => ({ ...st, items: st.items.filter((it) => it.id !== deletedId), screen: st.pieceReturn, ficheEnFeuille: null }));
+      setState((st) => ({ ...st, items: st.items.filter((it) => it.id !== deletedId), screen: st.pieceReturn }));
       if (isSupabaseConfigured && userId) {
         // Suppression best-effort : la pièce reste retirée localement même en cas d'échec réseau.
         deleteDressingItem(deletedId).catch((err) => reportDressingError("deleteDressingItem", err));
@@ -3571,7 +3603,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       noterNotifications(notifLookSauvegarde(look.id, look.name));
     },
     openLook: (id) =>
-      setState((s) => ({ ...s, activeLookId: id, lookReturn: s.screen === "looks" ? "looks" : "wardrobe", screen: "lookDetail" })),
+      setState((s) => ({ ...s, activeLookId: id, lookReturn: s.screen === "looks" ? "looks" : s.screen === "piece" ? "piece" : "wardrobe", screen: "lookDetail" })),
     closeLookDetail: () => setState((s) => ({ ...s, activeLookId: null, screen: s.lookReturn })),
     deleteActiveLook: () => {
       const s = stateRef.current;

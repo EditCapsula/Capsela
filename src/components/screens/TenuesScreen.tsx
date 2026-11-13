@@ -1,5 +1,6 @@
 "use client";
 
+import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import TitrePage from "@/components/TitrePage";
 import { t, tn } from "@/lib/langue";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
@@ -220,6 +221,11 @@ export default function TenuesScreen() {
   // La tenue planifiée devenue tenue du jour (option C, 30/09/2026).
   const planApplique = usePlanApplique();
   const ouvrirPiece = useOuvrirPiece();
+  // Le retour d'une fiche complète (une page depuis le 13/11/2026) retrouve la position — memoireEcrans.ts, comme l'accueil.
+  const zoneTenue = useRef<HTMLDivElement>(null);
+  const reprisTenue = useContexteRepris<{ defilement: number }>("tenues");
+  const defilementTenue = useDefilementRepris(zoneTenue, reprisTenue?.defilement);
+  useGarderContexte("tenues", () => ({ defilement: defilementTenue.position.current }));
   // LE FLAT LAY INTERACTIF (12/11/2026, RemplacementPiece) : toucher une pièce de la tenue ouvre Voir / Remplacer ; le remplacement
   // s'applique à la tenue affichée (remplacerDansTenue), « Annuler » le défait.
   const remplacement = useRemplacementPiece();
@@ -803,6 +809,8 @@ export default function TenuesScreen() {
 
   return (
     <div
+      ref={zoneTenue}
+      onScroll={defilementTenue.onScroll}
       className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav"
       onTouchStart={surDebutGlissement}
       onTouchEnd={surFinGlissement}

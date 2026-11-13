@@ -1,11 +1,12 @@
 "use client";
 
+import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import TitrePage from "@/components/TitrePage";
 import { t } from "@/lib/langue";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
 import { styleDuLook, texteEditorialLook } from "@/lib/editorialLook";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
@@ -120,6 +121,13 @@ const AUCUN_FANTOME: CategoryKey[] = [];
 export default function HomeScreen() {
   const { state, vestiairePool, wardrobePool, defaultCapsule, meteoDuJour, jourConsulte, valiseConsultee, actions, weather, sourceMeteo } = useCapsela();
   const rappelValise = useRappelValise();
+
+  // LE RETOUR RETROUVE LA POSITION (13/11/2026, fiches harmonisées : la fiche complète est une page, son retour ramène ici au même
+  // endroit) — memoireEcrans.ts, comme le Dressing et la Capsule ; un onglet de la barre du bas l'oublie (TabBar).
+  const zoneAccueil = useRef<HTMLDivElement>(null);
+  const reprisAccueil = useContexteRepris<{ defilement: number }>("home");
+  const defilementAccueil = useDefilementRepris(zoneAccueil, reprisAccueil?.defilement);
+  useGarderContexte("home", () => ({ defilement: defilementAccueil.position.current }));
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const jourAVenir = jourConsulte.decalage > 0;
   const planApplique = usePlanApplique();
@@ -467,7 +475,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-safe-nav">
+    <div ref={zoneAccueil} onScroll={defilementAccueil.onScroll} className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-safe-nav">
       <div className="px-6">
         {/* Le calendrier est une entrée GLOBALE, pas un onglet : un bouton dans la gouttière gauche du bandeau (05/10/2026). */}
         <AppHeader />

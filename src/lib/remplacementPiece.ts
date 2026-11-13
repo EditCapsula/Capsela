@@ -1,3 +1,5 @@
+import { CATLABEL } from "./data";
+import { formalityOf } from "./attributes";
 import { isCatalogId } from "./catalog";
 import { candidatsDeRemplacement, computeLookScore } from "./logic";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -79,4 +81,17 @@ export function lienAffiliationValide(lien: string | undefined | null): string |
   } catch {
     return null;
   }
+}
+
+/**
+ * LA JUSTIFICATION COURTE D'UNE ALTERNATIVE (13/11/2026, planche « Remplacer » : « Plus structuré », « Look plus décontracté »).
+ * Seulement ce que les données disent, rien d'inventé : une autre catégorie (« Jean à la place »), sinon l'écart de formalité des deux
+ * pièces (formalityOf, 0 à 4) — plus habillée, plus décontractée, ou le même registre.
+ */
+export function justificationRemplacement(ancien: Item, nouvel: Item): string {
+  if (nouvel.cat !== ancien.cat) return `${CATLABEL[nouvel.cat]} à la place`;
+  const ecart = formalityOf(nouvel) - formalityOf(ancien);
+  if (ecart >= 1) return "Plus habillée";
+  if (ecart <= -1) return "Plus décontractée";
+  return "Même registre";
 }

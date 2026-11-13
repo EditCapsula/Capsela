@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import Button from "@/components/Button";
 import PhotoPiece from "@/components/PhotoPiece";
-import { masquerMenuActions } from "@/lib/menuActions";
+import { afficherToast } from "@/components/ToastCapsela";
 import { useAuth } from "@/lib/auth";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { paletteHexes } from "@/lib/profile";
-import { alternativesClassees, estSuggestion, lienAffiliationValide, poolDeRemplacement, type ContexteLook } from "@/lib/remplacementPiece";
+import { alternativesClassees, estSuggestion, justificationRemplacement, lienAffiliationValide, poolDeRemplacement, type ContexteLook } from "@/lib/remplacementPiece";
 import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 
@@ -21,7 +21,7 @@ import type { Item } from "@/lib/types";
  * partout dans l'app : un lien externe, nouvel onglet ou navigateur du téléphone). Rien d'autre : pas de description.
  *
  * « Remplacer » montre les alternatives en grille, la meilleure d'abord ; en toucher une remplace CETTE pièce seulement, ferme la feuille
- * et laisse quelques secondes « Annuler ». L'écran qui pose le flat lay dit comment le remplacement s'applique (`appliquer`) : la tenue
+ * et laisse six secondes « Annuler » (le message commun, ToastCapsela). L'écran qui pose le flat lay dit comment le remplacement s'applique (`appliquer`) : la tenue
  * du jour, une proposition du carrousel, la tenue proposée par Planifier ou une tenue déjà planifiée (enregistrée). Le score du look
  * se recalcule de lui-même : il est dérivé des pièces affichées.
  *
@@ -40,8 +40,6 @@ export interface ConfigRemplacement {
   appliquer: (ancienId: number, nouvelId: number) => boolean | Promise<boolean>;
 }
 
-const DUREE_ANNULER_MS = 6000;
-
 /** Une seule feuille par écran ; chaque flat lay passe SON look au toucher (`ouvrir(piece, config)`) — le carrousel en a plusieurs. */
 export function useRemplacementPiece(): {
   ouvrir: (it: Item, config: ConfigRemplacement) => void;
@@ -52,27 +50,20 @@ export function useRemplacementPiece(): {
   const { actions } = useCapsela();
   const [piece, setPiece] = useState<Item | null>(null);
   const [vue, setVue] = useState<"piece" | "remplacer">("piece");
-  // Le look où le remplacement a été fait est gardé avec lui : « Annuler » le défait là, même si une autre feuille a été ouverte depuis.
-  const [fait, setFait] = useState<{ ancien: Item; nouvel: Item; config: ConfigRemplacement } | null>(null);
-  const [echec, setEchec] = useState(false);
-  const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // La confirmation passe par le message commun de l'app (ToastCapsela, 13/11/2026) : « Pièce remplacée », « Annuler » pendant 6 s,
+  // qui remet exactement la pièce d'origine dans le look où le remplacement a été fait (la configuration est gardée avec lui).
   const configRef = useRef<ConfigRemplacement | null>(null);
-
-  // Le menu d'actions flottant s'efface le temps de la confirmation : elle occupe le même bas d'écran.
-  useEffect(() => {
-    masquerMenuActions("remplacement-piece", Boolean(fait || echec));
-    return () => masquerMenuActions("remplacement-piece", false);
-  }, [fait, echec]);
-  useEffect(() => () => {
-    if (minuterie.current) clearTimeout(minuterie.current);
-  }, []);
 
   // Calculées au toucher de « Remplacer », une fois : le classement note le look entier pour chaque candidate.
   const [alternatives, setAlternatives] = useState<Item[]>([]);
+  // L'alternative choisie avant confirmation ; la meilleure est présélectionnée (planche « Remplacer »).
+  const [choix, setChoix] = useState<Item | null>(null);
   const ouvrirRemplacement = () => {
     const c = configRef.current;
     if (!c || !piece) return;
-    setAlternatives(alternativesClassees(c.look, piece, poolDeRemplacement(piece, c.dressing, c.suggestions), c.contexte));
+    const alt = alternativesClassees(c.look, piece, poolDeRemplacement(piece, c.dressing, c.suggestions), c.contexte);
+    setAlternatives(alt);
+    setChoix(alt[0] ?? null);
     setVue("remplacer");
   };
 
@@ -80,30 +71,17 @@ export function useRemplacementPiece(): {
     setPiece(null);
     setVue("piece");
   };
-  const montrer = (etat: { ancien: Item; nouvel: Item; config: ConfigRemplacement } | null, rate: boolean) => {
-    if (minuterie.current) clearTimeout(minuterie.current);
-    setFait(etat);
-    setEchec(rate);
-    minuterie.current = setTimeout(() => {
-      setFait(null);
-      setEchec(false);
-    }, DUREE_ANNULER_MS);
-  };
   const remplacer = async (nouvel: Item) => {
     const c = configRef.current;
     if (!c || !piece) return;
     const ancien = piece;
     fermer();
     const ok = await c.appliquer(ancien.id, nouvel.id);
-    montrer(ok ? { ancien, nouvel, config: c } : null, !ok);
-  };
-  const annuler = async () => {
-    if (!fait) return;
-    const { ancien, nouvel, config: c } = fait;
-    if (minuterie.current) clearTimeout(minuterie.current);
-    setFait(null);
-    const ok = await c.appliquer(nouvel.id, ancien.id);
-    if (!ok) montrer(null, true);
+    if (!ok) return afficherToast("Le remplacement n'a pas pu être enregistré.");
+    afficherToast("Pièce remplacée", async () => {
+      const retour = await c.appliquer(nouvel.id, ancien.id);
+      if (!retour) afficherToast("Le retour à la pièce d'origine n'a pas pu être enregistré.");
+    });
   };
 
   const suggestion = piece ? estSuggestion(piece) : false;
@@ -125,43 +103,73 @@ export function useRemplacementPiece(): {
         onRemplacer={ouvrirRemplacement}
       />
 
-      <BottomSheet title="Remplacer" open={Boolean(piece) && vue === "remplacer"} onClose={fermer}>
+      {/* REMPLACER (13/11/2026, planche « Remplacer, une seule logique ») : la pièce actuelle, puis les alternatives en liste, la mieux notée
+          d'abord (« Meilleur choix », alternativesClassees), chacune avec une justification tirée de ses données ; on en choisit une, puis
+          « Remplacer la pièce » l'applique, ferme la feuille et propose « Annuler » six secondes. */}
+      <BottomSheet
+        title="Remplacer"
+        open={Boolean(piece) && vue === "remplacer"}
+        onClose={fermer}
+        pied={
+          alternatives.length > 0 && (
+            <Button variante="principal" disabled={!choix} onClick={() => choix && void remplacer(choix)}>
+              Remplacer la pièce
+            </Button>
+          )
+        }
+      >
+        <div className="t-chapeau text-muted-3 -mt-[4px] mb-[12px]">Choisis une alternative pour ton look.</div>
+        {piece && (
+          <div className="flex items-center gap-3 pb-[12px] mb-[12px] border-b border-divider">
+            <div className="w-[48px] flex-shrink-0">
+              <PhotoPiece piece={piece} ratio={0.8} rayon={10} entiere />
+            </div>
+            <div className="min-w-0">
+              <div className="t-label text-muted">Pièce actuelle</div>
+              <div className="t-titre-vignette text-ink truncate mt-[2px]">{piece.name}</div>
+            </div>
+          </div>
+        )}
         {piece && alternatives.length === 0 && (
           <div className="text-[13px] text-muted-3 leading-[1.5]">
             {suggestion ? "Aucune autre pièce ne convient à ce look." : "Aucune autre pièce de ton dressing ne convient à ce look."}
           </div>
         )}
-        {alternatives.length > 0 && (
-          <div className="grid grid-cols-3 gap-[10px]" role="list" aria-label="Pièces de remplacement">
-            {alternatives.map((p) => (
-              <button key={p.id} type="button" role="listitem" onClick={() => void remplacer(p)} className="text-left cursor-pointer active:opacity-80 min-w-0">
-                <PhotoPiece piece={p} ratio={0.8} rayon={14} entiere />
-                <span className="block text-[11.5px] text-ink leading-[1.3] mt-[6px] line-clamp-2">{p.name}</span>
-                {estSuggestion(p) && <span className="block t-pastille text-terracotta mt-[3px]">Suggestion</span>}
-              </button>
-            ))}
+        {piece && alternatives.length > 0 && (
+          <div role="radiogroup" aria-label="Pièces de remplacement" className="flex flex-col gap-[8px]">
+            {alternatives.map((p, i) => {
+              const actif = choix?.id === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={actif}
+                  onClick={() => setChoix(p)}
+                  className={"flex items-center gap-3 rounded-tuile border bg-card px-3 py-[8px] text-left cursor-pointer min-h-[64px] " + (actif ? "border-terracotta-deep" : "border-border")}
+                >
+                  <div className="w-[48px] flex-shrink-0">
+                    <PhotoPiece piece={p} ratio={0.8} rayon={10} entiere />
+                  </div>
+                  <span className="flex-1 min-w-0">
+                    {i === 0 && <span className="inline-block rounded-full bg-chip-soft-bg text-terracotta-deep t-pastille px-[7px] py-[3px] mb-[3px]">✦ Meilleur choix</span>}
+                    <span className="block t-titre-vignette text-ink truncate">{p.name}</span>
+                    <span className="block text-[11.5px] text-muted-3 mt-[1px]">
+                      {justificationRemplacement(piece, p)} · {estSuggestion(p) ? "Suggestion" : "Ton dressing"}
+                    </span>
+                  </span>
+                  <span aria-hidden="true" className={"w-[20px] h-[20px] flex-shrink-0 rounded-full border flex items-center justify-center " + (actif ? "border-terracotta-deep bg-terracotta-deep" : "border-border")}>
+                    {actif && (
+                      <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3L9.5 3.8" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </BottomSheet>
 
-      {(fait || echec) && (
-        <div
-          className="fixed inset-x-0 mx-auto max-w-[480px] px-6 z-40"
-          style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px)" }}
-          role="status"
-        >
-          <div className="flex items-center gap-3 bg-ink rounded-full py-[12px] pl-4 pr-[6px] shadow-lg">
-            <span className="flex-1 min-w-0 text-[12px] text-cream truncate">
-              {echec ? "Le remplacement n'a pas pu être enregistré." : `${fait!.nouvel.name} remplace ${fait!.ancien.name}`}
-            </span>
-            {fait && (
-              <button onClick={() => void annuler()} className="flex-shrink-0 rounded-full px-[14px] text-[12px] font-semibold text-cream cursor-pointer" style={{ minHeight: 36 }}>
-                Annuler
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </>
   );
 
@@ -173,7 +181,9 @@ export function useRemplacementPiece(): {
     },
     remplacer: (it: Item, config: ConfigRemplacement) => {
       configRef.current = config;
-      setAlternatives(alternativesClassees(config.look, it, poolDeRemplacement(it, config.dressing, config.suggestions), config.contexte));
+      const alt = alternativesClassees(config.look, it, poolDeRemplacement(it, config.dressing, config.suggestions), config.contexte);
+      setAlternatives(alt);
+      setChoix(alt[0] ?? null);
       setPiece(it);
       setVue("remplacer");
     },
@@ -219,27 +229,34 @@ export function VuePiece({ piece, onFermer, onVoir, onRemplacer }: { piece: Item
               {piece.name}
             </h2>
           </div>
-          <div className={"grid gap-[10px] mt-5 " + (onRemplacer ? "grid-cols-2" : "grid-cols-1")}>
-            <Button variante={onRemplacer ? "contour" : "principal"} onClick={() => onVoir(piece)}>
+          {/* LES ACTIONS (13/11/2026, planche « Feuille courte ») : empilées, pleine largeur ; « Voir » en action principale, « Remplacer »
+              là où la tenue se modifie, « Acheter cette pièce » pour une suggestion au lien valide — en contour, avec leur icône. Les
+              libellés courts sont demandés ; les lecteurs d'écran entendent le sens complet. */}
+          <div className="flex flex-col gap-[10px] mt-5">
+            <Button variante="principal" onClick={() => onVoir(piece)} aria-label={`Voir la fiche complète de ${piece.name}`}>
               Voir
             </Button>
             {onRemplacer && (
-              <Button variante="principal" onClick={onRemplacer}>
-                Remplacer
+              <Button variante="contour" onClick={onRemplacer} aria-label={`Remplacer ${piece.name} dans ce look`}>
+                <span className="inline-flex items-center gap-[8px]">
+                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h12l-3-3M19 15H7l3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  Remplacer
+                </span>
               </Button>
             )}
+            {lien && (
+              <a
+                href={lien}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className="flex items-center justify-center gap-[8px] rounded-full border border-border text-terracotta t-bouton cursor-pointer"
+                style={{ minHeight: 52 }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8zM9 8V6.5a3 3 0 016 0V8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
+                Acheter cette pièce
+              </a>
+            )}
           </div>
-          {lien && (
-            <a
-              href={lien}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              className="mt-[10px] flex items-center justify-center rounded-full border border-border text-terracotta t-bouton cursor-pointer"
-              style={{ minHeight: 52 }}
-            >
-              Acheter cette pièce
-            </a>
-          )}
         </>
       )}
     </BottomSheet>

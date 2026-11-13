@@ -1,7 +1,8 @@
 "use client";
 
+import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import TitrePage from "@/components/TitrePage";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import AvisEnregistresJournal from "@/components/AvisEnregistresJournal";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -481,6 +482,13 @@ function CompositionDressing({ parts, total, onVoirPieces }: { parts: PartDressi
 export default function HistoryScreen() {
   const { state, vestiairePool, actions, dressingLoaded, avisEnregistres } = useCapsela();
 
+  // LE RETOUR RETROUVE LA POSITION (13/11/2026, fiches harmonisées : la fiche complète est une page, son retour ramène ici au même
+  // endroit) — memoireEcrans.ts, comme le Dressing et la Capsule ; un onglet de la barre du bas l'oublie (TabBar).
+  const zoneJournal = useRef<HTMLDivElement>(null);
+  const reprisJournal = useContexteRepris<{ defilement: number }>("history");
+  const defilementJournal = useDefilementRepris(zoneJournal, reprisJournal?.defilement);
+  useGarderContexte("history", () => ({ defilement: defilementJournal.position.current }));
+
   // Avis de styliste enregistrés : lus au premier affichage du Journal (et
   // relus après un nouvel enregistrement, qui remet la liste à null).
   useEffect(() => {
@@ -859,7 +867,7 @@ export default function HistoryScreen() {
   };
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
+    <div ref={zoneJournal} onScroll={defilementJournal.onScroll} className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <AppHeader />
 
       {/* EN-TÊTE */}

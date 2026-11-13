@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useVotesSuggestion } from "@/components/useVotesSuggestion";
 import FicheSuggestion, { type AssociationFiche } from "@/components/FicheSuggestion";
 import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
 import { useAuth } from "@/lib/auth";
@@ -21,8 +22,9 @@ import type { Item } from "@/lib/types";
  * fiche de la Capsule partout, ouverte par openItem(id, true) (state.ficheSuggestion) ; seuls le parcours « 3 / 10 » et « Remplacer
  * cette pièce » (qui recompose la capsule d'une saison) restent dans la Capsule.
  *
- * Les gestes gardent leur sens de la Capsule : « J'aime » note le vote puis ouvre « Comment porter » ; « Pas pour moi » retire la
- * pièce de la capsule (vote « rejetee ») et referme la fiche ; « Je possède déjà cette pièce » ouvre l'ajout au dressing, revenu ici.
+ * Les gestes sont ceux de la Capsule (useVotesSuggestion) : « J'aime » note le vote, sans navigation ; « Pas pour moi » retire la pièce
+ * pour la saison et referme la fiche ; « Ne plus me proposer » est le refus définitif ; chacun se défait par « Annuler ». « Je possède
+ * déjà cette pièce » ouvre l'ajout au dressing — ou, si une pièce en vient déjà (vote « possedee »), le dit au lieu d'en créer une seconde.
  */
 export default function FicheSuggestionGlobale() {
   const { state, actions, vestiairePool, defaultCapsule, votesSuggestions, weather } = useCapsela();
@@ -30,7 +32,7 @@ export default function FicheSuggestionGlobale() {
   const fiche = state.ficheSuggestion;
   const ouverte = fiche != null && fiche.ecran === state.screen;
   const piece: Item | null = fiche ? (vestiairePool.find((i) => i.id === fiche.id) ?? defaultCapsule.find((i) => i.id === fiche.id) ?? null) : null;
-  const [occupe, setOccupe] = useState(false);
+  const votes = useVotesSuggestion();
 
   // L'écran a changé sous la fiche : elle n'a plus lieu d'être.
   useEffect(() => {
@@ -74,26 +76,21 @@ export default function FicheSuggestionGlobale() {
       phrase={phraseSuggestion(piece, profile)}
       synthese={synthese}
       associations={idees.cartes}
-      occupe={occupe}
+      occupe={false}
       onFermer={actions.fermerFicheSuggestion}
-      onAimer={() => {
-        if (occupe) return;
-        setOccupe(true);
-        if (votesSuggestions[String(piece.id)] !== "aimee") void actions.voterSuggestion(piece.id, "aimee");
-        setTimeout(() => {
-          setOccupe(false);
-          actions.fermerFicheSuggestion();
-          actions.openItemOutfits(piece.id);
-        }, 260);
-      }}
+      onAimer={() => votes.aimer(piece)}
       onRejeter={() => {
-        if (occupe) return;
-        setOccupe(true);
-        void actions.voterSuggestion(piece.id, "rejetee");
-        setTimeout(() => {
-          setOccupe(false);
-          actions.fermerFicheSuggestion();
-        }, 260);
+        votes.pasPourMoi(piece);
+        actions.fermerFicheSuggestion();
+      }}
+      onNePlusProposer={() => {
+        votes.nePlusProposer(piece);
+        actions.fermerFicheSuggestion();
+      }}
+      dejaPossedee={votesSuggestions[String(piece.id)] === "possedee"}
+      onVoirDressing={() => {
+        actions.fermerFicheSuggestion();
+        actions.goWardrobe();
       }}
       onPossede={() => {
         actions.fermerFicheSuggestion();

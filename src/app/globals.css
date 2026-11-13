@@ -642,3 +642,9 @@ input.capin[type="date"]::-webkit-date-and-time-value {
     padding: 20px 10px 10px 14px;
   }
 }
+
+/* Le décompte du message « Annuler » (ToastCapsela, 13/11/2026) : la barre se vide en 6 s. */
+@keyframes decompte-toast {
+  from { width: 100%; }
+  to { width: 0%; }
+}

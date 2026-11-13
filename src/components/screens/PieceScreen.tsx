@@ -83,7 +83,7 @@ function BulbIcon() {
   );
 }
 
-/** `onFermer` : la fiche est dans une feuille (FicheEnFeuille) — le retour la referme au lieu de changer d'écran. */
+/** `onFermer` : la fiche posée dans une feuille. Depuis le 13/11/2026, la fiche complète est une page (openItem) : plus aucun appelant. */
 export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}) {
   const { state, actions, vestiairePool } = useCapsela();
   const revenir = onFermer ?? (() => actions.go(state.pieceReturn));
@@ -193,6 +193,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
   };
 
   const addableLooks = state.savedLooks.filter((l) => !l.pieceIds.includes(active.id));
+  const looksAvecLaPiece = state.savedLooks.filter((l) => l.pieceIds.includes(active.id));
 
   const manquants = champsManquants(active);
   const titre = titreEnDeuxTemps(displayName);
@@ -436,6 +437,26 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
                   </svg>
                   Ajouter {manquants.join(", ")}
                 </button>
+              )}
+
+              {/* SES LOOKS (13/11/2026, mission « Harmonisation du système de fiches ») : les looks enregistrés qui la contiennent ; aucun :
+                  pas de section. Un look s'ouvre dans son détail, dont le retour revient ici. */}
+              {looksAvecLaPiece.length > 0 && (
+                <>
+                  <div className="t-surtitre text-muted mt-[24px]">Dans tes looks · {looksAvecLaPiece.length}</div>
+                  <Card className="overflow-hidden mt-[8px]">
+                    <ul>
+                      {looksAvecLaPiece.slice(0, 5).map((l) => (
+                        <li key={l.id} className="border-b border-divider last:border-b-0">
+                          <button type="button" onClick={() => actions.openLook(l.id)} className="w-full flex items-center justify-between gap-3 px-4 min-h-[52px] text-left cursor-pointer active:bg-warm-bg">
+                            <span className="t-titre-vignette text-ink truncate">{l.name}</span>
+                            <span className="flex-shrink-0 text-[12px] text-muted-3">{l.pieceIds.length} pièces ›</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                </>
               )}
             </div>
           </div>
