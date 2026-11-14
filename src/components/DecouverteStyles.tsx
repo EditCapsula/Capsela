@@ -16,10 +16,10 @@ import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfi
  *
  * Données inchangées : les ids de StyleId, persistés sur `profiles.styles` par l'écran du questionnaire (le brouillon, puis la fin du
  * parcours) ; les libellés, descriptions et visuels de STYLE_CONFIG ; les styles proposés par genre (exposedStyleIds). Le moteur n'est pas
- * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy et Créatif côté femme, Minimaliste, Casual chic, Classique chic, Bohème et Streetwear côté homme au 15/11/2026.
+ * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy et Créatif côté femme, Minimaliste, Casual chic, Classique chic, Bohème, Streetwear et Preppy côté homme au 15/11/2026.
  */
 /** Hauteur de l'étape Style hors flat lay, quand le style a des looks portés (px, mesurée à 390 × 844) : tout tient sans défiler. */
-const HAUTEUR_HORS_FLAT_LAY = 680;
+const HAUTEUR_HORS_FLAT_LAY = 705;
 
 export default function DecouverteStyles({
   gender,
@@ -64,10 +64,10 @@ export default function DecouverteStyles({
                   15/11/2026, demandé d'abord « plus grand comme sur les maquettes », puis « réduis la hauteur pour que les éléments de
                   la page soient visibles, aucune marge blanche, plus important que les 3 visuels ». Sa hauteur suit donc celle de
                   l'écran : ce qui reste une fois l'en-tête, le texte, les vignettes, les gestes et le pied posés (HAUTEUR_HORS_FLAT_LAY,
-                  mesuré à 390 × 844), entre 150 px (toujours plus haut que les vignettes) et 300 px. Sans looks portés, carré. */}
+                  mesuré à 390 × 844), entre 140 px (toujours plus haut que les vignettes) et 300 px. Sans looks portés, carré. */}
               <div
                 className="w-full rounded-bloc overflow-hidden bg-border"
-                style={looks.length > 0 ? { height: `clamp(150px, calc(100dvh - ${HAUTEUR_HORS_FLAT_LAY}px), 300px)` } : { aspectRatio: "1 / 1" }}
+                style={looks.length > 0 ? { height: `clamp(140px, calc(100dvh - ${HAUTEUR_HORS_FLAT_LAY}px), 300px)` } : { aspectRatio: "1 / 1" }}
                 onDragStart={(e) => e.preventDefault()}
               >
                 {visuel && (
@@ -87,13 +87,14 @@ export default function DecouverteStyles({
               </span>
             </div>
             {/* LES LOOKS PORTÉS : trois photos côte à côte, dans la carte, sans clic (LOOKS_PORTES_STYLE) ; un style sans photo n'a pas de
-                galerie (aucune donnée inventée). Vignettes carrées (4:5 avant le 15/11/2026), recadrées au centre : le flat lay reste le plus grand visuel. */}
+                galerie (aucune donnée inventée). Vignettes en 4:5, calées en haut : la tête n'est jamais coupée (le carré du 15/11/2026 la coupait), seule la marge sous les pieds se
+                réduit. Le flat lay reste le plus grand visuel. */}
             {looks.length > 0 && (
               <div className="grid grid-cols-3 gap-[8px] mt-[8px]">
                 {looks.slice(0, 3).map((src, k) => (
-                  <div key={src} className="rounded-tuile overflow-hidden bg-border" style={{ aspectRatio: "1 / 1" }}>
+                  <div key={src} className="rounded-tuile overflow-hidden bg-border" style={{ aspectRatio: "4 / 5" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt={`${cfg.label}, look ${k + 1}`} width={900} height={1200} loading="lazy" decoding="async" className="w-full h-full object-cover block" draggable={false} />
+                    <img src={src} alt={`${cfg.label}, look ${k + 1}`} width={900} height={1200} loading="lazy" decoding="async" className="w-full h-full object-cover object-top block" draggable={false} />
                   </div>
                 ))}
               </div>
