@@ -78,8 +78,8 @@ export function ChoixVille({
   surtitre,
 }: {
   /**
-   * Le surtitre de la question (« Où ? · Facultatif »), posé par ChoixVille pour mettre « Utiliser ma position actuelle » juste dessous,
-   * au-dessus du champ de recherche (14/11/2026, demandé ; un premier essai sur la ligne du surtitre la raccourcissait sous 375 px).
+   * Le surtitre de la question (« Où ? · Facultatif »), posé par ChoixVille pour porter « Utiliser ma position actuelle » sur sa
+   * ligne, à droite (14/11/2026, demandé : « mets-la sur la même ligne que Où »).
    */
   surtitre?: React.ReactNode;
   lieu: string;
@@ -165,30 +165,38 @@ export function ChoixVille({
   const resultats = reponse && reponse.q === q && reponse.liste ? presenterResultats(reponse.liste) : null;
   const nomsRecents = recentes.map((r) => r.name);
 
-  // « Utiliser ma position actuelle » sous le surtitre quand il y en a un, tant qu'aucune ville n'est choisie ni cherchée.
+  // « Utiliser ma position actuelle » sur la ligne du surtitre quand il y en a un, tant qu'aucune ville n'est choisie ni cherchée.
   const positionEnTete = !!surtitre && avecPosition && !carte && q.length < 2;
   const boutonPosition = (
     <button
       onClick={utiliserPosition}
       disabled={position === "encours"}
-      className={(surtitre ? "" : "mt-3 ") + "inline-flex items-center gap-[8px] text-[13px] text-terracotta-deep cursor-pointer"}
+      className={(surtitre ? "-my-[12px] " : "mt-3 ") + "inline-flex items-center gap-[8px] text-[13px] text-terracotta-deep cursor-pointer flex-shrink-0 whitespace-nowrap"}
       style={{ minHeight: 44 }}
       aria-label={position === "encours" ? "Je cherche ta position" : "Utiliser ma position actuelle"}
     >
       <Cible />
-      {position === "encours" ? "Je cherche ta position…" : "Utiliser ma position actuelle"}
+      {position === "encours" ? (
+        "Je cherche…"
+      ) : surtitre ? (
+        // Sur la ligne du surtitre, les écrans étroits (moins de 375 px) n'ont la place que pour « Ma position » : mesuré à 320.
+        <>
+          <span className="max-[374px]:hidden">Utiliser ma position actuelle</span>
+          <span className="min-[375px]:hidden">Ma position</span>
+        </>
+      ) : (
+        "Utiliser ma position actuelle"
+      )}
     </button>
   );
 
   return (
     <>
       {surtitre && (
-        <>
+        <div className="flex items-center justify-between gap-3 whitespace-nowrap">
           <Surtitre>{surtitre}</Surtitre>
-          {/* Au-dessus du champ, sur sa propre ligne (14/11/2026, demandé après l'essai sur la ligne du surtitre, qui obligeait à
-              raccourcir le libellé sous 375 px) : le libellé reste entier à toutes les largeurs. */}
-          {positionEnTete && <div className="mt-[6px]">{boutonPosition}</div>}
-        </>
+          {positionEnTete && boutonPosition}
+        </div>
       )}
       {carte ? (
         <div className={titre ? "mt-5" : "mt-[10px]"}>
@@ -211,7 +219,7 @@ export function ChoixVille({
         </div>
       ) : (
         <>
-          <div className={(positionEnTete ? "mt-1" : surtitre ? "mt-[10px]" : titre ? "mt-5" : "mt-[10px]") + " flex items-center gap-[10px] rounded-bloc border border-border bg-card px-[14px] focus-within:border-terracotta"} style={{ minHeight: 52 }}>
+          <div className={(titre ? "mt-5" : "mt-[10px]") + " flex items-center gap-[10px] rounded-bloc border border-border bg-card px-[14px] focus-within:border-terracotta"} style={{ minHeight: 52 }}>
             <span aria-hidden="true" className="flex-shrink-0 text-placeholder"><Loupe /></span>
             <input
               ref={champ}
@@ -340,7 +348,7 @@ export default function EtapeLieu({
   meteo,
   surtitre,
 }: {
-  /** Le surtitre de la question, posé par ChoixVille avec « Utiliser ma position actuelle » dessous, au-dessus du champ. */
+  /** Le surtitre de la question, porté par ChoixVille avec « Utiliser ma position actuelle » sur sa ligne. */
   surtitre?: React.ReactNode;
   lieu: string;
   /** Choisir une destination : `ville` porte les coordonnées (null pour une saisie libre), `libelle` est ce qui s'affiche et s'enregistre. */
