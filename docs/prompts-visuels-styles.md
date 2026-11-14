@@ -28,7 +28,7 @@ Côté homme, pas de `romantique` ni de `glamour` (styles non proposés aux prof
 > visible, aucun accessoire de décor. Visage naturel, maquillage discret.
 
 **Cohérence de la série** : même fond, même lumière, même cadrage, même distance pour les 48 images. Varier les personnes d'un look à
-l'autre (âges adultes, carnations, silhouettes et coiffures différentes), sans jamais associer une personne à un style : chaque style
+l'autre (âges adultes de 20 à 50 ans, carnations, silhouettes et coiffures différentes), sans jamais associer une personne à un style : chaque style
 montre trois personnes différentes. Aucune pose ni retouche qui mette en avant ou masque une partie du corps.
 
 ## Looks portés — FEMME
@@ -148,8 +148,8 @@ Pour générer les looks portés dans ChatGPT, une image à la fois, dans **une 
 >   toujours entières dans le cadre.
 > - Les vêtements décrits sont nets et bien lisibles de la tête aux pieds ; matières visibles ; aucun autre vêtement ajouté.
 > - Aucun texte, aucun logo, aucune marque visible, aucun décor, aucun accessoire non demandé.
-> - Série inclusive : chaque image montre une personne différente — âges adultes variés (de 20 à 70 ans), carnations, morphologies,
->   tailles et coiffures variées, y compris des personnes ronde, grande, petite, aux cheveux gris, avec des lunettes ou un handicap
+> - Série inclusive : chaque image montre une personne différente — âges adultes de 20 à 50 ans, jamais plus (arbitré le 14/11/2026),
+>   carnations, morphologies, tailles et coiffures variées, y compris des personnes ronde, grande, petite, avec des lunettes ou un handicap
 >   visible quand c'est naturel. Aucun style n'est réservé à un type de personne : les trois looks d'un même style montrent trois
 >   personnes différentes.
 > - La personne est représentée avec respect et élégance : aucune pose ni retouche qui mette en avant ou masque une partie du corps,
