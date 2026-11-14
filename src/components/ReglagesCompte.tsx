@@ -6,7 +6,7 @@ import Rangee from "@/components/Rangee";
 import { Toggle } from "@/components/screens/PreferencesScreen";
 import { useAuth } from "@/lib/auth";
 import { readConsent, setConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
-import { choixPublicitairesDisponibles, ouvrirChoixPublicitaires, suivreChoixPublicitaires } from "@/lib/publicite";
+import { choixPublicitairesDisponibles, etatPublicite, ouvrirChoixPublicitaires, publiciteDisponibleIci, reessayerVideo, suivreChoixPublicitaires, suivreEtatPublicite, type EtatPublicite } from "@/lib/publicite";
 import { buildDataExport, downloadJson, exportFileName } from "@/lib/dataExport";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
@@ -167,6 +167,7 @@ export function VueDonnees() {
             <Chevron />
           </Rangee>
         )}
+        <EtatVideos />
         {/* Masqué en mode démo, où rien n'a quitté l'appareil. */}
         {!demoMode ? (
           <Rangee onClick={handleExport} disabled={exporting} className="justify-between disabled:opacity-60">
@@ -210,5 +211,41 @@ export function VueDonnees() {
         </button>
       </BottomSheet>
     </>
+  );
+}
+
+/**
+ * L'ÉTAT DES VIDÉOS RÉCOMPENSÉES (14/11/2026, demandé après « je n'ai toujours pas les publicités AdMob ») : ce que la publicité
+ * sait vraiment (publicite.ts, etatPublicite), dit sans jargon, avec la réponse de Google quand elle refuse. Android seulement, là où
+ * la publicité existe. « Réessayer » relance un chargement, jamais une boucle.
+ */
+const TEXTE_ETAT: Record<EtatPublicite["etape"], string> = {
+  nonDemarree: "Pas démarrées : elles le sont pour un compte connecté, au profil complet, en offre Gratuit.",
+  consentementRefuse: "Consentement non donné : Google ne sert aucune vidéo. Tu peux le changer dans Choix publicitaires.",
+  chargement: "Chargement d'une vidéo…",
+  prete: "Une vidéo est prête : elle te sera proposée quand tu atteindras la limite de tenues du jour, une fois par jour.",
+  aucuneVideo: "Google n'a fourni aucune vidéo pour l'instant.",
+  echec: "La publicité n'a pas pu démarrer.",
+};
+
+function EtatVideos() {
+  const e = useSyncExternalStore(suivreEtatPublicite, etatPublicite, etatPublicite);
+  if (!publiciteDisponibleIci()) return null;
+  return (
+    <Rangee className="justify-between">
+      <span className="flex-1 min-w-0 pr-2">
+        <span className="block text-[13px] text-ink">Vidéos récompensées</span>
+        <span className="block text-[11px] text-muted mt-[2px] leading-[1.35]" role="status">
+          {TEXTE_ETAT[e.etape]}
+          {e.test && " Vidéos de test de Google."}
+          {e.detail && ` (réponse : ${e.detail})`}
+        </span>
+      </span>
+      {e.etape === "aucuneVideo" && (
+        <button type="button" onClick={reessayerVideo} className="min-h-[44px] text-[12px] font-semibold text-terracotta-deep cursor-pointer flex-shrink-0">
+          Réessayer
+        </button>
+      )}
+    </Rangee>
   );
 }

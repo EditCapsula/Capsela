@@ -61,6 +61,41 @@ function poserOptionsRequises(v: boolean) {
   abonnes.forEach((f) => f());
 }
 
+/**
+ * L'ÉTAT DE LA PUBLICITÉ, LISIBLE DANS RÉGLAGES (14/11/2026, signalé : « je n'ai toujours pas les publicités AdMob », accord pour
+ * un diagnostic comme celui des notifications). La carte « Regarder une vidéo » n'apparaît qu'avec une vidéo DÉJÀ chargée : sans
+ * elle, rien ne disait si Google n'en servait pas, si le consentement manquait ou si l'app n'avait pas démarré la publicité. Chaque
+ * étape de `demarrerPublicite` et de chaque chargement pose ici où elle en est, avec la réponse de Google (code ou message).
+ */
+export type EtapePublicite = "nonDemarree" | "consentementRefuse" | "chargement" | "prete" | "aucuneVideo" | "echec";
+export interface EtatPublicite {
+  etape: EtapePublicite;
+  /** Le bloc de test de Google est utilisé (identifiant réel absent de la construction). */
+  test: boolean;
+  /** La réponse de Google ou du téléphone, telle quelle, pour « aucuneVideo » et « echec ». */
+  detail: string | null;
+}
+let etat: EtatPublicite = { etape: "nonDemarree", test: false, detail: null };
+const abonnesEtat = new Set<() => void>();
+export const etatPublicite = (): EtatPublicite => etat;
+export function suivreEtatPublicite(f: () => void): () => void {
+  abonnesEtat.add(f);
+  return () => abonnesEtat.delete(f);
+}
+function poserEtat(e: Partial<EtatPublicite>) {
+  etat = { ...etat, ...e };
+  abonnesEtat.forEach((f) => f());
+}
+function texteErreur(e: unknown): string {
+  const err = e as { code?: unknown; message?: unknown } | null;
+  const code = typeof err?.code === "string" || typeof err?.code === "number" ? String(err.code) : "";
+  const message = typeof err?.message === "string" ? err.message : String(e);
+  return code && !message.includes(code) ? `${code} · ${message}` : message;
+}
+/** Relance le chargement d'une vidéo (bouton « Réessayer » de Réglages) ; sans effet tant que la publicité n'a pas démarré. */
+let rechargerVideo: (() => void) | null = null;
+export const reessayerVideo = (): void => rechargerVideo?.();
+
 type ModuleAdMob = typeof import("@capacitor-community/admob");
 
 /** Le compte pour lequel la publicité a été démarrée : une seule fois par compte et par lancement. */
@@ -89,10 +124,14 @@ export async function demarrerPublicite(userId: string): Promise<void> {
     }
     // L'énumération n'est pas exportée par le plugin (8.2.1) : sa valeur est la chaîne « REQUIRED ».
     poserOptionsRequises(String(info.privacyOptionsRequirementStatus) === "REQUIRED");
-    if (!info.canRequestAds) return;
+    if (!info.canRequestAds) {
+      poserEtat({ etape: "consentementRefuse", detail: null });
+      return;
+    }
 
     // 2. L'INITIALISATION. Capsela est ouverte dès 15 ans (`ageMinimum.ts`) : contenu publicitaire « Teen » au plus.
     const bloc = blocRecompense(process.env.NEXT_PUBLIC_ADMOB_RECOMPENSE_ID);
+    poserEtat({ etape: "chargement", test: bloc.test, detail: null });
     await AdMob.initialize({ initializeForTesting: bloc.test, maxAdContentRating: MaxAdContentRating.Teen });
 
     // 3. LE FOURNISSEUR. Il ne se dit prêt qu'avec une vidéo DÉJÀ chargée : une vidéo qu'on attend se lit comme une panne.
@@ -100,6 +139,7 @@ export async function demarrerPublicite(userId: string): Promise<void> {
   } catch (e) {
     console.warn("[publicite] démarrage impossible", e);
     demarreePour = null;
+    poserEtat({ etape: "echec", detail: texteErreur(e) });
   }
 }
 
@@ -107,6 +147,8 @@ export async function demarrerPublicite(userId: string): Promise<void> {
 export function arreterPublicite(): void {
   demarreePour = null;
   enregistrerFournisseurVideo(null);
+  rechargerVideo = null;
+  poserEtat({ etape: "nonDemarree", detail: null });
 }
 
 /** Rouvre le formulaire de Google pour changer son choix (ligne « Choix publicitaires » de « Gérer mon compte »). */
@@ -128,19 +170,23 @@ function creerFournisseurAdMob(m: ModuleAdMob, bloc: { id: string; test: boolean
   const charger = async () => {
     if (prete || chargement) return;
     chargement = true;
+    poserEtat({ etape: "chargement", detail: null });
     try {
       // `ssv.userId` revient tel quel dans l'appel d'AdMob à `video-recompense` : c'est lui qui désigne le compte à créditer.
       await AdMob.prepareRewardVideoAd({ adId: bloc.id, isTesting: bloc.test, ssv: { userId } });
       prete = true;
+      poserEtat({ etape: "prete", detail: null });
     } catch (e) {
       // Pas de vidéo disponible (aucune annonce à servir, réseau absent) : la carte reste absente, on retentera après
       // la prochaine vidéo ou au prochain lancement — jamais en boucle.
       console.warn("[publicite] aucune vidéo chargée", e);
       prete = false;
+      poserEtat({ etape: "aucuneVideo", detail: texteErreur(e) });
     } finally {
       chargement = false;
     }
   };
+  rechargerVideo = () => void charger();
   void charger();
 
   return {
