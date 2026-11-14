@@ -330,7 +330,7 @@ export const VISUELS_ETAPE_STYLE_FEMME: Record<StyleId, string> = {
 /**
  * LES LOOKS PORTÉS D'UN STYLE (14/11/2026, brief « Refonte UX/UI – Onboarding Choix des styles ») : trois photos éditoriales de tenues
  * portées par style, sous le flat lay de la carte (DecouverteStyles). Fournies au fil de l'eau (14/11/2026 : Minimaliste, Casual chic,
- * Classique chic, Bohème, Streetwear, Preppy et Créatif femme) ; pour les autres, la règle « aucune donnée inventée » veut
+ * Classique chic, Bohème, Streetwear, Preppy et Créatif femme ; 15/11/2026 : Minimaliste homme) ; pour les autres, la règle « aucune donnée inventée » veut
  * qu'une galerie sans photo ne s'affiche pas — pas d'icône, pas de placeholder, pas de flat lay recomposé à leur place. Chaque photo
  * fournie se déclare ici, par genre et par style, à l'emplacement prévu : public/images/styles/looks/<genre>/<slug>-<1|2|3>.webp,
  * portrait 3:4 (900 × 1200, WebP), comme les flat lays. Une liste partielle affiche ce qu'elle a.
@@ -349,7 +349,11 @@ export const LOOKS_PORTES_STYLE: Record<"femme" | "homme", Partial<Record<StyleI
     preppy: ["/images/styles/looks/femme/preppy-1.webp", "/images/styles/looks/femme/preppy-2.webp", "/images/styles/looks/femme/preppy-3.webp"],
     creatif: ["/images/styles/looks/femme/creatif-1.webp", "/images/styles/looks/femme/creatif-2.webp", "/images/styles/looks/femme/creatif-3.webp"],
   },
-  homme: {},
+  homme: {
+    // Fournis le 15/11/2026, rangés dans l'ordre du prompt (docs/prompts-visuels-styles.md) : 1 pull noir et pantalon anthracite,
+    // 2 manteau camel et col roulé, 3 chemise blanche et chino ; même conversion que côté femme.
+    minimaliste: ["/images/styles/looks/homme/minimaliste-1.webp", "/images/styles/looks/homme/minimaliste-2.webp", "/images/styles/looks/homme/minimaliste-3.webp"],
+  },
 };
 
 export function looksPortesStyle(gender: Gender | null, id: StyleId): readonly string[] {
