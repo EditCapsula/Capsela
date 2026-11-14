@@ -16,7 +16,7 @@ import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfi
  *
  * Données inchangées : les ids de StyleId, persistés sur `profiles.styles` par l'écran du questionnaire (le brouillon, puis la fin du
  * parcours) ; les libellés, descriptions et visuels de STYLE_CONFIG ; les styles proposés par genre (exposedStyleIds). Le moteur n'est pas
- * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : aucun n'est encore fourni.
+ * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : Minimaliste et Casual chic côté femme au 14/11/2026.
  */
 export default function DecouverteStyles({
   gender,
@@ -52,7 +52,7 @@ export default function DecouverteStyles({
   };
   return (
     <div className="mt-3">
-      <Card rayon="carte" className="relative px-[14px] pt-[12px] pb-[12px]" aria-roledescription="carrousel" aria-label="Styles">
+      <Card rayon="carte" className="relative px-[14px] pt-[10px] pb-[10px]" aria-roledescription="carrousel" aria-label="Styles">
         {/* La clé suit le style : la carte repart au centre et entre en fondu, comme une nouvelle suggestion de pièce. */}
         <div key={id} className="motion-safe:animate-[capsule-apparition_240ms_ease-out_both]" aria-live="polite">
           <CarteGlissante onAimer={() => voter("aime")} onRejeter={() => voter("pasPourMoi")}>
@@ -61,7 +61,7 @@ export default function DecouverteStyles({
                   pour que les deux gestes restent visibles sans défiler. */}
               <div
                 className="mx-auto rounded-bloc overflow-hidden bg-border"
-                style={{ width: "min(100%, 28vh)", aspectRatio: "1 / 1" }}
+                style={{ width: looks.length > 0 ? "min(100%, 14vh)" : "min(100%, 28vh)", aspectRatio: "1 / 1" }}
                 onDragStart={(e) => e.preventDefault()}
               >
                 {visuel && (
@@ -80,12 +80,13 @@ export default function DecouverteStyles({
                 {choisi ? ", sélectionné" : ""}
               </span>
             </div>
-            {/* LES LOOKS PORTÉS : trois photos côte à côte, dans la carte, sans clic. Aucune n'est encore fournie : sans photo, pas de
-                galerie (aucune donnée inventée). */}
+            {/* LES LOOKS PORTÉS : trois photos côte à côte, dans la carte, sans clic (LOOKS_PORTES_STYLE) ; un style sans photo n'a pas de
+                galerie (aucune donnée inventée). Avec elles, le flat lay se réduit (14 vh au lieu de 28) : carte et gestes tiennent à
+                390 × 844 au-dessus du pied (mesuré). Vignettes en 4:5, recadrées au centre (tête et pieds ont de la marge). */}
             {looks.length > 0 && (
-              <div className="grid grid-cols-3 gap-[8px] mt-[14px]">
+              <div className="grid grid-cols-3 gap-[8px] mt-[8px]">
                 {looks.slice(0, 3).map((src, k) => (
-                  <div key={src} className="rounded-tuile overflow-hidden bg-border" style={{ aspectRatio: "3 / 4" }}>
+                  <div key={src} className="rounded-tuile overflow-hidden bg-border" style={{ aspectRatio: "4 / 5" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={src} alt={`${cfg.label}, look ${k + 1}`} width={900} height={1200} loading="lazy" decoding="async" className="w-full h-full object-cover block" draggable={false} />
                   </div>
