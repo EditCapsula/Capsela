@@ -327,6 +327,27 @@ export const VISUELS_ETAPE_STYLE_FEMME: Record<StyleId, string> = {
   creatif: "/images/styles/creatif.webp",
 };
 
+/**
+ * LES LOOKS PORTÉS D'UN STYLE (14/11/2026, brief « Refonte UX/UI – Onboarding Choix des styles ») : trois photos éditoriales de tenues
+ * portées par style, sous le flat lay de la carte (DecouverteStyles). AUCUNE N'EXISTE ENCORE : la règle « aucune donnée inventée » veut
+ * qu'une galerie sans photo ne s'affiche pas — pas d'icône, pas de placeholder, pas de flat lay recomposé à leur place. Chaque photo
+ * fournie se déclare ici, par genre et par style, à l'emplacement prévu : public/images/styles/looks/<genre>/<slug>-<1|2|3>.webp,
+ * portrait 3:4 (900 × 1200, WebP), comme les flat lays. Une liste partielle affiche ce qu'elle a.
+ */
+export const LOOKS_PORTES_STYLE: Record<"femme" | "homme", Partial<Record<StyleId, readonly string[]>>> = {
+  femme: {},
+  homme: {},
+};
+
+export function looksPortesStyle(gender: Gender | null, id: StyleId): readonly string[] {
+  return LOOKS_PORTES_STYLE[gender === "homme" ? "homme" : "femme"][id] ?? [];
+}
+
+/** Le flat lay d'un style pour l'étape Style : les visuels du 25/09/2026 côté femme (et genre non renseigné), ceux du 30/10/2026 côté homme. */
+export function visuelEtapeStyle(gender: Gender | null, id: StyleId): string | null {
+  return gender === "homme" ? STYLE_CONFIG.homme[id].asset || null : VISUELS_ETAPE_STYLE_FEMME[id];
+}
+
 export function styleConfigFor(gender: Gender | null): Record<StyleId, StyleCardConfig> {
   return STYLE_CONFIG[gender === "homme" ? "homme" : "femme"];
 }
@@ -363,6 +384,20 @@ export function stylesDuGenre(styles: readonly string[], gender: Gender | null):
   return styles.filter((s) => permis.has(s));
 }
 
+
+/**
+ * LE VOTE SUR UN STYLE (14/11/2026, découverte des styles de l'onboarding) : « J'aime » ajoute le style, ou le retire s'il est déjà choisi
+ * (le cœur plein se défait) ; « Pas pour moi » le retire s'il était choisi. Au plafond (MAX_STYLES), un nouveau « J'aime » est BLOQUÉ —
+ * jamais substitué (règle du 07/10/2026) : `bloque` le dit, la sélection ne change pas. L'ordre du choix est gardé : le premier reste le
+ * style principal.
+ */
+export function voterStyle(styles: readonly string[], id: string, vote: "aime" | "pasPourMoi"): { styles: string[]; bloque: boolean } {
+  const choisi = styles.includes(id);
+  if (vote === "pasPourMoi") return { styles: choisi ? styles.filter((s) => s !== id) : [...styles], bloque: false };
+  if (choisi) return { styles: styles.filter((s) => s !== id), bloque: false };
+  if (styles.length >= MAX_STYLES) return { styles: [...styles], bloque: true };
+  return { styles: [...styles, id], bloque: false };
+}
 
 export function basculerStyle(styles: readonly string[], id: string): string[] {
   if (styles.includes(id)) return styles.filter((s) => s !== id);

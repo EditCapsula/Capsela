@@ -3,6 +3,7 @@
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
 import { useEffect, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import DecouverteStyles from "@/components/DecouverteStyles";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
@@ -50,14 +51,10 @@ import {
   MORPHO_HINTS,
   PAL_COULEURS,
   TAILLES_HAUT,
-  basculerStyle,
   MAX_STYLES,
   libelleStyles,
-  exposedStyleIds,
   stylesDuGenre,
   paletteColorName,
-  styleConfigFor,
-  VISUELS_ETAPE_STYLE_FEMME,
   tailleBasLabelFor,
   taillesBasFor,
   type Intensite,
@@ -94,7 +91,7 @@ const ALL_STEPS = [
   { key: "prenom", kicker: "Toi", title: "Comment tu t'appelles ?", subtitle: "Pour personnaliser ton expérience Capsela." },
   { key: "genre", kicker: "Genre", title: "Comment tu te définis ?", subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
-  { key: "style", kicker: "Ton style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis jusqu'à 3 styles." },
+  { key: "style", kicker: "Ton style", title: "Quel style te ressemble le plus ?", subtitle: "Fais défiler les styles et sélectionne jusqu'à 3 styles." },
   { key: "morpho", kicker: "Ta silhouette", title: "Quelle est ta silhouette ?", subtitle: "Elle nous aide à te proposer des coupes et des proportions qui te mettent en valeur." },
   /*
    * MISE EN VALEUR ET COUPES (31/10/2026, brief « Évolution de l'onboarding », preferencesSilhouette.ts). Ce que la personne AIME,
@@ -337,22 +334,11 @@ export default function ProfileSetupScreen() {
     patch({ paletteCouleurs: [...cur, hex] });
   };
   // Un à trois styles (trois depuis le 11/11/2026, demandé par la propriétaire ; deux du 05/10/2026 ; avant : sélection unique, arbitrage
-  // du 20/08/2026 reconduit après un essai de multi-sélection le même jour) : basculerStyle, le premier choisi est le principal.
+  // du 20/08/2026 reconduit après un essai de multi-sélection le même jour) : le premier choisi est le principal.
   // Un style au-delà du plafond est BLOQUÉ, pas substitué (07/10/2026) : le remplacer en silence changeait un choix sans le dire.
   // Seuls comptent les styles que le genre propose (stylesDuGenre) : un style resté d'un autre genre (Glamour après un passage à Homme) ne
   // doit ni occuper une des places ni rester dans le profil.
-  const nbStyles = stylesDuGenre(draft.styles, draft.gender).length;
-  const selectStyle = (id: string) => {
-    const valides = stylesDuGenre(draft.styles, draft.gender);
-    if (!valides.includes(id) && valides.length >= MAX_STYLES) {
-      // Un false puis true : un second refus pendant que le message est affiché relance son délai.
-      setStyleBloque(false);
-      setTimeout(() => setStyleBloque(true), 0);
-      return;
-    }
-    setStyleBloque(false);
-    patch({ styles: basculerStyle(valides, id) });
-  };
+  // Le vote sur un style (J'aime / Pas pour moi) et son plafond : voterStyle (profile.ts), appelé par DecouverteStyles (14/11/2026).
 
   // Édition ciblée d'une seule étape (recette 22/08/2026, signalé : "si je
   // change mon style je ne devrai pas avoir à chaque fois l'écran
@@ -864,97 +850,23 @@ export default function ProfileSetupScreen() {
 
       {meta.key === "taille" && blocTailles}
 
-      {/* OÙ EN EST LA SÉLECTION (31/10/2026, brief « Ajustement UX – sélection des styles ») : rien avant le premier choix (le sous-titre
-          dit déjà « jusqu'à 3 styles »), puis 1/3, 2/3, 3/3 (trois styles depuis le 11/11/2026). Hauteur réservée : la grille ne saute pas quand le compteur apparaît. */}
+      {/* LA DÉCOUVERTE DES STYLES (14/11/2026, brief « Refonte UX/UI – Onboarding Choix des styles ») : les styles un à un, J'aime / Pas
+          pour moi, comme les suggestions de la capsule, à la place de la grille de cartes. Même brouillon, mêmes ids, même plafond ; la
+          bulle du refus d'un quatrième style reste celle de l'étape (styleBloque). */}
       {meta.key === "style" && (
-        <p role="status" aria-live="polite" className="h-[18px] mt-[6px] text-[12px] text-muted leading-[18px]">
-          {nbStyles >= 1 ? `${nbStyles}/${MAX_STYLES} ${nbStyles > 1 ? "styles sélectionnés" : "style sélectionné"}` : ""}
-        </p>
-      )}
-      {meta.key === "style" && (
-        <div className="grid grid-cols-2 gap-[11px] mt-[8px]">
-          {exposedStyleIds(draft.gender).map((id) => {
-            const cfg = styleConfigFor(draft.gender)[id];
-            const on = draft.styles.includes(id);
-            // Les flat lays en portrait 3:4 : côté femme (et genre non
-            // renseigné, qui affiche la grille femme) ceux du 25/09 ; côté
-            // homme, ceux fournis le 30/10/2026 (STYLE_CONFIG), au même
-            // format — les deux grilles sont identiques.
-            const visuel = draft.gender === "homme" ? cfg.asset || null : VISUELS_ETAPE_STYLE_FEMME[id];
-            return (
-              <button
-                key={id}
-                onClick={() => selectStyle(id)}
-                className={
-                  // Épaisseur de bordure fixe (jamais 1px ↔ 2px) : seule la
-                  // couleur change à la sélection, jamais la largeur, pour
-                  // qu'aucune card ne bouge d'un pixel au clic (indépendant
-                  // de box-sizing, garanti par construction).
-                  // Sélectionnée (31/10/2026) : la bordure se marque d'un anneau de 1 px en plus (box-shadow, hors du flux : aucune card ne
-                  // bouge), le fond s'éclaire ; transition de 180 ms, coupée si le téléphone demande moins d'animations.
-                  "relative text-left rounded-tuile overflow-hidden border-[1.5px] cursor-pointer flex flex-col transition-[border-color,box-shadow,background-color] duration-[180ms] ease-out motion-reduce:transition-none " +
-                  (on ? "border-terracotta" : "border-border")
-                }
-                aria-pressed={on}
-                style={{ background: on ? "var(--color-selected-bg)" : "var(--color-card)", boxShadow: on ? "0 0 0 1px var(--color-terracotta)" : "none" }}
-              >
-                {visuel ? (
-                  /* LE FORMAT EXACT DU VISUEL (3:4), et non le 5:4 des
-                     anciennes cartes : dans un cadre paysage, un flat lay
-                     portrait perdait ~40 % de sa hauteur. Ici rien n'est
-                     rogné ni déformé — `cover` sur un cadre au même ratio que
-                     l'image. Dimensions déclarées : la place est réservée
-                     avant le chargement. Aucun élément par-dessus, hormis le
-                     contrôle de sélection existant. */
-                  <div className="w-full flex-shrink-0 bg-border" style={{ aspectRatio: "3/4" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={visuel}
-                      alt=""
-                      width={900}
-                      height={1200}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover block"
-                    />
-                  </div>
-                ) : (
-                <div
-                  className="w-full flex-shrink-0"
-                  style={{
-                    // ~60/40 image/texte (recette 20/08/2026) : 5/4 est plus
-                    // dominant que le 4/3 précédent sans agrandir la card de
-                    // façon perceptible.
-                    aspectRatio: "5/4",
-                    // Aplat beige toujours en fond : si l'URL Storage est vide, indisponible
-                    // ou en échec de chargement, background-image ne dessine simplement rien
-                    // par-dessus — jamais une icône d'image cassée (repli déjà natif, pas de JS).
-                    backgroundColor: "var(--color-border)",
-                    ...(cfg.asset ? { backgroundImage: `url(${cfg.asset})` } : {}),
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                />
-                )}
-                <span
-                  className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-[1.5px] transition-colors duration-[180ms] motion-reduce:transition-none"
-                  style={{ background: on ? "var(--color-terracotta)" : "#FFFFFF", borderColor: on ? "var(--color-terracotta)" : "#B08968" }}
-                >
-                  {on && (
-                    <svg width="11" height="9" viewBox="0 0 11 9" fill="none" className="coche-style">
-                      <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </span>
-                <div className="px-[13px] py-[11px]">
-                  <div className="t-titre-vignette text-ink">{cfg.label}</div>
-                  <div className="text-[11px] text-muted mt-[4px] leading-[1.35]">{cfg.desc}</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <DecouverteStyles
+          gender={draft.gender}
+          styles={stylesDuGenre(draft.styles, draft.gender)}
+          onChange={(styles) => {
+            setStyleBloque(false);
+            patch({ styles });
+          }}
+          onBloque={() => {
+            // Un false puis true : un second refus pendant que le message est affiché relance son délai.
+            setStyleBloque(false);
+            setTimeout(() => setStyleBloque(true), 0);
+          }}
+        />
       )}
 
       {meta.key === "morpho" && (
