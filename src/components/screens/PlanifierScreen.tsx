@@ -1950,11 +1950,10 @@ export default function PlanifierScreen() {
                 />
                 {/* LE LIEU, facultatif, et la météo qu'il donne pour la date choisie (EtapeLieu) : sur la même page que la date depuis le
                     04/11/2026. La carte météo qui suivait le calendrier n'a plus lieu d'être : EtapeLieu dit déjà la prévision, ou ce qui manque. */}
+                {/* Le surtitre est posé par EtapeLieu : « Utiliser ma position actuelle » sur sa ligne (14/11/2026, demandé). */}
                 <div className="mt-6">
-                  <Surtitre>Où ? · Facultatif</Surtitre>
-                </div>
-                <div className="mt-2">
                   <EtapeLieu
+                    surtitre="Où ? · Facultatif"
                     lieu={lieu}
                     onChoisir={(v, libelle) => {
                       setVille(v);
