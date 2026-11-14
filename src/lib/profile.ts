@@ -330,7 +330,7 @@ export const VISUELS_ETAPE_STYLE_FEMME: Record<StyleId, string> = {
 /**
  * LES LOOKS PORTÉS D'UN STYLE (14/11/2026, brief « Refonte UX/UI – Onboarding Choix des styles ») : trois photos éditoriales de tenues
  * portées par style, sous le flat lay de la carte (DecouverteStyles). Fournies au fil de l'eau (14/11/2026 : Minimaliste, Casual chic,
- * Classique chic, Bohème et Streetwear femme) ; pour les autres, la règle « aucune donnée inventée » veut
+ * Classique chic, Bohème, Streetwear et Preppy femme) ; pour les autres, la règle « aucune donnée inventée » veut
  * qu'une galerie sans photo ne s'affiche pas — pas d'icône, pas de placeholder, pas de flat lay recomposé à leur place. Chaque photo
  * fournie se déclare ici, par genre et par style, à l'emplacement prévu : public/images/styles/looks/<genre>/<slug>-<1|2|3>.webp,
  * portrait 3:4 (900 × 1200, WebP), comme les flat lays. Une liste partielle affiche ce qu'elle a.
@@ -346,6 +346,7 @@ export const LOOKS_PORTES_STYLE: Record<"femme" | "homme", Partial<Record<StyleI
     classique_chic: ["/images/styles/looks/femme/classique-chic-1.webp", "/images/styles/looks/femme/classique-chic-2.webp", "/images/styles/looks/femme/classique-chic-3.webp"],
     boheme: ["/images/styles/looks/femme/boheme-1.webp", "/images/styles/looks/femme/boheme-2.webp", "/images/styles/looks/femme/boheme-3.webp"],
     streetwear: ["/images/styles/looks/femme/streetwear-1.webp", "/images/styles/looks/femme/streetwear-2.webp", "/images/styles/looks/femme/streetwear-3.webp"],
+    preppy: ["/images/styles/looks/femme/preppy-1.webp", "/images/styles/looks/femme/preppy-2.webp", "/images/styles/looks/femme/preppy-3.webp"],
   },
   homme: {},
 };

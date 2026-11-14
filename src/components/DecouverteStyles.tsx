@@ -16,7 +16,7 @@ import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfi
  *
  * Données inchangées : les ids de StyleId, persistés sur `profiles.styles` par l'écran du questionnaire (le brouillon, puis la fin du
  * parcours) ; les libellés, descriptions et visuels de STYLE_CONFIG ; les styles proposés par genre (exposedStyleIds). Le moteur n'est pas
- * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : Minimaliste, Casual chic, Classique chic, Bohème et Streetwear côté femme au 14/11/2026.
+ * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear et Preppy côté femme au 15/11/2026.
  */
 export default function DecouverteStyles({
   gender,
