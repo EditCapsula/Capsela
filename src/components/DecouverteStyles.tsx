@@ -52,16 +52,18 @@ export default function DecouverteStyles({
   };
   return (
     <div className="mt-3">
-      <Card rayon="carte" className="relative px-[14px] pt-[10px] pb-[10px]" aria-roledescription="carrousel" aria-label="Styles">
+      <Card rayon="carte" className="relative px-[10px] pt-[10px] pb-[12px]" aria-roledescription="carrousel" aria-label="Styles">
         {/* La clé suit le style : la carte repart au centre et entre en fondu, comme une nouvelle suggestion de pièce. */}
         <div key={id} className="motion-safe:animate-[capsule-apparition_240ms_ease-out_both]" aria-live="polite">
           <CarteGlissante onAimer={() => voter("aime")} onRejeter={() => voter("pasPourMoi")}>
             <div className="relative">
-              {/* Le flat lay du style, en grand : carré, centré (le visuel 3:4 est recadré au centre), borné par la hauteur de l'écran
-                  pour que les deux gestes restent visibles sans défiler. */}
+              {/* Le flat lay du style, en grand, sur toute la largeur de la carte (15/11/2026, demandé : « le flat lay doit être plus
+                  grand comme sur les maquettes ») : presque carré comme la maquette (21:20), le visuel 3:4 recadré au centre. Il n'est
+                  plus borné par la hauteur de l'écran : sur un petit téléphone, la page défile jusqu'aux gestes (le pied, avec « Mes
+                  styles sélectionnés », reste fixe), et le glissement de la carte vote sans défiler. */}
               <div
-                className="mx-auto rounded-bloc overflow-hidden bg-border"
-                style={{ width: looks.length > 0 ? "min(100%, 14vh)" : "min(100%, 28vh)", aspectRatio: "1 / 1" }}
+                className="w-full rounded-bloc overflow-hidden bg-border"
+                style={{ aspectRatio: "21 / 20" }}
                 onDragStart={(e) => e.preventDefault()}
               >
                 {visuel && (
@@ -81,8 +83,7 @@ export default function DecouverteStyles({
               </span>
             </div>
             {/* LES LOOKS PORTÉS : trois photos côte à côte, dans la carte, sans clic (LOOKS_PORTES_STYLE) ; un style sans photo n'a pas de
-                galerie (aucune donnée inventée). Avec elles, le flat lay se réduit (14 vh au lieu de 28) : carte et gestes tiennent à
-                390 × 844 au-dessus du pied (mesuré). Vignettes en 4:5, recadrées au centre (tête et pieds ont de la marge). */}
+                galerie (aucune donnée inventée). Vignettes en 4:5, recadrées au centre (tête et pieds ont de la marge). */}
             {looks.length > 0 && (
               <div className="grid grid-cols-3 gap-[8px] mt-[8px]">
                 {looks.slice(0, 3).map((src, k) => (
