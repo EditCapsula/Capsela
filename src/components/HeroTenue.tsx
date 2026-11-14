@@ -223,18 +223,22 @@ export function RailPiecesTenue({
     return (
       <>
         <div className="t-surtitre text-muted mt-[26px] mb-[10px]">{t("Les pièces de ton look · {n}", { n: pieces.length })}</div>
-        <ul className="grid grid-cols-2 gap-[10px] list-none p-0 m-0">
+        {/* EN RANGÉE QUI DÉFILE (14/11/2026, demandé : « remets-les en card scrollable à l'horizontal et fais en sorte que ce soit les
+            mêmes hauteurs ») : la grille à deux colonnes donnait des cartes de hauteurs différentes selon la longueur du nom. Les cartes
+            gardent leur taille (un peu moins de la moitié de la largeur : la suivante dépasse et dit qu'on peut faire défiler) ; le nom tient
+            toujours sur deux lignes réservées, et chaque carte s'étire à la hauteur de la plus haute (items-stretch, h-full). */}
+        <ul className="scrollarea flex items-stretch gap-[10px] overflow-x-auto snap-x snap-mandatory list-none m-0 -mx-6 px-6 pb-[4px]" style={{ scrollPaddingInline: 24 }}>
           {pieces.map((it) => {
             const suggested = isCatalogId(it.id);
             const img = resolveItemImage(it);
             const categorie = libelle(CATLABEL[isBag(it) ? "sac" : it.cat]);
             return (
-              <li key={it.id} className="relative min-w-0">
+              <li key={it.id} className="relative flex-none snap-start" style={{ width: "calc((100% - 10px) / 2.25)" }}>
                 <button
                   type="button"
                   onClick={() => ouvrir(it)}
                   aria-label={`${it.name} — ${categorie}, ${suggested ? "capsule" : "dressing"}. Voir le détail`}
-                  className="w-full text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer active:opacity-80 transition-shadow duration-[1200ms] ease-out"
+                  className="w-full h-full flex flex-col text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer active:opacity-80 transition-shadow duration-[1200ms] ease-out"
                   style={{ boxShadow: misEnAvant === it.id ? "0 0 0 1.5px var(--color-terracotta)" : "0 0 0 1.5px rgba(166,105,80,0)" }}
                 >
                   {/* Le visuel entier, jamais déformé ni rogné (contain) ; une photo du dressing remplit son carré comme dans le rail. */}
@@ -257,8 +261,9 @@ export function RailPiecesTenue({
                     )}
                     {it.imageStatus === "generating" && <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />}
                   </span>
-                  <span className="block px-[10px] pt-[8px] pb-[10px]">
-                    <span className="block t-titre-vignette text-ink line-clamp-2 break-words">{nomAffiche(it)}</span>
+                  <span className="block flex-1 px-[10px] pt-[8px] pb-[10px]">
+                    {/* Deux lignes réservées au nom, qu'il en prenne une ou deux : la catégorie et la provenance tombent au même niveau. */}
+                    <span className="block t-titre-vignette text-ink line-clamp-2 break-words" style={{ minHeight: "2.6em" }}>{nomAffiche(it)}</span>
                     <span className="block text-[11px] text-muted mt-[2px]">{categorie}</span>
                     {/* Provenance à la pièce — la même séparation que la ligne du hero (isCatalogId), jamais un second calcul. */}
                     <span className="block text-[11px] mt-[1px]" style={{ color: suggested ? "var(--color-sand-text)" : "var(--color-muted)" }}>

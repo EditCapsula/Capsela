@@ -1455,8 +1455,9 @@ export default function TenuesScreen() {
       {/* LES PIÈCES DE LA TENUE : le composant partagé avec Planifier (RailPiecesTenue, 04/11/2026), ici avec l'échange ⇄ et le contour
           d'une pièce tout juste ajoutée (R-S13/R-S14). Rien ne disparaît : même rail, mêmes fiches, mêmes gestes qu'avant. Pas de lien
           « Voir les détails » : il n'existe pas d'écran de détail de LA tenue, chaque pièce ouvre le sien. */}
-      {/* LES PIÈCES DE TON LOOK, EN GRILLE (12/11/2026, brief, point 5) : exactement les pièces du flat lay (piecesDuLook) — accessoires
-          compris, sans le manteau montré à part « pour l'extérieur ». */}
+      {/* LES PIÈCES DE TON LOOK (12/11/2026, brief, point 5) : exactement les pièces du flat lay (piecesDuLook) — accessoires compris,
+          sans le manteau montré à part « pour l'extérieur ». En grille jusqu'au 14/11/2026, puis en rangée qui défile, cartes de même
+          hauteur (demandé ; RailPiecesTenue). */}
       <RailPiecesTenue
         pieces={piecesDuLook}
         chargement={meteoEnAttente}
