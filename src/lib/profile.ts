@@ -329,8 +329,8 @@ export const VISUELS_ETAPE_STYLE_FEMME: Record<StyleId, string> = {
 
 /**
  * LES LOOKS PORTÉS D'UN STYLE (14/11/2026, brief « Refonte UX/UI – Onboarding Choix des styles ») : trois photos éditoriales de tenues
- * portées par style, sous le flat lay de la carte (DecouverteStyles). Fournies au fil de l'eau (14/11/2026 : Minimaliste et Casual chic
- * femme) ; pour les autres, la règle « aucune donnée inventée » veut
+ * portées par style, sous le flat lay de la carte (DecouverteStyles). Fournies au fil de l'eau (14/11/2026 : Minimaliste, Casual chic et
+ * Classique chic femme) ; pour les autres, la règle « aucune donnée inventée » veut
  * qu'une galerie sans photo ne s'affiche pas — pas d'icône, pas de placeholder, pas de flat lay recomposé à leur place. Chaque photo
  * fournie se déclare ici, par genre et par style, à l'emplacement prévu : public/images/styles/looks/<genre>/<slug>-<1|2|3>.webp,
  * portrait 3:4 (900 × 1200, WebP), comme les flat lays. Une liste partielle affiche ce qu'elle a.
@@ -341,6 +341,9 @@ export const LOOKS_PORTES_STYLE: Record<"femme" | "homme", Partial<Record<StyleI
     // chaque côté (bord recopié) pour passer du 2:3 au 3:4 sans couper la tête ni les pieds, puis 900 × 1200 WebP.
     minimaliste: ["/images/styles/looks/femme/minimaliste-1.webp", "/images/styles/looks/femme/minimaliste-2.webp", "/images/styles/looks/femme/minimaliste-3.webp"],
     casual_chic: ["/images/styles/looks/femme/casual-chic-1.webp", "/images/styles/looks/femme/casual-chic-2.webp", "/images/styles/looks/femme/casual-chic-3.webp"],
+    // Fournis au format 3:4 (14/11/2026) : le 1 ramené à 900 × 1200 ; les 2 et 3 avaient des bandes claires ajoutées sur les côtés,
+    // retirées (recadrage sur la photo) puis recomplétées par le bord de la photo.
+    classique_chic: ["/images/styles/looks/femme/classique-chic-1.webp", "/images/styles/looks/femme/classique-chic-2.webp", "/images/styles/looks/femme/classique-chic-3.webp"],
   },
   homme: {},
 };
