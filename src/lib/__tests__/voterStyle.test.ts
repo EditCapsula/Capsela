@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { MAX_STYLES, voterStyle } from "../profile";
+import { MAX_STYLES, retirerStyle, voterStyle } from "../profile";
 
 // 14/11/2026 : la découverte des styles de l'onboarding (J'aime / Pas pour moi, trois styles au plus).
 describe("voterStyle", () => {
   it("J'aime ajoute un style, à la suite des autres", () => {
     expect(voterStyle(["boheme"], "preppy", "aime")).toEqual({ styles: ["boheme", "preppy"], bloque: false });
   });
-  it("J'aime sur un style déjà choisi le retire", () => {
-    expect(voterStyle(["boheme", "preppy"], "boheme", "aime")).toEqual({ styles: ["preppy"], bloque: false });
+  it("J'aime sur un style déjà choisi le garde, à sa place", () => {
+    expect(voterStyle(["boheme", "preppy"], "boheme", "aime")).toEqual({ styles: ["boheme", "preppy"], bloque: false });
+  });
+  it("la croix d'un style le retire et libère une place", () => {
+    const trois = ["boheme", "preppy", "minimaliste"];
+    expect(retirerStyle(trois, "preppy")).toEqual(["boheme", "minimaliste"]);
+    expect(voterStyle(retirerStyle(trois, "preppy"), "streetwear", "aime")).toEqual({ styles: ["boheme", "minimaliste", "streetwear"], bloque: false });
   });
   it("Pas pour moi retire un style choisi, et ne change rien sinon", () => {
     expect(voterStyle(["boheme", "preppy"], "preppy", "pasPourMoi")).toEqual({ styles: ["boheme"], bloque: false });

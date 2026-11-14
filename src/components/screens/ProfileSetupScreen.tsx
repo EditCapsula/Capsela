@@ -3,7 +3,7 @@
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
 import { useEffect, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import DecouverteStyles from "@/components/DecouverteStyles";
+import DecouverteStyles, { MesStylesSelectionnes } from "@/components/DecouverteStyles";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
@@ -51,7 +51,6 @@ import {
   MORPHO_HINTS,
   PAL_COULEURS,
   TAILLES_HAUT,
-  MAX_STYLES,
   libelleStyles,
   stylesDuGenre,
   paletteColorName,
@@ -339,6 +338,15 @@ export default function ProfileSetupScreen() {
   // Seuls comptent les styles que le genre propose (stylesDuGenre) : un style resté d'un autre genre (Glamour après un passage à Homme) ne
   // doit ni occuper une des places ni rester dans le profil.
   // Le vote sur un style (J'aime / Pas pour moi) et son plafond : voterStyle (profile.ts), appelé par DecouverteStyles (14/11/2026).
+  // Le refus d'un quatrième « J'aime », dit un instant dans « Mes styles sélectionnés » (le pied de l'étape) ; un nouveau refus relance
+  // son délai (le compteur change à chaque refus).
+  const [refusStyle, setRefusStyle] = useState<{ libelle: string; n: number } | null>(null);
+  const signalerRefusStyle = (libelle: string | null) => setRefusStyle((r) => (libelle ? { libelle, n: (r?.n ?? 0) + 1 } : null));
+  useEffect(() => {
+    if (!refusStyle) return;
+    const t = setTimeout(() => setRefusStyle(null), 3500);
+    return () => clearTimeout(t);
+  }, [refusStyle]);
 
   // Édition ciblée d'une seule étape (recette 22/08/2026, signalé : "si je
   // change mon style je ne devrai pas avoir à chaque fois l'écran
@@ -502,7 +510,6 @@ export default function ProfileSetupScreen() {
     !state.profileSetupFromEdit && !profile.completed && sectionCourante >= 0
       ? `${sectionCourante + 1} / ${SECTIONS.length} · ${SECTIONS[sectionCourante].label}`
       : null;
-  const [styleBloque, setStyleBloque] = useState(false);
   // L'ÉTAPE MÉTÉO (EtapeMeteo.tsx). La fenêtre du système s'ouvre dans le geste même du toucher : getBrowserPosition demande
   // l'autorisation puis lit la position, sans délai ni demande différée.
   const [localisation, setLocalisation] = useState<EtatLocalisation>(draft.prefs.geoConsent && draft.prefs.weatherFromGeo ? "accordee" : "attente");
@@ -522,13 +529,6 @@ export default function ProfileSetupScreen() {
     setLocalisation("accordee");
     setDraft((d) => ({ ...d, ...(lieu ? { city: lieu.name } : {}), prefs: { ...d.prefs, geoConsent: true, weatherFromGeo: true } }));
   };
-  // Le refus d'un troisième style se dit un instant, puis s'efface (31/10/2026, brief « Ajustement UX – sélection des styles ») : jamais
-  // un message permanent. Un nouveau refus relance le délai.
-  useEffect(() => {
-    if (!styleBloque) return;
-    const t = setTimeout(() => setStyleBloque(false), 3500);
-    return () => clearTimeout(t);
-  }, [styleBloque]);
   // Seules les étapes style et palette exigent une sélection non vide
   // (styles : recette 20/08/2026 ; palette : Tâche 8, min 1 couleur) — les
   // autres étapes gardent leur comportement existant, jamais bloquant.
@@ -851,22 +851,10 @@ export default function ProfileSetupScreen() {
       {meta.key === "taille" && blocTailles}
 
       {/* LA DÉCOUVERTE DES STYLES (14/11/2026, brief « Refonte UX/UI – Onboarding Choix des styles ») : les styles un à un, J'aime / Pas
-          pour moi, comme les suggestions de la capsule, à la place de la grille de cartes. Même brouillon, mêmes ids, même plafond ; la
-          bulle du refus d'un quatrième style reste celle de l'étape (styleBloque). */}
+          pour moi, comme les suggestions de la capsule, à la place de la grille de cartes ; les styles choisis restent visibles dessous
+          (« Mes styles sélectionnés »), et le refus d'un quatrième se dit là, à côté d'eux. Même brouillon, mêmes ids, même plafond. */}
       {meta.key === "style" && (
-        <DecouverteStyles
-          gender={draft.gender}
-          styles={stylesDuGenre(draft.styles, draft.gender)}
-          onChange={(styles) => {
-            setStyleBloque(false);
-            patch({ styles });
-          }}
-          onBloque={() => {
-            // Un false puis true : un second refus pendant que le message est affiché relance son délai.
-            setStyleBloque(false);
-            setTimeout(() => setStyleBloque(true), 0);
-          }}
-        />
+        <DecouverteStyles gender={draft.gender} styles={stylesDuGenre(draft.styles, draft.gender)} onChange={(styles) => patch({ styles })} onRefus={signalerRefusStyle} />
       )}
 
       {meta.key === "morpho" && (
@@ -1058,21 +1046,26 @@ export default function ProfileSetupScreen() {
         <div key={`${meta.key}-${colo.vue}`} className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">
           {pageBody}
         </div>
-        {/* Le refus d'un troisième style : une bulle discrète au-dessus du bouton, quelques secondes (pas dans la page : sur deux lignes,
-            elle aurait fait sauter la grille à chaque apparition). */}
-        {meta.key === "style" && styleBloque && (
-          <div role="status" className="detail-part absolute inset-x-0 bottom-3 mx-auto max-w-[480px] px-7 pointer-events-none">
-            <div className="bg-ink rounded-feuille px-4 py-[10px] text-[12px] text-cream leading-[1.4] text-center shadow-lg">
-              Tu as déjà choisi {MAX_STYLES} styles. Retire-en un pour en sélectionner un autre.
-            </div>
-          </div>
-        )}
       </div>
       {continueButton && (
         <div
           className="flex-shrink-0 px-7 bg-cream border-t border-border flex flex-col"
           style={{ paddingBottom: pied?.lien ? "calc(4px + env(safe-area-inset-bottom))" : "calc(16px + env(safe-area-inset-bottom))" }}
         >
+          {/* MES STYLES SÉLECTIONNÉS, dans le pied (14/11/2026) : visibles pendant toute l'étape, au-dessus du bouton. */}
+          {meta.key === "style" && (
+            <div className="mb-[10px]">
+              <MesStylesSelectionnes
+                gender={draft.gender}
+                styles={stylesDuGenre(draft.styles, draft.gender)}
+                onChange={(styles) => {
+                  setRefusStyle(null);
+                  patch({ styles });
+                }}
+                refus={refusStyle?.libelle ?? null}
+              />
+            </div>
+          )}
           {continueButton}
         </div>
       )}

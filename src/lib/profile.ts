@@ -386,17 +386,22 @@ export function stylesDuGenre(styles: readonly string[], gender: Gender | null):
 
 
 /**
- * LE VOTE SUR UN STYLE (14/11/2026, découverte des styles de l'onboarding) : « J'aime » ajoute le style, ou le retire s'il est déjà choisi
- * (le cœur plein se défait) ; « Pas pour moi » le retire s'il était choisi. Au plafond (MAX_STYLES), un nouveau « J'aime » est BLOQUÉ —
- * jamais substitué (règle du 07/10/2026) : `bloque` le dit, la sélection ne change pas. L'ordre du choix est gardé : le premier reste le
- * style principal.
+ * LE VOTE SUR UN STYLE (14/11/2026, découverte des styles de l'onboarding) : « J'aime » ajoute le style (déjà choisi, il le reste) ;
+ * « Pas pour moi » le retire s'il était choisi. Au plafond (MAX_STYLES), un nouveau « J'aime » est BLOQUÉ — jamais substitué (règle du
+ * 07/10/2026) : `bloque` le dit, la sélection ne change pas. L'ordre du choix est gardé : le premier reste le style principal. Retirer un
+ * style se fait aussi par sa croix, dans « Mes styles sélectionnés » (retirerStyle).
  */
 export function voterStyle(styles: readonly string[], id: string, vote: "aime" | "pasPourMoi"): { styles: string[]; bloque: boolean } {
   const choisi = styles.includes(id);
   if (vote === "pasPourMoi") return { styles: choisi ? styles.filter((s) => s !== id) : [...styles], bloque: false };
-  if (choisi) return { styles: styles.filter((s) => s !== id), bloque: false };
+  if (choisi) return { styles: [...styles], bloque: false };
   if (styles.length >= MAX_STYLES) return { styles: [...styles], bloque: true };
   return { styles: [...styles, id], bloque: false };
+}
+
+/** La croix d'un style de « Mes styles sélectionnés » : retiré tout de suite, sans confirmation ; une place se libère. */
+export function retirerStyle(styles: readonly string[], id: string): string[] {
+  return styles.filter((s) => s !== id);
 }
 
 export function basculerStyle(styles: readonly string[], id: string): string[] {
