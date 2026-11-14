@@ -18,8 +18,8 @@ import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfi
  * parcours) ; les libellés, descriptions et visuels de STYLE_CONFIG ; les styles proposés par genre (exposedStyleIds). Le moteur n'est pas
  * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy et Créatif côté femme, Minimaliste, Casual chic, Classique chic, Bohème, Streetwear et Preppy côté homme au 15/11/2026.
  */
-/** Hauteur de l'étape Style hors flat lay, quand le style a des looks portés (px, mesurée à 390 × 844) : tout tient sans défiler. */
-const HAUTEUR_HORS_FLAT_LAY = 705;
+/** Hauteur de l'étape Style hors de la rangée flat lay + looks (px, mesurée à 390 × 844) : tout tient sans défiler. */
+const HAUTEUR_HORS_RANGEE = 573;
 
 export default function DecouverteStyles({
   gender,
@@ -59,24 +59,44 @@ export default function DecouverteStyles({
         {/* La clé suit le style : la carte repart au centre et entre en fondu, comme une nouvelle suggestion de pièce. */}
         <div key={id} className="motion-safe:animate-[capsule-apparition_240ms_ease-out_both]" aria-live="polite">
           <CarteGlissante onAimer={() => voter("aime")} onRejeter={() => voter("pasPourMoi")}>
-            <div className="relative">
-              {/* Le flat lay du style, sur toute la largeur de la carte, recadré au centre sans aucune marge (object-cover) :
-                  15/11/2026, demandé d'abord « plus grand comme sur les maquettes », puis « réduis la hauteur pour que les éléments de
-                  la page soient visibles, aucune marge blanche, plus important que les 3 visuels ». Sa hauteur suit donc celle de
-                  l'écran : ce qui reste une fois l'en-tête, le texte, les vignettes, les gestes et le pied posés (HAUTEUR_HORS_FLAT_LAY,
-                  mesuré à 390 × 844), entre 140 px (toujours plus haut que les vignettes) et 300 px. Sans looks portés, carré. */}
+            {/* LE FLAT LAY EN ENTIER, LES LOOKS À CÔTÉ (15/11/2026, demandé : « le flat lay n'est pas suffisamment visible, il faut
+                qu'on le voie entièrement », après « aucune marge blanche », « plus important que les 3 visuels » et « les éléments de
+                la page visibles »). Le flat lay garde son format 3:4 : rien n'est recadré, rien n'est ajouté autour. Les trois looks
+                portés s'empilent à sa droite, sur sa hauteur : il reste le grand visuel, et la rangée tient dans la hauteur que
+                laissent l'en-tête, le texte, les gestes et le pied (HAUTEUR_HORS_RANGEE, mesurée à 390 × 844), bornée par la largeur
+                de la carte (cqw). Sans looks portés, le flat lay seul, centré. */}
+            <div style={{ containerType: "inline-size" }}>
               <div
-                className="w-full rounded-bloc overflow-hidden bg-border"
-                style={looks.length > 0 ? { height: `clamp(140px, calc(100dvh - ${HAUTEUR_HORS_FLAT_LAY}px), 300px)` } : { aspectRatio: "1 / 1" }}
-                onDragStart={(e) => e.preventDefault()}
+                className="flex justify-center gap-[8px]"
+                style={{ ["--h" as string]: `clamp(160px, min(calc(100dvh - ${HAUTEUR_HORS_RANGEE}px), ${looks.length > 0 ? 96 : 110}cqw), 420px)` }}
               >
-                {visuel && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={visuel} alt="" width={900} height={1200} decoding="async" className="w-full h-full object-cover block" draggable={false} />
+                <div className="relative flex-none">
+                  <div
+                    className="rounded-bloc overflow-hidden bg-border"
+                    style={{ height: "var(--h)", aspectRatio: "3 / 4" }}
+                    onDragStart={(e) => e.preventDefault()}
+                  >
+                    {visuel && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={visuel} alt="" width={900} height={1200} decoding="async" className="w-full h-full object-cover block" draggable={false} />
+                    )}
+                  </div>
+                  <FlecheParcours sens="precedente" libelle="Style précédent" onClick={i > 0 ? () => setIndex(i - 1) : undefined} />
+                  <FlecheParcours sens="suivante" libelle="Style suivant" onClick={i < ids.length - 1 ? () => setIndex(i + 1) : undefined} />
+                </div>
+                {/* LES LOOKS PORTÉS : sans clic (LOOKS_PORTES_STYLE) ; un style sans photo n'a pas de galerie (aucune donnée inventée).
+                    En 4:5, calés en haut : la tête n'est jamais coupée, seule la marge sous les pieds se réduit. */}
+                {looks.length > 0 && (
+                  <div className="flex flex-col gap-[8px] flex-none">
+                    {looks.slice(0, 3).map((src, k) => (
+                      <div key={src} className="rounded-tuile overflow-hidden bg-border" style={{ height: "calc((var(--h) - 16px) / 3)", aspectRatio: "4 / 5" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={`${cfg.label}, look ${k + 1}`} width={900} height={1200} loading="lazy" decoding="async" className="w-full h-full object-cover object-top block" draggable={false} />
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-              <FlecheParcours sens="precedente" libelle="Style précédent" onClick={i > 0 ? () => setIndex(i - 1) : undefined} />
-              <FlecheParcours sens="suivante" libelle="Style suivant" onClick={i < ids.length - 1 ? () => setIndex(i + 1) : undefined} />
             </div>
             <div className="text-center mt-[8px]">
               <div className="t-titre-section text-ink">{cfg.label}</div>
@@ -86,19 +106,6 @@ export default function DecouverteStyles({
                 {choisi ? ", sélectionné" : ""}
               </span>
             </div>
-            {/* LES LOOKS PORTÉS : trois photos côte à côte, dans la carte, sans clic (LOOKS_PORTES_STYLE) ; un style sans photo n'a pas de
-                galerie (aucune donnée inventée). Vignettes en 4:5, calées en haut : la tête n'est jamais coupée (le carré du 15/11/2026 la coupait), seule la marge sous les pieds se
-                réduit. Le flat lay reste le plus grand visuel. */}
-            {looks.length > 0 && (
-              <div className="grid grid-cols-3 gap-[8px] mt-[8px]">
-                {looks.slice(0, 3).map((src, k) => (
-                  <div key={src} className="rounded-tuile overflow-hidden bg-border" style={{ aspectRatio: "4 / 5" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt={`${cfg.label}, look ${k + 1}`} width={900} height={1200} loading="lazy" decoding="async" className="w-full h-full object-cover object-top block" draggable={false} />
-                  </div>
-                ))}
-              </div>
-            )}
           </CarteGlissante>
         </div>
       </Card>
