@@ -130,3 +130,44 @@ principale deux fois.
 - Déposer dans les dossiers ci-dessus, puis déclarer chaque série dans `LOOKS_PORTES_STYLE` (`src/lib/profile.ts`). La galerie apparaît
   dès qu'un style a au moins une photo.
 - Valider chaque série à l'écran avant mise en ligne (règle : aucune donnée inventée, aucun visuel qui ne correspond pas au style).
+
+## Version ChatGPT (copier-coller)
+
+Pour générer les looks portés dans ChatGPT, une image à la fois, dans **une seule conversation** (la série reste homogène).
+
+### 1. Le premier message, à coller une fois
+
+> Tu vas générer pour moi une série de photographies de mode pour l'application Capsela, une image par message. Respecte ces règles
+> pour TOUTES les images de la conversation, sans exception :
+>
+> - Format vertical 2:3 (1024 × 1536), photographie de mode éditoriale réaliste, plein pied, une seule personne adulte debout, pose
+>   naturelle et détendue.
+> - Fond uni crème chaud (#F3EEE5), sol légèrement plus clair, lumière naturelle douce venant de la gauche, ombres légères. Même fond,
+>   même lumière, même cadrage et même distance pour toutes les images.
+> - La personne occupe 80 % de la hauteur, centrée, avec la même marge au-dessus de la tête et sous les pieds : tête et chaussures
+>   toujours entières dans le cadre.
+> - Les vêtements décrits sont nets et bien lisibles de la tête aux pieds ; matières visibles ; aucun autre vêtement ajouté.
+> - Aucun texte, aucun logo, aucune marque visible, aucun décor, aucun accessoire non demandé.
+> - Série inclusive : chaque image montre une personne différente — âges adultes variés (de 20 à 70 ans), carnations, morphologies,
+>   tailles et coiffures variées, y compris des personnes ronde, grande, petite, aux cheveux gris, avec des lunettes ou un handicap
+>   visible quand c'est naturel. Aucun style n'est réservé à un type de personne : les trois looks d'un même style montrent trois
+>   personnes différentes.
+> - La personne est représentée avec respect et élégance : aucune pose ni retouche qui mette en avant ou masque une partie du corps,
+>   maquillage discret, expression sereine.
+>
+> Confirme simplement que tu as compris ; je t'envoie ensuite chaque look.
+
+### 2. Puis un message par image
+
+> Image **femme-casual-chic-1** : une femme porte un jean droit bleu moyen, un pull col roulé crème, un trench beige ouvert et des
+> mocassins marron.
+
+Reprendre la même phrase pour chaque look des listes « FEMME » et « HOMME » ci-dessus, en changeant le nom de l'image
+(`<genre>-<slug>-<1|2|3>`) et la description. Si une image ne respecte pas les règles (tête ou pieds coupés, texte, autre fond),
+répondre : « Recommence en respectant toutes les règles du premier message. »
+
+### 3. Ensuite
+
+Télécharger chaque image sous son nom (`femme-casual-chic-1.png`…) et me les envoyer : je les recadre en 900 × 1200, les convertis en
+WebP, les dépose dans `public/images/styles/looks/` et les déclare dans `LOOKS_PORTES_STYLE`, puis je te montre la galerie à l'écran
+avant tout merge.
