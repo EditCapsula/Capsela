@@ -347,7 +347,10 @@ export default function EtapeLieu({
   onType,
   meteo,
   surtitre,
+  effetType,
 }: {
+  /** Ce que le type de lieu change à la tenue, dit sous la question (14/11/2026 : une phrase vraie, jamais générique). */
+  effetType?: string;
   /** Le surtitre de la question, porté par ChoixVille avec « Utiliser ma position actuelle » sur sa ligne. */
   surtitre?: React.ReactNode;
   lieu: string;
@@ -368,7 +371,7 @@ export default function EtapeLieu({
       {types.length > 0 && (
         <div className="mt-6 pt-5 border-t border-divider">
           <Surtitre>Le type de lieu · Facultatif</Surtitre>
-          <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">Cela nous aide à affiner ta tenue.</div>
+          {effetType && <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">{effetType}</div>}
           <div className="grid grid-cols-3 gap-[10px] mt-3" role="group" aria-label="Type de lieu">
             {types.map((t) => {
               const actif = typeLieu === t;

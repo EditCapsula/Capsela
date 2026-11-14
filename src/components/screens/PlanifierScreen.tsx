@@ -200,10 +200,19 @@ const TYPES_LIEU: [string, string][] = [
  * ARBITRAGE ÉDITORIAL, instruit au niveau de chaque occasion prise une à une.
  * Il ne s'étend pas à une occasion ajoutée plus tard sans le même examen.
  */
+/*
+ * RÉVISÉ LE 14/11/2026 (arbitrage de la propriétaire : « n'affiche que les propositions vraies dans le parcours, on verra pour enrichir
+ * cette liste plus tard »). Vérifié dans le code : seul « Bar / Rooftop » pour une SOIRÉE change la tenue (soireeHabillee) ; les autres
+ * types, et « Autre », ne faisaient que s'afficher sur la fiche, sous une phrase — « Cela nous aide à affiner ta tenue » — fausse pour
+ * eux. La question ne propose plus que ce qui agit : « Bar / Rooftop », pour une soirée ; elle disparaît pour le rendez-vous et
+ * l'événement. Les plans déjà enregistrés avec un autre type le gardent et l'affichent (la base n'est pas touchée).
+ */
 const TYPES_LIEU_PAR_OCCASION: Partial<Record<OccasionKey, readonly string[]>> = {
-  date: ["Restaurant", "Bar / Rooftop", "Lieu culturel", "Extérieur", "Chez quelqu'un"],
-  soiree: ["Restaurant", "Bar / Rooftop", "Lieu culturel", "Extérieur", "Chez quelqu'un"],
-  evenement_perso: ["Restaurant", "Lieu culturel", "Extérieur", "Chez quelqu'un"],
+  soiree: ["Bar / Rooftop"],
+};
+/** Ce que la réponse change, dit sous la question — vrai dans le code (soireeHabillee, occasions.ts). */
+const EFFET_TYPE_LIEU: Partial<Record<OccasionKey, string>> = {
+  soiree: "Un bar ou un rooftop rend ta tenue plus habillée.",
 };
 
 const JOURS_PROPOSES = 21;
@@ -716,9 +725,8 @@ export default function PlanifierScreen() {
   const typesLieuProposes = (() => {
     const permis = occ ? TYPES_LIEU_PAR_OCCASION[occ] : undefined;
     if (!permis) return [] as string[];
-    // « Autre » ferme la liste (08/10/2026). Il n'est pas écrit en base — la colonne n'accepte que les cinq autres valeurs : il se
-    // lit comme « pas de précision » à l'enregistrement (cf. TYPE_LIEU_AUTRE).
-    return [...TYPES_LIEU.filter(([t]) => permis.includes(t)).map(([t]) => t), TYPE_LIEU_AUTRE];
+    // « Autre » n'est plus proposé (14/11/2026) : il ne changeait rien à la tenue. TYPE_LIEU_AUTRE reste lu pour les choix d'avant.
+    return TYPES_LIEU.filter(([t]) => permis.includes(t)).map(([t]) => t);
   })();
   const dateChoisie = jour != null ? dansNJours(jour) : null;
   const dateLongue = dateChoisie
@@ -1963,6 +1971,7 @@ export default function PlanifierScreen() {
                       setPrevisionEtat("vide");
                     }}
                     types={typesLieuProposes}
+                    effetType={occ ? EFFET_TYPE_LIEU[occ] : undefined}
                     typeLieu={typeLieu}
                     onType={setTypeLieu}
                     meteo={meteoEtapeLieu}
