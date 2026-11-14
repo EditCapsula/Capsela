@@ -681,7 +681,8 @@ export default function ProfileSetupScreen() {
         </div>
       ) : null}
 
-      <div className={showBack || filDArianne ? "mt-[26px]" : "mt-[14px]"}>
+      {/* L'étape Style, resserrée (14/11/2026, demandé : « enlève de la marge avant le composant ») : la place va au visuel du style. */}
+      <div className={meta.key === "style" ? "mt-[8px]" : showBack || filDArianne ? "mt-[26px]" : "mt-[14px]"}>
         {enTete.kicker && <div className="t-surtitre text-terracotta">{enTete.kicker}</div>}
         <div className="t-titre-ecran text-ink mt-3" style={{ textWrap: "balance" }}>{avecTraitsDUnion(enTete.title)}</div>
         {enTete.subtitle && <div className="t-chapeau text-muted mt-[10px]">{enTete.subtitle}</div>}

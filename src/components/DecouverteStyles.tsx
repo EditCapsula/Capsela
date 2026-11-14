@@ -61,7 +61,7 @@ export default function DecouverteStyles({
                   pour que les deux gestes restent visibles sans défiler. */}
               <div
                 className="mx-auto rounded-bloc overflow-hidden bg-border"
-                style={{ width: "min(100%, 26vh)", aspectRatio: "1 / 1" }}
+                style={{ width: "min(100%, 28vh)", aspectRatio: "1 / 1" }}
                 onDragStart={(e) => e.preventDefault()}
               >
                 {visuel && (
