@@ -30,6 +30,9 @@ homme, les 7 styles. Romantique et Glamour ne servent que si l'on garde 9 styles
 > - La personne est représentée avec respect et élégance : aucune pose ni retouche qui mette en avant ou masque une partie du corps,
 >   maquillage discret.
 >
+> - Garde chaque image générée sous le nom que je lui donne (ex. `femme-boheme-1.png`) : à la fin, je te demanderai un fichier zip qui
+>   les rassemble toutes.
+>
 > Confirme simplement que tu as compris ; je t'envoie ensuite chaque image.
 
 Si une image s'écarte des règles : « Recommence en respectant toutes les règles du premier message : personne nouvelle, entre 20 et
@@ -207,7 +210,17 @@ Si une image s'écarte des règles : « Recommence en respectant toutes les règ
 
 ---
 
-## 5. Livraison
+## 5. Le zip, en dernier message
 
-Envoyer chaque image sous son nom. Je les recadre en 900 × 1200, les convertis en WebP, retire toute bande de couleur sur les côtés, les
+> Rassemble maintenant toutes les images de cette conversation dans un seul fichier zip nommé `capsela-looks.zip`, chacune en PNG sous
+> le nom que je lui ai donné (`femme-minimaliste-3.png`, `homme-preppy-2.png`…), sans dossier à l'intérieur, et donne-moi le lien de
+> téléchargement. Liste ensuite les noms des fichiers contenus dans le zip.
+
+Si ChatGPT répond qu'il ne peut pas accéder aux images générées pour les zipper : lui demander de générer de nouveau les images dans
+l'outil de code (« génère-les dans l'environnement Python et enregistre-les sous leur nom »), ou les télécharger une à une. Vérifier la
+liste des noms avant de me l'envoyer.
+
+## 6. Livraison
+
+M'envoyer le zip (ou chaque image sous son nom). Je les recadre en 900 × 1200, les convertis en WebP, retire toute bande de couleur sur les côtés, les
 dépose dans `public/images/styles/looks/` et les déclare dans `LOOKS_PORTES_STYLE`, puis je montre les cartes à l'écran avant tout merge.
