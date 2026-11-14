@@ -41,6 +41,8 @@ import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import type { Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
+import { I_CINTRE, LigneProfil } from "@/components/ProfilUI";
 
 /**
  * DRESSING — refonte éditoriale du 25/09/2026 (brief « Refonte UX/UI de la
@@ -305,6 +307,7 @@ export default function WardrobeScreen() {
       <AppHeader titre={<>Mon <span className="italic">dressing</span></>} />
       {/* Une seule ligne : le nombre de pièces et de catégories, calculés. Plus de « places restantes » (08/10/2026). */}
       <TitrePage chapeau={!dressingLoaded ? " " : items.length > 0 ? ligneDressing(items.length, groupes.length) : synthese.texte} />
+      <EntreeMesLooks />
     </>
   );
 
@@ -495,6 +498,7 @@ export default function WardrobeScreen() {
           titre={<>Mon <span className="italic">dressing</span></>}
         />
         <TitrePage chapeau={pl(items.length)} />
+        <EntreeMesLooks />
         {/* data-tour : la recherche et les catégories, cible de la visite guidée « Dressing » (lib/visites.ts). */}
         <div data-tour="dressing-filtres">
         <label className="mt-3 flex items-center gap-[10px] h-[44px] pl-[14px] pr-[6px] rounded-full bg-card border" style={{ borderColor: recherche ? "var(--color-terracotta-deep)" : "var(--color-border)" }}>
@@ -750,3 +754,25 @@ export default function WardrobeScreen() {
   );
 }
 
+/**
+ * L'ENTRÉE « MES LOOKS » (14/11/2026, signalé : « où vont les tenues enregistrées dans l'appli ? Rien ne permet d'y accéder », puis,
+ * sur le Dressing vide : « il faut une entrée vers les looks ici »). Les tenues enregistrées (Accueil, Tenue, Capsule, Planifier,
+ * valise) et les looks créés vivent dans « Mes looks » ; le seul lien, « Voir mes looks », était en bas du Dressing rempli, sous des
+ * idées générées, et disparaissait sans elles. La ligne est en haut du Dressing, vide ou rempli, avec la ligne de Mon profil (cintre).
+ * Le nombre vient de state.savedLooks ; sans look, la ligne dit ce que l'écran rassemblera, sans inventer de nombre.
+ */
+function EntreeMesLooks() {
+  const { state, actions } = useCapsela();
+  const n = state.savedLooks.length;
+  return (
+    <Card className="overflow-hidden mt-3">
+      <LigneProfil
+        icone={I_CINTRE}
+        titre="Mes looks"
+        valeur={<span className="text-muted-3">{n === 0 ? "Tes tenues enregistrées et tes looks créés" : n === 1 ? "1 look enregistré" : `${n} looks enregistrés`}</span>}
+        renseigne
+        onClick={actions.goLooks}
+      />
+    </Card>
+  );
+}
