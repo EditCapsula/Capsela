@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { decisionRetour, lirePage } from "@/lib/retourSysteme";
+import { marquerRetour } from "@/lib/memoireEcrans";
 
 /*
  * iOS : LA PAGE PREND TOUT L'ÉCRAN, ET LA COQUE LAISSE LA PLACE DE L'ENCOCHE (06/11/2026, signalé sur l'enregistrement TestFlight :
@@ -188,7 +189,11 @@ function Screens() {
       const decision = decisionRetour({ superposition: !!page.superposition, bouton: !!page.bouton, ecran: ecranRef.current });
       if (decision === "fermer") document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       else if (decision === "bouton") page.bouton?.click();
-      else if (decision === "accueil") actions.goHome();
+      else if (decision === "accueil") {
+        // Le retour Android vers l'accueil est un retour : l'accueil reprend là où il était (memoireEcrans.ts, marquerRetour).
+        marquerRetour();
+        actions.goHome();
+      }
       else if (decision === "etapePrecedente") actions.onbBack();
       else if (Capacitor.isNativePlatform()) void CapApp.exitApp();
       return decision;

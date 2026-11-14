@@ -19,9 +19,33 @@ export const lireContexte = <T>(cle: string): T | null => (memoire.has(cle) ? (m
 export const garderContexte = (cle: string, contexte: unknown): void => void memoire.set(cle, contexte);
 export const oublierContexte = (cle: string): void => void memoire.delete(cle);
 
-/** Le contexte gardé pour `cle`, lu UNE fois au montage — null s'il n'y en a pas, ou quand `ignorer` (une entrée explicite prime). */
+/*
+ * SEUL UN RETOUR RETROUVE LE CONTEXTE (14/11/2026, signalé : « lorsque je clique sur une action m'amenant sur une autre page, sauf
+ * spécificité, je dois arriver en haut de la page souhaitée, pas au milieu »). Jusqu'ici, seul un onglet de la barre du bas oubliait
+ * le contexte : toute AUTRE entrée — un raccourci de l'accueil, une action, une notification, « Voir mes looks » — rouvrait l'écran
+ * au défilement de la visite précédente, souvent au milieu de la page. Le contexte n'est désormais repris qu'au RETOUR : un appui sur
+ * BoutonRetour (le bouton Retour de tous les écrans, que le retour Android touche aussi) ou le retour Android vers l'accueil. Toute
+ * autre navigation ouvre l'écran en haut.
+ *
+ * Le drapeau vit le temps de l'appui : React rend l'écran de destination dans le même événement (mise à jour discrète, rendue avant
+ * la fin de la tâche), donc avant que le minuteur ne l'efface ; un retour qui ne change pas d'écran (une étape d'un parcours) ne
+ * laisse rien derrière lui.
+ */
+let retourEnCours = false;
+export function marquerRetour(): void {
+  retourEnCours = true;
+  setTimeout(() => {
+    retourEnCours = false;
+  }, 0);
+}
+export const estUnRetour = (): boolean => retourEnCours;
+
+/**
+ * Le contexte gardé pour `cle`, lu UNE fois au montage — null s'il n'y en a pas, quand `ignorer` (une entrée explicite prime), ou
+ * quand l'écran n'est pas ouvert par un retour (voir marquerRetour).
+ */
 export function useContexteRepris<T>(cle: string, ignorer = false): T | null {
-  const [repris] = useState<T | null>(() => (ignorer ? null : lireContexte<T>(cle)));
+  const [repris] = useState<T | null>(() => (ignorer || !retourEnCours ? null : lireContexte<T>(cle)));
   return repris;
 }
 

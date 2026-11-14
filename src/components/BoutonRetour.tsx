@@ -36,6 +36,8 @@
  * accessible était le caractère « ← ». Le rendre obligatoire empêche que ça
  * se reproduise sans qu'on s'en aperçoive.
  */
+import { marquerRetour } from "@/lib/memoireEcrans";
+
 export default function BoutonRetour({
   onClick,
   label,
@@ -54,7 +56,11 @@ export default function BoutonRetour({
   const marge = -(44 - taille) / 2;
   return (
     <button
-      onClick={onClick}
+      // Un retour retrouve l'écran tel qu'il était (memoireEcrans.ts, marquerRetour) ; toute autre navigation l'ouvre en haut.
+      onClick={() => {
+        marquerRetour();
+        onClick();
+      }}
       aria-label={label}
       // Le retour Android touche ce bouton quand rien n'est ouvert par-dessus (retourSysteme.ts, ATTRIBUT_RETOUR).
       data-retour-ecran=""
