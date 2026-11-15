@@ -455,7 +455,7 @@ function PanneauDressing() {
       {/* EN-TÊTE FIXE DE L'ONGLET : synthèse compacte, recherche et filtres avancés, catégories — la grille arrive juste dessous. */}
       <div className="flex-shrink-0 px-6">
         <CarteSynthese
-          nombre={synthese.texte.split(" pièce")[0] /* « 12 / 30 » en gratuit vérifié, sinon le nombre seul */}
+          nombre={items.length /* Le nombre seul (15/11/2026, demandé : « supprime le /50 ») — la limite gratuite se dit ailleurs (Premium). */}
           libelle={items.length <= 1 ? "pièce" : "pièces"}
           action="Ajouter une pièce"
           onAction={ajouter}

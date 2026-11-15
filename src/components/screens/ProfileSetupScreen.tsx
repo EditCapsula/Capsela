@@ -6,7 +6,6 @@ import AppHeader from "@/components/AppHeader";
 import DecouverteStyles, { MesStylesSelectionnes } from "@/components/DecouverteStyles";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import BoutonRetour from "@/components/BoutonRetour";
 import {
   AnalyseColorimetrie,
   IndecisColorimetrie,
@@ -88,7 +87,7 @@ const ALL_STEPS = [
   { key: "prenom", kicker: "Toi", title: "Comment tu t'appelles ?", subtitle: "Pour personnaliser ton expérience Capsela." },
   { key: "genre", kicker: "Genre", title: "Comment tu te définis ?", subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
-  { key: "style", kicker: "Ton style", title: "Quel style te ressemble le plus ?", subtitle: "Fais défiler les styles et sélectionne jusqu'à 3 styles." },
+  { key: "style", kicker: "Ton style", title: "Quel style te ressemble ?", subtitle: "Fais défiler les styles et sélectionne jusqu'à 3 styles." },
   { key: "morpho", kicker: "Ta silhouette", title: "Quelle est ta silhouette ?", subtitle: "Elle nous aide à te proposer des coupes et des proportions qui te mettent en valeur." },
   /*
    * MISE EN VALEUR ET COUPES (31/10/2026, brief « Évolution de l'onboarding », preferencesSilhouette.ts). Ce que la personne AIME,
@@ -656,42 +655,25 @@ export default function ProfileSetupScreen() {
 
   const pageBody = (
     <>
-      <AppHeader showAvatar={false} />
-
-      {/* Les deux gouttières valent 38 px et non plus 36 : le bouton de
-          retour est passé au composant commun, dont le cercle fait 38 (cf.
-          BoutonRetour). Des cales restées à 36 décentreraient le fil d'un
-          pixel — invisible isolément, mais c'est la raison d'être de ces
-          deux div. */}
-      <div className="flex items-center justify-between">
-        {showBack ? (
-          <BoutonRetour onClick={back} label="Revenir à l'étape précédente" />
-        ) : (
-          // 38 × 38 : la rangée garde sa hauteur sans bouton (analyse) — sinon
-          // tout l'écran remontait d'un cran entre la dernière question et l'analyse.
-          <div className="w-[38px] h-[38px]" />
-        )}
-        {/* Pendant l'analyse, aucun compteur. Les questions de colorimétrie tiennent sur un écran depuis le 31/10/2026 : plus de
-            « 1 / 4 » à côté du fil de l'onboarding. */}
-        {enAnalyse ? (
-          <div />
-        ) : (
+      {/* LE RETOUR DANS LE BANDEAU (15/11/2026, demandé : « harmonise la place du bouton Retour sur toutes les étapes pour le remonter
+          comme sur Mon profil ») : il occupe la gouttière gauche du bandeau du logo (AppHeader, onBack), comme sur les écrans secondaires,
+          au lieu d'une rangée à lui sous le logo. Sans retour (première question, analyse), la gouttière reste réservée : rien ne bouge.
+          Le fil d'étapes passe juste dessous, centré, et les écarts sont resserrés — l'étape Style remonte d'autant. */}
+      <AppHeader showAvatar={false} onBack={showBack ? back : undefined} backLabel="Revenir à l'étape précédente" />
+      {/* Pendant l'analyse, aucun compteur. */}
+      {!enAnalyse && (
+        <div className="flex justify-center mt-[6px]">
           <FilEtapes total={STEPS.length} courante={step} />
-        )}
-        <div className="w-[38px]" />
-      </div>
-      {/* Hauteur réservée même sans fil (tailles, modification) : le titre tombe au même endroit d'une étape à l'autre.
-          SAUF quand la rangée n'a ni retour ni fil (Genre, première question de l'inscription) : la bande vide se lisait comme une
-          marge de trop au-dessus du titre (retours du test fermé, 04/11/2026). Rien n'y saute : on n'arrive sur Genre que depuis
-          la création du compte, jamais depuis une autre étape. */}
-      {showBack || filDArianne ? (
-        <div className="text-center text-[11px] text-muted mt-2 h-[16px] leading-[16px]" aria-live="polite">
+        </div>
+      )}
+      {filDArianne ? (
+        <div className="text-center text-[11px] text-muted mt-[6px] h-[16px] leading-[16px]" aria-live="polite">
           {filDArianne}
         </div>
       ) : null}
 
       {/* L'étape Style, resserrée (14/11/2026, demandé : « enlève de la marge avant le composant ») : la place va au visuel du style. */}
-      <div className={meta.key === "style" ? "mt-[8px]" : showBack || filDArianne ? "mt-[26px]" : "mt-[14px]"}>
+      <div className={meta.key === "style" ? "mt-[8px]" : "mt-[16px]"}>
         {enTete.kicker && <div className="t-surtitre text-terracotta">{enTete.kicker}</div>}
         <div className="t-titre-ecran text-ink mt-3" style={{ textWrap: "balance" }}>{avecTraitsDUnion(enTete.title)}</div>
         {enTete.subtitle && <div className="t-chapeau text-muted mt-[10px]">{enTete.subtitle}</div>}
