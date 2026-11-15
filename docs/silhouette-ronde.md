@@ -67,6 +67,24 @@ départage qu'à égalité.
 
 Taille de capsule, pièces du style et basiques inchangés ; aucune tenue dont le score baisse.
 
+## Planifier, valise, tenue du jour sans historique (15/11/2026)
+
+Demandé : « Planifier et valise doivent appliquer les règles morphologiques ». Ces parcours ne tiraient qu'une tenue : le bonus R-S20
+ne pouvait rien départager. `meilleurTirageMorphologique` (silhouetteRonde.ts) tire, pour une silhouette ronde seulement, jusqu'à six
+tenues du même moteur et garde celle qui sert le mieux la règle (à égalité, la première). Branché dans Planifier sans humeur
+(`humeur.ts`), la valise (`generateurMoteur`) et la tenue du jour sans historique (`diversite.ts`). Les autres profils : un tirage.
+
+Mesure (run 48, 864 tenues par combinaison) — DÉMONTRÉ dans ces scénarios :
+
+| Combinaison | Vêtements compatibles par tenue | Tenues impossibles |
+|---|---|---|
+| Ronde seule | 1,0 → 1,5 | 0 → 0 |
+| Ronde + A | 0,9 → 1,4 | 0 → 0 |
+| Ronde + V | 0,8 → 1,2 | 0 → 0 |
+| Ronde + H | 1,1 → 1,6 | 0 → 0 |
+| Ronde + X / 8 | 1,1 → 1,6 | 0 → 0 |
+| Témoin sans silhouette ronde | 0 → 0 | 0 → 0 |
+
 ## Limites du catalogue
 
 - Colonnes `longueur` et `couche` vides (0 %) : les longueurs ne sont pas prises en compte, les pièces ouvertes et manteaux droits
@@ -74,4 +92,4 @@ Taille de capsule, pièces du style et basiques inchangés ; aucune tenue dont l
 - `matiere_tenue` est large (la viscose et l'élasthanne n'indiquent pas toujours une bonne tenue) : à affiner quand la matière sera
   décrite plus finement.
 - Peu de bas évasés (3), de manteaux ceinturés (3) et de pièces ouvertes (1) : la règle ne peut pas proposer ce que le catalogue n'a pas.
-- **NON DÉMONTRÉ** : profils à plusieurs styles, dressings remplis, Planifier et la valise (leur score ne reçoit pas la morphologie).
+- **NON DÉMONTRÉ** : profils à plusieurs styles, dressings remplis ; la valise mesurée sur la capsule, pas sur une valise réelle.
