@@ -18,8 +18,6 @@ import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfi
  * parcours) ; les libellés, descriptions et visuels de STYLE_CONFIG ; les styles proposés par genre (exposedStyleIds). Le moteur n'est pas
  * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy, Créatif, Romantique et Glamour côté femme, Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy et Créatif côté homme au 15/11/2026.
  */
-/** Hauteur de l'étape Style hors de la rangée flat lay + looks (px, mesurée à 390 × 844) : tout tient sans défiler. */
-const HAUTEUR_HORS_RANGEE = 573;
 
 export default function DecouverteStyles({
   gender,
@@ -62,13 +60,15 @@ export default function DecouverteStyles({
             {/* LE FLAT LAY EN ENTIER, LES LOOKS À CÔTÉ (15/11/2026, demandé : « le flat lay n'est pas suffisamment visible, il faut
                 qu'on le voie entièrement », après « aucune marge blanche », « plus important que les 3 visuels » et « les éléments de
                 la page visibles »). Le flat lay garde son format 3:4 : rien n'est recadré, rien n'est ajouté autour. Les trois looks
-                portés s'empilent à sa droite, sur sa hauteur : il reste le grand visuel, et la rangée tient dans la hauteur que
-                laissent l'en-tête, le texte, les gestes et le pied (HAUTEUR_HORS_RANGEE, mesurée à 390 × 844), bornée par la largeur
-                de la carte (cqw). Sans looks portés, le flat lay seul, centré. */}
+                portés s'empilent à sa droite, sur sa hauteur : il reste le grand visuel. LA RANGÉE PREND TOUTE LA LARGEUR DE LA CARTE
+                (15/11/2026, signalé dans le navigateur : « il faut exploiter la largeur, là tout est petit ») : sa hauteur suivait celle
+                de l'écran, et la barre d'adresse du navigateur la réduisait de moitié. Elle suit désormais la largeur (cqw) ; sur un
+                écran court, la page défile jusqu'aux gestes, et glisser la carte vote sans défiler. Sans looks portés, le flat lay
+                seul, centré. */}
             <div style={{ containerType: "inline-size" }}>
               <div
                 className="flex justify-center gap-[8px]"
-                style={{ ["--h" as string]: `clamp(160px, min(calc(100dvh - ${HAUTEUR_HORS_RANGEE}px), ${looks.length > 0 ? 96 : 110}cqw), 420px)` }}
+                style={{ ["--h" as string]: `clamp(160px, ${looks.length > 0 ? 96 : 110}cqw, 460px)` }}
               >
                 <div className="relative flex-none">
                   <div
