@@ -16,7 +16,7 @@ Rédigé le 14/11/2026 pour la découverte des styles (`DecouverteStyles.tsx`). 
 
 Slugs : `minimaliste`, `casual-chic`, `classique-chic`, `romantique`, `boheme`, `streetwear`, `preppy`, `glamour`, `creatif`.
 Côté homme, pas de `romantique` ni de `glamour` (styles non proposés aux profils homme). Total des looks portés : 27 femme + 21 homme
-= 48 images (à confirmer : 7 ou 9 styles côté femme).
+= 48 images (9 styles côté femme, confirmé le 15/11/2026).
 
 ## Prompt commun (à placer avant chaque prompt de look)
 

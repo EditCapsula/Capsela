@@ -7,7 +7,7 @@ du corps.
 
 État au 14/11/2026 : faits et gardés — femme Minimaliste 1 et 2, Casual chic 2, Classique chic 1. À refaire (correctifs) — femme
 Minimaliste 3, Casual chic 1 et 3, Classique chic 2 et 3. Manquants — femme Romantique, Bohème, Streetwear, Preppy, Glamour, Créatif ;
-homme, les 7 styles. Romantique et Glamour ne servent que si l'on garde 9 styles côté femme.
+homme, les 7 styles. Romantique et Glamour sont à générer : 9 styles côté femme, confirmé le 15/11/2026.
 
 ---
 
@@ -61,7 +61,7 @@ Si une image s'écarte des règles : « Recommence en respectant toutes les règ
 
 ## 3. Visuels manquants — FEMME
 
-**Romantique** (seulement si 9 styles côté femme)
+**Romantique**
 
 > Image **femme-romantique-1** : une femme d'une vingtaine d'années aux longs cheveux blonds ondulés, porte une robe midi fluide à
 > petites fleurs, un gilet court ivoire et des ballerines beige.
@@ -105,7 +105,7 @@ Si une image s'écarte des règles : « Recommence en respectant toutes les règ
 > Image **femme-preppy-3** : une femme d'une quarantaine d'années à la peau foncée, cheveux naturels courts, avec des lunettes rondes,
 > porte un gilet en maille marine à boutons, un polo blanc, un pantalon droit gris et des mocassins marron.
 
-**Glamour** (seulement si 9 styles côté femme)
+**Glamour**
 
 > Image **femme-glamour-1** : une femme d'une trentaine d'années aux traits du Moyen-Orient, longs cheveux bruns lissés, porte une robe
 > portefeuille satinée rouge profond, des escarpins noirs et une pochette dorée.
