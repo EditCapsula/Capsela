@@ -1,6 +1,7 @@
 import { huesHarmonious, isStatement, rolePieceOf } from "./attributes";
 import { morphologieOrienteLaSelection, styleFit, temperatureDeSaison } from "./capsule";
 import { CATS } from "./data";
+import { colorimetrieUtilisable } from "./colorimetrie";
 import { libelleStyles, paletteColorName, paletteHexes, silhouetteForme, STYLE_ID_TO_CATALOG_LABEL, styleLabel, stylesLabels, type Profile, type StyleId } from "./profile";
 import { raisonsSuggestion } from "./capsuleEcran";
 import { isColRoule } from "./logic";
@@ -254,7 +255,7 @@ export function raisonsComposition(pieces: Item[], profile: Profile): string[] {
  *   · le dressing — les chiffres réels des pièces montrées.
  */
 export interface CritereSelection {
-  cle: "style" | "couleurs" | "saison" | "silhouette" | "dressing";
+  cle: "style" | "couleurs" | "colorimetrie" | "saison" | "silhouette" | "dressing";
   titre: string;
   valeur: string;
   texte: string;
@@ -295,6 +296,15 @@ export function criteresDeSelection(p: {
         "Tes préférences de couleurs guident la sélection. Les pièces aux nuances ou intensités moins adaptées à tes préférences sont écartées lorsque le catalogue le permet.",
     });
   }
+  // LA COLORIMÉTRIE (15/11/2026) : la capsule la lit juste après les couleurs préférées (capsule.ts, colorimetrieCapsule).
+  if (colorimetrieUtilisable(profile.colorimetrie)) {
+    out.push({
+      cle: "colorimetrie",
+      titre: "Ta colorimétrie",
+      valeur: profile.colorimetrie.libelle ?? "Ta saison",
+      texte: "Juste après tes couleurs préférées, Capsela privilégie les couleurs de ta saison, signature et neutres, sans écarter aucune pièce.",
+    });
+  }
   out.push({
     cle: "saison",
     titre: "La saison",
@@ -326,11 +336,15 @@ export function criteresDeSelection(p: {
   return out;
 }
 
-/** L'accroche du composant : les critères présents, dans l'ordre du brief (« ton style, ta palette de couleurs et la saison »). */
+/**
+ * L'accroche du composant : les critères présents, dans l'ordre du brief. « Ta palette de couleurs » est devenu « tes couleurs
+ * préférées » et « ta colorimétrie » s'y ajoute le 15/11/2026 (deux notions distinctes, la seconde lue par la capsule depuis ce jour).
+ */
 export function accrocheSelection(criteres: readonly CritereSelection[]): string {
   const morceaux = [
     criteres.some((c) => c.cle === "style") && "ton style",
-    criteres.some((c) => c.cle === "couleurs") && "ta palette de couleurs",
+    criteres.some((c) => c.cle === "couleurs") && "tes couleurs préférées",
+    criteres.some((c) => c.cle === "colorimetrie") && "ta colorimétrie",
     criteres.some((c) => c.cle === "saison") && "la saison",
   ].filter((m): m is string => Boolean(m));
   if (!morceaux.length) return "";

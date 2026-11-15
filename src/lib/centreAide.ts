@@ -70,7 +70,7 @@ export const CENTRE_AIDE: readonly ThemeAide[] = [
         question: "Qu'est-ce que ma capsule ?",
         // computeDefaultCapsule (capsule.ts) : catalogue, style, palette, saison.
         reponse:
-          "Une sélection de pièces pensée pour ton style, ta palette de couleurs et la saison. Elle sert de base à tes tenues et complète ton dressing là où il manque des pièces.",
+          "Une sélection de pièces pensée pour ton style, tes couleurs préférées, ta colorimétrie et la saison. Elle sert de base à tes tenues et complète ton dressing là où il manque des pièces.",
       },
       {
         question: "Comment voir la capsule d'une autre saison ?",

@@ -265,3 +265,26 @@ Demandé : en revenant sur l'étape après avoir déjà fait le test, on doit vo
 Sous le bouton « Continuer », un lien « Refaire le test » relance (retiré puis remis le 31/10/2026 : c'est le seul endroit d'où l'on repasse le test) le questionnaire depuis le début, réponses effacées. Le résultat actuel reste enregistré tant qu'un nouveau n'est pas trouvé.
 
 Vérifié en rendu réel (mode démo, 390 px) : résultat affiché, retour vers « Quelle intensité… », retour au résultat, « Refaire le test » ouvre la question 1/4.
+
+## La colorimétrie dans la capsule (15/11/2026)
+
+Jusqu'au 15/11/2026, la capsule ne lisait que les **couleurs préférées** ; la saison colorimétrique ne servait qu'aux tenues. Elle
+entre désormais dans la sélection de la capsule, selon l'**arbitrage éditorial** de la propriétaire : « il faut plus tenir compte des
+couleurs préférées, puis la colorimétrie vient juste après ».
+
+Règle (`SelectionStrategy.colorimetrieCapsule = "hierarchie"`, `capsule.ts`) : juste après la couverture des occasions, un rang à
+trois niveaux — couleur préférée, puis couleur de la saison (signature et neutres ; jamais les couleurs « à doser »), puis le reste.
+C'est un rang, jamais un filtre : aucune pièce n'est écartée pour sa couleur. Le filet de sécurité (`ensure`) suit le même ordre.
+
+Mesure (`scripts/colorimetrie-capsule.audit.ts`, run 46, catalogue réel, un style à la fois, sans dressing, météo représentative,
+tous styles × 4 saisons de capsule × 4 saisons colorimétriques) — **DÉMONTRÉ** dans ces scénarios :
+
+| Femme, Noir / Marine / Camel | Avant | Hiérarchie |
+|---|---|---|
+| Vêtements en couleurs préférées | 31,4 % | 39,7 % |
+| Vêtements dans la saison | 22,2 % | 27,7 % |
+| Basiques retenus | 21,8 | 20,3 |
+| Occasions sans tenue possible | 0 | 0 |
+
+Homme : préférées 36,1 → 43,6 %, saison 22,4 → 26,7 %, 0 occasion impossible. Sans couleur préférée : saison 22,2 → 29,5 % (femme).
+Une silhouette en A avec coupes droites ne change pas la conclusion. **NON DÉMONTRÉ** : profils à plusieurs styles, dressings remplis.

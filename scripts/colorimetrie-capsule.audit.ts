@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import type { CatalogItem } from "../src/lib/catalog";
-import { CAPSULE_SEASONS, STRATEGIE_PRODUCTION, computeDefaultCapsule, representativeWeatherFor, type SelectionStrategy } from "../src/lib/capsule";
+import { CAPSULE_SEASONS, STRATEGIE_AVANT_COULEURS_HIERARCHISEES, STRATEGIE_PRODUCTION, computeDefaultCapsule, representativeWeatherFor, type SelectionStrategy } from "../src/lib/capsule";
 import { colorimetrieDeSaison, SAISONS_CLES } from "../src/lib/colorimetrie";
 import { colorimetrieMoteur } from "../src/lib/colorimetrieMoteur";
 import { OCCASIONS } from "../src/lib/data";
@@ -21,9 +21,10 @@ import { STYLES_FEMME, STYLES_HOMME, assertCatalogueStyles, profilAudit } from "
 // CONFIGURATION GELÉE (AGENTS.md, point 1) : le catalogue réel complet (paginé, pièces gelées écartées), la météo représentative de
 // chaque saison de capsule, aucun dressing, aucune exclusion, un style à la fois.
 // LEVIER ÉTUDIÉ (point 2) : SelectionStrategy.colorimetrieCapsule — trois bras sur le même profil et le même pool :
-//   avant       la production : couleurs préférées par le filtre de curation seulement, saison ignorée ;
+//   avant       la production jusqu'au 15/11/2026 : couleurs préférées par le filtre de curation seulement, saison ignorée ;
 //   saison      la saison seule, juste après la couverture des occasions (la meilleure place de la 1re mesure) ;
-//   hierarchie  au même rang, trois niveaux : couleur préférée (2), couleur de la saison (1), le reste (0) — l'arbitrage.
+//   hierarchie  au même rang, trois niveaux : couleur préférée (2), couleur de la saison (1), le reste (0) — l'arbitrage, en
+//               production depuis le 15/11/2026 (run 46).
 // FIXES CROISÉS (point 3) : genre × style × saison de capsule × saison colorimétrique × profil :
 //   P1 sans couleur préférée ; P2 « Noir, Marine, Camel » ; P3 = P2 + silhouette en A + coupes « droites » (femme), pour voir si
 //   les rangs morphologie et coupe changent la conclusion (NON DÉMONTRÉ à la 1re mesure).
@@ -43,9 +44,9 @@ const PROFILS: { nom: string; genres: ("femme" | "homme")[]; patch: Partial<Prof
   { nom: "P3 Noir, Marine, Camel + silhouette en A + coupes droites", genres: ["femme"], patch: { paletteCouleurs: NMC, preferencesSilhouette: { miseEnValeur: null, coupes: ["droites"] } }, morphology: "f_poire" },
 ];
 const BRAS: [string, SelectionStrategy][] = [
-  ["avant", STRATEGIE_PRODUCTION],
+  ["avant", STRATEGIE_AVANT_COULEURS_HIERARCHISEES],
   ["saison", { ...STRATEGIE_PRODUCTION, colorimetrieCapsule: "apres_occasions" }],
-  ["hierarchie", { ...STRATEGIE_PRODUCTION, colorimetrieCapsule: "hierarchie" }],
+  ["hierarchie", STRATEGIE_PRODUCTION],
 ];
 
 interface Cumul { n: number; taille: number; vet: number; pref: number; saison: number; basiques: number; changees: number; occImp: number; touchees: number }

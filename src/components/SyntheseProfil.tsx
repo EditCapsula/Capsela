@@ -259,7 +259,7 @@ export default function SyntheseProfil({
           <Badge tone="plein">{saisonCapsule}</Badge>
         </div>
         <p className="t-titre-carte text-ink mt-[10px]">Ta première capsule sera celle de la saison en cours.</p>
-        <p className="text-[12.5px] text-ink-soft leading-[1.5] mt-[6px]">{phraseCapsule({ morphology: silhouettePosee ? profil.morphology : null, nbCouleurs: profil.paletteCouleurs.length })}</p>
+        <p className="text-[12.5px] text-ink-soft leading-[1.5] mt-[6px]">{phraseCapsule({ morphology: silhouettePosee ? profil.morphology : null, nbCouleurs: profil.paletteCouleurs.length, colorimetrie: profil.colorimetrie })}</p>
         {/* LE LIEN VERS LA CAPSULE (15/11/2026, demandé) : la capsule de cette saison, sur l'écran Capsule — le parcours se termine
             d'abord (profil enregistré), comme « Créer mon dressing ». */}
         {onVoirCapsule && (

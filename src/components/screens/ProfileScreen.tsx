@@ -364,7 +364,7 @@ export default function ProfileScreen() {
             )
           }
           renseigne={colorimetrieUtilisable(profile.colorimetrie)}
-          explication="Oriente les couleurs de tes tenues, près du visage."
+          explication="Oriente les couleurs de ta capsule, après tes couleurs préférées, et de tes tenues."
           onClick={() => actions.goProfileSetup("colorimetrie", true)}
         />
       </Card>

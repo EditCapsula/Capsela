@@ -16,6 +16,10 @@ describe("phraseCapsule", () => {
     );
     expect(phraseCapsule({ morphology: "f_sablier", nbCouleurs: 3 })).toBe("Nous allons composer une sélection de pièces adaptées à ton style et tes couleurs préférées.");
   });
+  it("cite la colorimétrie quand la saison est connue", () => {
+    const colorimetrie = { statut: "faite", saison: "automne", libelle: "Automne chaleureux", signature: ["#a66950"] } as never;
+    expect(phraseCapsule({ morphology: null, nbCouleurs: 2, colorimetrie })).toBe("Nous allons composer une sélection de pièces adaptées à ton style, tes couleurs préférées et ta colorimétrie.");
+  });
   it("sans couleur choisie, le style seul", () => {
     expect(phraseCapsule({ morphology: null, nbCouleurs: 0 })).toBe("Nous allons composer une sélection de pièces adaptées à ton style.");
   });

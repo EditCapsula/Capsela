@@ -467,7 +467,7 @@ export type SelectionStrategy = {
    *   "hierarchie"    : à la place de "apres_occasions", un rang à trois niveaux — couleur préférée (2), puis couleur de la saison (1),
    *                     puis le reste (0). ARBITRAGE ÉDITORIAL de la propriétaire, 15/11/2026 : « il faut plus tenir compte des couleurs
    *                     préférées, puis la colorimétrie vient juste après ».
-   * Le filet de sécurité (ensure) prend alors aussi la palette pour ses couleurs. Absent — la production — rien ne change.
+   * Le filet de sécurité (ensure) prend alors aussi la palette pour ses couleurs. EN PRODUCTION DEPUIS LE 15/11/2026 : "hierarchie".
    * `hexSaison` est calculé par computeDefaultCapsule depuis le profil ; un appelant ne le renseigne pas.
    */
   colorimetrieCapsule?: "apres_occasions" | "apres_basique" | "departage" | "hierarchie";
@@ -594,7 +594,14 @@ export const STRATEGIE_PRODUCTION: SelectionStrategy = {
   paireHabillee: "garantie",
   jumelles: "evitees",
   filetSaison: "respectee",
+  // LES COULEURS DE LA CAPSULE (15/11/2026), validé par la propriétaire après mesure (scripts/colorimetrie-capsule.audit.ts, run 46) :
+  // couleur préférée d'abord, couleur de la saison colorimétrique ensuite, juste après la couverture des occasions. Femme, Noir /
+  // Marine / Camel : couleurs préférées 31,4 → 39,7 %, saison 22,2 → 27,7 %, basiques 21,8 → 20,3, occasions impossibles 0 → 0.
+  colorimetrieCapsule: "hierarchie",
 };
+
+/** La production juste avant les couleurs hiérarchisées de la capsule (15/11/2026) — pour l'audit colorimetrie-capsule. */
+export const STRATEGIE_AVANT_COULEURS_HIERARCHISEES: SelectionStrategy = { ...STRATEGIE_PRODUCTION, colorimetrieCapsule: undefined };
 
 /** La production juste avant le filet de sécurité qui respecte saison et style (15/11/2026) — pour l'audit premiere-tenue. */
 export const STRATEGIE_AVANT_FILET_SAISON: SelectionStrategy = { ...STRATEGIE_PRODUCTION, filetSaison: undefined };

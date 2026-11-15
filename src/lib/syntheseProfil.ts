@@ -1,4 +1,5 @@
 import { morphologieOrienteLaSelection } from "./capsule";
+import { colorimetrieUtilisable, type Colorimetrie } from "./colorimetrie";
 import { zonesRequises } from "./garmentEffect";
 
 /*
@@ -12,14 +13,15 @@ import { zonesRequises } from "./garmentEffect";
  * CE QUE LA PREMIÈRE CAPSULE PREND EN COMPTE, dit seulement quand c'est vrai (règle du projet : une phrase qui affirme qu'une donnée
  * sert à quelque chose doit l'être dans le code). Le style, toujours ; la silhouette, seulement si elle oriente la sélection de la
  * capsule (`morphologieOrienteLaSelection`, capsule.ts — aujourd'hui les silhouettes en A et en V) ; les couleurs préférées si elles
- * sont choisies (`paletteHexes`, la seule entrée couleur de computeDefaultCapsule). LA SAISON COLORIMÉTRIQUE N'Y EST PAS CITÉE :
- * vérifié le 15/11/2026, la capsule ne la lit pas — c'est le moteur des tenues qui la reçoit (colorimetrieMoteur). Le brief proposait
- * « ta palette de couleurs » : la phrase dirait faux.
+ * sont choisies ; la colorimétrie si le questionnaire a donné une saison — la capsule la lit depuis le 15/11/2026, juste après les
+ * couleurs préférées (SelectionStrategy.colorimetrieCapsule « hierarchie », capsule.ts). Avant cette date elle ne la lisait pas, et la
+ * phrase ne la citait pas.
  */
-export function phraseCapsule(p: { morphology: string | null | undefined; nbCouleurs: number }): string {
+export function phraseCapsule(p: { morphology: string | null | undefined; nbCouleurs: number; colorimetrie?: Colorimetrie | null }): string {
   const parts = ["ton style"];
   if (morphologieOrienteLaSelection(p.morphology)) parts.push("ta silhouette");
   if (p.nbCouleurs > 0) parts.push("tes couleurs préférées");
+  if (colorimetrieUtilisable(p.colorimetrie)) parts.push("ta colorimétrie");
   const liste = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
   return `Nous allons composer une sélection de pièces adaptées à ${liste}.`;
 }
