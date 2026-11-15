@@ -342,7 +342,7 @@ export const LOOKS_PORTES_STYLE: Record<"femme" | "homme", Partial<Record<StyleI
     minimaliste: ["/images/styles/looks/femme/minimaliste-1.webp", "/images/styles/looks/femme/minimaliste-2.webp", "/images/styles/looks/femme/minimaliste-3.webp"],
     casual_chic: ["/images/styles/looks/femme/casual-chic-1.webp", "/images/styles/looks/femme/casual-chic-2.webp", "/images/styles/looks/femme/casual-chic-3.webp"],
     // Fournis au format 3:4 (14/11/2026) : le 1 ramené à 900 × 1200 ; les 2 et 3 avaient des bandes claires ajoutées sur les côtés,
-    // retirées (recadrage sur la photo) puis recomplétées par le bord de la photo.
+    // retirées (recadrage sur la photo) puis recomplétées par le bord de la photo. Le 2 remplacé le 15/11/2026 (correctif, fourni en 2:3).
     classique_chic: ["/images/styles/looks/femme/classique-chic-1.webp", "/images/styles/looks/femme/classique-chic-2.webp", "/images/styles/looks/femme/classique-chic-3.webp"],
     boheme: ["/images/styles/looks/femme/boheme-1.webp", "/images/styles/looks/femme/boheme-2.webp", "/images/styles/looks/femme/boheme-3.webp"],
     streetwear: ["/images/styles/looks/femme/streetwear-1.webp", "/images/styles/looks/femme/streetwear-2.webp", "/images/styles/looks/femme/streetwear-3.webp"],
