@@ -19,7 +19,8 @@ import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
 import { candidatsDeRemplacement, clePrincipale, computeLookScore, SEUIL_MANTEAU, estContexteMaison, tenueAUnSocle } from "@/lib/logic";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
-import { libelleStyles, paletteHexes } from "@/lib/profile";
+import { applyGenderChange, libelleStyles, paletteHexes, type Gender } from "@/lib/profile";
+import { GenderModal } from "@/components/ProfilUI";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BarreDuJour from "@/components/BarreDuJour";
@@ -183,7 +184,7 @@ export default function HomeScreen() {
       actions.regenOutfit();
     });
   };
-  const { profile } = useAuth();
+  const { profile, saveProfile } = useAuth();
   const firstNameOrYou = profile.displayName || t("toi");
 
   // Lecture seule des données déjà disponibles ailleurs dans l'app
@@ -326,6 +327,19 @@ export default function HomeScreen() {
    * deux. Le vide seul n'en est pas un.
    */
   const aucuneTenuePossible = !hasOutfit && state.outfitNoCompleteOutfit;
+  /*
+   * LE GENRE MANQUANT (15/11/2026, demandé). Sans genre, l'univers du profil ne laisse passer que les pièces unisexes (univers.ts) :
+   * aucun bas, donc aucune tenue. L'étape Genre est obligatoire depuis le 12/11/2026, mais un compte plus ancien peut l'avoir passée.
+   * L'accueil le dit tel quel — « Complète ton profil » — et ouvre la feuille des genres de Mon profil, avec le même enregistrement
+   * (applyGenderChange) : dès que le genre est enregistré, la capsule se recalcule et la tenue du jour se compose sur les styles choisis.
+   */
+  const sansGenre = !profile.gender;
+  const sansTenue = aucuneTenuePossible || sansGenre;
+  const [genreOuvert, setGenreOuvert] = useState(false);
+  const indiquerGenre = (g: Gender) => {
+    setGenreOuvert(false);
+    saveProfile({ ...profile, ...applyGenderChange(profile, g).patch });
+  };
 
   /**
    * LA SILHOUETTE ATTENDUE, avant que la tenue soit composée (chargement,
@@ -384,7 +398,7 @@ export default function HomeScreen() {
           jour: typeDeJour(occasionParDefaut(profile.prefs, jourConsulte.date)),
         })
       : [];
-  const carrouselActif = slides.length > 1;
+  const carrouselActif = !sansGenre && slides.length > 1;
   // PORTÉE AUJOURD'HUI (15/10/2026, demandé) : la tenue du jour validée « Porter cette tenue », ou une tenue du Journal d'aujourd'hui
   // faite des mêmes pièces (le validé ne survit pas toujours à un rechargement ; l'historique, si).
   const auj = new Date().toDateString();
@@ -540,7 +554,7 @@ export default function HomeScreen() {
       >
         {/* Sans tenue possible (15/11/2026, capture : le texte tenait dans la moitié gauche, la droite restait vide), le texte prend toute
             la largeur de la carte : il n'y a pas de composition à côté. */}
-        <div className="flex flex-col min-w-0" style={!passee && aucuneTenuePossible ? { gridColumn: "1 / -1" } : undefined}>
+        <div className="flex flex-col min-w-0" style={!passee && sansTenue ? { gridColumn: "1 / -1" } : undefined}>
           <div className="flex items-center gap-[7px]">
             <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -559,6 +573,20 @@ export default function HomeScreen() {
               <div className="mt-auto pt-4">
                 <Button variante="principal" pleine={false} onClick={actions.goHistory} className="!px-[18px]">
                   {t("Voir dans mon journal")}
+                </Button>
+              </div>
+            </>
+          ) : sansGenre ? (
+            <>
+              <div className="t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
+                {t("Complète ton")} <span className="italic text-terracotta">{t("profil")}</span>
+              </div>
+              <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+                {t("Pour que Capsela prépare tes tenues, complète ton profil.")}
+              </div>
+              <div className="mt-auto pt-4">
+                <Button variante="principal" pleine={false} onClick={() => setGenreOuvert(true)} className="!px-[18px]">
+                  {t("Indiquer mon genre")}
                 </Button>
               </div>
             </>
@@ -629,7 +657,7 @@ export default function HomeScreen() {
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
         {/* La zone déborde de 10 px dans le remplissage de droite et de 6 px sur la gouttière : la composition est plus grande (08/10/2026,
             « c'est encore vraiment petit »). Le texte garde sa colonne ; les pièces restent à 10 px au moins du bord de la card. */}
-        {(passee || !aucuneTenuePossible) && (
+        {(passee || !sansTenue) && (
         <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "4px -10px 0 -6px" }}>
           {passee ? (
             <FlatLayCapsela items={piecesPassee} context="hero-home" layoutSeed={clePieces(piecesPassee.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
@@ -639,10 +667,10 @@ export default function HomeScreen() {
         </div>
         )}
 
-        {!passee && !aucuneTenuePossible && blocExterieur && <div style={{ gridColumn: "1 / -1" }}>{blocExterieur}</div>}
+        {!passee && !sansTenue && blocExterieur && <div style={{ gridColumn: "1 / -1" }}>{blocExterieur}</div>}
         {/* LES DEUX ACTIONS : « Sauvegarder » range la tenue dans Mes looks (l'ancien « J'adore », même enregistrement) ; « Autre tenue »
             propose une autre tenue (l'ancien « Pas pour moi » : le refus est enregistré, la suivante l'évite, même quota). */}
-        {hasOutfit && !passee && (
+        {hasOutfit && !passee && !sansGenre && (
           <div className="flex items-center mt-0" style={{ gridColumn: "1 / -1" }} aria-live="polite">
             <ActionRonde
               icone={
@@ -744,6 +772,8 @@ export default function HomeScreen() {
       {quota.feuille}
       {/* La feuille Voir / Remplacer d'une pièce du flat lay, et sa confirmation (RemplacementPiece). */}
       {remplacement.rendu}
+      {/* La feuille des genres de Mon profil (« Complète ton profil »), titrée pour l'accueil. */}
+      {genreOuvert && <GenderModal current={profile.gender} titre={t("Indiquer mon genre")} onSelect={indiquerGenre} onClose={() => setGenreOuvert(false)} />}
     </div>
   );
 }
