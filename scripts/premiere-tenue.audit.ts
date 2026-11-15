@@ -43,8 +43,9 @@ function trios(styles: StyleId[]): StyleId[][] {
   return r;
 }
 
-function mesurer(catalogue: CatalogItem[], genre: "femme" | "homme", styles: StyleId[], temp: number, label: string, ctx: Contexte) {
-  const profil = profilAudit({ gender: genre, styles });
+function mesurer(catalogue: CatalogItem[], genre: "femme" | "homme" | null, styles: StyleId[], temp: number, label: string, ctx: Contexte) {
+  // Genre non renseigné (15/11/2026) : la capsule du compte signalé montre des pièces homme, 33 au lieu de 40.
+  const profil = genre ? profilAudit({ gender: genre, styles }) : profilAudit({ gender: "femme", styles, patch: { gender: null } });
   const w: Weather = weatherForDay(temp, label, currentSeasonKey(), CHALEUR_HORS_SAISON);
   const capsule = computeDefaultCapsule(profil, w, [], saisonCapsuleDuJour(w.temp), catalogue);
   const pool = composeWardrobePool([], capsule, CAT_KEYS);
@@ -106,6 +107,16 @@ describe("première tenue d'un compte neuf (dressing vide)", () => {
             ` | ${[...m.parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`,
         );
       }
+
+    // 1 bis. Le même trio, profil SANS GENRE puis HOMME.
+    for (const genre of [null, "homme"] as const) {
+      console.log(`\n=== Trio signalé, genre ${genre ?? "non renseigné"} ===`);
+      for (const [temp, label] of TEMPS)
+        for (const ctx of CONTEXTES) {
+          const m = mesurer(catalogue, genre, ["classique_chic", "casual_chic", "minimaliste"], temp, label, ctx);
+          console.log(`${temp}° ${ctx.nom} : capsule ${m.capsule}, pool ${m.pool}, échecs ${m.echecs}/${TIRAGES}` + (m.raisons.size ? ` (${[...m.raisons].map(([k, n]) => `${k} ×${n}`).join(", ")})` : "") + ` | ${[...m.parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`);
+        }
+    }
 
     // 2. Tous les trios, par genre : les cellules en échec seulement.
     for (const [genre, styles] of [["femme", STYLES_FEMME], ["homme", STYLES_HOMME]] as const) {
