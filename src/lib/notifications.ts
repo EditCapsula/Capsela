@@ -97,8 +97,8 @@ export async function synchroniserNotifications(
       .slice(0, NB_REPRISES_MAX);
     if (!heure && reprises.length === 0) return "desactivee";
 
-    let permission = (await LocalNotifications.checkPermissions()).display;
-    if (permission !== "granted" && demander) permission = (await LocalNotifications.requestPermissions()).display;
+    let permission = (await LocalNotifications.checkPermissions())?.display;
+    if (permission !== "granted" && demander) permission = (await LocalNotifications.requestPermissions())?.display;
     if (permission !== "granted") return "refusee";
 
     const commun = { isExactNotification: false, smallIcon: "ic_stat_capsela" };
@@ -172,7 +172,7 @@ export async function diagnostiquerNotifications(): Promise<DiagnosticNotificati
   if (!notificationsDisponiblesIci()) return null;
   try {
     const { LocalNotifications } = await import("@capacitor/local-notifications");
-    const autorisee = (await LocalNotifications.checkPermissions()).display === "granted";
+    const autorisee = (await LocalNotifications.checkPermissions())?.display === "granted";
     const { notifications } = await LocalNotifications.getPending();
     derniereErreur = null;
     return { autorisee, prochaine: prochaineTenueProgrammee(notifications, new Date()) };
@@ -188,8 +188,11 @@ export async function envoyerNotificationEssai(): Promise<"envoyee" | "refusee" 
   if (!notificationsDisponiblesIci()) return "indisponible";
   try {
     const { LocalNotifications } = await import("@capacitor/local-notifications");
-    let permission = (await LocalNotifications.checkPermissions()).display;
-    if (permission !== "granted") permission = (await LocalNotifications.requestPermissions()).display;
+    let permission = (await LocalNotifications.checkPermissions())?.display;
+    if (permission !== "granted") permission = (await LocalNotifications.requestPermissions())?.display;
+    // Une réponse sans autorisation lisible n'est pas un refus (14/11/2026, vu : R8 retirait les annotations des plugins,
+    // proguard-rules.pro) : l'écran le dit tel quel, au lieu d'un « Cannot read properties of undefined ».
+    if (permission === undefined) throw new Error("autorisation illisible");
     if (permission !== "granted") return "refusee";
     // INEXACTE, COMME LES AUTRES (13/11/2026) : sans `isExactNotification: false`, le module la croit exacte (sa valeur par défaut) et,
     // sur Android 12 et plus, ouvre la demande « Alarmes et rappels » — autorisation que le manifeste retire (cf. l'en-tête) : l'essai

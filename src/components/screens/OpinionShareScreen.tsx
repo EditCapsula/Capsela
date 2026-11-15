@@ -617,8 +617,9 @@ export default function OpinionShareScreen() {
             <span>{etat === "partage" ? "Préparation…" : "Partager ma tenue"}</span>
           </Button>
         ) : (
+          // Phrase demandée le 14/11/2026 : « Ton navigateur ne propose pas de partage » parlait d'un navigateur dans l'app, où il n'y en a pas.
           <div className="text-[12px] text-muted leading-[1.5] py-1">
-            Ton navigateur ne propose pas de partage. Copie le message pour l&apos;envoyer toi-même.
+            Clique sur « Copier le message » ci-dessous pour partager ta tenue à un proche dans l&apos;application de ton choix.
           </div>
         )}
 

@@ -3037,12 +3037,50 @@ function porterParDessus(ids: number[], pivot: Item, pool: Item[], occasion: Occ
   return [...ids, pivot.id];
 }
 
+/**
+ * UNE MAILLE OUVERTE (CARDIGAN, GILET) DANS « LES IDÉES DE TENUES » (14/11/2026, signalé : « Cardigan structuré » dans la capsule,
+ * « Pas encore assez de pièces compatibles » ; correctif accepté par la propriétaire). Même défaut que le manteau du 27/09/2026 : le
+ * moteur ne pose un calque qu'une fois sur trois environ (R-B8, Math.random() < 0.35), seulement sur un haut « base », sans veste et hors
+ * contexte habillé — avec des styles Classique chic et Casual chic, la plupart des tirages ont une veste ou sont habillés, et le cardigan
+ * n'entrait presque jamais. La règle du moteur n'est PAS changée (tenue du jour, Planifier inchangés) : seul ce module, quand la pièce
+ * ouverte est une maille OUVERTE et qu'un tirage ne l'a pas retenue, la porte par-dessus la tenue tirée — aux mêmes conditions que R-B8
+ * et R-B5, plus celles du vêtement de dessus :
+ *   · sa saison est celle de la météo de la capsule, sa plage de température la couvre ;
+ *   · l'occasion n'est pas habillée (isDressy : jamais de calque en contexte habillé, R-B8) et l'admet (applySportCocooningFilter) ;
+ *   · la tenue a un haut « base » ou une robe dessous (R-B5 : un calque sur une robe, hors habillé) ;
+ *   · la tenue n'a ni autre maille ni autre calque.
+ * Une VESTE tirée (le moteur en pose une par temps frais : à 12 °C, six tirages sur six dans le test) PREND LA PLACE du cardigan : même
+ * rôle de couche, jamais les deux ensemble (R-B8). Un manteau, lui, reste par-dessus.
+ * Rend null sinon.
+ */
+function porterMailleOuverte(ids: number[], pivot: Item, pool: Item[], occasion: OccasionKey, weather: Weather): number[] | null {
+  if (fermetureMaille(pivot) !== "ouverte") return null;
+  if (!estDeSaison(pivot, weather)) return null;
+  if (pivot.meteoMinTemp != null && weather.temp < pivot.meteoMinTemp) return null;
+  if (pivot.meteoMaxTemp != null && weather.temp > pivot.meteoMaxTemp) return null;
+  if (isDressy(occasion)) return null;
+  if (!applySportCocooningFilter([pivot], occasion).length) return null;
+  const pieces = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
+  const dessous = pieces.some((p) => (p.cat === "haut" && rolePieceOf(p) === "base") || p.cat === "robe");
+  if (!dessous) return null;
+  const dejaCouvert = pieces.some((p) => p.cat === "pull" || (TOP_LAYER_CATS.includes(p.cat) && rolePieceOf(p) === "calque"));
+  if (dejaCouvert) return null;
+  const vestes = new Set(pieces.filter((p) => p.cat === "veste").map((p) => p.id));
+  return [...ids.filter((id) => !vestes.has(id)), pivot.id];
+}
+
 export function getOutfitsForItem(
   pivotId: number,
   pool: Item[],
   weather: Weather,
   preferredHexes: string[] = [],
-  opts: { maxPerOccasion?: number; maxTotal?: number; attemptsPerOccasion?: number } = {},
+  opts: {
+    maxPerOccasion?: number;
+    maxTotal?: number;
+    attemptsPerOccasion?: number;
+    /** Levier d'audit : `false` reproduit l'avant du 14/11/2026 (une maille ouverte jamais portée par-dessus, porterMailleOuverte). */
+    mailleOuverteParDessus?: boolean;
+  } = {},
   gender: "femme" | "homme" | null = null,
   /** Saison de la capsule dont `pool` est issu — cf. generateOutfit. L'écran « Comment porter cette pièce ? » raisonne toujours sur une saison de capsule explicite. */
   capsuleSeason?: CapsuleSeason | null,
@@ -3095,7 +3133,10 @@ export function getOutfitsForItem(
     const localSeen = new Set<string>();
     for (let attempt = 0; attempt < attemptsPerOccasion; attempt++) {
       const tirage = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes, gender, undefined, pivotId, capsuleSeason, undefined, coloPivot).ids;
-      const ids = tirage.includes(pivotId) ? tirage : porterParDessus(tirage, pivot, pool, occasion, weather);
+      const ids = tirage.includes(pivotId)
+        ? tirage
+        : (porterParDessus(tirage, pivot, pool, occasion, weather) ??
+          (opts.mailleOuverteParDessus === false ? null : porterMailleOuverte(tirage, pivot, pool, occasion, weather)));
       if (!ids) continue;
       const key = structuralKeyOf(ids);
       if (seenKeys.has(key) || localSeen.has(key)) continue;

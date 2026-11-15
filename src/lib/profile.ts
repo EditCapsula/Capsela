@@ -327,6 +327,52 @@ export const VISUELS_ETAPE_STYLE_FEMME: Record<StyleId, string> = {
   creatif: "/images/styles/creatif.webp",
 };
 
+/**
+ * LES LOOKS PORTÉS D'UN STYLE (14/11/2026, brief « Refonte UX/UI – Onboarding Choix des styles ») : trois photos éditoriales de tenues
+ * portées par style, sous le flat lay de la carte (DecouverteStyles). Fournies au fil de l'eau (14/11/2026 : Minimaliste, Casual chic,
+ * Classique chic, Bohème, Streetwear, Preppy et Créatif femme, Romantique et Glamour le 15/11/2026 ; 15/11/2026 : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy et Créatif homme) ; pour les autres, la règle « aucune donnée inventée » veut
+ * qu'une galerie sans photo ne s'affiche pas — pas d'icône, pas de placeholder, pas de flat lay recomposé à leur place. Chaque photo
+ * fournie se déclare ici, par genre et par style, à l'emplacement prévu : public/images/styles/looks/<genre>/<slug>-<1|2|3>.webp,
+ * portrait 3:4 (900 × 1200, WebP), comme les flat lays. Une liste partielle affiche ce qu'elle a.
+ */
+export const LOOKS_PORTES_STYLE: Record<"femme" | "homme", Partial<Record<StyleId, readonly string[]>>> = {
+  femme: {
+    // Fournis le 14/11/2026 (générés par la propriétaire, docs/prompts-visuels-styles.md, looks 1 à 3) ; élargis de 64 px de fond de
+    // chaque côté (bord recopié) pour passer du 2:3 au 3:4 sans couper la tête ni les pieds, puis 900 × 1200 WebP.
+    minimaliste: ["/images/styles/looks/femme/minimaliste-1.webp", "/images/styles/looks/femme/minimaliste-2.webp", "/images/styles/looks/femme/minimaliste-3.webp"],
+    casual_chic: ["/images/styles/looks/femme/casual-chic-1.webp", "/images/styles/looks/femme/casual-chic-2.webp", "/images/styles/looks/femme/casual-chic-3.webp"],
+    // Fournis au format 3:4 (14/11/2026) : le 1 ramené à 900 × 1200 ; les 2 et 3 avaient des bandes claires ajoutées sur les côtés,
+    // retirées (recadrage sur la photo) puis recomplétées par le bord de la photo. Les 2 et 3 remplacés le 15/11/2026 (correctifs, fournis en 2:3).
+    classique_chic: ["/images/styles/looks/femme/classique-chic-1.webp", "/images/styles/looks/femme/classique-chic-2.webp", "/images/styles/looks/femme/classique-chic-3.webp"],
+    boheme: ["/images/styles/looks/femme/boheme-1.webp", "/images/styles/looks/femme/boheme-2.webp", "/images/styles/looks/femme/boheme-3.webp"],
+    streetwear: ["/images/styles/looks/femme/streetwear-1.webp", "/images/styles/looks/femme/streetwear-2.webp", "/images/styles/looks/femme/streetwear-3.webp"],
+    preppy: ["/images/styles/looks/femme/preppy-1.webp", "/images/styles/looks/femme/preppy-2.webp", "/images/styles/looks/femme/preppy-3.webp"],
+    creatif: ["/images/styles/looks/femme/creatif-1.webp", "/images/styles/looks/femme/creatif-2.webp", "/images/styles/looks/femme/creatif-3.webp"],
+    romantique: ["/images/styles/looks/femme/romantique-1.webp", "/images/styles/looks/femme/romantique-2.webp", "/images/styles/looks/femme/romantique-3.webp"],
+    glamour: ["/images/styles/looks/femme/glamour-1.webp", "/images/styles/looks/femme/glamour-2.webp", "/images/styles/looks/femme/glamour-3.webp"],
+  },
+  homme: {
+    // Fournis le 15/11/2026, rangés dans l'ordre du prompt (docs/prompts-visuels-styles.md) : 1 pull noir et pantalon anthracite,
+    // 2 manteau camel et col roulé, 3 chemise blanche et chino ; même conversion que côté femme.
+    minimaliste: ["/images/styles/looks/homme/minimaliste-1.webp", "/images/styles/looks/homme/minimaliste-2.webp", "/images/styles/looks/homme/minimaliste-3.webp"],
+    casual_chic: ["/images/styles/looks/homme/casual-chic-1.webp", "/images/styles/looks/homme/casual-chic-2.webp", "/images/styles/looks/homme/casual-chic-3.webp"],
+    classique_chic: ["/images/styles/looks/homme/classique-chic-1.webp", "/images/styles/looks/homme/classique-chic-2.webp", "/images/styles/looks/homme/classique-chic-3.webp"],
+    boheme: ["/images/styles/looks/homme/boheme-1.webp", "/images/styles/looks/homme/boheme-2.webp", "/images/styles/looks/homme/boheme-3.webp"],
+    streetwear: ["/images/styles/looks/homme/streetwear-1.webp", "/images/styles/looks/homme/streetwear-2.webp", "/images/styles/looks/homme/streetwear-3.webp"],
+    preppy: ["/images/styles/looks/homme/preppy-1.webp", "/images/styles/looks/homme/preppy-2.webp", "/images/styles/looks/homme/preppy-3.webp"],
+    creatif: ["/images/styles/looks/homme/creatif-1.webp", "/images/styles/looks/homme/creatif-2.webp", "/images/styles/looks/homme/creatif-3.webp"],
+  },
+};
+
+export function looksPortesStyle(gender: Gender | null, id: StyleId): readonly string[] {
+  return LOOKS_PORTES_STYLE[gender === "homme" ? "homme" : "femme"][id] ?? [];
+}
+
+/** Le flat lay d'un style pour l'étape Style : les visuels du 25/09/2026 côté femme (et genre non renseigné), ceux du 30/10/2026 côté homme. */
+export function visuelEtapeStyle(gender: Gender | null, id: StyleId): string | null {
+  return gender === "homme" ? STYLE_CONFIG.homme[id].asset || null : VISUELS_ETAPE_STYLE_FEMME[id];
+}
+
 export function styleConfigFor(gender: Gender | null): Record<StyleId, StyleCardConfig> {
   return STYLE_CONFIG[gender === "homme" ? "homme" : "femme"];
 }
@@ -363,6 +409,25 @@ export function stylesDuGenre(styles: readonly string[], gender: Gender | null):
   return styles.filter((s) => permis.has(s));
 }
 
+
+/**
+ * LE VOTE SUR UN STYLE (14/11/2026, découverte des styles de l'onboarding) : « J'aime » ajoute le style (déjà choisi, il le reste) ;
+ * « Pas pour moi » le retire s'il était choisi. Au plafond (MAX_STYLES), un nouveau « J'aime » est BLOQUÉ — jamais substitué (règle du
+ * 07/10/2026) : `bloque` le dit, la sélection ne change pas. L'ordre du choix est gardé : le premier reste le style principal. Retirer un
+ * style se fait aussi par sa croix, dans « Mes styles sélectionnés » (retirerStyle).
+ */
+export function voterStyle(styles: readonly string[], id: string, vote: "aime" | "pasPourMoi"): { styles: string[]; bloque: boolean } {
+  const choisi = styles.includes(id);
+  if (vote === "pasPourMoi") return { styles: choisi ? styles.filter((s) => s !== id) : [...styles], bloque: false };
+  if (choisi) return { styles: [...styles], bloque: false };
+  if (styles.length >= MAX_STYLES) return { styles: [...styles], bloque: true };
+  return { styles: [...styles, id], bloque: false };
+}
+
+/** La croix d'un style de « Mes styles sélectionnés » : retiré tout de suite, sans confirmation ; une place se libère. */
+export function retirerStyle(styles: readonly string[], id: string): string[] {
+  return styles.filter((s) => s !== id);
+}
 
 export function basculerStyle(styles: readonly string[], id: string): string[] {
   if (styles.includes(id)) return styles.filter((s) => s !== id);

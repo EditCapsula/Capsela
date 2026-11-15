@@ -15,6 +15,7 @@ import {
   I_REGLAGES,
   FeuilleDateNaissance,
   I_SILHOUETTE,
+  I_SORTIE,
   Icone,
   LigneInfo,
   LigneProfil,
@@ -73,7 +74,7 @@ import Card from "@/components/Card";
  */
 
 export default function ProfileScreen() {
-  const { profile, email, inscritLe, demoMode, saveProfile, profileLoaded } = useAuth();
+  const { profile, email, inscritLe, demoMode, saveProfile, profileLoaded, signOut } = useAuth();
   const membreDepuis = libelleMembreDepuis(inscritLe);
   const { state, actions, etatPremium } = useCapsela();
   const [genreOuvert, setGenreOuvert] = useState(false);
@@ -375,6 +376,20 @@ export default function ProfileScreen() {
         ))}
       </div>
       <div className="text-[12px] text-muted leading-[1.45] mt-[8px] px-1">Pré-remplies quand tu ajoutes une pièce.</div>
+
+      {/* SE DÉCONNECTER, AUSSI ICI (14/11/2026, demandé) : le même bouton, le même geste que dans Réglages (auth.signOut, puis l'écran
+          de connexion), sans confirmation, comme là-bas. */}
+      <Button
+        variante="contour"
+        className="mt-8"
+        onClick={async () => {
+          await signOut();
+          actions.goLogin();
+        }}
+      >
+        <Icone taille={17}>{I_SORTIE}</Icone>
+        Se déconnecter
+      </Button>
 
       {/* « MA CAPSULE » RETIRÉE (27/09/2026) : pièces et looks portés ont leurs
           espaces (Dressing, Journal) ; le profil reste ce que Capsela sait de

@@ -40,14 +40,34 @@ export function raisonErreurPosition(e: unknown): RaisonPosition {
   return "indisponible";
 }
 
+/**
+ * JAMAIS D'ATTENTE SANS FIN (14/11/2026, signalé dans l'app Android : « il ne se passe rien au clic » sur « Utiliser ma position
+ * actuelle »). Une demande d'autorisation ou de position du plugin qui ne répond pas laissait l'écran figé, sans message : passé ce
+ * délai, la réponse est « delai », que l'écran dit. Plus long que les deux essais de position réunis (8 s puis 15 s) et que le temps de
+ * répondre à la fenêtre d'autorisation du système.
+ */
+const DELAI_POSITION_MAX = 45_000;
+
 export async function lirePosition(): Promise<{ pos: PositionLue } | { raison: RaisonPosition }> {
   if (estNatif()) {
+    return Promise.race([
+      lirePositionNative(),
+      new Promise<{ raison: RaisonPosition }>((resolve) => setTimeout(() => resolve({ raison: "delai" }), DELAI_POSITION_MAX)),
+    ]);
+  }
+  return lirePositionNavigateur();
+}
+
+async function lirePositionNative(): Promise<{ pos: PositionLue } | { raison: RaisonPosition }> {
+  {
     try {
       const { Geolocation } = await import("@capacitor/geolocation");
       const statut = await Geolocation.checkPermissions();
-      const accordee = statut.location === "granted" || statut.coarseLocation === "granted";
+      // `?.` (14/11/2026) : une réponse vide du plugin (annotations retirées par R8, proguard-rules.pro) n'est pas un refus.
+      const accordee = statut?.location === "granted" || statut?.coarseLocation === "granted";
       if (!accordee) {
         const demande = await Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] });
+        if (!demande) return { raison: "indisponible" };
         if (demande.location !== "granted" && demande.coarseLocation !== "granted") return { raison: "refusee" };
       }
       try {
@@ -64,6 +84,9 @@ export async function lirePosition(): Promise<{ pos: PositionLue } | { raison: R
       return { raison: raisonErreurPosition(e) };
     }
   }
+}
+
+function lirePositionNavigateur(): Promise<{ pos: PositionLue } | { raison: RaisonPosition }> {
   return new Promise((resolve) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       resolve({ raison: "indisponible" });

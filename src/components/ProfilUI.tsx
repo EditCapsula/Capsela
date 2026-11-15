@@ -192,10 +192,13 @@ export function GenderModal({
   current,
   onSelect,
   onClose,
+  titre = "Modifier mon genre",
 }: {
   current: Gender | null;
   onSelect: (g: Gender) => void;
   onClose: () => void;
+  /** « Indiquer mon genre » depuis l'accueil, quand le profil n'en a pas (15/11/2026). */
+  titre?: string;
 }) {
   return (
     <div
@@ -204,7 +207,7 @@ export function GenderModal({
       onClick={onClose}
     >
       <div className="w-full max-w-[440px] bg-cream rounded-t-feuille px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
-        <div className="t-titre-carte text-ink mb-[16px]">Modifier mon genre</div>
+        <div className="t-titre-carte text-ink mb-[16px]">{titre}</div>
         <div className="flex flex-col gap-[10px]">
           {GENDERS.map((g) => (
             <button
