@@ -214,7 +214,7 @@ export default function SyntheseProfil({
                 ))}
               </div>
             )}
-            <p className="text-[12.5px] text-muted leading-[1.45] mt-[12px]">Ta palette guide le choix des couleurs qui valorisent ton teint dans tes tenues.</p>
+            <p className="text-[12.5px] text-muted leading-[1.45] mt-[12px]">Ta colorimétrie guide le choix des couleurs qui valorisent ton teint dans tes tenues.</p>
           </>
         ) : (
           <p className="text-[13px] text-muted leading-[1.45]">Pas encore définie. Quelques questions, sans photo, suffisent pour connaître les couleurs qui te mettent en valeur.</p>

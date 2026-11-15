@@ -289,7 +289,8 @@ export default function CapsuleScreen() {
       : "";
     return [
       userStyleLabel && { cle: "style", avant: nbStylesProfil > 1 ? "tes styles " : "ton style ", valeur: userStyleLabel, etape: "style" },
-      aUnePalette && { cle: "palette", avant: "ta ", valeur: "palette", etape: "pal_couleurs" },
+      // « Tes couleurs » (15/11/2026) : ce sont les couleurs préférées que la capsule lit, pas la colorimétrie.
+      aUnePalette && { cle: "palette", avant: "tes ", valeur: "couleurs préférées", etape: "pal_couleurs" },
       forme && { cle: "morpho", avant: "ta silhouette ", valeur: forme, etape: "morpho" },
     ].filter((c): c is { cle: string; avant: string; valeur: string; etape: string } => Boolean(c));
   }, [userStyleLabel, nbStylesProfil, profile.paletteCouleurs, profile.paletteAffinite, profile.paletteIntensite, profile.morphology]);

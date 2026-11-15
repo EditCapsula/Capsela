@@ -133,7 +133,7 @@ const ALL_STEPS = [
   // Un écran depuis le 31/10/2026 (lot 3). Titre et sous-titre du brief, au tutoiement de l'app ; le surtitre reprend deux repères de
   // l'ancienne présentation, toujours vrais : rapide, et aucune photo.
   { key: "colorimetrie", kicker: "Environ 1 minute · sans photo", title: "Ta colorimétrie", subtitle: "Quelques informations pour identifier les couleurs qui te mettent en valeur." },
-  { key: "colorimetrie_resultat", kicker: "Ta palette", title: "Ta palette", subtitle: "" },
+  { key: "colorimetrie_resultat", kicker: "Ta colorimétrie", title: "Ta colorimétrie", subtitle: "" },
   // « Et maintenant ? » n'est plus une étape (31/10/2026, arbitrage 7) : ses trois bénéfices s'affichent sous « Ta palette ».
   /*
    * LA MÉTÉO (12/11/2026, brief 2.3, point 3, EtapeMeteo.tsx). La demande de localisation du téléphone est expliquée AVANT de s'ouvrir,

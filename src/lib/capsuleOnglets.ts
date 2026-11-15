@@ -289,10 +289,10 @@ export function criteresDeSelection(p: {
   if (noms.length || profile.paletteAffinite || profile.paletteIntensite) {
     out.push({
       cle: "couleurs",
-      titre: "Ta palette",
+      titre: "Tes couleurs préférées",
       valeur: noms.length ? noms.slice(0, 4).join(", ") + (noms.length > 4 ? ` et ${noms.length - 4} autre${noms.length > 5 ? "s" : ""}` : "") : "Tes préférences de ton et d'intensité",
       texte:
-        "Tes préférences de couleurs guident la sélection. Les pièces aux nuances ou intensités moins adaptées à ta palette sont écartées lorsque le catalogue le permet.",
+        "Tes préférences de couleurs guident la sélection. Les pièces aux nuances ou intensités moins adaptées à tes préférences sont écartées lorsque le catalogue le permet.",
     });
   }
   out.push({

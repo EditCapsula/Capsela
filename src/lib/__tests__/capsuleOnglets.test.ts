@@ -213,7 +213,7 @@ describe("« Une sélection pensée pour toi » : seuls les critères réellemen
     const c = criteresDeSelection({ ...base, profile: profil({ styles: ["minimaliste"], paletteCouleurs: ["#2A2724"] }) });
     expect(c.map((x) => x.cle)).toEqual(["style", "couleurs", "saison", "dressing"]);
     expect(c.find((x) => x.cle === "dressing")!.valeur).toBe("3 pièces intégrées · 31 suggestions Capsela");
-    expect(c.find((x) => x.cle === "couleurs")!.titre).toBe("Ta palette");
+    expect(c.find((x) => x.cle === "couleurs")!.titre).toBe("Tes couleurs préférées");
     expect(c.find((x) => x.cle === "saison")!.valeur).toBe("Automne · Environ 12 °C");
     expect(c.find((x) => x.cle === "saison")!.texte).toContain("adaptées à l'automne");
     expect(accrocheSelection(c)).toBe("Des pièces choisies pour ton style, ta palette de couleurs et la saison.");

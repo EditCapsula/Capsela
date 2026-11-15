@@ -657,7 +657,7 @@ export function champsProfilStyle(profile: Profile): ChampCompletude[] {
   }
   champs.push({ cle: "coupes", libelle: "Coupes préférées", renseigne: profile.preferencesSilhouette.coupes !== null });
   champs.push(
-    { cle: "palette", libelle: "Palette", renseigne: profile.paletteCouleurs.length > 0 },
+    { cle: "palette", libelle: "Couleurs préférées", renseigne: profile.paletteCouleurs.length > 0 },
     { cle: "tailles", libelle: "Tailles", renseigne: Boolean(profile.tailleHaut && profile.tailleBas && profile.pointure) }
   );
   return champs;
@@ -712,7 +712,7 @@ export function prochaineActionProfil(profile: Profile): ProchaineActionProfil |
     case "coupes":
       return { cle: "coupes", message: "Indique les coupes dans lesquelles tu te sens le mieux : elles orientent le choix des pièces de ta capsule.", cta: "Choisir mes coupes" };
     case "palette":
-      return { cle: "palette", message: "Choisis tes couleurs : elles orientent la capsule et tes tenues.", cta: "Choisir ma palette" };
+      return { cle: "palette", message: "Choisis tes couleurs : elles orientent la capsule et tes tenues.", cta: "Choisir mes couleurs" };
     case "tailles":
       if (!profile.tailleHaut) return { cle: "tailles", message: "Ajoute ta taille de haut : elle est pré-remplie quand tu ajoutes une pièce.", cta: "Renseigner ma taille de haut" };
       if (!profile.tailleBas) return { cle: "tailles", message: "Ajoute ta taille de bas : elle est pré-remplie quand tu ajoutes une pièce.", cta: "Renseigner ma taille de bas" };
