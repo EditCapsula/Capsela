@@ -528,7 +528,25 @@ export default function ProfileSetupScreen() {
     const lieu = await fetchVilleParPosition(pos.coords.latitude, pos.coords.longitude);
     setLocalisation("accordee");
     setDraft((d) => ({ ...d, ...(lieu ? { city: lieu.name } : {}), prefs: { ...d.prefs, geoConsent: true, weatherFromGeo: true } }));
+    // L'ÉTAPE S'ENCHAÎNE SEULE (15/11/2026, demandé : « continue l'étape sans attendre que l'on clique sur Continuer ») : la
+    // localisation accordée, la coche s'affiche un instant puis l'étape suivante s'ouvre — pendant l'inscription seulement, comme
+    // avancerApresChoix. « Continuer » reste là pour qui va plus vite.
+    if (!state.profileSetupFromEdit) setAvanceMeteo(true);
   };
+  const [avanceMeteo, setAvanceMeteo] = useState(false);
+  // `next` lu au moment du déclenchement (après le rendu qui porte la ville trouvée), jamais celui de la fermeture d'avant.
+  const nextRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    nextRef.current = next;
+  });
+  useEffect(() => {
+    if (!avanceMeteo || meta.key !== "meteo") return;
+    const t = setTimeout(() => {
+      setAvanceMeteo(false);
+      nextRef.current();
+    }, 1100);
+    return () => clearTimeout(t);
+  }, [avanceMeteo, meta.key]);
   // Seules les étapes style et palette exigent une sélection non vide
   // (styles : recette 20/08/2026 ; palette : Tâche 8, min 1 couleur) — les
   // autres étapes gardent leur comportement existant, jamais bloquant.
