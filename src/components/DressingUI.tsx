@@ -70,7 +70,10 @@ export function CarteSynthese({ nombre, libelle, action, onAction }: { nombre: R
   );
 }
 
-/** La recherche, et à sa droite, facultatif, le bouton des filtres avancés (indépendant, avec son compteur de filtres actifs). */
+/**
+ * La recherche, et à sa droite, facultatif, le bouton des filtres avancés (indépendant, avec son compteur de filtres actifs). UNE SEULE
+ * CROIX (15/11/2026, signalé : « deux croix ») : celle que le navigateur ajoute aux champs de recherche est masquée, la nôtre reste.
+ */
 export function BarreRecherche({
   valeur,
   onChange,
@@ -102,7 +105,7 @@ export function BarreRecherche({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className="flex-1 min-w-0 h-full bg-transparent outline-none text-[13.5px] font-medium text-ink placeholder:text-placeholder"
+          className="flex-1 min-w-0 h-full bg-transparent outline-none text-[13.5px] font-medium text-ink placeholder:text-placeholder appearance-none [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
         />
         {valeur && (
           <button type="button" onClick={() => onChange("")} aria-label="Effacer la recherche" className="w-[34px] h-[34px] flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center cursor-pointer">
