@@ -330,7 +330,7 @@ export const VISUELS_ETAPE_STYLE_FEMME: Record<StyleId, string> = {
 /**
  * LES LOOKS PORTÉS D'UN STYLE (14/11/2026, brief « Refonte UX/UI – Onboarding Choix des styles ») : trois photos éditoriales de tenues
  * portées par style, sous le flat lay de la carte (DecouverteStyles). Fournies au fil de l'eau (14/11/2026 : Minimaliste, Casual chic,
- * Classique chic, Bohème, Streetwear, Preppy et Créatif femme ; 15/11/2026 : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy et Créatif homme) ; pour les autres, la règle « aucune donnée inventée » veut
+ * Classique chic, Bohème, Streetwear, Preppy et Créatif femme, Romantique le 15/11/2026 ; 15/11/2026 : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy et Créatif homme) ; pour les autres, la règle « aucune donnée inventée » veut
  * qu'une galerie sans photo ne s'affiche pas — pas d'icône, pas de placeholder, pas de flat lay recomposé à leur place. Chaque photo
  * fournie se déclare ici, par genre et par style, à l'emplacement prévu : public/images/styles/looks/<genre>/<slug>-<1|2|3>.webp,
  * portrait 3:4 (900 × 1200, WebP), comme les flat lays. Une liste partielle affiche ce qu'elle a.
@@ -342,12 +342,13 @@ export const LOOKS_PORTES_STYLE: Record<"femme" | "homme", Partial<Record<StyleI
     minimaliste: ["/images/styles/looks/femme/minimaliste-1.webp", "/images/styles/looks/femme/minimaliste-2.webp", "/images/styles/looks/femme/minimaliste-3.webp"],
     casual_chic: ["/images/styles/looks/femme/casual-chic-1.webp", "/images/styles/looks/femme/casual-chic-2.webp", "/images/styles/looks/femme/casual-chic-3.webp"],
     // Fournis au format 3:4 (14/11/2026) : le 1 ramené à 900 × 1200 ; les 2 et 3 avaient des bandes claires ajoutées sur les côtés,
-    // retirées (recadrage sur la photo) puis recomplétées par le bord de la photo. Le 2 remplacé le 15/11/2026 (correctif, fourni en 2:3).
+    // retirées (recadrage sur la photo) puis recomplétées par le bord de la photo. Les 2 et 3 remplacés le 15/11/2026 (correctifs, fournis en 2:3).
     classique_chic: ["/images/styles/looks/femme/classique-chic-1.webp", "/images/styles/looks/femme/classique-chic-2.webp", "/images/styles/looks/femme/classique-chic-3.webp"],
     boheme: ["/images/styles/looks/femme/boheme-1.webp", "/images/styles/looks/femme/boheme-2.webp", "/images/styles/looks/femme/boheme-3.webp"],
     streetwear: ["/images/styles/looks/femme/streetwear-1.webp", "/images/styles/looks/femme/streetwear-2.webp", "/images/styles/looks/femme/streetwear-3.webp"],
     preppy: ["/images/styles/looks/femme/preppy-1.webp", "/images/styles/looks/femme/preppy-2.webp", "/images/styles/looks/femme/preppy-3.webp"],
     creatif: ["/images/styles/looks/femme/creatif-1.webp", "/images/styles/looks/femme/creatif-2.webp", "/images/styles/looks/femme/creatif-3.webp"],
+    romantique: ["/images/styles/looks/femme/romantique-1.webp", "/images/styles/looks/femme/romantique-2.webp", "/images/styles/looks/femme/romantique-3.webp"],
   },
   homme: {
     // Fournis le 15/11/2026, rangés dans l'ordre du prompt (docs/prompts-visuels-styles.md) : 1 pull noir et pantalon anthracite,
