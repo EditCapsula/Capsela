@@ -147,6 +147,15 @@ describe("première tenue d'un compte neuf (dressing vide)", () => {
           console.log(`${temp}° ${ctx.nom} : capsule ${m.capsule}, échecs ${m.echecs}/${TIRAGES}` + (m.raisons.size ? ` (${[...m.raisons].map(([k, n]) => `${k} ×${n}`).join(", ")})` : "") + ` | ${[...m.parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`);
         }
     }
+    // L'export de la capsule qui échoue (homme, couleurs + intensité, 10°, Quotidien) : pour rejouer le moteur hors CI, sur ces pièces-là.
+    {
+      const profil = profilAudit({ gender: "homme", styles: ["classique_chic", "casual_chic", "minimaliste"], patch: { paletteCouleurs: PALETTE_SIGNALEE, paletteIntensite: "Profondes et intenses" } });
+      const w = weatherForDay(10, "Nuageux", currentSeasonKey(), CHALEUR_HORS_SAISON);
+      const capsule = computeDefaultCapsule(profil, w, [], saisonCapsuleDuJour(w.temp), catalogue);
+      console.log("\nEXPORT_CAPSULE_DEBUT");
+      console.log(JSON.stringify({ weather: w, capsule }));
+      console.log("EXPORT_CAPSULE_FIN");
+    }
     for (const genre of ["homme", "femme"] as const) {
       console.log(`\n=== Trio signalé, ${genre}, palette de six couleurs choisies ===`);
       for (const [temp, label] of TEMPS)
