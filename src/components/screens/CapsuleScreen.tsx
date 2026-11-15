@@ -10,7 +10,6 @@ import OptionRow from "@/components/OptionRow";
 import SegmentedControl, { type Segment } from "@/components/SegmentedControl";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import GlyphePiece from "@/components/GlyphePiece";
-import SelectionPenseePourToi, { DetailSelection } from "@/components/SelectionPenseePourToi";
 import Vignette from "@/components/VignettePiece";
 import FicheSuggestion, { type AssociationFiche } from "@/components/FicheSuggestion";
 import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
@@ -51,7 +50,6 @@ import {
   piecesComposees,
   piecesParEmplacement,
   position,
-  criteresDeSelection,
   selectionDeDepart,
   selectionDepuisTenue,
   type CleEmplacement,
@@ -166,7 +164,7 @@ function useParcoursAGarder() {
   };
 }
 type Onglet = "composer" | "explorer" | "cles" | "details";
-type Feuille = "saison" | "selection" | "couleur" | "tri" | null;
+type Feuille = "saison" | "couleur" | "tri" | null;
 
 const ONGLETS: readonly Segment<Onglet>[] = [
   { key: "composer", label: "Composer" },
@@ -380,18 +378,6 @@ export default function CapsuleScreen() {
   // Mémorisées : la planche (FlatLayCapsela) ne se recompose que si les pièces changent.
   const composees = useMemo(() => piecesComposees(groupes, selection), [groupes, selection]);
   const piecesTenue = useMemo(() => composees.map((e) => e.item), [composees]);
-  // « Une sélection pensée pour toi » (05/11/2026) : ce qui a réellement orienté la capsule, avec les chiffres des pièces montrées.
-  const criteresSelection = useMemo(
-    () =>
-      criteresDeSelection({
-        profile,
-        styleExplore: exploredStyleId,
-        saison: capsuleSeason,
-        possedees: entrees.filter((e) => e.possedee).length,
-        suggestions: entrees.filter((e) => !e.possedee).length,
-      }),
-    [profile, exploredStyleId, capsuleSeason, entrees]
-  );
   const cleTenue = clePieces(piecesTenue.map((it) => it.id)).join(",");
   const tenueEnregistree = state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue);
 
@@ -940,8 +926,8 @@ export default function CapsuleScreen() {
               })}
             </div>
 
-            <SelectionPenseePourToi criteres={criteresSelection} onOuvrir={() => setFeuille("selection")} />
-
+            {/* « UNE SÉLECTION PENSÉE POUR TOI » RETIRÉ (15/11/2026, demandé) : l'en-tête de l'écran dit déjà ce qui oriente la capsule
+                (« Pensées pour tes styles… »). La fonction des critères (criteresDeSelection) reste, testée. */}
             {piecesTenue.length >= 2 && (
               <Button variante={tenueEnregistree ? "contour" : "principal"} className="mt-[14px]" onClick={enregistrerTenue}>
                 <Signet plein={tenueEnregistree} />
@@ -1347,14 +1333,12 @@ export default function CapsuleScreen() {
         </div>
       )}
 
-      {/* Les feuilles de l'écran : saison, « Une sélection pensée pour toi » et filtres d'Explorer. Une seule ouverte à la fois. */}
+      {/* Les feuilles de l'écran : saison et filtres d'Explorer. Une seule ouverte à la fois. */}
       <BottomSheet
         title={
           feuille === "saison"
             ? "Choisir la saison"
-            : feuille === "selection"
-              ? "Une sélection pensée pour toi"
-              : feuille === "couleur"
+            : feuille === "couleur"
                 ? "Couleur"
                 : "Trier"
         }
@@ -1382,7 +1366,6 @@ export default function CapsuleScreen() {
             })}
           </div>
         )}
-        {feuille === "selection" && <DetailSelection criteres={criteresSelection} />}
         {feuille === "couleur" && (
           <div className="flex flex-col gap-[8px]">
             <OptionRow
