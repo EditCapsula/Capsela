@@ -347,7 +347,8 @@ function PanneauDressing() {
           Découvre ta capsule personnalisée et quelques idées de looks, même sans pièces dans ton dressing.
         </div>
         {tenuesMoteur.length > 0 && <Associations tenues={tenuesMoteur} onOuvrir={ouvrirTenue} />}
-        <div className="mt-5">
+        {/* Le lien suit le texte de près (15/11/2026, demandé : « réduis l'espace au-dessus du lien ») ; un peu plus après les idées de looks. */}
+        <div className={tenuesMoteur.length > 0 ? "mt-3" : "mt-[10px]"}>
           <Lien onClick={actions.goCapsule}>Découvrir ma capsule →</Lien>
         </div>
       </div>
