@@ -266,6 +266,7 @@ export const EN: Record<string, string> = {
   "Ajoute au moins 2 pièces à cette tenue pour l'enregistrer.": "Add at least 2 pieces to this outfit to save it.",
   "Ajoute et gère tes pièces": "Add and manage your pieces",
   "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour.": "Add a few pieces to your wardrobe, and we'll put together your outfit of the day.",
+  "Ta capsule ne couvre pas encore cette occasion. Ajoute quelques pièces à ton dressing pour composer ta tenue du jour.": "Your capsule doesn't cover this occasion yet. Add a few pieces to your wardrobe to put together your outfit of the day.",
   "Ajoute un haut, une robe ou une combinaison sous ta veste pour compléter la tenue.": "Add a top, a dress or a jumpsuit under your jacket to complete the outfit.",
   "Ajoute un haut, une robe ou une combinaison sous ta veste.": "Add a top, a dress or a jumpsuit under your jacket.",
   "Ajouter des chaussures à mon dressing →": "Add shoes to my wardrobe →",

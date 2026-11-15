@@ -538,7 +538,9 @@ export default function HomeScreen() {
         // l'écran. La colonne de la composition fait 181 px (zone 181 × 203), moins sur un écran étroit : le texte garde sa place.
         style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", minHeight: 307 }}
       >
-        <div className="flex flex-col min-w-0">
+        {/* Sans tenue possible (15/11/2026, capture : le texte tenait dans la moitié gauche, la droite restait vide), le texte prend toute
+            la largeur de la carte : il n'y a pas de composition à côté. */}
+        <div className="flex flex-col min-w-0" style={!passee && aucuneTenuePossible ? { gridColumn: "1 / -1" } : undefined}>
           <div className="flex items-center gap-[7px]">
             <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -566,8 +568,10 @@ export default function HomeScreen() {
                 {t("On prépare ta")} <span className="italic text-terracotta">{t("première tenue")}</span>
               </div>
               <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+                {/* Dressing vide (15/11/2026) : la tenue se compose avec la capsule. Si elle n'en compose aucune, « ajoute quelques pièces et on
+                    compose ta tenue » était faux — c'est la capsule qui ne couvre pas l'occasion, et le dire. */}
                 {dressingVide
-                  ? t("Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour.")
+                  ? t("Ta capsule ne couvre pas encore cette occasion. Ajoute quelques pièces à ton dressing pour composer ta tenue du jour.")
                   : t("Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront.")}
               </div>
               <div className="mt-auto pt-4">
@@ -625,13 +629,15 @@ export default function HomeScreen() {
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
         {/* La zone déborde de 10 px dans le remplissage de droite et de 6 px sur la gouttière : la composition est plus grande (08/10/2026,
             « c'est encore vraiment petit »). Le texte garde sa colonne ; les pièces restent à 10 px au moins du bord de la card. */}
+        {(passee || !aucuneTenuePossible) && (
         <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "4px -10px 0 -6px" }}>
           {passee ? (
             <FlatLayCapsela items={piecesPassee} context="hero-home" layoutSeed={clePieces(piecesPassee.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
-          ) : aucuneTenuePossible ? null : (
+          ) : (
             <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={toucherPiece(outfitPieces, remplacerTenueDuJour)} fantomes={sansChaussures(outfitPieces)} onFantome={(cat) => cat === "chaussures" && (demanderChoixChaussures(), actions.goTenues())} ajouts={conseilVeste} />
           )}
         </div>
+        )}
 
         {!passee && !aucuneTenuePossible && blocExterieur && <div style={{ gridColumn: "1 / -1" }}>{blocExterieur}</div>}
         {/* LES DEUX ACTIONS : « Sauvegarder » range la tenue dans Mes looks (l'ancien « J'adore », même enregistrement) ; « Autre tenue »

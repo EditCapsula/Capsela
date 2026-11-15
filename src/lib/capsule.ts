@@ -546,6 +546,8 @@ export type SelectionStrategy = {
    * Créatif, dans une capsule d'automne — que le moteur écarte ensuite (hors saison). Plus aucun haut habillé, plus aucune tenue.
    * "respectee" : le filet cherche d'abord dans la saison de la capsule ET les styles du profil, puis dans la saison seule, puis partout
    * (comme avant) ; les couleurs choisies départagent à l'intérieur de ce rang. Absent : le filet d'avant (audit avant / après).
+   * Mesuré (premiere-tenue.audit.ts, même exécution) : le cas signalé passe de 100 % à 0 % d'échecs ; 30 cellules homme sans tenue → 0 ;
+   * aucune cellule ne perd sa tenue ; 4 à 66 % des capsules changent selon la palette. Validé par la propriétaire le 15/11/2026.
    */
   filetSaison?: "respectee";
 };
