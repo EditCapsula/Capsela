@@ -2,6 +2,7 @@
 
 import type { Segment } from "@/components/SegmentedControl";
 import { resolveItemImage } from "@/lib/catalogImages";
+import { occasionShortLabel } from "@/lib/data";
 import type { FiltreLooks } from "@/lib/looksFiltre";
 import type { Item, SavedLook } from "@/lib/types";
 
@@ -117,6 +118,8 @@ export default function CarteLook({
       <div className="px-[2px] pt-[10px]">
         <div className="t-titre-vignette text-ink overflow-hidden text-ellipsis whitespace-nowrap">{look.name}</div>
         <div className="text-[11px] text-muted mt-[3px]">
+          {/* L'occasion du look quand il en porte une (onglet Mes looks, 15/11/2026), puis sa date. */}
+          {look.occasion && look.occasion !== "all" && `${occasionShortLabel(look.occasion)} · `}
           {date}
           {porte > 0 && ` · Porté ${porte} fois`}
           {compacte && suggere && <span className="text-terracotta"> · ✦ Suggéré par Capsela</span>}

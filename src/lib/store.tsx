@@ -329,6 +329,8 @@ export interface Actions {
   goWardrobePieces: (filtre?: FiltrePieces) => void;
   fermerFicheSuggestion: () => void;
   goLooks: () => void;
+  /** Bascule entre les deux onglets du Dressing (15/11/2026) : change d'écran sans rien oublier — chaque onglet garde son contexte. */
+  ongletDressing: (onglet: "wardrobe" | "looks") => void;
   goProfile: () => void;
   /**
    * Réglages Capsela (05/11/2026), ou l'une de ses sous-pages (`section`). Ouverte depuis un autre écran — la ligne météo de
@@ -2015,6 +2017,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       oublierContexte("looks");
       go("looks");
     },
+    ongletDressing: (onglet) => go(onglet),
     // LE RETOUR DU PROFIL NE MÉMORISE JAMAIS UN DE SES SOUS-ÉCRANS (25/09).
     // Avant : revenir de « Modifier » au profil enregistrait « Modifier »
     // comme écran de retour, et le chevron du profil y renvoyait — profil →

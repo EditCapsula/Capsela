@@ -163,6 +163,8 @@ export default function TabBar() {
           state.screen === tab.screen ||
           (tab.screen === "home" && state.screen === "tenues") ||
           (tab.screen === "wardrobe" && state.screen === "dernieresPieces") ||
+          // Mes looks est le second onglet du Dressing (15/11/2026) : l'onglet Dressing reste allumé.
+          (tab.screen === "wardrobe" && state.screen === "looks") ||
           // Mon planning (maquette, 08/10/2026) allume l'onglet Planifier : c'est le planning des tenues.
           (tab.screen === "planifier" && state.screen === "calendrier") ||
           (tab.screen === "history" && (state.screen === "avisTous" || state.screen === "avisEnregistre")) ||
