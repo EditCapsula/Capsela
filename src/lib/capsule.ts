@@ -15,6 +15,7 @@ import {
 } from "./profile";
 import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, OccasionKey, Season, Tons } from "./types";
 import { estPieceDeValise } from "./piecesDeValise";
+import { colorimetrieUtilisable } from "./colorimetrie";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
 export function weatherSeasonBucket(temp: number): Season {
@@ -455,6 +456,19 @@ export function occasionsOf(it: Item): OccasionKey[] {
  * ne passe autre chose. Aucun code applicatif ne renseigne ce paramètre.
  */
 export type SelectionStrategy = {
+  /**
+   * LEVIER D'AUDIT — LA SAISON COLORIMÉTRIQUE DANS LA CAPSULE (15/11/2026, question de la propriétaire : « pourquoi la capsule ne
+   * s'adapte pas à ma colorimétrie ? »). La capsule ne lit que les couleurs préférées ; la saison (couleurs signature et neutres) ne
+   * sert qu'aux tenues. Ce levier la fait entrer comme RANG de la sélection, jamais comme filtre : une pièce de la palette passe
+   * devant à égalité de ce qui précède, aucune pièce n'est écartée, les couleurs « à doser » ne comptent pas.
+   *   "apres_occasions" : juste après la couverture des occasions — le plus fort, avant « basique » ;
+   *   "apres_basique" : juste après « basique » (et la coupe préférée), avant la direction morphologique ;
+   *   "departage"     : en dernier, avant l'id — ne départage que des pièces par ailleurs équivalentes.
+   * Le filet de sécurité (ensure) prend alors aussi la palette pour ses couleurs. Absent — la production — rien ne change.
+   * `hexSaison` est calculé par computeDefaultCapsule depuis le profil ; un appelant ne le renseigne pas.
+   */
+  colorimetrieCapsule?: "apres_occasions" | "apres_basique" | "departage";
+  hexSaison?: ReadonlySet<string>;
   /** Rang 3 : `morphoFit` legacy, ou neutre (le rang disparaît du tri). */
   rang3: "legacy" | "neutre";
   /** Rang 4 : direction de compensation V2, absente par défaut. "A" et "B" sont deux fonctions de saturation. */
@@ -738,14 +752,19 @@ function pickBestMarginal(
   // constante ne peut jamais départager, donc la clé se comporte exactement
   // comme l'ancienne [occasions, basique, morphoFit, -id].
   // Les rangs « coupe » valent 0 pour tous sans le levier (production) : constants, ils ne départagent rien.
+  const palette = (it: CatalogItem, place: SelectionStrategy["colorimetrieCapsule"]) =>
+    strategy.colorimetrieCapsule === place && strategy.hexSaison?.has(it.hex) ? 1 : 0;
   const scoreKey = (it: CatalogItem): number[] => [
     occasionsOf(it).filter((o) => !covered.has(o)).length,
+    palette(it, "apres_occasions"),
     coupe(it, "avant_basique"),
     it.estBasiqueCapsule ? 1 : 0,
     coupe(it, "apres_basique"),
+    palette(it, "apres_basique"),
     strategy.rang3 === "legacy" && morphoFit(it, morphology) ? 1 : 0,
     strategy.v2 ? valeurDirection(it, morphology, retenues, strategy.v2, neutralise) : 0,
     coupe(it, "apres_direction"),
+    palette(it, "departage"),
     -it.id,
   ];
   // Comparaison lexicographique : le premier critère qui diffère tranche
@@ -902,6 +921,10 @@ export function computeDefaultCapsule(
   // Les pièces réservées à la valise (maillots, surchemises de plage, 06/11/2026, piecesDeValise.ts) n'entrent dans aucune capsule :
   // écartées ici, à la source, elles ne reviennent pas non plus par les filets de sécurité qui repiochent dans `sourcePool`.
   sourcePool = sourcePool.filter((it) => !estPieceDeValise(it));
+  // Levier d'audit colorimetrieCapsule (cf. SelectionStrategy) : la palette de la saison, signature et neutres.
+  if (strategy.colorimetrieCapsule && colorimetrieUtilisable(profile.colorimetrie)) {
+    strategy = { ...strategy, hexSaison: new Set([...(profile.colorimetrie.signature ?? []), ...(profile.colorimetrie.neutres ?? [])]) };
+  }
   const excluded = new Set(excludedIds);
   let base = sourcePool.filter((it) => !excluded.has(it.id));
 
@@ -1146,7 +1169,7 @@ export function computeDefaultCapsule(
     const duStyle = (it: CatalogItem) => !styles.length || styles.some((st) => styleFit(it, st));
     const rangs = strategy.filetSaison === "respectee" ? [pool.filter((it) => deSaison(it) && duStyle(it)), pool.filter(deSaison), pool] : [pool];
     const rang = rangs.find((r) => r.length) ?? [];
-    const fav = rang.filter((it) => favColors.includes(it.hex));
+    const fav = rang.filter((it) => favColors.includes(it.hex) || !!strategy.hexSaison?.has(it.hex));
     const pickFrom = fav.length ? fav : rang;
     if (pickFrom.length) out = [...out, pickFrom[0]];
   };
