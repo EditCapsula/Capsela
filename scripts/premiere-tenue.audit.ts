@@ -134,6 +134,19 @@ describe("première tenue d'un compte neuf (dressing vide)", () => {
     // 1 quater. La palette du compte signalé (capture du 15/11/2026) : six couleurs CHOISIES, transmises au moteur comme couleurs préférées
     // (paletteHexes, comme regen). Rose pâle, gris perle, menthe, turquoise, lavande, bleu ciel — au plus près des pastilles affichées.
     const PALETTE_SIGNALEE = ["#EBCFCB", "#D3D0CB", "#B7D3C1", "#3A9A9E", "#A99BC4", "#A9BFCB"];
+    // La capsule du téléphone (33 pièces : 2 hauts, 4 mailles, 7 bas, 2 vestes + 2 manteaux, 7 chaussures) est exactement la cellule
+    // « homme · Profondes et intenses » : le profil cumule cette intensité et les six couleurs. Les deux leviers, seuls puis ensemble.
+    for (const [nom, patch] of [
+      ["intensité seule", { paletteIntensite: "Profondes et intenses" as Intensite }],
+      ["couleurs + intensité", { paletteCouleurs: PALETTE_SIGNALEE, paletteIntensite: "Profondes et intenses" as Intensite }],
+    ] as [string, Partial<Profile>][]) {
+      console.log(`\n=== Trio signalé, homme, ${nom} ===`);
+      for (const [temp, label] of TEMPS)
+        for (const ctx of CONTEXTES) {
+          const m = mesurer(catalogue, "homme", ["classique_chic", "casual_chic", "minimaliste"], temp, label, ctx, patch);
+          console.log(`${temp}° ${ctx.nom} : capsule ${m.capsule}, échecs ${m.echecs}/${TIRAGES}` + (m.raisons.size ? ` (${[...m.raisons].map(([k, n]) => `${k} ×${n}`).join(", ")})` : "") + ` | ${[...m.parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`);
+        }
+    }
     for (const genre of ["homme", "femme"] as const) {
       console.log(`\n=== Trio signalé, ${genre}, palette de six couleurs choisies ===`);
       for (const [temp, label] of TEMPS)
