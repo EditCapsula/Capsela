@@ -498,19 +498,30 @@ export default function ProfileSetupScreen() {
             }
           : meta.key === "colorimetrie_resultat"
             ? { kicker: meta.kicker, title: draft.colorimetrie?.libelle || meta.title, subtitle: saisonResultat?.description ?? null }
-            : { kicker: meta.kicker, title: meta.title, subtitle: meta.subtitle || null };
+            : {
+                // Sans étape Silhouette (profils homme, 15/11/2026), les questions de coupes ne parlent pas de « Ta silhouette ».
+                kicker: meta.kicker === "Ta silhouette" && !STEPS.some((x) => x.key === "morpho") ? "Tes coupes" : meta.kicker,
+                title: meta.title,
+                subtitle: meta.subtitle || null,
+              };
   const taillesBas = taillesBasFor(draft.gender);
   // Le fil d'Ariane discret (07/10/2026) : « 3 / 6 · Tes couleurs ». « Ton dressing » est la dernière section, ouverte
   // par le récapitulatif ; la silhouette n'existe pas pour tous les profils (cf. STEPS), le compte suit donc le parcours servi.
+  /*
+   * SIX ÉTAPES, PLUS SEPT (15/11/2026, arbitré par la propriétaire) : « Ton dressing » n'avait aucune question — c'était l'écran qui
+   * s'ouvre après « Créer mon dressing » — et la dernière page affichait 6/7. Elle affiche maintenant 6/6.
+   * AJUSTÉ PAR GENRE (même jour, demandé) : une section ne compte que si l'une de ses étapes est posée à ce profil (STEPS). Sans étape
+   * Silhouette (profils homme), la section garde ses questions de coupes et s'appelle « Tes coupes ».
+   */
+  const avecSilhouette = STEPS.some((x) => x.key === "morpho");
   const SECTIONS: { label: string; cles: string[] }[] = [
     { label: "Ton style", cles: ["style"] },
-    { label: "Ta silhouette", cles: ["morpho", "mise_en_valeur", "coupes"] },
+    { label: avecSilhouette ? "Ta silhouette" : "Tes coupes", cles: ["morpho", "mise_en_valeur", "coupes"] },
     { label: "Tes couleurs", cles: ["pal_couleurs"] },
     { label: "Ta colorimétrie", cles: ["colorimetrie", "colorimetrie_resultat"] },
     { label: "Ta météo", cles: ["meteo"] },
     { label: "Ton profil", cles: ["pal_recap"] },
-    { label: "Ton dressing", cles: [] },
-  ];
+  ].filter((x) => x.cles.some((k) => STEPS.some((st) => st.key === k)));
   const sectionCourante = SECTIONS.findIndex((x) => x.cles.includes(meta.key));
   const filDArianne =
     !state.profileSetupFromEdit && !profile.completed && sectionCourante >= 0
