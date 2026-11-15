@@ -1,3 +1,4 @@
+import type { Corpulence } from "./silhouetteRonde";
 import { miseEnValeurDuGenre, miseEnValeurPosee, PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
 import { langue, t } from "./langue";
 import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
@@ -54,6 +55,12 @@ export interface Profile {
   prefs: ProfilePrefs;
   /** Mise en valeur et coupes préférées (31/10/2026, preferencesSilhouette.ts) : `null` par champ = jamais posé. */
   preferencesSilhouette: PreferencesSilhouette;
+  /**
+   * La silhouette en général, fine / moyenne / ronde (15/11/2026, silhouetteRonde.ts) — complément de la morphologie. LA QUESTION
+   * N'EST PAS POSÉE (arbitrage du 15/11/2026) : rien ne l'écrit ni ne la lit en base ; seuls les audits la renseignent. Absente, la
+   * seule silhouette ronde connue est la morphologie « plutôt ronde et régulière ».
+   */
+  corpulence?: Corpulence | null;
 }
 
 export const DEFAULT_PREFS: ProfilePrefs = {

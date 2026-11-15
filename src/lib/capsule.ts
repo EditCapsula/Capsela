@@ -16,6 +16,7 @@ import {
 import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, OccasionKey, Season, Tons } from "./types";
 import { estPieceDeValise } from "./piecesDeValise";
 import { colorimetrieUtilisable } from "./colorimetrie";
+import { compatibiliteRonde, type Corpulence } from "./silhouetteRonde";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
 export function weatherSeasonBucket(temp: number): Season {
@@ -457,6 +458,14 @@ export function occasionsOf(it: Item): OccasionKey[] {
  */
 export type SelectionStrategy = {
   /**
+   * LA SILHOUETTE RONDE (15/11/2026, silhouetteRonde.ts) : "rang" ajoute un rang de compatibilité (familles de pièces favorisées pour
+   * la combinaison morphologie + silhouette ronde), juste après la direction morphologique et la coupe préférée — la règle
+   * morphologique propre reste prioritaire. Jamais un filtre, jamais négatif. Absent : rien ne change.
+   */
+  silhouetteRonde?: "rang";
+  /** Interne : la silhouette déclarée du profil, posée par computeDefaultCapsule pour le rang silhouetteRonde. */
+  corpulence?: Corpulence | null;
+  /**
    * LEVIER D'AUDIT — LA SAISON COLORIMÉTRIQUE DANS LA CAPSULE (15/11/2026, question de la propriétaire : « pourquoi la capsule ne
    * s'adapte pas à ma colorimétrie ? »). La capsule ne lit que les couleurs préférées ; la saison (couleurs signature et neutres) ne
    * sert qu'aux tenues. Ce levier la fait entrer comme RANG de la sélection, jamais comme filtre : une pièce de la palette passe
@@ -778,6 +787,7 @@ function pickBestMarginal(
     strategy.rang3 === "legacy" && morphoFit(it, morphology) ? 1 : 0,
     strategy.v2 ? valeurDirection(it, morphology, retenues, strategy.v2, neutralise) : 0,
     coupe(it, "apres_direction"),
+    strategy.silhouetteRonde === "rang" ? compatibiliteRonde(it, morphology, strategy.corpulence) : 0,
     palette(it, "departage"),
     -it.id,
   ];
@@ -935,6 +945,7 @@ export function computeDefaultCapsule(
   // Les pièces réservées à la valise (maillots, surchemises de plage, 06/11/2026, piecesDeValise.ts) n'entrent dans aucune capsule :
   // écartées ici, à la source, elles ne reviennent pas non plus par les filets de sécurité qui repiochent dans `sourcePool`.
   sourcePool = sourcePool.filter((it) => !estPieceDeValise(it));
+  if (strategy.silhouetteRonde) strategy = { ...strategy, corpulence: profile.corpulence ?? null };
   // Levier d'audit colorimetrieCapsule (cf. SelectionStrategy) : la palette de la saison, signature et neutres.
   if (strategy.colorimetrieCapsule) {
     strategy = {
