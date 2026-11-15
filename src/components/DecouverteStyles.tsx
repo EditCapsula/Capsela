@@ -16,7 +16,7 @@ import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfi
  *
  * Données inchangées : les ids de StyleId, persistés sur `profiles.styles` par l'écran du questionnaire (le brouillon, puis la fin du
  * parcours) ; les libellés, descriptions et visuels de STYLE_CONFIG ; les styles proposés par genre (exposedStyleIds). Le moteur n'est pas
- * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy, Créatif et Romantique côté femme, Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy et Créatif côté homme au 15/11/2026.
+ * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy, Créatif, Romantique et Glamour côté femme, Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy et Créatif côté homme au 15/11/2026.
  */
 /** Hauteur de l'étape Style hors de la rangée flat lay + looks (px, mesurée à 390 × 844) : tout tient sans défiler. */
 const HAUTEUR_HORS_RANGEE = 573;
