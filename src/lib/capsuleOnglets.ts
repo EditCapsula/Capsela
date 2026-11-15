@@ -1,5 +1,5 @@
 import { huesHarmonious, isStatement, rolePieceOf } from "./attributes";
-import { morphologieOrienteLaSelection, styleFit, temperatureDeSaison } from "./capsule";
+import { silhouetteOrienteLaCapsule, styleFit, temperatureDeSaison } from "./capsule";
 import { CATS } from "./data";
 import { colorimetrieUtilisable } from "./colorimetrie";
 import { libelleStyles, paletteColorName, paletteHexes, silhouetteForme, STYLE_ID_TO_CATALOG_LABEL, styleLabel, stylesLabels, type Profile, type StyleId } from "./profile";
@@ -311,7 +311,7 @@ export function criteresDeSelection(p: {
     valeur: `${saison} · Environ ${degresUnite(temperatureDeSaison(saison))}`,
     texte: `Des pièces adaptées ${A_LA_SAISON[saison]}, privilégiant celles prévues pour cette saison ou portables toute l'année.`,
   });
-  if (!styleExplore && morphologieOrienteLaSelection(profile.morphology)) {
+  if (!styleExplore && silhouetteOrienteLaCapsule(profile.morphology)) {
     out.push({
       cle: "silhouette",
       titre: "Ta silhouette",

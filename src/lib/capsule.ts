@@ -16,7 +16,7 @@ import {
 import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, OccasionKey, Season, Tons } from "./types";
 import { estPieceDeValise } from "./piecesDeValise";
 import { colorimetrieUtilisable } from "./colorimetrie";
-import { compatibiliteRonde, type Corpulence } from "./silhouetteRonde";
+import { compatibiliteRonde, estSilhouetteRonde, type Corpulence } from "./silhouetteRonde";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
 export function weatherSeasonBucket(temp: number): Season {
@@ -607,7 +607,13 @@ export const STRATEGIE_PRODUCTION: SelectionStrategy = {
   // couleur préférée d'abord, couleur de la saison colorimétrique ensuite, juste après la couverture des occasions. Femme, Noir /
   // Marine / Camel : couleurs préférées 31,4 → 39,7 %, saison 22,2 → 27,7 %, basiques 21,8 → 20,3, occasions impossibles 0 → 0.
   colorimetrieCapsule: "hierarchie",
+  // LA SILHOUETTE RONDE (15/11/2026), validée par la propriétaire après mesure (silhouette-ronde-moteur.audit.ts, runs 47 et 48) :
+  // ronde seule, vêtements compatibles 36,7 → 42,5 %, taille, style et basiques inchangés, 0 occasion perdue. docs/silhouette-ronde.md.
+  silhouetteRonde: "rang",
 };
+
+/** La production juste avant la règle de la silhouette ronde (15/11/2026) — pour l'audit silhouette-ronde-moteur. */
+export const STRATEGIE_AVANT_SILHOUETTE_RONDE: SelectionStrategy = { ...STRATEGIE_PRODUCTION, silhouetteRonde: undefined };
 
 /** La production juste avant les couleurs hiérarchisées de la capsule (15/11/2026) — pour l'audit colorimetrie-capsule. */
 export const STRATEGIE_AVANT_COULEURS_HIERARCHISEES: SelectionStrategy = { ...STRATEGIE_PRODUCTION, colorimetrieCapsule: undefined };
@@ -713,6 +719,15 @@ export const MORPHOLOGIES_AVEC_DIRECTION: readonly string[] = ["f_poire", "f_tri
 /** True si la morphologie oriente effectivement la sélection. Cf. MORPHOLOGIES_AVEC_DIRECTION. */
 export function morphologieOrienteLaSelection(morphology: string | null | undefined): boolean {
   return morphology != null && MORPHOLOGIES_AVEC_DIRECTION.includes(morphology);
+}
+
+/**
+ * La silhouette oriente-t-elle la capsule, toutes règles confondues (15/11/2026) ? La direction morphologique (A, V), ou la règle de la
+ * silhouette ronde quand elle est en production. C'est CETTE fonction que les textes consultent pour dire « ta silhouette » ;
+ * `morphologieOrienteLaSelection` reste la seule direction (valeurDirection), que d'autres règles lisent.
+ */
+export function silhouetteOrienteLaCapsule(morphology: string | null | undefined, corpulence?: Corpulence | null): boolean {
+  return morphologieOrienteLaSelection(morphology) || (STRATEGIE_PRODUCTION.silhouetteRonde === "rang" && estSilhouetteRonde(morphology, corpulence));
 }
 
 /**

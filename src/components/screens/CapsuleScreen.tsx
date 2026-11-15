@@ -25,7 +25,7 @@ import {
   currentSeasonKey,
   representativeWeatherFor,
   saisonCapsuleDuJour,
-  morphologieOrienteLaSelection,
+  silhouetteOrienteLaCapsule,
   type CapsuleSeason,
 } from "@/lib/capsule";
 import {
@@ -285,7 +285,7 @@ export default function CapsuleScreen() {
   const criteres = useMemo(() => {
     const aUnePalette =
       profile.paletteCouleurs.length > 0 || !!profile.paletteAffinite || !!profile.paletteIntensite;
-    const forme = morphologieOrienteLaSelection(profile.morphology)
+    const forme = silhouetteOrienteLaCapsule(profile.morphology)
       ? silhouetteForme(profile.morphology)
       : "";
     return [

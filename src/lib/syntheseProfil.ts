@@ -1,6 +1,6 @@
-import { morphologieOrienteLaSelection } from "./capsule";
+import { morphologieOrienteLaSelection, silhouetteOrienteLaCapsule } from "./capsule";
+import { BONUS_SILHOUETTE_RONDE_EN_PRODUCTION, estSilhouetteRonde } from "./silhouetteRonde";
 import { colorimetrieUtilisable, type Colorimetrie } from "./colorimetrie";
-import { zonesRequises } from "./garmentEffect";
 
 /*
  * LA SYNTHÈSE DU PROFIL, ÉTAPE 6/7 DE L'ONBOARDING (15/11/2026, brief « Refonte UX/UI – Étape 6/7 : Synthèse du profil »).
@@ -12,14 +12,14 @@ import { zonesRequises } from "./garmentEffect";
 /**
  * CE QUE LA PREMIÈRE CAPSULE PREND EN COMPTE, dit seulement quand c'est vrai (règle du projet : une phrase qui affirme qu'une donnée
  * sert à quelque chose doit l'être dans le code). Le style, toujours ; la silhouette, seulement si elle oriente la sélection de la
- * capsule (`morphologieOrienteLaSelection`, capsule.ts — aujourd'hui les silhouettes en A et en V) ; les couleurs préférées si elles
+ * capsule (`silhouetteOrienteLaCapsule`, capsule.ts — les silhouettes en A et en V, et la silhouette ronde depuis le 15/11/2026) ; les couleurs préférées si elles
  * sont choisies ; la colorimétrie si le questionnaire a donné une saison — la capsule la lit depuis le 15/11/2026, juste après les
  * couleurs préférées (SelectionStrategy.colorimetrieCapsule « hierarchie », capsule.ts). Avant cette date elle ne la lisait pas, et la
  * phrase ne la citait pas.
  */
 export function phraseCapsule(p: { morphology: string | null | undefined; nbCouleurs: number; colorimetrie?: Colorimetrie | null }): string {
   const parts = ["ton style"];
-  if (morphologieOrienteLaSelection(p.morphology)) parts.push("ta silhouette");
+  if (silhouetteOrienteLaCapsule(p.morphology)) parts.push("ta silhouette");
   if (p.nbCouleurs > 0) parts.push("tes couleurs préférées");
   if (colorimetrieUtilisable(p.colorimetrie)) parts.push("ta colorimétrie");
   const liste = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
@@ -27,14 +27,17 @@ export function phraseCapsule(p: { morphology: string | null | undefined; nbCoul
 }
 
 /**
- * CE QUE LA SILHOUETTE CHANGE, dit seulement quand c'est vrai. Elle entre au score des tenues (scoreMorphoV2, garmentEffect.ts) quand
- * le modèle a des repères pour elle (`zonesRequises` non vide) ; la sélection de la capsule ne la lit que pour les silhouettes en A
- * et en V. Une silhouette sans repère (aujourd'hui « plutôt ronde et régulière ») n'oriente rien : la phrase ne prétend pas le
- * contraire.
+ * CE QUE LA SILHOUETTE CHANGE, dit seulement quand c'est vrai. CORRIGÉ LE 15/11/2026 : la version du matin promettait « dans tes
+ * tenues » aux silhouettes que le modèle sait décrire (zonesRequises) — faux, le score des tenues n'a plus de terme morphologique
+ * depuis le 29/08/2026 (R-S9 retirée). Ce qui est vrai :
+ *   · silhouette ronde : la capsule (rang silhouetteRonde) ET les tenues (bonus R-S20, meilleur tirage) ;
+ *   · silhouettes en A et en V : la capsule (direction morphologique) ;
+ *   · les autres : rien n'est orienté, la phrase ne le prétend pas.
  */
 export function phraseSilhouette(morphology: string): string {
-  if (morphologieOrienteLaSelection(morphology)) return "Des coupes, volumes et proportions accordés à ta silhouette, dans ta capsule comme dans tes tenues.";
-  if (zonesRequises(morphology).length) return "Des coupes, volumes et proportions accordés à ta silhouette dans tes tenues.";
+  if (BONUS_SILHOUETTE_RONDE_EN_PRODUCTION && silhouetteOrienteLaCapsule(morphology) && estSilhouetteRonde(morphology))
+    return "Des coupes, volumes et proportions accordés à ta silhouette, dans ta capsule comme dans tes tenues.";
+  if (morphologieOrienteLaSelection(morphology)) return "Des coupes, volumes et proportions accordés à ta silhouette dans ta capsule.";
   return "Elle est gardée dans ton profil, et tu peux la changer à tout moment.";
 }
 

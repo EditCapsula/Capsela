@@ -4,6 +4,16 @@ Brief de la propriétaire : « Évolution du moteur de recommandations Capsela �
 **habiller les formes, pas les dissimuler**. Code : `src/lib/silhouetteRonde.ts`. Tests : `src/lib/__tests__/silhouetteRonde.test.ts`.
 Mesure : `scripts/silhouette-ronde-moteur.audit.ts` (run 47).
 
+## En production depuis le 15/11/2026
+
+Validé par la propriétaire après les runs 47 et 48 : `STRATEGIE_PRODUCTION.silhouetteRonde = "rang"` (capsule) et
+`BONUS_SILHOUETTE_RONDE_EN_PRODUCTION = true` (R-S20 et meilleur tirage de Planifier, de la valise et de la tenue sans historique).
+`STRATEGIE_AVANT_SILHOUETTE_RONDE` garde l'avant pour l'audit. Les textes suivent `silhouetteOrienteLaCapsule` (capsule.ts) :
+« ta silhouette plutôt ronde » sur l'écran Capsule et ses critères, la raison « Pensée aussi pour ta silhouette plutôt ronde » sur
+une pièce compatible, la ligne Morphologie du profil, la synthèse 6/6. La phrase de silhouette de la synthèse a été corrigée le même
+jour : elle promettait « dans tes tenues » aux silhouettes X / 8 et H, ce qui était faux (le score des tenues n'a pas de terme
+morphologique pour elles).
+
 ## Arbitrages (15/11/2026)
 
 - Les cinq morphologies restent telles quelles. X et 8 restent réunis dans « Taille bien marquée » (`f_sablier`), faute de donnée ou

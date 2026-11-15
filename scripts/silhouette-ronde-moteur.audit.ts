@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import type { CatalogItem } from "../src/lib/catalog";
-import { CAPSULE_SEASONS, STRATEGIE_PRODUCTION, computeDefaultCapsule, representativeWeatherFor, styleFit, type SelectionStrategy } from "../src/lib/capsule";
+import { CAPSULE_SEASONS, STRATEGIE_AVANT_SILHOUETTE_RONDE, STRATEGIE_PRODUCTION, computeDefaultCapsule, representativeWeatherFor, styleFit, type SelectionStrategy } from "../src/lib/capsule";
 import { OCCASIONS } from "../src/lib/data";
 import { computeLookScore, generateOutfitWithFallback } from "../src/lib/logic";
 import { STYLE_ID_TO_CATALOG_LABEL } from "../src/lib/profile";
@@ -36,7 +36,8 @@ const COMBINAISONS: { nom: string; morphology: string; corpulence: Corpulence | 
   { nom: "ronde + X / 8 (taille marquée)", morphology: "f_sablier", corpulence: "ronde" },
   { nom: "TÉMOIN X / 8 sans silhouette ronde", morphology: "f_sablier", corpulence: null },
 ];
-const AVEC: SelectionStrategy = { ...STRATEGIE_PRODUCTION, silhouetteRonde: "rang" };
+// En production depuis le 15/11/2026 : « avant » est la production d'avant, « avec » la production.
+const AVEC: SelectionStrategy = STRATEGIE_PRODUCTION;
 const pct = (a: number, d: number) => (d ? ((a / d) * 100).toFixed(1) : "0.0") + " %";
 const moy = (a: number, d: number) => (d ? (a / d).toFixed(1) : "0.0");
 
@@ -90,7 +91,7 @@ describe("silhouette ronde dans le moteur", () => {
               if (r.noCompleteOutfit || !r.ids.length) acc.imp++;
             }
           };
-          const avant = computeDefaultCapsule(profil, w, [], saison, catalogue);
+          const avant = computeDefaultCapsule(profil, w, [], saison, catalogue, STRATEGIE_AVANT_SILHOUETTE_RONDE);
           const apres = computeDefaultCapsule(profil, w, [], saison, catalogue, AVEC);
           mesurer(avant, capAvant);
           mesurer(apres, capApres);
@@ -101,7 +102,7 @@ describe("silhouette ronde dans le moteur", () => {
             const tirer = () => generateOutfitWithFallback(apres, w, occ, "Présentiel", "Verre", [], "femme", saison);
             const compatDe = (ids: number[]) => ids.map((id) => apres.find((x) => x.id === id)).filter((x): x is CatalogItem => !!x && VETEMENTS.includes(x.cat) && compatibiliteRonde(x, comb.morphology, comb.corpulence) === 1).length;
             for (let t = 0; t < 3; t++) {
-              const a = tirer();
+              const a = meilleurTirageMorphologique(tirer, apres, comb.morphology, comb.corpulence, false);
               const b = meilleurTirageMorphologique(tirer, apres, comb.morphology, comb.corpulence, true);
               unTirage.n++; meilleurDeSix.n++;
               if (a.noCompleteOutfit || !a.ids.length) unTirage.echecs++; else unTirage.compat += compatDe(a.ids);

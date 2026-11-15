@@ -3,6 +3,7 @@ import {
   computeDefaultCapsule,
   MORPHOLOGIES_AVEC_DIRECTION,
   morphologieOrienteLaSelection,
+  silhouetteOrienteLaCapsule,
 } from "../capsule";
 import { EMPTY_PROFILE, MORPHOLOGIES, MORPHO_HINTS, silhouetteForme } from "../profile";
 import { MILD, item } from "./fixtures";
@@ -97,7 +98,8 @@ describe("la forme courte affichée par l'écran Capsule", () => {
   });
 
   it("ne nomme pas celles que la sélection ignore", () => {
-    for (const m of MORPHOLOGIES.filter((x) => !morphologieOrienteLaSelection(x))) {
+    // Depuis le 15/11/2026, la silhouette ronde oriente aussi la capsule (silhouetteOrienteLaCapsule) : elle est nommée « plutôt ronde ».
+    for (const m of MORPHOLOGIES.filter((x) => !silhouetteOrienteLaCapsule(x))) {
       expect(silhouetteForme(m), `${m} n'a pas à être nommée`).toBe("");
     }
   });

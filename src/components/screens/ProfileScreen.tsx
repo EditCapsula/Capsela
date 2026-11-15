@@ -25,7 +25,7 @@ import {
 } from "@/components/ProfilUI";
 import { libelleMembreDepuis } from "@/lib/membreDepuis";
 import { useAuth } from "@/lib/auth";
-import { morphologieOrienteLaSelection } from "@/lib/capsule";
+import { silhouetteOrienteLaCapsule } from "@/lib/capsule";
 import { SIGNATURE_AFFICHEE_MAX, colorimetrieUtilisable } from "@/lib/colorimetrie";
 import {
   GENDER_DEPENDENT_FIELDS,
@@ -313,7 +313,7 @@ export default function ProfileScreen() {
             valeur={renseigne("morphologie") ? morphologyLabel(profile.morphology) : "Non renseignée"}
             renseigne={renseigne("morphologie")}
             explication={
-              morphologieOrienteLaSelection(profile.morphology)
+              silhouetteOrienteLaCapsule(profile.morphology)
                 ? "Oriente les coupes et proportions de ta capsule."
                 : "Décrit ta silhouette, sans rien t'imposer."
             }

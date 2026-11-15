@@ -20,10 +20,11 @@ import type { CategoryKey, Item } from "./types";
 export type Corpulence = "fine" | "moyenne" | "ronde";
 
 /**
- * LE BONUS DE TENUE EN PRODUCTION. Faux tant que la mesure avant / après (scripts/silhouette-ronde-moteur.audit.ts) n'a pas été
- * validée par la propriétaire ; le levier `silhouetteRonde` de computeLookScore le remplace pour la mesure.
+ * LE BONUS DE TENUE EN PRODUCTION, et le meilleur tirage de Planifier, de la valise et de la tenue sans historique. Activé le
+ * 15/11/2026 après mesure (scripts/silhouette-ronde-moteur.audit.ts) ; le levier `silhouetteRonde` de computeLookScore le remplace pour
+ * la mesure.
  */
-export const BONUS_SILHOUETTE_RONDE_EN_PRODUCTION = false;
+export const BONUS_SILHOUETTE_RONDE_EN_PRODUCTION = true; // validé par la propriétaire le 15/11/2026 (runs 47 et 48)
 
 /** La silhouette ronde est connue : déclarée (le jour où la question existera), ou la morphologie « plutôt ronde et régulière ». */
 export function estSilhouetteRonde(morphology: string | null | undefined, corpulence?: Corpulence | null): boolean {

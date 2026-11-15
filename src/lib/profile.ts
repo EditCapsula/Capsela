@@ -495,6 +495,8 @@ export function morphologyLabel(m: string | null): string {
 export const SILHOUETTE_FORME: Record<string, string> = {
   f_poire: "en A",
   f_triangle_inverse: "en V",
+  // La silhouette ronde oriente la capsule depuis le 15/11/2026 (silhouetteRonde.ts) : « ta silhouette plutôt ronde ».
+  f_pomme: "plutôt ronde",
 };
 
 export function silhouetteForme(m: string | null): string {

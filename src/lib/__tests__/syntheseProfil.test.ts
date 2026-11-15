@@ -3,9 +3,11 @@ import { DECOMPTE_SYNTHESE_S, dureeDecompteSynthese, libelleDecompte, phraseCaps
 
 describe("phraseSilhouette", () => {
   it("ne promet que ce que le moteur fait", () => {
-    expect(phraseSilhouette("f_poire")).toContain("dans ta capsule comme dans tes tenues");
-    expect(phraseSilhouette("f_sablier")).toBe("Des coupes, volumes et proportions accordés à ta silhouette dans tes tenues.");
-    expect(phraseSilhouette("f_pomme")).not.toContain("accordés");
+    // 15/11/2026 : la silhouette ronde oriente la capsule et les tenues ; A et V la capsule seule ; les autres rien.
+    expect(phraseSilhouette("f_pomme")).toContain("dans ta capsule comme dans tes tenues");
+    expect(phraseSilhouette("f_poire")).toBe("Des coupes, volumes et proportions accordés à ta silhouette dans ta capsule.");
+    expect(phraseSilhouette("f_sablier")).not.toContain("accordés");
+    expect(phraseSilhouette("f_rectangle")).not.toContain("tenues");
   });
 });
 

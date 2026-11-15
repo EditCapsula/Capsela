@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { effetMorphologique } from "../garmentEffect";
-import { CAPSULE_MAX_PIECES, STRATEGIE_LEGACY, STRATEGIE_PRODUCTION, computeDefaultCapsule } from "../capsule";
+import { CAPSULE_MAX_PIECES, STRATEGIE_AVANT_SILHOUETTE_RONDE, STRATEGIE_LEGACY, STRATEGIE_PRODUCTION, computeDefaultCapsule } from "../capsule";
 import { computeLookScore } from "../logic";
 import { suggestOccasions } from "../attributes";
 import { EMPTY_PROFILE, type Profile } from "../profile";
@@ -168,10 +168,11 @@ describe("Neutralisation du signal legacy (29/08/2026)", () => {
     // Le legacy déplaçait leurs capsules sur 120 sur 120. V2 ne les touche pas :
     // axeDirection ne reconnaît que poire et triangle inversé, tout le reste
     // retourne null — par construction, pas par liste d'exclusion.
+    // La direction seule : la règle de la silhouette ronde (15/11/2026, silhouetteRonde.test.ts) est une autre règle, écartée ici.
     const catalogue = catalogueAvecLeviers();
-    const sans = computeDefaultCapsule(profile(), at(16, "Printemps / Été"), [], "Printemps", catalogue);
+    const sans = computeDefaultCapsule(profile(), at(16, "Printemps / Été"), [], "Printemps", catalogue, STRATEGIE_AVANT_SILHOUETTE_RONDE);
     for (const m of ["f_rectangle", "f_sablier", "f_pomme"]) {
-      const avec = computeDefaultCapsule(profile({ morphology: m }), at(16, "Printemps / Été"), [], "Printemps", catalogue);
+      const avec = computeDefaultCapsule(profile({ morphology: m }), at(16, "Printemps / Été"), [], "Printemps", catalogue, STRATEGIE_AVANT_SILHOUETTE_RONDE);
       expect(avec.map((it) => it.id)).toEqual(sans.map((it) => it.id));
     }
   });
@@ -248,7 +249,8 @@ describe("V2 branchée en production (29/08/2026) — invariants", () => {
     // contredirait le principe « UNKNOWN plutôt que donnée fausse ».
     const catalogue = catalogueAvecLeviers();
     for (const m of ["f_rectangle", "f_sablier", "f_pomme"]) {
-      const sans = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue);
+      // La direction seule, comme ci-dessus : la règle de la silhouette ronde est écartée des deux côtés.
+      const sans = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue, STRATEGIE_AVANT_SILHOUETTE_RONDE);
       const avec = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue, V2_A);
       expect(avec.map((it) => it.id)).toEqual(sans.map((it) => it.id));
     }
