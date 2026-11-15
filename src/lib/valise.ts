@@ -1,3 +1,4 @@
+import { meilleurTirageMorphologique } from "./silhouetteRonde";
 import { previsionPour, type Prevision } from "./prevision";
 import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
 import { ajouterCouverture, ajouterVesteDePluie, estImpermeableDeValise, estJourneeDeMarche, estPieceDeValise, estRandonnee, estRobeDePlage, estVesteDePluie, piecesPourLaSituation, poolDeBaignade, poolDecontracte, poolDeRandonnee, sansTenueDeSport } from "./piecesDeValise";
@@ -430,7 +431,9 @@ export function generateurMoteur(
    * de plage, piscine ou spa : le pool de la valise, reconstitué catégorie par catégorie, les perdrait sinon au profit d'un short ou
    * d'un haut du dressing.
    */
-  piecesValise: Item[] = []
+  piecesValise: Item[] = [],
+  /** La morphologie du profil (15/11/2026) : la règle de la silhouette ronde s'applique aux looks de la valise (meilleurTirageMorphologique). */
+  morphologie: string | null = null
 ): Generateur {
   return (poolComplet, s) => {
     // Les pièces réservées de cette situation seulement (baignade, randonnée, pluie) : piecesPourLaSituation. Une veste de pluie du
@@ -462,7 +465,11 @@ export function generateurMoteur(
     if (!pool.length) return null;
     // Le niveau du contexte de vacances, quand la situation en porte un (PLANCHERS_VACANCES) ; sinon celui de l'occasion, comme avant.
     const leviers = s.plancher != null ? { plancher: s.plancher } : undefined;
-    const r = generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, leviers, colorimetrie);
+    const r = meilleurTirageMorphologique(
+      () => generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, leviers, colorimetrie),
+      pool,
+      morphologie
+    );
     if (r.noCompleteOutfit || !r.ids.length) return null;
     // Les chaussures et le sac ajoutés suivent les règles du moteur (météo, occasion, couleur, saison) : 12/10/2026, demandé « tenir compte des règles du moteur ».
     const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion, meteo }, (s.sousIds ?? []).includes("spa"));

@@ -104,3 +104,35 @@ describe("la capsule (levier silhouetteRonde)", () => {
     expect(style(apres)).toBeGreaterThanOrEqual(style(avant) - 1);
   });
 });
+
+describe("Planifier, valise, tenue du jour : le meilleur tirage pour une silhouette ronde (meilleurTirageMorphologique)", () => {
+  const encolure = p("haut", "Pull col V");
+  const bas = p("pantalon", "Pantalon droit");
+  const neutre1 = p("haut", "T-shirt basique");
+  const neutre2 = p("pantalon", "Jogging");
+  const pool = [encolure, bas, neutre1, neutre2];
+  const sequence = (tenues: number[][]) => {
+    let i = 0;
+    let appels = 0;
+    return { tirer: () => ({ ids: tenues[Math.min(i++, tenues.length - 1)], noCompleteOutfit: false, appels: ++appels }), nb: () => appels };
+  };
+  it("règle éteinte ou silhouette non ronde : un seul tirage, comme avant", async () => {
+    const { meilleurTirageMorphologique } = await import("../silhouetteRonde");
+    const a = sequence([[neutre1.id, neutre2.id], [encolure.id, bas.id]]);
+    expect(meilleurTirageMorphologique(a.tirer, pool, "f_pomme", null, false).ids).toEqual([neutre1.id, neutre2.id]);
+    expect(a.nb()).toBe(1);
+    const b = sequence([[neutre1.id, neutre2.id], [encolure.id, bas.id]]);
+    expect(meilleurTirageMorphologique(b.tirer, pool, "f_sablier", null, true).ids).toEqual([neutre1.id, neutre2.id]);
+    expect(b.nb()).toBe(1);
+  });
+  it("silhouette ronde, règle active : la tenue qui sert le mieux la règle, parmi des tirages du même moteur", async () => {
+    const { meilleurTirageMorphologique } = await import("../silhouetteRonde");
+    const c = sequence([[neutre1.id, neutre2.id], [encolure.id, neutre2.id], [encolure.id, bas.id]]);
+    expect(meilleurTirageMorphologique(c.tirer, pool, "f_pomme", null, true).ids).toEqual([encolure.id, bas.id]);
+  });
+  it("à égalité, le premier tirage est gardé", async () => {
+    const { meilleurTirageMorphologique } = await import("../silhouetteRonde");
+    const d = sequence([[neutre1.id, neutre2.id], [neutre2.id, neutre1.id]]);
+    expect(meilleurTirageMorphologique(d.tirer, pool, "f_pomme", null, true).ids).toEqual([neutre1.id, neutre2.id]);
+  });
+});

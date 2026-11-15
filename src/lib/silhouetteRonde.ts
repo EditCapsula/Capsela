@@ -123,3 +123,37 @@ export function bonusSilhouetteRonde(pieces: readonly Item[], morphology: string
   const n = vetements.filter((p) => compatibiliteRonde(p, morphology, corpulence) === 1).length;
   return n >= 2 ? 6 : n === 1 ? 3 : 0;
 }
+
+/**
+ * LA RÈGLE DANS TOUS LES PARCOURS DE TENUE (15/11/2026, demandé : « Planifier et valise doivent appliquer les règles morphologiques »).
+ * Le bonus R-S20 ne joue que là où le score départage plusieurs tirages : la tenue du jour avec un historique récent, Planifier avec
+ * une humeur. Partout ailleurs — Planifier sans humeur, la valise, la tenue du jour sans historique — le moteur ne tirait qu'une fois.
+ * Pour une silhouette ronde, et seulement elle, on tire TIRAGES_MORPHOLOGIQUES fois le MÊME moteur et on garde la tenue qui sert le
+ * mieux la règle ; à égalité, le premier tirage, celui d'avant. Jamais un second moteur : toutes les tentatives sont des tenues du
+ * moteur, avec ses contraintes (météo, occasion, règles). Sans silhouette ronde, ou règle éteinte : un seul tirage, comme avant.
+ */
+export const TIRAGES_MORPHOLOGIQUES = 6;
+
+export function meilleurTirageMorphologique<T extends { ids: number[]; noCompleteOutfit?: boolean }>(
+  tirer: () => T,
+  pool: readonly Item[],
+  morphology: string | null | undefined,
+  corpulence?: Corpulence | null,
+  actif: boolean = BONUS_SILHOUETTE_RONDE_EN_PRODUCTION
+): T {
+  const premier = tirer();
+  if (!actif || !estSilhouetteRonde(morphology, corpulence) || premier.noCompleteOutfit || !premier.ids.length) return premier;
+  const note = (r: T) => bonusSilhouetteRonde(r.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => !!p), morphology, corpulence);
+  let meilleur = premier;
+  let meilleureNote = note(premier);
+  for (let i = 1; i < TIRAGES_MORPHOLOGIQUES && meilleureNote < 6; i++) {
+    const r = tirer();
+    if (r.noCompleteOutfit || !r.ids.length) continue;
+    const n = note(r);
+    if (n > meilleureNote) {
+      meilleur = r;
+      meilleureNote = n;
+    }
+  }
+  return meilleur;
+}

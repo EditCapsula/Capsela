@@ -1,3 +1,4 @@
+import { meilleurTirageMorphologique } from "./silhouetteRonde";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import type { Weather } from "./data";
 import { formalityOf } from "./attributes";
@@ -170,8 +171,10 @@ export interface ParametresHumeur {
 export function genererTenueHumeur(p: ParametresHumeur): GeneratedOutfitWithFallback {
   const tirer = () =>
     generateOutfitWithFallback(p.pool, p.weather, p.occasion, p.workMode, p.dateContext, p.preferredHexes, p.gender, undefined, undefined, p.colorimetrie, p.soireeHabillee);
+  // Sans humeur, un tirage — ou, pour une silhouette ronde, le meilleur de quelques tirages (meilleurTirageMorphologique, 15/11/2026).
+  if (!p.humeur) return meilleurTirageMorphologique(tirer, p.pool, p.morphology);
   const premier = tirer();
-  if (!p.humeur || premier.noCompleteOutfit) return premier;
+  if (premier.noCompleteOutfit) return premier;
   const resultats: GeneratedOutfitWithFallback[] = [premier];
   for (let i = 1; i < CANDIDATS_HUMEUR; i++) {
     const r = tirer();

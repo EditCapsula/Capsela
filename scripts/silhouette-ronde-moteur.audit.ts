@@ -5,7 +5,7 @@ import { CAPSULE_SEASONS, STRATEGIE_PRODUCTION, computeDefaultCapsule, represent
 import { OCCASIONS } from "../src/lib/data";
 import { computeLookScore, generateOutfitWithFallback } from "../src/lib/logic";
 import { STYLE_ID_TO_CATALOG_LABEL } from "../src/lib/profile";
-import { compatibiliteRonde, criteresRonde, type Corpulence } from "../src/lib/silhouetteRonde";
+import { compatibiliteRonde, criteresRonde, meilleurTirageMorphologique, type Corpulence } from "../src/lib/silhouetteRonde";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import type { CategoryKey, Item, OccasionKey } from "../src/lib/types";
 import { STYLES_FEMME, assertCatalogueStyles, profilAudit } from "./harnaisAudit";
@@ -69,6 +69,9 @@ describe("silhouette ronde dans le moteur", () => {
       const capApres = { ...capAvant };
       let changees = 0;
       const tenue = { n: 0, change: 0, compatOff: 0, compatOn: 0, pieces: 0, scoreBaisse: 0 };
+      // PLANIFIER SANS HUMEUR, VALISE, TENUE DU JOUR SANS HISTORIQUE (meilleurTirageMorphologique) : un tirage contre le meilleur de six.
+      const unTirage = { n: 0, compat: 0, echecs: 0 };
+      const meilleurDeSix = { n: 0, compat: 0, echecs: 0 };
       for (const style of STYLES_FEMME)
         for (const saison of CAPSULE_SEASONS) {
           const profil = { ...profilAudit({ gender: "femme", styles: [style], morphology: comb.morphology }), corpulence: comb.corpulence };
@@ -93,6 +96,18 @@ describe("silhouette ronde dans le moteur", () => {
           mesurer(apres, capApres);
           const ids = new Set(avant.map((i) => i.id));
           changees += apres.filter((i) => !ids.has(i.id)).length;
+
+          for (const occ of OCCS) {
+            const tirer = () => generateOutfitWithFallback(apres, w, occ, "Présentiel", "Verre", [], "femme", saison);
+            const compatDe = (ids: number[]) => ids.map((id) => apres.find((x) => x.id === id)).filter((x): x is CatalogItem => !!x && VETEMENTS.includes(x.cat) && compatibiliteRonde(x, comb.morphology, comb.corpulence) === 1).length;
+            for (let t = 0; t < 3; t++) {
+              const a = tirer();
+              const b = meilleurTirageMorphologique(tirer, apres, comb.morphology, comb.corpulence, true);
+              unTirage.n++; meilleurDeSix.n++;
+              if (a.noCompleteOutfit || !a.ids.length) unTirage.echecs++; else unTirage.compat += compatDe(a.ids);
+              if (b.noCompleteOutfit || !b.ids.length) meilleurDeSix.echecs++; else meilleurDeSix.compat += compatDe(b.ids);
+            }
+          }
 
           // La tenue : mêmes tirages, choix au meilleur score sans puis avec R-S20 (sur la capsule « après », celle de production si validée).
           for (const occ of OCCS) {
@@ -121,6 +136,9 @@ describe("silhouette ronde dans le moteur", () => {
           `capsule ${nom.padEnd(5)} ${moy(a.taille, a.n)} p. · vêtements compatibles ${pct(a.compat, a.vet)} · pièces du style ${moy(a.style, a.n)} · basiques ${moy(a.basiques, a.n)} · occasions impossibles ${a.imp}`,
         );
       console.log(`pièces changées par capsule : ${moy(changees, capAvant.n)}`);
+      console.log(
+        `Planifier sans humeur / valise / tenue sans historique : vêtements compatibles par tenue ${moy(unTirage.compat, unTirage.n)} → ${moy(meilleurDeSix.compat, meilleurDeSix.n)} · tenues impossibles ${unTirage.echecs} → ${meilleurDeSix.echecs} (sur ${unTirage.n})`,
+      );
       console.log(
         `tenue (R-S20, mêmes tirages) : choix changé ${pct(tenue.change, tenue.n)} des ${tenue.n} cas · vêtements compatibles par tenue ${moy(tenue.compatOff, tenue.n)} → ${moy(tenue.compatOn, tenue.n)} · tenues dont le score baisse : ${tenue.scoreBaisse}`,
       );
