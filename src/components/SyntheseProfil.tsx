@@ -87,6 +87,7 @@ export default function SyntheseProfil({
   saisonCapsule,
   modifiable,
   onModifier,
+  onVoirCapsule,
 }: {
   profil: Profile;
   /** La saison vestimentaire de la première capsule, déterminée par l'écran (règle de l'écran Capsule). */
@@ -94,6 +95,8 @@ export default function SyntheseProfil({
   /** L'étape existe dans le parcours de ce profil (la silhouette n'est posée qu'aux profils femme, etc.). */
   modifiable: (etape: string) => boolean;
   onModifier: (etape: string) => void;
+  /** Termine le parcours et ouvre l'écran Capsule (absent en modification depuis Mon profil). */
+  onVoirCapsule?: () => void;
 }) {
   const g = profil.gender;
   const modif = (etape: string) => (modifiable(etape) ? () => onModifier(etape) : undefined);
@@ -257,6 +260,13 @@ export default function SyntheseProfil({
         </div>
         <p className="t-titre-carte text-ink mt-[10px]">Ta première capsule sera celle de la saison en cours.</p>
         <p className="text-[12.5px] text-ink-soft leading-[1.5] mt-[6px]">{phraseCapsule({ morphology: silhouettePosee ? profil.morphology : null, nbCouleurs: profil.paletteCouleurs.length })}</p>
+        {/* LE LIEN VERS LA CAPSULE (15/11/2026, demandé) : la capsule de cette saison, sur l'écran Capsule — le parcours se termine
+            d'abord (profil enregistré), comme « Créer mon dressing ». */}
+        {onVoirCapsule && (
+          <button type="button" onClick={onVoirCapsule} className="mt-[6px] -ml-1 px-1 min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer">
+            Voir ma capsule →
+          </button>
+        )}
       </section>
     </div>
   );

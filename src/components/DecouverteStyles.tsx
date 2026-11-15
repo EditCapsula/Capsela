@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Card from "@/components/Card";
 import { BoutonRond, CarteGlissante, FlecheParcours, IconeCoeur, IconeCroix } from "@/components/ParcoursVote";
 import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfigFor, visuelEtapeStyle, voterStyle, type Gender, type StyleId } from "@/lib/profile";
@@ -24,6 +25,7 @@ export default function DecouverteStyles({
   styles,
   onChange,
   onRefus,
+  cibleGestes,
 }: {
   gender: Gender | null;
   /** Les styles choisis, dans l'ordre du choix (le premier est le principal), déjà réduits à ceux du genre. */
@@ -31,6 +33,13 @@ export default function DecouverteStyles({
   onChange: (styles: string[]) => void;
   /** Un quatrième « J'aime » refusé : l'écran le dit dans « Mes styles sélectionnés » (le libellé du style refusé). */
   onRefus: (libelle: string | null) => void;
+  /**
+   * LES GESTES DANS LE PIED (15/11/2026, signalé : « dès que j'ai choisi un style, celui-ci cache les boutons permettant d'en
+   * sélectionner d'autres ») : « Mes styles sélectionnés » grandit le pied fixe, et les deux ronds, posés sous la carte, passaient
+   * sous le pli. L'écran fournit ici un emplacement de son pied, juste au-dessus des styles choisis : les gestes y sont toujours
+   * visibles, quelle que soit la hauteur. Sans emplacement (null, le temps du premier rendu), ils restent sous la carte.
+   */
+  cibleGestes?: HTMLElement | null;
 }) {
   const ids = exposedStyleIds(gender);
   const config = styleConfigFor(gender);
@@ -51,6 +60,22 @@ export default function DecouverteStyles({
     onChange(r.styles);
     suivant();
   };
+  const gestes = (
+      <div className="grid grid-cols-2 items-start pt-[8px]">
+        <BoutonRond libelle="Pas pour moi" aria={`Pas pour moi : ${cfg.label}, style suivant`} onClick={() => voter("pasPourMoi")}>
+          <IconeCroix />
+        </BoutonRond>
+        <BoutonRond
+          libelle="J'aime"
+          aria={choisi ? `${cfg.label} est déjà sélectionné : style suivant` : `J'aime : ajouter ${cfg.label} à ma sélection`}
+          onClick={() => voter("aime")}
+          principal={choisi}
+          actif={choisi}
+        >
+          <IconeCoeur plein={choisi} />
+        </BoutonRond>
+      </div>
+  );
   return (
     <div className="mt-3">
       <Card rayon="carte" className="relative px-[10px] pt-[10px] pb-[12px]" aria-roledescription="carrousel" aria-label="Styles">
@@ -81,8 +106,6 @@ export default function DecouverteStyles({
                       <img src={visuel} alt="" width={900} height={1200} decoding="async" className="w-full h-full object-cover block" draggable={false} />
                     )}
                   </div>
-                  <FlecheParcours sens="precedente" libelle="Style précédent" onClick={i > 0 ? () => setIndex(i - 1) : undefined} />
-                  <FlecheParcours sens="suivante" libelle="Style suivant" onClick={i < ids.length - 1 ? () => setIndex(i + 1) : undefined} />
                 </div>
                 {/* LES LOOKS PORTÉS : sans clic (LOOKS_PORTES_STYLE) ; un style sans photo n'a pas de galerie (aucune donnée inventée).
                     En 4:5, calés en haut : la tête n'est jamais coupée, seule la marge sous les pieds se réduit. */}
@@ -108,25 +131,18 @@ export default function DecouverteStyles({
             </div>
           </CarteGlissante>
         </div>
+        {/* LES FLÈCHES AUX EXTRÉMITÉS DU CARROUSEL (15/11/2026, demandé) : sur les bords de la carte, à mi-hauteur, plus sur le flat lay. */}
+        <div className="absolute inset-y-0 -left-[14px] -right-[14px] pointer-events-none">
+          <div className="relative h-full pointer-events-none [&>button]:pointer-events-auto">
+            <FlecheParcours sens="precedente" libelle="Style précédent" onClick={i > 0 ? () => setIndex(i - 1) : undefined} />
+            <FlecheParcours sens="suivante" libelle="Style suivant" onClick={i < ids.length - 1 ? () => setIndex(i + 1) : undefined} />
+          </div>
+        </div>
       </Card>
 
       {/* LES DEUX GESTES, ceux du parcours de la capsule ; chacun passe au style suivant. J'aime au trait tant que le style n'est pas
           choisi, plein et terracotta une fois choisi. */}
-      <div className="grid grid-cols-2 items-start mt-[8px]">
-        <BoutonRond libelle="Pas pour moi" aria={`Pas pour moi : ${cfg.label}, style suivant`} onClick={() => voter("pasPourMoi")}>
-          <IconeCroix />
-        </BoutonRond>
-        <BoutonRond
-          libelle="J'aime"
-          aria={choisi ? `${cfg.label} est déjà sélectionné : style suivant` : `J'aime : ajouter ${cfg.label} à ma sélection`}
-          onClick={() => voter("aime")}
-          principal={choisi}
-          actif={choisi}
-        >
-          <IconeCoeur plein={choisi} />
-        </BoutonRond>
-      </div>
-
+      {cibleGestes ? createPortal(gestes, cibleGestes) : gestes}
     </div>
   );
 }

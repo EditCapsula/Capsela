@@ -373,16 +373,16 @@ export default function ProfileSetupScreen() {
   // parcours qu'une fois ; le bouton dit qu'elle est en cours. Un échec rend la main.
   // Un toucher est un événement « discret » : React applique `creation` avant le suivant, un double toucher trouve donc le verrou posé.
   const [creation, setCreation] = useState(false);
-  const finish = async () => {
+  const finish = async (vers: "dressing" | "capsule" = "dressing") => {
     if (creation) return;
     setCreation(true);
     try {
-      await terminer();
+      await terminer(vers);
     } catch {
       setCreation(false);
     }
   };
-  const terminer = async () => {
+  const terminer = async (vers: "dressing" | "capsule") => {
     // La fin du parcours efface l'étape gardée : un profil terminé n'a plus rien à reprendre.
     const { onboardingEtape: _fini, ...prefs } = draft.prefs;
     void _fini;
@@ -390,6 +390,8 @@ export default function ProfileSetupScreen() {
     if (state.profileSetupFromEdit) actions.go(state.profileSetupReturn);
     // Le parcours mène au dressing : l'écran Dressing vide (01/11/2026, demandé), qui explique par quoi commencer, garde « Ajouter ma
     // première pièce » et propose la capsule et des idées de looks. Avant (07/10/2026) : l'ajout d'une pièce s'ouvrait directement.
+    // « Voir ma capsule » (15/11/2026, bloc « Ta première capsule » de la synthèse) : la même fin de parcours, puis l'écran Capsule.
+    else if (vers === "capsule") actions.goCapsule();
     else actions.goWardrobe();
   };
 
@@ -559,6 +561,8 @@ export default function ProfileSetupScreen() {
    * « Modifier » : la création ne part jamais pendant qu'on consulte ou modifie son profil. Durée réglable, 0 le coupe
    * (DECOMPTE_SYNTHESE_S et le réglage de l'appareil, syntheseProfil.ts).
    */
+  // L'emplacement des gestes de l'étape Style, dans le pied (DecouverteStyles, `cibleGestes`).
+  const [cibleGestes, setCibleGestes] = useState<HTMLDivElement | null>(null);
   const [decompteArrete, setDecompteArrete] = useState(false);
   const [dureeDecompte] = useState(() => dureeDecompteSynthese());
   const decompteActif = meta.key === "pal_recap" && isLast && !state.profileSetupFromEdit && !profile.completed && !decompteArrete && !creation && dureeDecompte > 0;
@@ -806,6 +810,7 @@ export default function ProfileSetupScreen() {
           profil={draft}
           saisonCapsule={state.capsuleSeason || currentSeasonKey()}
           modifiable={(etape) => STEPS.some((x) => x.key === etape)}
+          onVoirCapsule={!state.profileSetupFromEdit && isLast ? () => void finish("capsule") : undefined}
           onModifier={(etape) => {
             // Ouvrir une modification arrête le compte à rebours pour de bon : la création ne part jamais pendant une modification.
             setDecompteArrete(true);
@@ -821,7 +826,7 @@ export default function ProfileSetupScreen() {
           pour moi, comme les suggestions de la capsule, à la place de la grille de cartes ; les styles choisis restent visibles dessous
           (« Mes styles sélectionnés »), et le refus d'un quatrième se dit là, à côté d'eux. Même brouillon, mêmes ids, même plafond. */}
       {meta.key === "style" && (
-        <DecouverteStyles gender={draft.gender} styles={stylesDuGenre(draft.styles, draft.gender)} onChange={(styles) => patch({ styles })} onRefus={signalerRefusStyle} />
+        <DecouverteStyles gender={draft.gender} styles={stylesDuGenre(draft.styles, draft.gender)} onChange={(styles) => patch({ styles })} onRefus={signalerRefusStyle} cibleGestes={cibleGestes} />
       )}
 
       {meta.key === "morpho" && (
@@ -1022,6 +1027,8 @@ export default function ProfileSetupScreen() {
           style={{ paddingBottom: pied?.lien ? "calc(4px + env(safe-area-inset-bottom))" : "calc(16px + env(safe-area-inset-bottom))" }}
         >
           {/* MES STYLES SÉLECTIONNÉS, dans le pied (14/11/2026) : visibles pendant toute l'étape, au-dessus du bouton. */}
+          {/* Les gestes J'aime / Pas pour moi, posés ici par DecouverteStyles (15/11/2026) : jamais sous le pli. */}
+          {meta.key === "style" && <div ref={setCibleGestes} />}
           {meta.key === "style" && (
             <div className="mb-[10px]">
               <MesStylesSelectionnes

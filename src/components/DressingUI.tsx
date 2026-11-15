@@ -50,25 +50,20 @@ export function OngletsDressing({ actif, onChange }: { actif: OngletDressing; on
 }
 
 /**
- * La synthèse compacte d'un onglet : le nombre (chiffres en Manrope), son libellé, l'action principale. RACCOURCIE LE 15/11/2026
- * (demandé : « juste 2 looks », même traitement du bouton) : « 14 pièces » / « + Ajouter », « 2 looks » / « + Créer » — une ligne
- * jusqu'à 320 px ; le libellé complet de l'action reste pour les lecteurs d'écran (`actionAria`).
+ * La synthèse compacte d'un onglet : le nombre (chiffres en Manrope) et son libellé à gauche, l'action en LIEN TEXTUEL à droite
+ * (15/11/2026, demandé : « 14 pièces », plus de gros bouton terracotta, « + Ajouter une pièce » en lien aligné à droite du compteur).
+ * Rien n'est jamais tronqué : sur un écran trop étroit pour les deux, le lien passe sous le compteur plutôt que de le couper.
  */
-export function CarteSynthese({ nombre, libelle, action, actionAria, onAction }: { nombre: ReactNode; libelle: string; action: string; actionAria?: string; onAction: () => void }) {
+export function CarteSynthese({ nombre, libelle, action, onAction }: { nombre: ReactNode; libelle: string; action: string; onAction: () => void }) {
   return (
-    <Card rayon="bloc" className="mt-3 flex items-center gap-3 pl-4 pr-[6px] py-[6px]">
-      <div className="min-w-0 flex-1 flex items-center gap-[8px]">
+    <Card rayon="bloc" className="mt-3 flex flex-wrap items-center justify-between gap-x-3 pl-4 pr-[6px] min-h-[52px]">
+      <div className="flex items-baseline gap-[6px] whitespace-nowrap">
         <span className="text-[22px] leading-none font-semibold text-ink tabular-nums" style={{ fontFamily: "var(--font-chiffres)" }}>
           {nombre}
         </span>
-        <span className="text-[12.5px] leading-[1.25] text-muted-3 min-w-0" style={{ textWrap: "balance" }}>{libelle}</span>
+        <span className="text-[13px] text-muted-3">{libelle}</span>
       </div>
-      <button
-        type="button"
-        onClick={onAction}
-        aria-label={actionAria}
-        className="flex-shrink-0 h-[40px] px-[13px] rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-[12.5px] font-semibold whitespace-nowrap cursor-pointer"
-      >
+      <button type="button" onClick={onAction} className="min-h-[44px] px-[10px] text-[13px] font-semibold text-terracotta-deep whitespace-nowrap cursor-pointer active:opacity-70">
         + {action}
       </button>
     </Card>
