@@ -494,6 +494,15 @@ export function silhouetteForme(m: string | null): string {
   return SILHOUETTE_FORME[m ?? ""] ?? "";
 }
 
+/** Visuels de l'étape Silhouette (femme) — fichiers dans public/onboarding/silhouettes/ ; repris par la synthèse du profil (6/7). */
+export const VISUELS_SILHOUETTE: Record<string, string> = {
+  f_sablier: "/onboarding/silhouettes/sablier.webp",
+  f_poire: "/onboarding/silhouettes/poire.webp",
+  f_pomme: "/onboarding/silhouettes/pomme.webp",
+  f_rectangle: "/onboarding/silhouettes/rectangle.webp",
+  f_triangle_inverse: "/onboarding/silhouettes/triangle-inverse.webp",
+};
+
 export const MORPHO_HINTS: Record<string, string> = {
   f_rectangle: "Épaules, taille et hanches sont assez alignées, sans marquage particulier.",
   f_sablier: "Tes épaules et tes hanches ont une largeur proche, avec une taille nettement plus fine.",
