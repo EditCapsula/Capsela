@@ -5,7 +5,7 @@ import type { CatalogItem } from "../src/lib/catalog";
 import { CATS, type Weather } from "../src/lib/data";
 import { genererTenueDiversifiee } from "../src/lib/diversite";
 import { composeWardrobePool } from "../src/lib/selectors";
-import type { StyleId } from "../src/lib/profile";
+import type { Affinite, Intensite, Profile, StyleId } from "../src/lib/profile";
 import type { DateContext, OccasionKey, WorkMode } from "../src/lib/types";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { STYLES_FEMME, STYLES_HOMME, assertCatalogueStyles, profilAudit } from "./harnaisAudit";
@@ -43,9 +43,9 @@ function trios(styles: StyleId[]): StyleId[][] {
   return r;
 }
 
-function mesurer(catalogue: CatalogItem[], genre: "femme" | "homme" | null, styles: StyleId[], temp: number, label: string, ctx: Contexte) {
+function mesurer(catalogue: CatalogItem[], genre: "femme" | "homme" | null, styles: StyleId[], temp: number, label: string, ctx: Contexte, patch: Partial<Profile> = {}) {
   // Genre non renseigné (15/11/2026) : la capsule du compte signalé montre des pièces homme, 33 au lieu de 40.
-  const profil = genre ? profilAudit({ gender: genre, styles }) : profilAudit({ gender: "femme", styles, patch: { gender: null } });
+  const profil = genre ? profilAudit({ gender: genre, styles, patch }) : profilAudit({ gender: "femme", styles, patch: { ...patch, gender: null } });
   const w: Weather = weatherForDay(temp, label, currentSeasonKey(), CHALEUR_HORS_SAISON);
   const capsule = computeDefaultCapsule(profil, w, [], saisonCapsuleDuJour(w.temp), catalogue);
   const pool = composeWardrobePool([], capsule, CAT_KEYS);
@@ -117,6 +117,19 @@ describe("première tenue d'un compte neuf (dressing vide)", () => {
           console.log(`${temp}° ${ctx.nom} : capsule ${m.capsule}, pool ${m.pool}, échecs ${m.echecs}/${TIRAGES}` + (m.raisons.size ? ` (${[...m.raisons].map(([k, n]) => `${k} ×${n}`).join(", ")})` : "") + ` | ${[...m.parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`);
         }
     }
+
+    // 1 ter. Le trio en homme, avec chaque PALETTE déclarable (15/11/2026) : sur le téléphone, la capsule du compte signalé compte 33 pièces
+    // (« ta palette »), contre 37-38 sans palette ; la tenue du jour échoue en homme et réussit en femme. Le levier : affinité × intensité.
+    console.log("\n=== Trio signalé, homme, par palette (10°) ===");
+    const AFFINITES: (Affinite | null)[] = [null, "Tons chauds", "Tons froids", "Les deux", "Je ne sais pas"];
+    const INTENSITES: (Intensite | null)[] = [null, "Douces et discrètes", "Profondes et intenses", "Lumineuses", "Un mélange"];
+    for (const genre of ["homme", "femme"] as const)
+      for (const a of AFFINITES)
+        for (const i of INTENSITES)
+          for (const ctx of CONTEXTES) {
+            const m = mesurer(catalogue, genre, ["classique_chic", "casual_chic", "minimaliste"], 10, "Nuageux", ctx, { paletteAffinite: a, paletteIntensite: i });
+            console.log(`${genre} · ${a ?? "—"} · ${i ?? "—"} · ${ctx.nom} : capsule ${m.capsule}, échecs ${m.echecs}/${TIRAGES}` + (m.raisons.size ? ` (${[...m.raisons].map(([k, n]) => `${k} ×${n}`).join(", ")})` : "") + ` | ${[...m.parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`);
+          }
 
     // 2. Tous les trios, par genre : les cellules en échec seulement.
     for (const [genre, styles] of [["femme", STYLES_FEMME], ["homme", STYLES_HOMME]] as const) {
