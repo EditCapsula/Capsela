@@ -1,17 +1,15 @@
 "use client";
 
-import TitrePage from "@/components/TitrePage";
 import { masquerMenuActions } from "@/lib/menuActions";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
-import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { MosaiquePieces } from "@/components/CarteLook";
 import PhotoPiece from "@/components/PhotoPiece";
 import { useIdeesDressing } from "@/components/useIdeesDressing";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/lib/auth";
-import { CATLABEL, CATS, OCC_LABELS, occasionShortLabel, wornAgo } from "@/lib/data";
+import { CATLABEL, CATS, OCC_LABELS, wornAgo } from "@/lib/data";
 import {
   assezDuDressing,
   categoriesHorsPuces,
@@ -22,16 +20,11 @@ import {
   articlePossessif,
   candidatsARedecouvrir,
   designationPiece,
-  ideeLaPlusComplete,
-  ligneDressing,
-  phrasePiste,
-  piecesRecentes,
   pisteAssociation,
   saisonDeLaDate,
 } from "@/lib/dressingSections";
 import { avecTirageDeterministe, graineIdees } from "@/lib/looks";
-import { generateOutfitWithFallback, getOutfitsForItem, type ItemOutfitVariation } from "@/lib/logic";
-import { clePieces } from "@/lib/outfitFeedback";
+import { generateOutfitWithFallback, getOutfitsForItem } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { composeWardrobePool, daysSinceWorn, wearCounts } from "@/lib/selectors";
@@ -41,8 +34,9 @@ import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import type { Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
-import Card from "@/components/Card";
-import { I_CINTRE, LigneProfil } from "@/components/ProfilUI";
+import { BarreRecherche, BoutonTri, CarteSynthese, OngletsDressing, Puces, type Tri } from "@/components/DressingUI";
+import { PanneauLooks } from "@/components/screens/LooksScreen";
+import { definirActionContextuelle } from "@/lib/menuActions";
 
 /**
  * DRESSING — refonte éditoriale du 25/09/2026 (brief « Refonte UX/UI de la
@@ -101,13 +95,6 @@ const OCCASIONS_INSPIRATION: OccasionKey[] = ["quotidien", "travail_formel"];
 /** Pièces dont les idées sont calculées pour l'écran : au-delà, le total de looks est annoncé « N+ ». */
 const NB_PIECES_AVEC_IDEES = 16;
 
-/** L'étoile de « L'inspiration du moment » : le dessin de l'onglet `sparkle` (TabBar), en SVG plutôt que le glyphe ✦ (09/10/2026). */
-const ETOILE = (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style={{ display: "block" }}>
-    <path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3z" />
-  </svg>
-);
-
 /** Surtitre de section, avec son action facultative à droite. */
 function TitreSection({ children, action, className = "mt-10" }: { children: React.ReactNode; action?: React.ReactNode; className?: string }) {
   return (
@@ -158,24 +145,24 @@ function Associations({
   );
 }
 
-/** Titre de section en serif, sous son surtitre. */
-function TitreSerif({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="t-titre-carte text-ink mt-[6px]">
-      {children}
-    </div>
-  );
-}
-
 interface ContexteDressing {
   recherche: string;
   groupeId: string | null;
-  tri: "recent" | "az";
+  tri: Tri;
+  couleurs: string[];
+  jamaisPortees: boolean;
   defilement: number;
 }
 
-export default function WardrobeScreen() {
-  const { state, actions, vestiairePool, defaultCapsule, weather, dressingLoaded, etatPremium } = useCapsela();
+/**
+ * L'ONGLET « MON DRESSING » (15/11/2026, brief « Refonte UX/UI – Page Dressing ») : exclusivement les pièces. La synthèse compacte
+ * (nombre, « + Ajouter une pièce »), la recherche et ses filtres avancés (couleurs réellement présentes, pièces jamais portées), les
+ * catégories en puces avec leur nombre, puis la grille. Les idées de looks du moteur qui suivaient la grille (« Tes looks »,
+ * « L'inspiration du moment ») n'y sont plus : l'onglet est réservé aux vêtements ; elles restent sur la fiche de chaque pièce
+ * (« Comment porter… »). « À redécouvrir », qui parle d'une pièce, reste sous la grille.
+ */
+function PanneauDressing() {
+  const { state, actions, defaultCapsule, weather, dressingLoaded, etatPremium } = useCapsela();
   const { profile } = useAuth();
   const items = state.items;
   const [maintenant] = useState(() => Date.now());
@@ -204,13 +191,15 @@ export default function WardrobeScreen() {
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appuiLongFait = useRef(false);
   const departAppui = useRef<{ x: number; y: number } | null>(null);
-  const [tri, setTri] = useState<"recent" | "az">(repris?.tri ?? "recent");
+  const [tri, setTri] = useState<Tri>(repris?.tri ?? "recent");
+  // LES FILTRES AVANCÉS (15/11/2026) : les couleurs réellement présentes dans le dressing, et « jamais portées » — rien d'inventé.
+  const [couleurs, setCouleurs] = useState<string[]>(repris?.couleurs ?? []);
+  const [jamaisPortees, setJamaisPortees] = useState(repris?.jamaisPortees ?? false);
+  const [avancesOuverts, setAvancesOuverts] = useState(false);
   const zoneGrille = useRef<HTMLDivElement | null>(null);
   const defilement = useDefilementRepris(zoneGrille, repris?.defilement);
-  useGarderContexte("wardrobe", (): ContexteDressing => ({ recherche, groupeId, tri, defilement: defilement.position.current }));
+  useGarderContexte("wardrobe", (): ContexteDressing => ({ recherche, groupeId, tri, couleurs, jamaisPortees, defilement: defilement.position.current }));
 
-  // Pool de résolution stable des looks — cf. l'en-tête, correctif 20/08/2026.
-  const resolvePool = useMemo(() => [...items, ...vestiairePool], [items, vestiairePool]);
   const groupes = useMemo(() => groupesDuVestiaire(items, profile.gender), [items, profile.gender]);
   const synthese = syntheseDressing(etatPremium, items.length, groupes.length);
 
@@ -291,7 +280,6 @@ export default function WardrobeScreen() {
    * le premier rendu avec le moteur de « Comment porter … ? ». Tout ce que l'écran annonce — « N looks possibles », l'inspiration, les
    * looks du carrousel — en est dérivé ; tant que le calcul n'est pas là, ces blocs n'existent pas.
    */
-  const recentes = useMemo(() => piecesRecentes(items, 8, maintenant), [items, maintenant]);
   const pourIdees = useMemo(() => {
     const ordre = [...items].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)).slice(0, NB_PIECES_AVEC_IDEES);
     const redecouvrir = aRedecouvrir[0]?.piece;
@@ -301,23 +289,12 @@ export default function WardrobeScreen() {
 
   const ouvrirTenue = (t: { occasion: OccasionKey; pieces: Item[] }) => actions.viewItemOutfit(t.pieces.map((p) => p.id), t.occasion);
 
-  // ── MON DRESSING ─────────────────────────────────────────────────────
-  const enTete = (
-    <>
-      <AppHeader titre={<>Mon <span className="italic">dressing</span></>} />
-      {/* Une seule ligne : le nombre de pièces et de catégories, calculés. Plus de « places restantes » (08/10/2026). */}
-      <TitrePage chapeau={!dressingLoaded ? " " : items.length > 0 ? ligneDressing(items.length, groupes.length) : synthese.texte} />
-      <EntreeMesLooks />
-    </>
-  );
-
   // ── CHARGEMENT ───────────────────────────────────────────────────────
   // Sans cet état, une utilisatrice qui possède des pièces voit l'empty
   // state et son « Ajoute ta première pièce » le temps du fetch.
   if (!dressingLoaded) {
     return (
-      <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-        {enTete}
+      <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pb-safe-nav">
         <div className="flex justify-center mt-16" aria-live="polite">
           <LoadingSpinner size={56} />
           <span className="sr-only">Chargement de ton dressing…</span>
@@ -329,13 +306,11 @@ export default function WardrobeScreen() {
   // ── DRESSING VIDE ────────────────────────────────────────────────────
   if (items.length === 0) {
     return (
-      <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-        {enTete}
-
+      <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pb-safe-nav">
         {/* UNE SEULE action dominante. Visuel d'accueil livré le 23/09 : ratio
             tenu par aspect-ratio, dimensions déclarées pour que rien ne saute
             à l'arrivée de l'image. */}
-        <div className="mt-6 rounded-hero overflow-hidden" style={{ aspectRatio: "1.548", background: "var(--color-warm-bg)" }}>
+        <div className="mt-4 rounded-hero overflow-hidden" style={{ aspectRatio: "1.548", background: "var(--color-warm-bg)" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/editorial/capsela_dressing_empty.webp"
@@ -385,38 +360,6 @@ export default function WardrobeScreen() {
   // dressing complet (gratuit), il mène à Premium au lieu d'ouvrir un formulaire qui refuserait d'enregistrer.
   const ajouter = () => (synthese.complet ? actions.goPremium() : actions.openAdd());
 
-  // L'inspiration : les deux pièces les plus récentes (30 jours) et un look que le moteur compose avec la première qui en a un.
-  const nouvelles = recentes.slice(0, 2);
-  const avecIdee = nouvelles.find((p) => (idees?.get(p.id) ?? []).length > 0);
-  const lookInspiration = avecIdee ? idees?.get(avecIdee.id)?.[0] : undefined;
-  const piecesAccordees = idees
-    ? new Set(nouvelles.flatMap((p) => (idees.get(p.id) ?? []).flatMap((v) => v.ids)).filter((id) => items.some((i) => i.id === id) && !nouvelles.some((n) => n.id === id))).size
-    : 0;
-  const designations = nouvelles.map((p) => designationPiece(p));
-  const phraseInspiration =
-    piecesAccordees > 0 && designations.length > 0
-      ? `${designations.length === 1 ? designations[0].charAt(0).toUpperCase() + designations[0].slice(1) : `${designations[0].charAt(0).toUpperCase()}${designations[0].slice(1)} et ${designations[1]}`} ${
-          designations.length === 1 && !designations[0].startsWith("tes ") ? "s'accorde" : "s'accordent"
-        } avec ${piecesAccordees} ${piecesAccordees === 1 ? "pièce" : "pièces"} que tu as déjà.`
-      : "";
-
-  // Tes looks : le premier look de chacune des pièces les plus récentes, sans doublon.
-  const looksCarrousel = (() => {
-    if (!idees) return [] as { piece: Item; idee: ItemOutfitVariation }[];
-    const vus = new Set<string>();
-    const sortie: { piece: Item; idee: ItemOutfitVariation }[] = [];
-    for (const piece of pourIdees) {
-      const idee = ideeLaPlusComplete(idees.get(piece.id));
-      if (!idee) continue;
-      const cle = clePieces(idee.ids).join(",");
-      if (vus.has(cle)) continue;
-      vus.add(cle);
-      sortie.push({ piece, idee });
-      if (sortie.length >= 6) break;
-    }
-    return sortie;
-  })();
-
   const aRedecouvrirUne = aRedecouvrir[0];
   const nbLooksRedecouvrir = aRedecouvrirUne ? (idees?.get(aRedecouvrirUne.piece.id)?.length ?? 0) : 0;
   // Accord sur le nom, comme l'article (« Tes baskets attendent », « Ta basket attend ») — plus sur la catégorie (09/10/2026).
@@ -425,7 +368,18 @@ export default function WardrobeScreen() {
   // ── LES PIÈCES : recherche (nom, catégorie, couleur), catégorie, tri — la maquette V10 ──────────────────────────────────────────
   const normaliser = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const terme = normaliser(recherche.trim());
-  const correspond = (it: Item) => !terme || normaliser(`${it.name} ${CATLABEL[it.cat] ?? ""} ${it.color ?? ""}`).includes(terme);
+  const correspond = (it: Item) => !terme || normaliser(`${it.name} ${CATLABEL[it.cat] ?? ""} ${it.color ?? ""} ${it.brand ?? ""}`).includes(terme);
+  // Les couleurs proposées par les filtres avancés : celles des pièces du dressing, avec leur pastille et leur nombre.
+  const couleursPresentes = (() => {
+    const m = new Map<string, { hex: string; n: number }>();
+    for (const it of items) if (it.color) m.set(it.color, { hex: m.get(it.color)?.hex ?? it.hex, n: (m.get(it.color)?.n ?? 0) + 1 });
+    return [...m.entries()].sort((x, y) => y[1].n - x[1].n || x[0].localeCompare(y[0], "fr"));
+  })();
+  const couleursActives = couleurs.filter((c) => couleursPresentes.some(([nom]) => nom === c));
+  const nbAvances = couleursActives.length + (jamaisPortees ? 1 : 0);
+  // « Jamais portée » au sens de la grille : sans date de port, ou sans aucun port au Journal (la grille dit alors « Jamais porté »).
+  const jamaisPortee = (it: Item) => it.worn == null || ((parPiece.get(it.id) || 0) === 0 && daysSinceWorn(state.history, it.id) == null);
+  const passeAvances = (it: Item) => (!couleursActives.length || (it.color != null && couleursActives.includes(it.color))) && (!jamaisPortees || jamaisPortee(it));
   // Une catégorie qu'aucune puce ne porte (« Haut » seul, venu du Journal, 15/10/2026) s'applique comme le filtre par teinte.
   const horsPuces = categoriesHorsPuces(filtre, groupes);
   const filtreExact = Boolean(filtre?.teinte || horsPuces);
@@ -434,19 +388,27 @@ export default function WardrobeScreen() {
     : horsPuces
       ? items.filter((i) => horsPuces.includes(i.cat))
       : items;
-  const parRecherche = baseItems.filter(correspond);
+  const parRecherche = baseItems.filter((it) => correspond(it) && passeAvances(it));
   const groupeActif = groupes.find((g) => g.id === groupeId) ?? null;
   const nbDuGroupe = (g: (typeof groupes)[number]) => parRecherche.filter((it) => g.categories.includes(it.cat)).length;
   const affichees = (groupeActif ? parRecherche.filter((it) => groupeActif.categories.includes(it.cat)) : parRecherche)
     .slice()
-    .sort(tri === "recent" ? (x, y) => (y.createdAt ?? 0) - (x.createdAt ?? 0) || y.id - x.id : (x, y) => x.name.localeCompare(y.name, "fr"));
+    .sort(
+      tri === "az"
+        ? (x, y) => x.name.localeCompare(y.name, "fr")
+        : tri === "ancien"
+          ? (x, y) => (x.createdAt ?? 0) - (y.createdAt ?? 0) || x.id - y.id
+          : (x, y) => (y.createdAt ?? 0) - (x.createdAt ?? 0) || y.id - x.id
+    );
   const pl = (n: number) => `${n} ${n <= 1 ? "pièce" : "pièces"}`;
   const libelleResultats = terme
     ? `${pl(affichees.length)} pour « ${recherche.trim()} »`
     : groupeActif
       ? `${groupeActif.libelle} · ${pl(affichees.length)}`
-      : `Toutes tes pièces · ${items.length}`;
-  const sansFiltre = !terme && !groupeActif && !filtreExact;
+      : nbAvances
+        ? `${pl(affichees.length)} filtrées`
+        : `Toutes tes pièces · ${items.length}`;
+  const sansFiltre = !terme && !groupeActif && !filtreExact && !nbAvances;
 
   const quitterSelection = () => {
     setSelectionMode(false);
@@ -490,60 +452,32 @@ export default function WardrobeScreen() {
   return (
     <>
     <div className="absolute inset-0 flex flex-col">
-      {/* EN-TÊTE FIXE : bandeau, titre, recherche, catégories — la grille arrive juste dessous, sans bannière intercalée. */}
-      <div className="flex-shrink-0 px-6 pt-[6px]">
-        <AppHeader
-          onBack={filtre?.retour === "tenue" ? actions.goTenues : filtre?.retour === "journal" ? actions.goHistory : undefined}
-          backLabel={filtre?.retour === "journal" ? "Revenir au Journal" : "Revenir à ma tenue"}
-          titre={<>Mon <span className="italic">dressing</span></>}
+      {/* EN-TÊTE FIXE DE L'ONGLET : synthèse compacte, recherche et filtres avancés, catégories — la grille arrive juste dessous. */}
+      <div className="flex-shrink-0 px-6">
+        <CarteSynthese
+          nombre={synthese.texte.split(" pièce")[0] /* « 12 / 30 » en gratuit vérifié, sinon le nombre seul */}
+          libelle={items.length <= 1 ? "pièce" : "pièces"}
+          action="Ajouter une pièce"
+          onAction={ajouter}
         />
-        <TitrePage chapeau={pl(items.length)} />
-        <EntreeMesLooks />
         {/* data-tour : la recherche et les catégories, cible de la visite guidée « Dressing » (lib/visites.ts). */}
         <div data-tour="dressing-filtres">
-        <label className="mt-3 flex items-center gap-[10px] h-[44px] pl-[14px] pr-[6px] rounded-full bg-card border" style={{ borderColor: recherche ? "var(--color-terracotta-deep)" : "var(--color-border)" }}>
-          <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-muted-3" style={{ display: "block" }}>
-            <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="6" />
-              <path d="M20 20l-4.5-4.5" />
-            </g>
-          </svg>
-          <input
-            type="search"
-            value={recherche}
-            onChange={(e) => setRecherche(e.target.value)}
-            placeholder="Rechercher une pièce, une couleur…"
-            aria-label="Rechercher une pièce"
-            className="flex-1 min-w-0 h-full bg-transparent outline-none text-[13.5px] font-medium text-ink placeholder:text-placeholder"
+          <BarreRecherche
+            valeur={recherche}
+            onChange={setRecherche}
+            placeholder="Rechercher une pièce, une couleur, une marque…"
+            ariaLabel="Rechercher une pièce"
+            filtres={{ actifs: nbAvances, onOuvrir: () => setAvancesOuverts(true) }}
           />
-          {recherche && (
-            <button type="button" onClick={() => setRecherche("")} aria-label="Effacer la recherche" className="w-[34px] h-[34px] flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center cursor-pointer">
-              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="text-muted-3" style={{ display: "block" }}>
-                <path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </button>
+          {!selectionMode && !filtreExact && (
+            <Puces
+              ariaLabel="Catégories"
+              puces={[{ id: null as string | null, libelle: "Tout", n: parRecherche.length }, ...groupes.map((g) => ({ id: g.id as string | null, libelle: g.libelle, n: nbDuGroupe(g) }))]}
+              actif={groupeId}
+              onChange={setGroupeId}
+            />
           )}
-        </label>
-        {!selectionMode && !filtreExact && (
-        <div role="tablist" aria-label="Catégories" className="scrollarea flex gap-2 overflow-x-auto py-3 -mx-6 px-6" style={{ scrollbarWidth: "none" }}>
-          {[{ id: null as string | null, libelle: "Tout", n: parRecherche.length }, ...groupes.map((g) => ({ id: g.id as string | null, libelle: g.libelle, n: nbDuGroupe(g) }))].map((c) => {
-            const actif = groupeId === c.id;
-            return (
-              <button
-                key={c.id ?? "tout"}
-                type="button"
-                role="tab"
-                aria-selected={actif}
-                onClick={() => setGroupeId(c.id)}
-                className={"flex-shrink-0 h-[40px] px-[15px] rounded-full border text-[12.5px] font-medium whitespace-nowrap flex items-center gap-[6px] cursor-pointer " + (actif ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")}
-              >
-                {c.libelle}
-                <span className="text-[11.5px]" style={{ color: actif ? "var(--color-warm-bg)" : "var(--color-muted)" }}>{c.n}</span>
-              </button>
-            );
-          })}
-        </div>
-        )}
+          {(selectionMode || filtreExact) && <div className="h-3" />}
         </div>
       </div>
 
@@ -557,12 +491,7 @@ export default function WardrobeScreen() {
           ) : filtreExact ? (
             <button type="button" onClick={() => actions.goWardrobePieces()} className="h-[44px] text-[12px] font-semibold text-terracotta-deep flex-shrink-0 cursor-pointer">Tout afficher</button>
           ) : (
-            <button type="button" onClick={() => setTri(tri === "recent" ? "az" : "recent")} className="h-[44px] flex items-center gap-[5px] text-[12px] font-semibold text-ink cursor-pointer">
-              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="text-muted-3" style={{ display: "block" }}>
-                <path d="M7 5v14M4 16l3 3 3-3M17 19V5M14 8l3-3 3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {tri === "recent" ? "Récentes d'abord" : "A → Z"}
-            </button>
+            <BoutonTri tri={tri} onChange={setTri} />
           )}
         </div>
         {!selectionMode && affichees.length > 0 && <div className="text-[11px] text-placeholder -mt-[4px] mb-[6px]">Appui long sur une pièce pour la sélectionner</div>}
@@ -632,7 +561,7 @@ export default function WardrobeScreen() {
               {terme ? "Essaie un autre mot, une couleur ou une catégorie. Ou ajoute-la si elle n'est pas encore dans ton dressing." : "Ajoute une pièce pour la retrouver ici."}
             </div>
             <div className="flex justify-center gap-2 mt-4 flex-wrap">
-              <button type="button" onClick={() => { setRecherche(""); setGroupeId(null); }} className="h-[44px] px-[18px] rounded-full border border-border bg-card text-[13px] font-semibold text-ink cursor-pointer">
+              <button type="button" onClick={() => { setRecherche(""); setGroupeId(null); setCouleurs([]); setJamaisPortees(false); }} className="h-[44px] px-[18px] rounded-full border border-border bg-card text-[13px] font-semibold text-ink cursor-pointer">
                 Voir tout le dressing
               </button>
               <button type="button" onClick={ajouter} className="h-[44px] px-[18px] rounded-full border border-terracotta-deep bg-card text-[13px] font-semibold text-terracotta-deep cursor-pointer">
@@ -642,67 +571,9 @@ export default function WardrobeScreen() {
           </div>
         )}
 
-        {/* Après les pièces, et seulement sans recherche ni catégorie : looks, inspiration, à redécouvrir. */}
+        {/* Après les pièces, et seulement sans recherche ni filtre : la pièce à redécouvrir. */}
         {sansFiltre && (
           <>
-            {looksCarrousel.length > 0 && (
-              <section className="mt-8" aria-label="Tes looks">
-                <div className="flex items-center justify-between gap-3">
-                  <TitreSerif>Tes looks</TitreSerif>
-                  <Lien onClick={actions.goLooks} label="Voir mes looks">Voir mes looks</Lien>
-                </div>
-                <div className="grid grid-cols-2 gap-[10px] mt-1 items-start">
-                  {looksCarrousel.slice(0, 2).map(({ piece, idee }) => {
-                    const pieces = idee.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i);
-                    return (
-                      <button key={clePieces(idee.ids).join(",")} type="button" onClick={() => actions.viewItemOutfit(idee.ids, idee.occasion)} className="flex flex-col justify-start h-full text-left cursor-pointer active:opacity-80">
-                        {/* Blanc cassé des cartes cerné de leur filet, comme le hero de l'accueil (option 3h, 14/10/2026, demandé pour le Dressing). */}
-                        <div
-                          className="relative overflow-hidden"
-                          style={{ aspectRatio: "0.9", borderRadius: 20, background: "var(--color-card)", border: "1px solid var(--color-border)" }}
-                        >
-                          <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} ombre="marquee" />
-                        </div>
-                        <div className="t-titre-vignette text-ink mt-2">{occasionShortLabel(idee.occasion)}</div>
-                        {/* La piste sur une ligne, le nombre de pièces toujours sur la suivante (14/10/2026, demandé) : deux lignes fixes, cartes de même hauteur. */}
-                        <div className="text-[11.5px] text-muted-3 mt-[2px] leading-[1.35]">
-                          <div className="truncate">{phrasePiste(piece)}</div>
-                          <div>{idee.ids.length} pièces</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {lookInspiration && avecIdee && phraseInspiration && (
-              <button
-                type="button"
-                onClick={() => actions.viewItemOutfit(lookInspiration.ids, lookInspiration.occasion)}
-                className="mt-[22px] w-full flex items-center gap-[14px] text-left rounded-[20px] border border-border bg-card py-3 pl-3 pr-[14px] cursor-pointer active:opacity-80"
-                aria-label="L'inspiration du moment"
-              >
-                <span className="relative flex-none overflow-hidden" style={{ width: 76, height: 92, borderRadius: 14, background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
-                  <FlatLayCapsela
-                    items={lookInspiration.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i)}
-                    context="look-detail"
-                    layoutSeed={clePieces(lookInspiration.ids).join(",")}
-                  />
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="t-surtitre flex items-center gap-[6px] text-terracotta-hover">
-                    <span className="text-terracotta">{ETOILE}</span>
-                    L&apos;inspiration du moment
-                  </span>
-                  <span className="block t-titre-carte text-ink mt-[5px]">
-                    Tes nouvelles pièces, <span className="italic text-terracotta">déjà en looks</span>
-                  </span>
-                  <span className="block text-[12px] font-semibold mt-[6px] text-terracotta-deep">Voir ce look</span>
-                </span>
-              </button>
-            )}
-
             {aRedecouvrirUne && (
               <button
                 onClick={() => actions.openItemOutfits(aRedecouvrirUne.piece.id, false, idees?.get(aRedecouvrirUne.piece.id))}
@@ -750,29 +621,97 @@ export default function WardrobeScreen() {
         Annuler
       </button>
     </BottomSheet>
+    <BottomSheet title="Filtres avancés" open={avancesOuverts} onClose={() => setAvancesOuverts(false)}>
+      {couleursPresentes.length > 0 && (
+        <>
+          <div className="t-surtitre text-muted">Couleurs</div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {couleursPresentes.map(([nom, { hex, n }]) => {
+              const on = couleursActives.includes(nom);
+              return (
+                <button
+                  key={nom}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setCouleurs(on ? couleurs.filter((c) => c !== nom) : [...couleurs, nom])}
+                  className={"h-[40px] pl-[8px] pr-[13px] rounded-full border text-[12.5px] font-medium flex items-center gap-[7px] cursor-pointer " + (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")}
+                >
+                  <span className="w-[22px] h-[22px] rounded-full border border-border flex-shrink-0" style={{ background: hex }} aria-hidden="true" />
+                  {nom}
+                  <span className="text-[11.5px]" style={{ color: on ? "var(--color-warm-bg)" : "var(--color-muted)" }}>{n}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+      <div className="t-surtitre text-muted mt-6">Port</div>
+      <button
+        type="button"
+        aria-pressed={jamaisPortees}
+        onClick={() => setJamaisPortees(!jamaisPortees)}
+        className={"mt-3 h-[40px] px-[15px] rounded-full border text-[12.5px] font-medium cursor-pointer " + (jamaisPortees ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")}
+      >
+        Jamais portées · {items.filter(jamaisPortee).length}
+      </button>
+      <div className="flex gap-2 mt-7 pb-2">
+        <Button variante="secondaire" onClick={() => { setCouleurs([]); setJamaisPortees(false); }}>
+          Effacer
+        </Button>
+        <Button variante="principal" onClick={() => setAvancesOuverts(false)}>
+          Voir {pl(affichees.length)}
+        </Button>
+      </div>
+    </BottomSheet>
     </>
   );
 }
 
 /**
- * L'ENTRÉE « MES LOOKS » (14/11/2026, signalé : « où vont les tenues enregistrées dans l'appli ? Rien ne permet d'y accéder », puis,
- * sur le Dressing vide : « il faut une entrée vers les looks ici »). Les tenues enregistrées (Accueil, Tenue, Capsule, Planifier,
- * valise) et les looks créés vivent dans « Mes looks » ; le seul lien, « Voir mes looks », était en bas du Dressing rempli, sous des
- * idées générées, et disparaissait sans elles. La ligne est en haut du Dressing, vide ou rempli, avec la ligne de Mon profil (cintre).
- * Le nombre vient de state.savedLooks ; sans look, la ligne dit ce que l'écran rassemblera, sans inventer de nombre.
+ * LE DRESSING EN DEUX ONGLETS (15/11/2026, brief « Refonte UX/UI – Page Dressing »). L'en-tête commun — titre « Mon dressing », cloche,
+ * avatar — puis les onglets Mon dressing et Mes looks, qui remplacent la carte « Mes looks » (14/11/2026) posée au-dessus des pièces.
+ *
+ * Un seul composant pour les deux écrans du store (`wardrobe`, `looks`), monté à la même place par App.tsx : changer d'onglet change
+ * l'écran (le retour d'un look revient sur Mes looks, comme avant) sans rien démonter — les deux onglets restent montés, l'inactif
+ * caché et inerte ; chacun garde sa recherche, ses filtres et son défilement, aucune donnée n'est rechargée.
+ *
+ * Le « + » flottant devient contextuel (menuActions.ts) : ajouter une pièce sur Mon dressing (le parcours d'ajout, ou Premium quand le
+ * dressing gratuit est complet), créer un look sur Mes looks.
  */
-function EntreeMesLooks() {
-  const { state, actions } = useCapsela();
-  const n = state.savedLooks.length;
+export default function WardrobeScreen() {
+  const { state, actions, etatPremium } = useCapsela();
+  const onglet = state.screen === "looks" ? "looks" : "wardrobe";
+  const filtre = state.filtrePieces;
+  const complet = syntheseDressing(etatPremium, state.items.length, 0).complet;
+  useEffect(() => {
+    definirActionContextuelle(
+      onglet === "looks"
+        ? { libelle: "Créer un look", onClick: () => actions.goCreateLook() }
+        : { libelle: "Ajouter une pièce", onClick: () => (complet ? actions.goPremium() : actions.openAdd()) }
+    );
+  }, [onglet, complet, actions]);
+  useEffect(() => () => definirActionContextuelle(null), []);
+
+  const panneau = (actif: boolean, contenu: React.ReactNode) => (
+    <div className="absolute inset-0" aria-hidden={!actif} inert={!actif} style={actif ? undefined : { visibility: "hidden" }}>
+      {contenu}
+    </div>
+  );
+
   return (
-    <Card className="overflow-hidden mt-3">
-      <LigneProfil
-        icone={I_CINTRE}
-        titre="Mes looks"
-        valeur={<span className="text-muted-3">{n === 0 ? "Tes tenues enregistrées et tes looks créés" : n === 1 ? "1 look enregistré" : `${n} looks enregistrés`}</span>}
-        renseigne
-        onClick={actions.goLooks}
-      />
-    </Card>
+    <div className="absolute inset-0 flex flex-col">
+      <div className="flex-shrink-0 px-6 pt-[6px]">
+        <AppHeader
+          onBack={onglet === "wardrobe" ? (filtre?.retour === "tenue" ? actions.goTenues : filtre?.retour === "journal" ? actions.goHistory : undefined) : undefined}
+          backLabel={filtre?.retour === "journal" ? "Revenir au Journal" : "Revenir à ma tenue"}
+          titre={<>Mon <span className="italic">dressing</span></>}
+        />
+        <OngletsDressing actif={onglet} onChange={actions.ongletDressing} />
+      </div>
+      <div className="relative flex-1 min-h-0">
+        {panneau(onglet === "wardrobe", <PanneauDressing />)}
+        {panneau(onglet === "looks", <PanneauLooks />)}
+      </div>
+    </div>
   );
 }

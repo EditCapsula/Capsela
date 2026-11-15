@@ -1022,7 +1022,7 @@ export default function PlanifierScreen() {
     ...(meteoMoment && !composition && !alerteMeteoPlan(piecesDuLook, meteoMoment)
       ? [{ cle: "meteo", icone: ICONES_INDICATEUR.meteo, texte: `Adaptée à ${degres(meteoMoment.temp)}` }]
       : []),
-    ...(coloResultat && accordVisage(piecesDuLook, coloResultat) ? [{ cle: "palette", icone: ICONES_INDICATEUR.palette, texte: "Ta palette", coche: true }] : []),
+    ...(coloResultat && accordVisage(piecesDuLook, coloResultat) ? [{ cle: "palette", icone: ICONES_INDICATEUR.palette, texte: "Ta colorimétrie", coche: true }] : []),
   ];
 
   /**
@@ -2232,7 +2232,7 @@ export default function PlanifierScreen() {
             // La météo : seulement avec une température, et seulement si le moteur ne signale rien (alerteMeteoPlan).
             ...(tempPlan != null && !alertePlan ? [{ cle: "meteo", icone: ICONES_INDICATEUR.meteo, texte: `Adaptée à ${degres(tempPlan)}` }] : []),
             // La palette : seulement avec une colorimétrie, et si la tenue s'y accorde près du visage (accordVisage, R-S18).
-            ...(colo && accordVisage(sepPlan.principal, colo) ? [{ cle: "palette", icone: ICONES_INDICATEUR.palette, texte: "Ta palette", coche: true }] : []),
+            ...(colo && accordVisage(sepPlan.principal, colo) ? [{ cle: "palette", icone: ICONES_INDICATEUR.palette, texte: "Ta colorimétrie", coche: true }] : []),
           ];
           return (
             <>

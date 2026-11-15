@@ -1040,7 +1040,7 @@ export default function ValiseScreen() {
   };
   const dressing = state.items;
   const generer = useMemo(
-    () => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie), piecesValise),
+    () => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie), piecesValise, profile.morphology),
     [profile, piecesValise]
   );
 

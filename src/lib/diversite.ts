@@ -1,3 +1,4 @@
+import { meilleurTirageMorphologique } from "./silhouetteRonde";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import { isRainy, type Weather } from "./data";
 import { computeLookScore, generateOutfitWithFallback, type GeneratedOutfitWithFallback } from "./logic";
@@ -255,9 +256,11 @@ export interface TenueDiversifiee extends GeneratedOutfitWithFallback {
 export function genererTenueDiversifiee(p: ParametresDiversifies): TenueDiversifiee {
   const tirer = () =>
     generateOutfitWithFallback(p.pool, p.weather, p.occasion, p.workMode, p.dateContext, p.preferredHexes, p.gender, undefined, undefined, p.colorimetrie);
-  const premier = tirer();
   const sansEffet = { applique: false, candidats: 1, eligibles: 1, penalite: 0 };
-  if (!p.recents.length || premier.noCompleteOutfit) return { ...premier, diversite: sansEffet };
+  // Sans historique récent, un tirage — ou, pour une silhouette ronde, le meilleur de quelques tirages (meilleurTirageMorphologique).
+  if (!p.recents.length) return { ...meilleurTirageMorphologique(tirer, p.pool, p.morphology), diversite: sansEffet };
+  const premier = tirer();
+  if (premier.noCompleteOutfit) return { ...premier, diversite: sansEffet };
 
   const resultats: GeneratedOutfitWithFallback[] = [premier];
   for (let i = 1; i < CANDIDATS_DIVERSITE; i++) {

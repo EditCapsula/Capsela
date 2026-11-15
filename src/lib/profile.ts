@@ -1,3 +1,4 @@
+import type { Corpulence } from "./silhouetteRonde";
 import { miseEnValeurDuGenre, miseEnValeurPosee, PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
 import { langue, t } from "./langue";
 import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
@@ -54,6 +55,12 @@ export interface Profile {
   prefs: ProfilePrefs;
   /** Mise en valeur et coupes préférées (31/10/2026, preferencesSilhouette.ts) : `null` par champ = jamais posé. */
   preferencesSilhouette: PreferencesSilhouette;
+  /**
+   * La silhouette en général, fine / moyenne / ronde (15/11/2026, silhouetteRonde.ts) — complément de la morphologie. LA QUESTION
+   * N'EST PAS POSÉE (arbitrage du 15/11/2026) : rien ne l'écrit ni ne la lit en base ; seuls les audits la renseignent. Absente, la
+   * seule silhouette ronde connue est la morphologie « plutôt ronde et régulière ».
+   */
+  corpulence?: Corpulence | null;
 }
 
 export const DEFAULT_PREFS: ProfilePrefs = {
@@ -488,11 +495,22 @@ export function morphologyLabel(m: string | null): string {
 export const SILHOUETTE_FORME: Record<string, string> = {
   f_poire: "en A",
   f_triangle_inverse: "en V",
+  // La silhouette ronde oriente la capsule depuis le 15/11/2026 (silhouetteRonde.ts) : « ta silhouette plutôt ronde ».
+  f_pomme: "plutôt ronde",
 };
 
 export function silhouetteForme(m: string | null): string {
   return SILHOUETTE_FORME[m ?? ""] ?? "";
 }
+
+/** Visuels de l'étape Silhouette (femme) — fichiers dans public/onboarding/silhouettes/ ; repris par la synthèse du profil (6/7). */
+export const VISUELS_SILHOUETTE: Record<string, string> = {
+  f_sablier: "/onboarding/silhouettes/sablier.webp",
+  f_poire: "/onboarding/silhouettes/poire.webp",
+  f_pomme: "/onboarding/silhouettes/pomme.webp",
+  f_rectangle: "/onboarding/silhouettes/rectangle.webp",
+  f_triangle_inverse: "/onboarding/silhouettes/triangle-inverse.webp",
+};
 
 export const MORPHO_HINTS: Record<string, string> = {
   f_rectangle: "Épaules, taille et hanches sont assez alignées, sans marquage particulier.",
@@ -648,7 +666,7 @@ export function champsProfilStyle(profile: Profile): ChampCompletude[] {
   }
   champs.push({ cle: "coupes", libelle: "Coupes préférées", renseigne: profile.preferencesSilhouette.coupes !== null });
   champs.push(
-    { cle: "palette", libelle: "Palette", renseigne: profile.paletteCouleurs.length > 0 },
+    { cle: "palette", libelle: "Couleurs préférées", renseigne: profile.paletteCouleurs.length > 0 },
     { cle: "tailles", libelle: "Tailles", renseigne: Boolean(profile.tailleHaut && profile.tailleBas && profile.pointure) }
   );
   return champs;
@@ -703,7 +721,7 @@ export function prochaineActionProfil(profile: Profile): ProchaineActionProfil |
     case "coupes":
       return { cle: "coupes", message: "Indique les coupes dans lesquelles tu te sens le mieux : elles orientent le choix des pièces de ta capsule.", cta: "Choisir mes coupes" };
     case "palette":
-      return { cle: "palette", message: "Choisis tes couleurs : elles orientent la capsule et tes tenues.", cta: "Choisir ma palette" };
+      return { cle: "palette", message: "Choisis tes couleurs : elles orientent la capsule et tes tenues.", cta: "Choisir mes couleurs" };
     case "tailles":
       if (!profile.tailleHaut) return { cle: "tailles", message: "Ajoute ta taille de haut : elle est pré-remplie quand tu ajoutes une pièce.", cta: "Renseigner ma taille de haut" };
       if (!profile.tailleBas) return { cle: "tailles", message: "Ajoute ta taille de bas : elle est pré-remplie quand tu ajoutes une pièce.", cta: "Renseigner ma taille de bas" };

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useCapsela } from "@/lib/store";
-import { abonnerMenuActions, instantaneMenuActions, menuActionsMasque, menuActionsVisible } from "@/lib/menuActions";
+import { abonnerMenuActions, actionContextuelle, instantaneMenuActions, menuActionsMasque, menuActionsVisible } from "@/lib/menuActions";
 
 /**
  * LE MENU D'ACTIONS FLOTTANT (12/11/2026, brief « Speed Dial », lib/menuActions.ts). Un composant, monté UNE fois par App.tsx.
@@ -26,6 +26,8 @@ import { abonnerMenuActions, instantaneMenuActions, menuActionsMasque, menuActio
 export default function MenuActions() {
   const { state, actions } = useCapsela();
   const masque = useSyncExternalStore(abonnerMenuActions, () => (instantaneMenuActions(), menuActionsMasque()), () => false);
+  // L'action contextuelle d'un écran (le Dressing et ses deux onglets) : le « + » la lance directement, sans menu.
+  const contexte = useSyncExternalStore(abonnerMenuActions, () => (instantaneMenuActions(), actionContextuelle()), () => null);
   const clavier = useClavierOuvert();
   const [ouvert, setOuvert] = useState(false);
   const boutonRef = useRef<HTMLButtonElement>(null);
@@ -105,12 +107,12 @@ export default function MenuActions() {
       <button
         ref={boutonRef}
         type="button"
-        onClick={() => setOuvert((o) => !o)}
-        aria-expanded={ouvert}
-        aria-controls="menu-actions"
-        aria-label={ouvert ? "Fermer les actions rapides" : "Actions rapides : ajouter une pièce, planifier, demander un avis"}
+        onClick={() => (contexte ? contexte.onClick() : setOuvert((o) => !o))}
+        aria-expanded={contexte ? undefined : ouvert}
+        aria-controls={contexte ? undefined : "menu-actions"}
+        aria-label={contexte ? contexte.libelle : ouvert ? "Fermer les actions rapides" : "Actions rapides : ajouter une pièce, planifier, demander un avis"}
         // Repère de la visite guidée du Dressing (VisiteGuidee) : ce bouton remplace le « + » qui le portait.
-        data-tour={state.screen === "wardrobe" ? "dressing-ajouter" : undefined}
+        data-tour={state.screen === "wardrobe" || state.screen === "looks" ? "dressing-ajouter" : undefined}
         // Fermé, sous les feuilles (BottomSheet, z-50) et au-dessus de la barre du bas (z-20) : une feuille ouverte le recouvre (12/11/2026,
         // vu en rendu sur la feuille d'une pièce). Ouvert, au-dessus de son voile (z-40).
         className={

@@ -19,7 +19,6 @@ import {
   colorimetrieUtilisable,
   COLORIMETRIE_VIDE,
   estSaison,
-  paletteCapsela,
   reponsesEnListe,
   reponsesParQuestion,
   SAISONS,
@@ -41,7 +40,6 @@ import EtapeMeteo, { type EtatLocalisation } from "@/components/EtapeMeteo";
 import { fetchVilleParPosition, getBrowserPosition } from "@/lib/weather";
 import OptionRow from "@/components/OptionRow";
 import {
-  genderLabel,
   GENDERS,
   INTENSITE_OPTIONS,
   INTENSITE_VISUELS,
@@ -49,11 +47,10 @@ import {
   MORPHOLOGIES,
   MORPHOLOGY_LABELS,
   MORPHO_HINTS,
+  VISUELS_SILHOUETTE,
   PAL_COULEURS,
   TAILLES_HAUT,
-  libelleStyles,
   stylesDuGenre,
-  paletteColorName,
   tailleBasLabelFor,
   taillesBasFor,
   type Intensite,
@@ -63,8 +60,6 @@ import Button from "@/components/Button";
 import {
   basculerOption,
   COUPES_PREFEREES,
-  libelleCoupes,
-  libelleMiseEnValeur,
   LIBELLE_SANS_COUPE,
   LIBELLE_SANS_MISE_EN_VALEUR,
   LIBELLES_COUPES,
@@ -78,6 +73,9 @@ import {
   type PreferencesSilhouette,
 } from "@/lib/preferencesSilhouette";
 import Card from "@/components/Card";
+import SyntheseProfil from "@/components/SyntheseProfil";
+import { dureeDecompteSynthese, libelleDecompte } from "@/lib/syntheseProfil";
+import { currentSeasonKey } from "@/lib/capsule";
 import Input from "@/components/Input";
 
 /**
@@ -135,7 +133,7 @@ const ALL_STEPS = [
   // Un écran depuis le 31/10/2026 (lot 3). Titre et sous-titre du brief, au tutoiement de l'app ; le surtitre reprend deux repères de
   // l'ancienne présentation, toujours vrais : rapide, et aucune photo.
   { key: "colorimetrie", kicker: "Environ 1 minute · sans photo", title: "Ta colorimétrie", subtitle: "Quelques informations pour identifier les couleurs qui te mettent en valeur." },
-  { key: "colorimetrie_resultat", kicker: "Ta palette", title: "Ta palette", subtitle: "" },
+  { key: "colorimetrie_resultat", kicker: "Ta colorimétrie", title: "Ta colorimétrie", subtitle: "" },
   // « Et maintenant ? » n'est plus une étape (31/10/2026, arbitrage 7) : ses trois bénéfices s'affichent sous « Ta palette ».
   /*
    * LA MÉTÉO (12/11/2026, brief 2.3, point 3, EtapeMeteo.tsx). La demande de localisation du téléphone est expliquée AVANT de s'ouvrir,
@@ -148,7 +146,8 @@ const ALL_STEPS = [
     title: "Des recommandations adaptées à ta météo",
     subtitle: "Capsela adapte tes tenues aux conditions météo. Autorise l'accès à ta localisation pour qu'elles suivent l'endroit où tu te trouves, ou indique ta ville.",
   },
-  { key: "pal_recap", kicker: "Ton profil", title: "Ton profil Capsela est prêt", subtitle: "Capsela combine tes goûts et ta colorimétrie pour des recommandations qui te ressemblent." },
+  // LA SYNTHÈSE (15/11/2026, brief « Refonte UX/UI – Étape 6/7 », SyntheseProfil.tsx) : textes du brief.
+  { key: "pal_recap", kicker: "Ton univers prend forme", title: "Ton profil Capsela est prêt !", subtitle: "Voici le résultat de ton onboarding. Il va guider la création de ta première capsule." },
 ] as const;
 
 // Les tailles prennent la même marque de sélection que les cartes (31/10/2026, revue de cohérence) : bordure terracotta et fond
@@ -228,14 +227,6 @@ function PaletteDots({
  * seule la couleur change, anneau de 1 px et coche terracotta à la sélection, visuel 3:4 sans rognage. Sans visuel (côté homme,
  * visuels à produire), la carte garde son libellé seul — jamais une image d'un autre genre.
  */
-/** Visuels de l'étape Silhouette (femme) — fichiers dans public/onboarding/silhouettes/. */
-const VISUELS_SILHOUETTE: Record<string, string> = {
-  f_sablier: "/onboarding/silhouettes/sablier.webp",
-  f_poire: "/onboarding/silhouettes/poire.webp",
-  f_pomme: "/onboarding/silhouettes/pomme.webp",
-  f_rectangle: "/onboarding/silhouettes/rectangle.webp",
-  f_triangle_inverse: "/onboarding/silhouettes/triangle-inverse.webp",
-};
 
 function CarteChoix({ libelle, visuel, on, onClick }: { libelle: string; visuel: string | null; on: boolean; onClick: () => void }) {
   return (
@@ -378,7 +369,20 @@ export default function ProfileSetupScreen() {
     enregistrerProgression(STEPS[step]?.key);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const finish = async () => {
+  // UNE SEULE CRÉATION (15/11/2026, brief de la synthèse) : le bouton, le compte à rebours ou un double toucher ne lancent la fin du
+  // parcours qu'une fois ; le bouton dit qu'elle est en cours. Un échec rend la main.
+  // Un toucher est un événement « discret » : React applique `creation` avant le suivant, un double toucher trouve donc le verrou posé.
+  const [creation, setCreation] = useState(false);
+  const finish = async (vers: "dressing" | "capsule" = "dressing") => {
+    if (creation) return;
+    setCreation(true);
+    try {
+      await terminer(vers);
+    } catch {
+      setCreation(false);
+    }
+  };
+  const terminer = async (vers: "dressing" | "capsule") => {
     // La fin du parcours efface l'étape gardée : un profil terminé n'a plus rien à reprendre.
     const { onboardingEtape: _fini, ...prefs } = draft.prefs;
     void _fini;
@@ -386,6 +390,8 @@ export default function ProfileSetupScreen() {
     if (state.profileSetupFromEdit) actions.go(state.profileSetupReturn);
     // Le parcours mène au dressing : l'écran Dressing vide (01/11/2026, demandé), qui explique par quoi commencer, garde « Ajouter ma
     // première pièce » et propose la capsule et des idées de looks. Avant (07/10/2026) : l'ajout d'une pièce s'ouvrait directement.
+    // « Voir ma capsule » (15/11/2026, bloc « Ta première capsule » de la synthèse) : la même fin de parcours, puis l'écran Capsule.
+    else if (vers === "capsule") actions.goCapsule();
     else actions.goWardrobe();
   };
 
@@ -492,19 +498,30 @@ export default function ProfileSetupScreen() {
             }
           : meta.key === "colorimetrie_resultat"
             ? { kicker: meta.kicker, title: draft.colorimetrie?.libelle || meta.title, subtitle: saisonResultat?.description ?? null }
-            : { kicker: meta.kicker, title: meta.title, subtitle: meta.subtitle || null };
+            : {
+                // Sans étape Silhouette (profils homme, 15/11/2026), les questions de coupes ne parlent pas de « Ta silhouette ».
+                kicker: meta.kicker === "Ta silhouette" && !STEPS.some((x) => x.key === "morpho") ? "Tes coupes" : meta.kicker,
+                title: meta.title,
+                subtitle: meta.subtitle || null,
+              };
   const taillesBas = taillesBasFor(draft.gender);
   // Le fil d'Ariane discret (07/10/2026) : « 3 / 6 · Tes couleurs ». « Ton dressing » est la dernière section, ouverte
   // par le récapitulatif ; la silhouette n'existe pas pour tous les profils (cf. STEPS), le compte suit donc le parcours servi.
+  /*
+   * SIX ÉTAPES, PLUS SEPT (15/11/2026, arbitré par la propriétaire) : « Ton dressing » n'avait aucune question — c'était l'écran qui
+   * s'ouvre après « Créer mon dressing » — et la dernière page affichait 6/7. Elle affiche maintenant 6/6.
+   * AJUSTÉ PAR GENRE (même jour, demandé) : une section ne compte que si l'une de ses étapes est posée à ce profil (STEPS). Sans étape
+   * Silhouette (profils homme), la section garde ses questions de coupes et s'appelle « Tes coupes ».
+   */
+  const avecSilhouette = STEPS.some((x) => x.key === "morpho");
   const SECTIONS: { label: string; cles: string[] }[] = [
     { label: "Ton style", cles: ["style"] },
-    { label: "Ta silhouette", cles: ["morpho", "mise_en_valeur", "coupes"] },
+    { label: avecSilhouette ? "Ta silhouette" : "Tes coupes", cles: ["morpho", "mise_en_valeur", "coupes"] },
     { label: "Tes couleurs", cles: ["pal_couleurs"] },
     { label: "Ta colorimétrie", cles: ["colorimetrie", "colorimetrie_resultat"] },
     { label: "Ta météo", cles: ["meteo"] },
     { label: "Ton profil", cles: ["pal_recap"] },
-    { label: "Ton dressing", cles: [] },
-  ];
+  ].filter((x) => x.cles.some((k) => STEPS.some((st) => st.key === k)));
   const sectionCourante = SECTIONS.findIndex((x) => x.cles.includes(meta.key));
   const filDArianne =
     !state.profileSetupFromEdit && !profile.completed && sectionCourante >= 0
@@ -528,7 +545,65 @@ export default function ProfileSetupScreen() {
     const lieu = await fetchVilleParPosition(pos.coords.latitude, pos.coords.longitude);
     setLocalisation("accordee");
     setDraft((d) => ({ ...d, ...(lieu ? { city: lieu.name } : {}), prefs: { ...d.prefs, geoConsent: true, weatherFromGeo: true } }));
+    // L'ÉTAPE S'ENCHAÎNE SEULE (15/11/2026, demandé : « continue l'étape sans attendre que l'on clique sur Continuer ») : la
+    // localisation accordée, la coche s'affiche un instant puis l'étape suivante s'ouvre — pendant l'inscription seulement, comme
+    // avancerApresChoix. « Continuer » reste là pour qui va plus vite.
+    if (!state.profileSetupFromEdit) setAvanceMeteo(true);
   };
+  const [avanceMeteo, setAvanceMeteo] = useState(false);
+  // `next` lu au moment du déclenchement (après le rendu qui porte la ville trouvée), jamais celui de la fermeture d'avant.
+  const nextRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    nextRef.current = next;
+  });
+  useEffect(() => {
+    if (!avanceMeteo || meta.key !== "meteo") return;
+    const t = setTimeout(() => {
+      setAvanceMeteo(false);
+      nextRef.current();
+    }, 1100);
+    return () => clearTimeout(t);
+  }, [avanceMeteo, meta.key]);
+
+  /*
+   * LE COMPTE À REBOURS DE LA SYNTHÈSE (15/11/2026, brief « Étape 6/7 », proposition d'expérience) : la synthèse en place, « On t'emmène
+   * à la création de ton dressing dans 8 secondes… » sous le bouton, avec une barre discrète ; au bout, la fin du parcours, comme le
+   * bouton. Seulement pendant l'inscription. LE MOINDRE GESTE L'ARRÊTE POUR DE BON — toucher, défiler, une touche, ouvrir un
+   * « Modifier » : la création ne part jamais pendant qu'on consulte ou modifie son profil. Durée réglable, 0 le coupe
+   * (DECOMPTE_SYNTHESE_S et le réglage de l'appareil, syntheseProfil.ts).
+   */
+  // L'emplacement des gestes de l'étape Style, dans le pied (DecouverteStyles, `cibleGestes`).
+  const [cibleGestes, setCibleGestes] = useState<HTMLDivElement | null>(null);
+  const [decompteArrete, setDecompteArrete] = useState(false);
+  const [dureeDecompte] = useState(() => dureeDecompteSynthese());
+  const decompteActif = meta.key === "pal_recap" && isLast && !state.profileSetupFromEdit && !profile.completed && !decompteArrete && !creation && dureeDecompte > 0;
+  const [ecoule, setEcoule] = useState<number | null>(null);
+  useEffect(() => {
+    if (!decompteActif) return;
+    let n = 0;
+    let iv: ReturnType<typeof setInterval> | undefined;
+    // Le temps que les blocs soient entrés (moins d'une seconde), puis une seconde par seconde.
+    const t0 = setTimeout(() => {
+      setEcoule(0);
+      iv = setInterval(() => setEcoule(++n), 1000);
+    }, 900);
+    const arreter = () => setDecompteArrete(true);
+    const gestes = ["pointerdown", "keydown", "wheel", "touchstart", "scroll"] as const;
+    gestes.forEach((e) => document.addEventListener(e, arreter, { capture: true, passive: true }));
+    return () => {
+      clearTimeout(t0);
+      if (iv) clearInterval(iv);
+      gestes.forEach((e) => document.removeEventListener(e, arreter, { capture: true }));
+    };
+  }, [decompteActif]);
+  const restantDecompte = decompteActif && ecoule != null ? Math.max(0, dureeDecompte - ecoule) : null;
+  const finishRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    finishRef.current = () => void finish();
+  });
+  useEffect(() => {
+    if (restantDecompte === 0) finishRef.current();
+  }, [restantDecompte]);
   // Seules les étapes style et palette exigent une sélection non vide
   // (styles : recette 20/08/2026 ; palette : Tâche 8, min 1 couleur) — les
   // autres étapes gardent leur comportement existant, jamais bloquant.
@@ -541,72 +616,6 @@ export default function ProfileSetupScreen() {
     (meta.key !== "pal_couleurs" || draft.paletteCouleurs.length >= MIN_PALETTE_COULEURS) &&
     // Les coupes demandent une réponse (« Cela dépend du vêtement » en est une) ; la mise en valeur est facultative.
     (meta.key !== "coupes" || draft.preferencesSilhouette.coupes !== null);
-
-  const recapRows: { label: string; value: string; swatches: string[]; etape?: string }[] = [
-    {
-      label: "Genre",
-      value: [genderLabel(draft.gender), draft.tailleHaut, draft.tailleBas, draft.pointure].filter(Boolean).join(" · ") || "à préciser",
-      swatches: [],
-      etape: "genre",
-    },
-    { label: "Style", value: libelleStyles(draft.styles, draft.gender) || "à choisir", swatches: [] as string[], etape: "style" },
-    ...(draft.gender === "femme" && draft.morphology
-      ? [{ label: "Silhouette", value: MORPHOLOGY_LABELS[draft.morphology], swatches: [] as string[], etape: "morpho" }]
-      : []),
-    ...(miseEnValeurPosee(draft.gender)
-      ? [
-          {
-            label: "Mise en valeur",
-            value: libelleMiseEnValeur(draft.preferencesSilhouette.miseEnValeur, draft.gender) ?? "non précisée",
-            swatches: [] as string[],
-            etape: "mise_en_valeur",
-          },
-        ]
-      : []),
-    { label: "Coupes", value: libelleCoupes(draft.preferencesSilhouette.coupes) ?? "à choisir", swatches: [], etape: "coupes" },
-    {
-      etape: "pal_couleurs",
-      label: "Couleurs",
-      value: draft.paletteCouleurs.map(paletteColorName).filter(Boolean).join(", ") || "à choisir",
-      swatches: draft.paletteCouleurs,
-    },
-    {
-      etape: "pal_couleurs",
-      label: "Intensité",
-      value: draft.paletteIntensite
-        ? (INTENSITE_VISUELS[draft.paletteIntensite]?.libelleRecap ?? draft.paletteIntensite)
-        : "non précisée",
-      // Les pastilles de l'étape Intensité (30/09/2026, demandé) : on retrouve
-      // ici la famille choisie telle qu'on l'a vue. Illustration seulement,
-      // comme sur l'étape — ce ne sont pas des couleurs choisies.
-      // Une valeur venue d'une version antérieure et absente de la table n'affiche rien plutôt que de planter.
-      swatches: (draft.paletteIntensite && INTENSITE_VISUELS[draft.paletteIntensite]?.pastilles) || ([] as string[]),
-    },
-    {
-      // « Saison » depuis le questionnaire (30/09/2026) : ce n'est plus une
-      // analyse. « Pas encore définie » et non « aucune » : elle est à venir,
-      // pas refusée.
-      etape: "colorimetrie",
-      label: "Saison",
-      value: colorimetrieUtilisable(draft.colorimetrie)
-        ? draft.colorimetrie.libelle || "Définie"
-        : "Pas encore définie",
-      swatches: [] as string[],
-    },
-    {
-      // CALCULÉE, JAMAIS STOCKÉE (brief §2). Sans colorimétrie elle vaut les
-      // préférences seules — ce qui est juste, pas un repli.
-      label: "Ta palette",
-      value: "",
-      swatches: paletteCapsela(draft.paletteCouleurs, draft.colorimetrie),
-    },
-    {
-      label: "Météo",
-      value: draft.prefs.geoConsent && draft.prefs.weatherFromGeo ? "Ta position" : draft.city || "Ville non renseignée",
-      swatches: [] as string[],
-      etape: "meteo",
-    },
-  ];
 
   // Contenu de l'écran, identique quelle que soit l'étape — extrait dans
   // une variable (correctif 24/08/2026, 2e retour) pour pouvoir l'insérer
@@ -808,45 +817,18 @@ export default function ProfileSetupScreen() {
       {meta.key === "colorimetrie_resultat" && <SuiteColorimetrie />}
 
       {meta.key === "pal_recap" && (
-        <Card className="mt-6 p-[18px]">
-          {recapRows.map((r) => {
-            const cible = r.etape ? STEPS.findIndex((x) => x.key === r.etape) : -1;
-            const ligne = (
-            <>
-              <span className="w-[92px] flex-shrink-0 t-surtitre text-muted">{r.label}</span>
-              <div className="flex items-center gap-[6px] flex-wrap flex-1 min-w-0">
-                {r.swatches.map((hex) => (
-                  <span
-                    key={hex}
-                    className="w-[15px] h-[15px] rounded-full flex-shrink-0"
-                    style={{ background: hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.10)" }}
-                  />
-                ))}
-                <span className="text-[12px] text-ink">{r.value}</span>
-              </div>
-            </>
-            );
-            const cls = "w-full flex items-center gap-3 py-[11px] border-b border-border last:border-b-0 text-left";
-            return cible >= 0 ? (
-              <button
-                key={r.label}
-                className={cls + " cursor-pointer"}
-                aria-label={`Modifier : ${r.label}`}
-                onClick={() => {
-                  setRetourRecap(true);
-                  setStep(sansPresentationDejaFaite(cible));
-                }}
-              >
-                {ligne}
-                <span aria-hidden="true" className="text-[12px] text-terracotta flex-shrink-0">Modifier</span>
-              </button>
-            ) : (
-              <div key={r.label} className={cls}>
-                {ligne}
-              </div>
-            );
-          })}
-        </Card>
+        <SyntheseProfil
+          profil={draft}
+          saisonCapsule={state.capsuleSeason || currentSeasonKey()}
+          modifiable={(etape) => STEPS.some((x) => x.key === etape)}
+          onVoirCapsule={!state.profileSetupFromEdit && isLast ? () => void finish("capsule") : undefined}
+          onModifier={(etape) => {
+            // Ouvrir une modification arrête le compte à rebours pour de bon : la création ne part jamais pendant une modification.
+            setDecompteArrete(true);
+            setRetourRecap(true);
+            setStep(sansPresentationDejaFaite(STEPS.findIndex((x) => x.key === etape)));
+          }}
+        />
       )}
 
       {meta.key === "taille" && blocTailles}
@@ -855,7 +837,7 @@ export default function ProfileSetupScreen() {
           pour moi, comme les suggestions de la capsule, à la place de la grille de cartes ; les styles choisis restent visibles dessous
           (« Mes styles sélectionnés »), et le refus d'un quatrième se dit là, à côté d'eux. Même brouillon, mêmes ids, même plafond. */}
       {meta.key === "style" && (
-        <DecouverteStyles gender={draft.gender} styles={stylesDuGenre(draft.styles, draft.gender)} onChange={(styles) => patch({ styles })} onRefus={signalerRefusStyle} />
+        <DecouverteStyles gender={draft.gender} styles={stylesDuGenre(draft.styles, draft.gender)} onChange={(styles) => patch({ styles })} onRefus={signalerRefusStyle} cibleGestes={cibleGestes} />
       )}
 
       {meta.key === "morpho" && (
@@ -967,7 +949,7 @@ export default function ProfileSetupScreen() {
       }
     }
     if (meta.key === "meteo") {
-      if (localisation === "accordee" || villeChoisie) return { libelle: "Continuer", onClick: next, actif: true };
+      if (localisation === "accordee" || villeChoisie) return { libelle: "Continuer", onClick: () => next(), actif: true };
       return {
         libelle: "Activer ma localisation",
         onClick: () => void activerLocalisation(),
@@ -978,7 +960,7 @@ export default function ProfileSetupScreen() {
     if (meta.key === "colorimetrie_resultat") {
       return {
         libelle: isLast ? (state.profileSetupFromEdit ? "Enregistrer les modifications" : "Créer mon dressing") : "Continuer",
-        onClick: next,
+        onClick: () => next(),
         actif: true,
         // Refaire le test : le questionnaire depuis le début, réponses effacées. Le résultat actuel reste tant qu'un nouveau n'est pas trouvé.
         // Retiré puis remis le 31/10/2026 (arbitrage) : c'est le seul endroit d'où l'on peut repasser le test.
@@ -999,19 +981,23 @@ export default function ProfileSetupScreen() {
       ? piedSpecifique
       : {
           libelle: isLast
-            ? state.profileSetupFromEdit
+            ? creation
+              ? "Création de ton dressing…"
+              : state.profileSetupFromEdit
               ? "Enregistrer les modifications"
               : // « Créer mon dressing » (07/10/2026, brief d'optimisation) : ce qui s'ouvre est le dressing (l'écran Dressing vide
                 // depuis le 01/11/2026), plus l'accueil.
                 "Créer mon dressing"
             : "Continuer",
-          onClick: next,
-          actif: canContinue,
+          onClick: () => next(),
+          actif: canContinue && !creation,
         };
 
   const continueButton = pied && (
     <>
-      <Button className="mt-[22px]" onClick={pied.actif ? pied.onClick : undefined} disabled={!pied.actif}>
+      {/* Étape Style : le bouton suit de près « Mes styles sélectionnés » (15/11/2026, demandé : « réduis la marge entre le style
+          sélectionné et le CTA ») ; ailleurs, l'écart d'origine. */}
+      <Button className={meta.key === "style" ? "mt-[4px]" : "mt-[22px]"} onClick={pied.actif ? pied.onClick : undefined} disabled={!pied.actif}>
         {pied.libelle}
       </Button>
       {pied.lien && (
@@ -1054,8 +1040,10 @@ export default function ProfileSetupScreen() {
           style={{ paddingBottom: pied?.lien ? "calc(4px + env(safe-area-inset-bottom))" : "calc(16px + env(safe-area-inset-bottom))" }}
         >
           {/* MES STYLES SÉLECTIONNÉS, dans le pied (14/11/2026) : visibles pendant toute l'étape, au-dessus du bouton. */}
+          {/* Les gestes J'aime / Pas pour moi, posés ici par DecouverteStyles (15/11/2026) : jamais sous le pli. */}
+          {meta.key === "style" && <div ref={setCibleGestes} />}
           {meta.key === "style" && (
-            <div className="mb-[10px]">
+            <div className="mb-[6px]">
               <MesStylesSelectionnes
                 gender={draft.gender}
                 styles={stylesDuGenre(draft.styles, draft.gender)}
@@ -1068,6 +1056,16 @@ export default function ProfileSetupScreen() {
             </div>
           )}
           {continueButton}
+          {restantDecompte != null && (
+            <div className="mt-[10px] mb-[2px]">
+              <p className="text-[12px] text-muted text-center" aria-live="off">
+                {libelleDecompte(restantDecompte)}
+              </p>
+              <div className="h-[3px] mt-[8px] mx-auto w-[120px] rounded-full bg-border overflow-hidden motion-reduce:hidden" aria-hidden="true">
+                <div className="h-full bg-terracotta rounded-full" style={{ animation: `decompte-toast ${dureeDecompte}s linear both`, transformOrigin: "left" }} />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

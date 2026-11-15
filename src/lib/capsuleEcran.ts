@@ -1,5 +1,6 @@
+import { compatibiliteRonde } from "./silhouetteRonde";
 import { isStatement } from "./attributes";
-import { contexteCapsule, estDeSaison, occasionsOf, pieceOrienteeParMorphologie, styleFit } from "./capsule";
+import { contexteCapsule, estDeSaison, occasionsOf, pieceOrienteeParMorphologie, silhouetteOrienteLaCapsule, styleFit } from "./capsule";
 import { OCCASIONS } from "./data";
 import { paletteHexes, silhouetteForme, STYLE_ID_TO_CATALOG_LABEL, styleLabel, type Profile, type StyleId } from "./profile";
 import type { CapsuleSeason, CategoryKey, Item, OccasionKey } from "./types";
@@ -250,7 +251,8 @@ export function raisonsSuggestion(it: Item, profile: Profile): RaisonSuggestion[
   }
 
   const forme = silhouetteForme(profile.morphology);
-  if (forme && pieceOrienteeParMorphologie(it, profile.morphology, profile.preferencesSilhouette?.miseEnValeur)) {
+  // La silhouette ronde (15/11/2026) : une pièce d'une famille favorisée (silhouetteRonde.ts) le dit aussi.
+  if (forme && (pieceOrienteeParMorphologie(it, profile.morphology, profile.preferencesSilhouette?.miseEnValeur) || (silhouetteOrienteLaCapsule(profile.morphology) && compatibiliteRonde(it, profile.morphology) === 1))) {
     raisons.push({ cle: "silhouette", texte: `Pensée aussi pour ta silhouette ${forme}` });
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Card from "@/components/Card";
 import { BoutonRond, CarteGlissante, FlecheParcours, IconeCoeur, IconeCroix } from "@/components/ParcoursVote";
 import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfigFor, visuelEtapeStyle, voterStyle, type Gender, type StyleId } from "@/lib/profile";
@@ -18,14 +19,13 @@ import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfi
  * parcours) ; les libellés, descriptions et visuels de STYLE_CONFIG ; les styles proposés par genre (exposedStyleIds). Le moteur n'est pas
  * touché. Les looks portés (LOOKS_PORTES_STYLE) ne s'affichent que s'ils existent : Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy, Créatif, Romantique et Glamour côté femme, Minimaliste, Casual chic, Classique chic, Bohème, Streetwear, Preppy et Créatif côté homme au 15/11/2026.
  */
-/** Hauteur de l'étape Style hors de la rangée flat lay + looks (px, mesurée à 390 × 844) : tout tient sans défiler. */
-const HAUTEUR_HORS_RANGEE = 573;
 
 export default function DecouverteStyles({
   gender,
   styles,
   onChange,
   onRefus,
+  cibleGestes,
 }: {
   gender: Gender | null;
   /** Les styles choisis, dans l'ordre du choix (le premier est le principal), déjà réduits à ceux du genre. */
@@ -33,6 +33,13 @@ export default function DecouverteStyles({
   onChange: (styles: string[]) => void;
   /** Un quatrième « J'aime » refusé : l'écran le dit dans « Mes styles sélectionnés » (le libellé du style refusé). */
   onRefus: (libelle: string | null) => void;
+  /**
+   * LES GESTES DANS LE PIED (15/11/2026, signalé : « dès que j'ai choisi un style, celui-ci cache les boutons permettant d'en
+   * sélectionner d'autres ») : « Mes styles sélectionnés » grandit le pied fixe, et les deux ronds, posés sous la carte, passaient
+   * sous le pli. L'écran fournit ici un emplacement de son pied, juste au-dessus des styles choisis : les gestes y sont toujours
+   * visibles, quelle que soit la hauteur. Sans emplacement (null, le temps du premier rendu), ils restent sous la carte.
+   */
+  cibleGestes?: HTMLElement | null;
 }) {
   const ids = exposedStyleIds(gender);
   const config = styleConfigFor(gender);
@@ -53,6 +60,22 @@ export default function DecouverteStyles({
     onChange(r.styles);
     suivant();
   };
+  const gestes = (
+      <div className="grid grid-cols-2 items-start pt-[8px]">
+        <BoutonRond libelle="Pas pour moi" aria={`Pas pour moi : ${cfg.label}, style suivant`} onClick={() => voter("pasPourMoi")}>
+          <IconeCroix />
+        </BoutonRond>
+        <BoutonRond
+          libelle="J'aime"
+          aria={choisi ? `${cfg.label} est déjà sélectionné : style suivant` : `J'aime : ajouter ${cfg.label} à ma sélection`}
+          onClick={() => voter("aime")}
+          principal={choisi}
+          actif={choisi}
+        >
+          <IconeCoeur plein={choisi} />
+        </BoutonRond>
+      </div>
+  );
   return (
     <div className="mt-3">
       <Card rayon="carte" className="relative px-[10px] pt-[10px] pb-[12px]" aria-roledescription="carrousel" aria-label="Styles">
@@ -62,13 +85,15 @@ export default function DecouverteStyles({
             {/* LE FLAT LAY EN ENTIER, LES LOOKS À CÔTÉ (15/11/2026, demandé : « le flat lay n'est pas suffisamment visible, il faut
                 qu'on le voie entièrement », après « aucune marge blanche », « plus important que les 3 visuels » et « les éléments de
                 la page visibles »). Le flat lay garde son format 3:4 : rien n'est recadré, rien n'est ajouté autour. Les trois looks
-                portés s'empilent à sa droite, sur sa hauteur : il reste le grand visuel, et la rangée tient dans la hauteur que
-                laissent l'en-tête, le texte, les gestes et le pied (HAUTEUR_HORS_RANGEE, mesurée à 390 × 844), bornée par la largeur
-                de la carte (cqw). Sans looks portés, le flat lay seul, centré. */}
+                portés s'empilent à sa droite, sur sa hauteur : il reste le grand visuel. LA RANGÉE PREND TOUTE LA LARGEUR DE LA CARTE
+                (15/11/2026, signalé dans le navigateur : « il faut exploiter la largeur, là tout est petit ») : sa hauteur suivait celle
+                de l'écran, et la barre d'adresse du navigateur la réduisait de moitié. Elle suit désormais la largeur (cqw) ; sur un
+                écran court, la page défile jusqu'aux gestes, et glisser la carte vote sans défiler. Sans looks portés, le flat lay
+                seul, centré. */}
             <div style={{ containerType: "inline-size" }}>
               <div
                 className="flex justify-center gap-[8px]"
-                style={{ ["--h" as string]: `clamp(160px, min(calc(100dvh - ${HAUTEUR_HORS_RANGEE}px), ${looks.length > 0 ? 96 : 110}cqw), 420px)` }}
+                style={{ ["--h" as string]: `clamp(160px, ${looks.length > 0 ? 96 : 110}cqw, 460px)` }}
               >
                 <div className="relative flex-none">
                   <div
@@ -81,8 +106,6 @@ export default function DecouverteStyles({
                       <img src={visuel} alt="" width={900} height={1200} decoding="async" className="w-full h-full object-cover block" draggable={false} />
                     )}
                   </div>
-                  <FlecheParcours sens="precedente" libelle="Style précédent" onClick={i > 0 ? () => setIndex(i - 1) : undefined} />
-                  <FlecheParcours sens="suivante" libelle="Style suivant" onClick={i < ids.length - 1 ? () => setIndex(i + 1) : undefined} />
                 </div>
                 {/* LES LOOKS PORTÉS : sans clic (LOOKS_PORTES_STYLE) ; un style sans photo n'a pas de galerie (aucune donnée inventée).
                     En 4:5, calés en haut : la tête n'est jamais coupée, seule la marge sous les pieds se réduit. */}
@@ -108,25 +131,18 @@ export default function DecouverteStyles({
             </div>
           </CarteGlissante>
         </div>
+        {/* LES FLÈCHES AUX EXTRÉMITÉS DU CARROUSEL (15/11/2026, demandé) : sur les bords de la carte, à mi-hauteur, plus sur le flat lay. */}
+        <div className="absolute inset-y-0 -left-[14px] -right-[14px] pointer-events-none">
+          <div className="relative h-full pointer-events-none [&>button]:pointer-events-auto">
+            <FlecheParcours sens="precedente" libelle="Style précédent" onClick={i > 0 ? () => setIndex(i - 1) : undefined} />
+            <FlecheParcours sens="suivante" libelle="Style suivant" onClick={i < ids.length - 1 ? () => setIndex(i + 1) : undefined} />
+          </div>
+        </div>
       </Card>
 
       {/* LES DEUX GESTES, ceux du parcours de la capsule ; chacun passe au style suivant. J'aime au trait tant que le style n'est pas
           choisi, plein et terracotta une fois choisi. */}
-      <div className="grid grid-cols-2 items-start mt-[8px]">
-        <BoutonRond libelle="Pas pour moi" aria={`Pas pour moi : ${cfg.label}, style suivant`} onClick={() => voter("pasPourMoi")}>
-          <IconeCroix />
-        </BoutonRond>
-        <BoutonRond
-          libelle="J'aime"
-          aria={choisi ? `${cfg.label} est déjà sélectionné : style suivant` : `J'aime : ajouter ${cfg.label} à ma sélection`}
-          onClick={() => voter("aime")}
-          principal={choisi}
-          actif={choisi}
-        >
-          <IconeCoeur plein={choisi} />
-        </BoutonRond>
-      </div>
-
+      {cibleGestes ? createPortal(gestes, cibleGestes) : gestes}
     </div>
   );
 }

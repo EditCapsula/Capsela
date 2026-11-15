@@ -211,7 +211,7 @@ export function AnalyseColorimetrie({ onFini }: { onFini: () => void }) {
         })}
       </ul>
       <div className={"font-serif italic text-[18px] text-terracotta mt-[26px] transition-opacity duration-300 " + (complet ? "opacity-100" : "opacity-0")}>
-        Ta palette se dessine…
+        Ta colorimétrie se dessine…
       </div>
     </div>
   );
@@ -319,7 +319,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
 
       {explications.length > 0 && (
         <section className="mt-[34px]">
-          <h2 className="t-titre-section text-ink">Pourquoi cette palette ?</h2>
+          <h2 className="t-titre-section text-ink">Pourquoi cette colorimétrie ?</h2>
           <p className="text-[13px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
             Capsela croise tes réponses pour trouver les nuances qui s&apos;harmonisent avec toi.
           </p>
@@ -352,7 +352,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
             </div>
           </div>
           <p className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
-            {approche.description} Ce choix de style complète ta palette sans la modifier.
+            {approche.description} Ce choix de style complète ta colorimétrie sans la modifier.
           </p>
         </section>
       )}
@@ -360,9 +360,9 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
       <Card className="px-[16px] py-[15px] mt-[30px] flex gap-[12px] items-start">
         <Pictogramme nom="repere" taille={22} />
         <div className="min-w-0">
-          <div className="t-titre-carte leading-[1.25] text-ink">Ta palette est un repère, pas une règle.</div>
+          <div className="t-titre-carte leading-[1.25] text-ink">Ta colorimétrie est un repère, pas une règle.</div>
           <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
-            Tu peux porter toutes les couleurs que tu aimes. Capsela utilise simplement cette palette pour privilégier les
+            Tu peux porter toutes les couleurs que tu aimes. Capsela utilise simplement ta colorimétrie pour privilégier les
             associations qui te mettent naturellement en valeur.
           </div>
         </div>
@@ -373,6 +373,9 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
 
 /* ───────── 6. Et maintenant ? ───────── */
 
+// « PALETTE » DEVIENT « COLORIMÉTRIE » sur l'écran de résultat (15/11/2026, demandé) : un seul mot pour la saison calculée, distinct des
+// « couleurs préférées » choisies par la personne.
+
 /**
  * TROIS BÉNÉFICES, CHACUN VRAI DANS LE CODE (colorimetrieMoteur.ts). Le
  * deuxième du brief (« les recommandations tiennent compte des couleurs
@@ -381,7 +384,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
  */
 export function SuiteColorimetrie() {
   const benefices: [Picto, string, string][] = [
-    ["tenue", "Des tenues plus personnalisées", "Capsela privilégie les couleurs de ta palette pour les pièces portées près du visage."],
+    ["tenue", "Des tenues plus personnalisées", "Capsela privilégie les couleurs de ta colorimétrie pour les pièces portées près du visage."],
     ["harmonie", "Des associations plus harmonieuses", "Les couleurs à doser selon tes envies passent plutôt en bas, en chaussures ou en sac."],
     ["cintre", "Un dressing plus cohérent", "Ta colorimétrie est prise en compte dans tes futures recommandations."],
   ];

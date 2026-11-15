@@ -47,7 +47,6 @@ import AvisStylisteScreen from "./screens/AvisStylisteScreen";
 import NouveauMotDePasseScreen from "./screens/NouveauMotDePasseScreen";
 import AvisTousScreen from "./screens/AvisTousScreen";
 import AvisEnregistreScreen from "./screens/AvisEnregistreScreen";
-import LooksScreen from "./screens/LooksScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import DateNaissanceScreen from "./screens/DateNaissanceScreen";
@@ -294,7 +293,9 @@ function Screens() {
         {state.screen === "onboarding" && <OnboardingScreen />}
         {state.screen === "auth" && <AuthScreen />}
         {state.screen === "home" && <HomeScreen />}
-        {state.screen === "wardrobe" && <WardrobeScreen />}
+        {/* Le Dressing et ses deux onglets, Mon dressing et Mes looks (15/11/2026) : UN SEUL composant monté pour les deux écrans, à la
+            même place — passer d'un onglet à l'autre ne démonte rien, chaque onglet garde sa recherche, ses filtres et son défilement. */}
+        {(state.screen === "wardrobe" || state.screen === "looks") && <WardrobeScreen />}
         {state.screen === "dernieresPieces" && <DernieresPiecesScreen />}
         {state.screen === "piece" && <PieceScreen />}
         {state.screen === "add" && <AddScreen />}
@@ -309,7 +310,6 @@ function Screens() {
         {state.screen === "avisStyliste" && <AvisStylisteScreen />}
         {state.screen === "avisEnregistre" && <AvisEnregistreScreen />}
         {state.screen === "avisTous" && <AvisTousScreen />}
-        {state.screen === "looks" && <LooksScreen />}
         {state.screen === "neverworn" && <NeverWornScreen />}
         {state.screen === "profileSetup" && <ProfileSetupScreen />}
         {state.screen === "profile" && <ProfileScreen />}

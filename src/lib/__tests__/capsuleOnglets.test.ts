@@ -213,20 +213,25 @@ describe("« Une sélection pensée pour toi » : seuls les critères réellemen
     const c = criteresDeSelection({ ...base, profile: profil({ styles: ["minimaliste"], paletteCouleurs: ["#2A2724"] }) });
     expect(c.map((x) => x.cle)).toEqual(["style", "couleurs", "saison", "dressing"]);
     expect(c.find((x) => x.cle === "dressing")!.valeur).toBe("3 pièces intégrées · 31 suggestions Capsela");
-    expect(c.find((x) => x.cle === "couleurs")!.titre).toBe("Ta palette");
+    expect(c.find((x) => x.cle === "couleurs")!.titre).toBe("Tes couleurs préférées");
     expect(c.find((x) => x.cle === "saison")!.valeur).toBe("Automne · Environ 12 °C");
     expect(c.find((x) => x.cle === "saison")!.texte).toContain("adaptées à l'automne");
-    expect(accrocheSelection(c)).toBe("Des pièces choisies pour ton style, ta palette de couleurs et la saison.");
+    expect(accrocheSelection(c)).toBe("Des pièces choisies pour ton style, tes couleurs préférées et la saison.");
   });
 
-  it("jamais la colorimétrie : elle n'oriente pas la capsule, même exploitable", () => {
+  // 15/11/2026 : la colorimétrie oriente la capsule, juste après les couleurs préférées (capsule.ts, colorimetrieCapsule « hierarchie ») —
+  // ce test disait l'inverse depuis le 05/11/2026, quand elle n'y entrait pas.
+  it("la colorimétrie exploitable est un critère, distinct des couleurs préférées", () => {
     const c = criteresDeSelection({
       ...base,
       profile: profil({ styles: ["minimaliste"], colorimetrie: { statut: "faite", saison: "automne", libelle: "Automne profond", signature: ["#8B4513"] } }),
     });
     expect(c.map((x) => x.cle)).not.toContain("couleurs");
-    expect(JSON.stringify(c)).not.toMatch(/Automne profond|colorim/i);
-    expect(accrocheSelection(c)).toBe("Des pièces choisies pour ton style et la saison.");
+    expect(c.find((x) => x.cle === "colorimetrie")?.valeur).toBe("Automne profond");
+    expect(accrocheSelection(c)).toBe("Des pièces choisies pour ton style, ta colorimétrie et la saison.");
+  });
+  it("sans colorimétrie exploitable, pas de critère colorimétrie", () => {
+    expect(criteresDeSelection({ ...base, profile: profil({ styles: ["minimaliste"] }) }).map((x) => x.cle)).not.toContain("colorimetrie");
   });
 
   it("la silhouette seulement quand elle oriente la sélection ; aucun critère inventé sans profil", () => {

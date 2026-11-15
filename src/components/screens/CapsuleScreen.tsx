@@ -25,7 +25,7 @@ import {
   currentSeasonKey,
   representativeWeatherFor,
   saisonCapsuleDuJour,
-  morphologieOrienteLaSelection,
+  silhouetteOrienteLaCapsule,
   type CapsuleSeason,
 } from "@/lib/capsule";
 import {
@@ -66,6 +66,7 @@ import { clePieces } from "@/lib/outfitFeedback";
 import { useAuth } from "@/lib/auth";
 import { libelleStyles, paletteHexes, silhouetteForme, styleLabel, stylesLabels } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
+import { colorimetrieUtilisable } from "@/lib/colorimetrie";
 import { resolvePhotoCatalogue } from "@/lib/catalogImages";
 import type { DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 import Button from "@/components/Button";
@@ -284,15 +285,18 @@ export default function CapsuleScreen() {
   const criteres = useMemo(() => {
     const aUnePalette =
       profile.paletteCouleurs.length > 0 || !!profile.paletteAffinite || !!profile.paletteIntensite;
-    const forme = morphologieOrienteLaSelection(profile.morphology)
+    const forme = silhouetteOrienteLaCapsule(profile.morphology)
       ? silhouetteForme(profile.morphology)
       : "";
     return [
       userStyleLabel && { cle: "style", avant: nbStylesProfil > 1 ? "tes styles " : "ton style ", valeur: userStyleLabel, etape: "style" },
-      aUnePalette && { cle: "palette", avant: "ta ", valeur: "palette", etape: "pal_couleurs" },
+      // « Tes couleurs » (15/11/2026) : ce sont les couleurs préférées que la capsule lit, pas la colorimétrie.
+      aUnePalette && { cle: "palette", avant: "tes ", valeur: "couleurs préférées", etape: "pal_couleurs" },
+      // La colorimétrie entre dans la sélection depuis le 15/11/2026, juste après les couleurs préférées.
+      colorimetrieUtilisable(profile.colorimetrie) && { cle: "colorimetrie", avant: "ta ", valeur: "colorimétrie", etape: "colorimetrie" },
       forme && { cle: "morpho", avant: "ta silhouette ", valeur: forme, etape: "morpho" },
     ].filter((c): c is { cle: string; avant: string; valeur: string; etape: string } => Boolean(c));
-  }, [userStyleLabel, nbStylesProfil, profile.paletteCouleurs, profile.paletteAffinite, profile.paletteIntensite, profile.morphology]);
+  }, [userStyleLabel, nbStylesProfil, profile.paletteCouleurs, profile.paletteAffinite, profile.paletteIntensite, profile.morphology, profile.colorimetrie]);
 
   const possedees = useMemo(
     () => (exploredStyleId ? [] : piecesDuDressingPourSaison(state.items, capsuleSeason)),

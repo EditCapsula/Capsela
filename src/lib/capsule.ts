@@ -15,6 +15,8 @@ import {
 } from "./profile";
 import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, OccasionKey, Season, Tons } from "./types";
 import { estPieceDeValise } from "./piecesDeValise";
+import { colorimetrieUtilisable } from "./colorimetrie";
+import { compatibiliteRonde, estSilhouetteRonde, type Corpulence } from "./silhouetteRonde";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
 export function weatherSeasonBucket(temp: number): Season {
@@ -455,6 +457,31 @@ export function occasionsOf(it: Item): OccasionKey[] {
  * ne passe autre chose. Aucun code applicatif ne renseigne ce paramètre.
  */
 export type SelectionStrategy = {
+  /**
+   * LA SILHOUETTE RONDE (15/11/2026, silhouetteRonde.ts) : "rang" ajoute un rang de compatibilité (familles de pièces favorisées pour
+   * la combinaison morphologie + silhouette ronde), juste après la direction morphologique et la coupe préférée — la règle
+   * morphologique propre reste prioritaire. Jamais un filtre, jamais négatif. Absent : rien ne change.
+   */
+  silhouetteRonde?: "rang";
+  /** Interne : la silhouette déclarée du profil, posée par computeDefaultCapsule pour le rang silhouetteRonde. */
+  corpulence?: Corpulence | null;
+  /**
+   * LEVIER D'AUDIT — LA SAISON COLORIMÉTRIQUE DANS LA CAPSULE (15/11/2026, question de la propriétaire : « pourquoi la capsule ne
+   * s'adapte pas à ma colorimétrie ? »). La capsule ne lit que les couleurs préférées ; la saison (couleurs signature et neutres) ne
+   * sert qu'aux tenues. Ce levier la fait entrer comme RANG de la sélection, jamais comme filtre : une pièce de la palette passe
+   * devant à égalité de ce qui précède, aucune pièce n'est écartée, les couleurs « à doser » ne comptent pas.
+   *   "apres_occasions" : juste après la couverture des occasions — le plus fort, avant « basique » ;
+   *   "apres_basique" : juste après « basique » (et la coupe préférée), avant la direction morphologique ;
+   *   "departage"     : en dernier, avant l'id — ne départage que des pièces par ailleurs équivalentes ;
+   *   "hierarchie"    : à la place de "apres_occasions", un rang à trois niveaux — couleur préférée (2), puis couleur de la saison (1),
+   *                     puis le reste (0). ARBITRAGE ÉDITORIAL de la propriétaire, 15/11/2026 : « il faut plus tenir compte des couleurs
+   *                     préférées, puis la colorimétrie vient juste après ».
+   * Le filet de sécurité (ensure) prend alors aussi la palette pour ses couleurs. EN PRODUCTION DEPUIS LE 15/11/2026 : "hierarchie".
+   * `hexSaison` est calculé par computeDefaultCapsule depuis le profil ; un appelant ne le renseigne pas.
+   */
+  colorimetrieCapsule?: "apres_occasions" | "apres_basique" | "departage" | "hierarchie";
+  hexSaison?: ReadonlySet<string>;
+  hexPreferees?: ReadonlySet<string>;
   /** Rang 3 : `morphoFit` legacy, ou neutre (le rang disparaît du tri). */
   rang3: "legacy" | "neutre";
   /** Rang 4 : direction de compensation V2, absente par défaut. "A" et "B" sont deux fonctions de saturation. */
@@ -576,7 +603,20 @@ export const STRATEGIE_PRODUCTION: SelectionStrategy = {
   paireHabillee: "garantie",
   jumelles: "evitees",
   filetSaison: "respectee",
+  // LES COULEURS DE LA CAPSULE (15/11/2026), validé par la propriétaire après mesure (scripts/colorimetrie-capsule.audit.ts, run 46) :
+  // couleur préférée d'abord, couleur de la saison colorimétrique ensuite, juste après la couverture des occasions. Femme, Noir /
+  // Marine / Camel : couleurs préférées 31,4 → 39,7 %, saison 22,2 → 27,7 %, basiques 21,8 → 20,3, occasions impossibles 0 → 0.
+  colorimetrieCapsule: "hierarchie",
+  // LA SILHOUETTE RONDE (15/11/2026), validée par la propriétaire après mesure (silhouette-ronde-moteur.audit.ts, runs 47 et 48) :
+  // ronde seule, vêtements compatibles 36,7 → 42,5 %, taille, style et basiques inchangés, 0 occasion perdue. docs/silhouette-ronde.md.
+  silhouetteRonde: "rang",
 };
+
+/** La production juste avant la règle de la silhouette ronde (15/11/2026) — pour l'audit silhouette-ronde-moteur. */
+export const STRATEGIE_AVANT_SILHOUETTE_RONDE: SelectionStrategy = { ...STRATEGIE_PRODUCTION, silhouetteRonde: undefined };
+
+/** La production juste avant les couleurs hiérarchisées de la capsule (15/11/2026) — pour l'audit colorimetrie-capsule. */
+export const STRATEGIE_AVANT_COULEURS_HIERARCHISEES: SelectionStrategy = { ...STRATEGIE_PRODUCTION, colorimetrieCapsule: undefined };
 
 /** La production juste avant le filet de sécurité qui respecte saison et style (15/11/2026) — pour l'audit premiere-tenue. */
 export const STRATEGIE_AVANT_FILET_SAISON: SelectionStrategy = { ...STRATEGIE_PRODUCTION, filetSaison: undefined };
@@ -682,6 +722,15 @@ export function morphologieOrienteLaSelection(morphology: string | null | undefi
 }
 
 /**
+ * La silhouette oriente-t-elle la capsule, toutes règles confondues (15/11/2026) ? La direction morphologique (A, V), ou la règle de la
+ * silhouette ronde quand elle est en production. C'est CETTE fonction que les textes consultent pour dire « ta silhouette » ;
+ * `morphologieOrienteLaSelection` reste la seule direction (valeurDirection), que d'autres règles lisent.
+ */
+export function silhouetteOrienteLaCapsule(morphology: string | null | undefined, corpulence?: Corpulence | null): boolean {
+  return morphologieOrienteLaSelection(morphology) || (STRATEGIE_PRODUCTION.silhouetteRonde === "rang" && estSilhouetteRonde(morphology, corpulence));
+}
+
+/**
  * True si la sélection a compté cette pièce au titre de la morphologie
  * déclarée (rang 4 de `pickBestMarginal`). Exportée le 25/09/2026 pour la
  * fiche d'une suggestion de l'écran Capsule, qui ne doit dire « pensée aussi
@@ -738,14 +787,23 @@ function pickBestMarginal(
   // constante ne peut jamais départager, donc la clé se comporte exactement
   // comme l'ancienne [occasions, basique, morphoFit, -id].
   // Les rangs « coupe » valent 0 pour tous sans le levier (production) : constants, ils ne départagent rien.
+  const palette = (it: CatalogItem, place: SelectionStrategy["colorimetrieCapsule"]) => {
+    if (place === "apres_occasions" && strategy.colorimetrieCapsule === "hierarchie")
+      return strategy.hexPreferees?.has(it.hex) ? 2 : strategy.hexSaison?.has(it.hex) ? 1 : 0;
+    return strategy.colorimetrieCapsule === place && strategy.hexSaison?.has(it.hex) ? 1 : 0;
+  };
   const scoreKey = (it: CatalogItem): number[] => [
     occasionsOf(it).filter((o) => !covered.has(o)).length,
+    palette(it, "apres_occasions"),
     coupe(it, "avant_basique"),
     it.estBasiqueCapsule ? 1 : 0,
     coupe(it, "apres_basique"),
+    palette(it, "apres_basique"),
     strategy.rang3 === "legacy" && morphoFit(it, morphology) ? 1 : 0,
     strategy.v2 ? valeurDirection(it, morphology, retenues, strategy.v2, neutralise) : 0,
     coupe(it, "apres_direction"),
+    strategy.silhouetteRonde === "rang" ? compatibiliteRonde(it, morphology, strategy.corpulence) : 0,
+    palette(it, "departage"),
     -it.id,
   ];
   // Comparaison lexicographique : le premier critère qui diffère tranche
@@ -902,6 +960,15 @@ export function computeDefaultCapsule(
   // Les pièces réservées à la valise (maillots, surchemises de plage, 06/11/2026, piecesDeValise.ts) n'entrent dans aucune capsule :
   // écartées ici, à la source, elles ne reviennent pas non plus par les filets de sécurité qui repiochent dans `sourcePool`.
   sourcePool = sourcePool.filter((it) => !estPieceDeValise(it));
+  if (strategy.silhouetteRonde) strategy = { ...strategy, corpulence: profile.corpulence ?? null };
+  // Levier d'audit colorimetrieCapsule (cf. SelectionStrategy) : la palette de la saison, signature et neutres.
+  if (strategy.colorimetrieCapsule) {
+    strategy = {
+      ...strategy,
+      hexSaison: colorimetrieUtilisable(profile.colorimetrie) ? new Set([...(profile.colorimetrie.signature ?? []), ...(profile.colorimetrie.neutres ?? [])]) : new Set(),
+      hexPreferees: new Set(paletteHexes(profile)),
+    };
+  }
   const excluded = new Set(excludedIds);
   let base = sourcePool.filter((it) => !excluded.has(it.id));
 
@@ -1146,8 +1213,10 @@ export function computeDefaultCapsule(
     const duStyle = (it: CatalogItem) => !styles.length || styles.some((st) => styleFit(it, st));
     const rangs = strategy.filetSaison === "respectee" ? [pool.filter((it) => deSaison(it) && duStyle(it)), pool.filter(deSaison), pool] : [pool];
     const rang = rangs.find((r) => r.length) ?? [];
+    // Les couleurs préférées d'abord, puis (levier colorimetrieCapsule seulement) celles de la saison.
     const fav = rang.filter((it) => favColors.includes(it.hex));
-    const pickFrom = fav.length ? fav : rang;
+    const favSaison = rang.filter((it) => !!strategy.hexSaison?.has(it.hex));
+    const pickFrom = fav.length ? fav : favSaison.length ? favSaison : rang;
     if (pickFrom.length) out = [...out, pickFrom[0]];
   };
   (["haut", "chaussures", "sac", "bijou", "veste", "manteau", "pull", "accessoire"] as CategoryKey[]).forEach(ensure);

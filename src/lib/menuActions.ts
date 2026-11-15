@@ -38,6 +38,26 @@ export const abonnerMenuActions = (f: () => void) => {
 export const instantaneMenuActions = () => instantane;
 export const menuActionsMasque = () => masques.size > 0;
 
+/*
+ * L'ACTION CONTEXTUELLE (15/11/2026, brief « Refonte UX/UI – Page Dressing ») : sur les deux onglets du Dressing, le « + » n'ouvre plus le
+ * menu, il lance directement le parcours de l'onglet — ajouter une pièce (Mon dressing), créer un look (Mes looks). Les parcours sont
+ * ceux qui existent déjà (openAdd, goCreateLook) ; le menu des quatre actions reste celui des autres pages. Posée par l'écran, retirée
+ * à son démontage.
+ */
+export interface ActionContextuelle {
+  libelle: string;
+  onClick: () => void;
+}
+let actionCtx: ActionContextuelle | null = null;
+
+export function definirActionContextuelle(action: ActionContextuelle | null): void {
+  if (action?.libelle === actionCtx?.libelle && action?.onClick === actionCtx?.onClick) return;
+  actionCtx = action;
+  instantane++;
+  abonnes.forEach((f) => f());
+}
+export const actionContextuelle = () => actionCtx;
+
 /** Le menu est-il proposé ? Sur une page principale, sans état qui le masque, sans clavier ouvert. */
 export function menuActionsVisible(p: { screen: Screen; masque: boolean; clavier: boolean }): boolean {
   return ECRANS_MENU_ACTIONS.has(p.screen) && !p.masque && !p.clavier;

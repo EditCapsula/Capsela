@@ -1,0 +1,42 @@
+import { describe, expect, it } from "vitest";
+import { DECOMPTE_SYNTHESE_S, dureeDecompteSynthese, libelleDecompte, phraseCapsule, phraseSilhouette } from "../syntheseProfil";
+
+describe("phraseSilhouette", () => {
+  it("ne promet que ce que le moteur fait", () => {
+    // 15/11/2026 : la silhouette ronde oriente la capsule et les tenues ; A et V la capsule seule ; les autres rien.
+    expect(phraseSilhouette("f_pomme")).toContain("dans ta capsule comme dans tes tenues");
+    expect(phraseSilhouette("f_poire")).toBe("Des coupes, volumes et proportions accordés à ta silhouette dans ta capsule.");
+    expect(phraseSilhouette("f_sablier")).not.toContain("accordés");
+    expect(phraseSilhouette("f_rectangle")).not.toContain("tenues");
+  });
+});
+
+describe("phraseCapsule", () => {
+  it("ne cite la silhouette que si elle oriente la sélection", () => {
+    expect(phraseCapsule({ morphology: "f_poire", nbCouleurs: 3 })).toBe(
+      "Nous allons composer une sélection de pièces adaptées à ton style, ta silhouette et tes couleurs préférées."
+    );
+    expect(phraseCapsule({ morphology: "f_sablier", nbCouleurs: 3 })).toBe("Nous allons composer une sélection de pièces adaptées à ton style et tes couleurs préférées.");
+  });
+  it("cite la colorimétrie quand la saison est connue", () => {
+    const colorimetrie = { statut: "faite", saison: "automne", libelle: "Automne chaleureux", signature: ["#a66950"] } as never;
+    expect(phraseCapsule({ morphology: null, nbCouleurs: 2, colorimetrie })).toBe("Nous allons composer une sélection de pièces adaptées à ton style, tes couleurs préférées et ta colorimétrie.");
+  });
+  it("sans couleur choisie, le style seul", () => {
+    expect(phraseCapsule({ morphology: null, nbCouleurs: 0 })).toBe("Nous allons composer une sélection de pièces adaptées à ton style.");
+  });
+});
+
+describe("dureeDecompteSynthese", () => {
+  it("vaut le réglage par défaut, ou celui de l'appareil s'il est valable", () => {
+    expect(dureeDecompteSynthese(null)).toBe(DECOMPTE_SYNTHESE_S);
+    expect(dureeDecompteSynthese("0")).toBe(0);
+    expect(dureeDecompteSynthese("12")).toBe(12);
+    expect(dureeDecompteSynthese("abc")).toBe(DECOMPTE_SYNTHESE_S);
+    expect(dureeDecompteSynthese("-3")).toBe(DECOMPTE_SYNTHESE_S);
+  });
+  it("accorde « seconde »", () => {
+    expect(libelleDecompte(1)).toContain("1 seconde…");
+    expect(libelleDecompte(8)).toContain("8 secondes…");
+  });
+});

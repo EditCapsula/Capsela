@@ -25,7 +25,8 @@ import {
 } from "@/components/ProfilUI";
 import { libelleMembreDepuis } from "@/lib/membreDepuis";
 import { useAuth } from "@/lib/auth";
-import { morphologieOrienteLaSelection } from "@/lib/capsule";
+import { silhouetteOrienteLaCapsule } from "@/lib/capsule";
+import { SIGNATURE_AFFICHEE_MAX, colorimetrieUtilisable } from "@/lib/colorimetrie";
 import {
   GENDER_DEPENDENT_FIELDS,
   applyGenderChange,
@@ -312,7 +313,7 @@ export default function ProfileScreen() {
             valeur={renseigne("morphologie") ? morphologyLabel(profile.morphology) : "Non renseignée"}
             renseigne={renseigne("morphologie")}
             explication={
-              morphologieOrienteLaSelection(profile.morphology)
+              silhouetteOrienteLaCapsule(profile.morphology)
                 ? "Oriente les coupes et proportions de ta capsule."
                 : "Décrit ta silhouette, sans rien t'imposer."
             }
@@ -338,13 +339,33 @@ export default function ProfileScreen() {
           explication="Oriente le choix des pièces de ta capsule."
           onClick={() => ouvrirChamp("coupes")}
         />
+        {/* DEUX NOTIONS, DEUX LIGNES (15/11/2026, demandé : « afficher les couleurs préférées, et pour la palette afficher
+            colorimétrie ») : les couleurs choisies par la personne (`paletteCouleurs`), puis la saison calculée par le questionnaire
+            (`colorimetrie`), qui n'apparaissait pas sur le profil. */}
         <LigneProfil
           icone={I_PALETTE}
-          titre="Palette de couleurs"
+          titre="Couleurs préférées"
           valeur={<PastillesPalette couleurs={profile.paletteCouleurs} />}
           renseigne={renseigne("palette")}
           explication="Oriente les couleurs de ta capsule et de tes tenues."
           onClick={() => ouvrirChamp("palette")}
+        />
+        <LigneProfil
+          icone={I_PALETTE}
+          titre="Colorimétrie"
+          valeur={
+            colorimetrieUtilisable(profile.colorimetrie) ? (
+              <span className="flex flex-col gap-[5px]">
+                <span>{profile.colorimetrie.libelle}</span>
+                <PastillesPalette couleurs={(profile.colorimetrie.signature ?? []).slice(0, SIGNATURE_AFFICHEE_MAX)} />
+              </span>
+            ) : (
+              "Non renseignée"
+            )
+          }
+          renseigne={colorimetrieUtilisable(profile.colorimetrie)}
+          explication="Oriente les couleurs de ta capsule, après tes couleurs préférées, et de tes tenues."
+          onClick={() => actions.goProfileSetup("colorimetrie", true)}
         />
       </Card>
 

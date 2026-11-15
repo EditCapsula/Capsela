@@ -33,8 +33,17 @@ export default function EtapeMeteo({
     <div className="mt-[22px]">
       {etat === "enCours" && <div className="text-[13px] text-muted leading-[1.5]">Localisation en cours…</div>}
       {etat === "accordee" && (
-        <div className="rounded-tuile border border-border bg-card px-[14px] py-[12px] text-[13px] text-ink leading-[1.5]">
-          Localisation activée. La météo de tes tenues suivra l&apos;endroit où tu te trouves{ville ? ` (${ville} pour l'instant)` : ""}.
+        // LA COCHE VERTE (15/11/2026, demandé : « visualiser que la géolocalisation est effective ») : le motif de réussite de la valise
+        // prête (ValiseScreen), pastille success à gauche du texte.
+        <div role="status" className="flex items-start gap-[10px] rounded-tuile border border-border bg-card px-[14px] py-[12px]">
+          <span aria-hidden="true" className="mt-[1px] w-[22px] h-[22px] rounded-full bg-success flex items-center justify-center flex-shrink-0">
+            <svg width="12" height="12" viewBox="0 0 24 24" style={{ display: "block" }}>
+              <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="var(--color-cream)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span className="text-[13px] text-ink leading-[1.5]">
+            Localisation activée. La météo de tes tenues suivra l&apos;endroit où tu te trouves{ville ? ` (${ville} pour l'instant)` : ""}.
+          </span>
         </div>
       )}
       {etat === "refusee" && (
