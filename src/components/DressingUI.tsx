@@ -49,8 +49,12 @@ export function OngletsDressing({ actif, onChange }: { actif: OngletDressing; on
   );
 }
 
-/** La synthèse compacte d'un onglet : le nombre (chiffres en Manrope), son libellé — sur deux lignes plutôt que tronqué à 320 px —, l'action principale. */
-export function CarteSynthese({ nombre, libelle, action, onAction }: { nombre: ReactNode; libelle: string; action: string; onAction: () => void }) {
+/**
+ * La synthèse compacte d'un onglet : le nombre (chiffres en Manrope), son libellé, l'action principale. RACCOURCIE LE 15/11/2026
+ * (demandé : « juste 2 looks », même traitement du bouton) : « 14 pièces » / « + Ajouter », « 2 looks » / « + Créer » — une ligne
+ * jusqu'à 320 px ; le libellé complet de l'action reste pour les lecteurs d'écran (`actionAria`).
+ */
+export function CarteSynthese({ nombre, libelle, action, actionAria, onAction }: { nombre: ReactNode; libelle: string; action: string; actionAria?: string; onAction: () => void }) {
   return (
     <Card rayon="bloc" className="mt-3 flex items-center gap-3 pl-4 pr-[6px] py-[6px]">
       <div className="min-w-0 flex-1 flex items-center gap-[8px]">
@@ -62,6 +66,7 @@ export function CarteSynthese({ nombre, libelle, action, onAction }: { nombre: R
       <button
         type="button"
         onClick={onAction}
+        aria-label={actionAria}
         className="flex-shrink-0 h-[40px] px-[13px] rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-[12.5px] font-semibold whitespace-nowrap cursor-pointer"
       >
         + {action}

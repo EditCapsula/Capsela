@@ -456,8 +456,9 @@ function PanneauDressing() {
       <div className="flex-shrink-0 px-6">
         <CarteSynthese
           nombre={synthese.texte.split(" pièce")[0] /* « 12 / 30 » en gratuit vérifié, sinon le nombre seul */}
-          libelle={`${items.length <= 1 ? "pièce" : "pièces"} dans mon dressing`}
-          action="Ajouter une pièce"
+          libelle={items.length <= 1 ? "pièce" : "pièces"}
+          action="Ajouter"
+          actionAria="Ajouter une pièce"
           onAction={ajouter}
         />
         {/* data-tour : la recherche et les catégories, cible de la visite guidée « Dressing » (lib/visites.ts). */}

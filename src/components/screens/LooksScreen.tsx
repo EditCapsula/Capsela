@@ -47,7 +47,7 @@ export function PanneauLooks() {
   return (
     <div className="absolute inset-0 flex flex-col">
       <div className="flex-shrink-0 px-6">
-        <CarteSynthese nombre={n} libelle={`${n <= 1 ? "look" : "looks"} dans ma collection`} action="Créer un look" onAction={() => actions.goCreateLook()} />
+        <CarteSynthese nombre={n} libelle={n <= 1 ? "look" : "looks"} action="Créer" actionAria="Créer un look" onAction={() => actions.goCreateLook()} />
         {n > 0 && (
           <>
             <BarreRecherche valeur={recherche} onChange={setRecherche} placeholder="Rechercher un look…" ariaLabel="Rechercher un look" />
