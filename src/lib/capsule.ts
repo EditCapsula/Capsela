@@ -538,6 +538,16 @@ export type SelectionStrategy = {
    * les garanties de fin ajoutaient déjà.
    */
   jumelles?: "evitees";
+  /**
+   * LE FILET DE SÉCURITÉ RESPECTE LA SAISON ET LE STYLE (15/11/2026, signalé : un compte neuf — homme, Classique chic, Casual chic,
+   * Minimaliste, intensité « Profondes et intenses », six couleurs choisies — n'avait aucune tenue du jour). Quand la sélection ne retient
+   * aucune pièce d'une catégorie essentielle, `ensure` en repioche une dans tout le catalogue. Il respectait la température, mais ni la
+   * saison ni le style, et prenait d'abord une pièce aux couleurs choisies : il ramenait une chemise de printemps, en lin, de style
+   * Créatif, dans une capsule d'automne — que le moteur écarte ensuite (hors saison). Plus aucun haut habillé, plus aucune tenue.
+   * "respectee" : le filet cherche d'abord dans la saison de la capsule ET les styles du profil, puis dans la saison seule, puis partout
+   * (comme avant) ; les couleurs choisies départagent à l'intérieur de ce rang. Absent : le filet d'avant (audit avant / après).
+   */
+  filetSaison?: "respectee";
 };
 /**
  * Depuis le 29/08/2026, la production ne consulte plus `morphoFit` au rang 3.
@@ -563,7 +573,11 @@ export const STRATEGIE_PRODUCTION: SelectionStrategy = {
   miseEnValeurPrime: true,
   paireHabillee: "garantie",
   jumelles: "evitees",
+  filetSaison: "respectee",
 };
+
+/** La production juste avant le filet de sécurité qui respecte saison et style (15/11/2026) — pour l'audit premiere-tenue. */
+export const STRATEGIE_AVANT_FILET_SAISON: SelectionStrategy = { ...STRATEGIE_PRODUCTION, filetSaison: undefined };
 
 /** La production juste avant la règle des pièces jumelles (05/11/2026) — pour l'audit avant / après (jumelles-capsule.audit.ts). */
 export const STRATEGIE_AVANT_JUMELLES: SelectionStrategy = { ...STRATEGIE_PRODUCTION, jumelles: undefined };
@@ -1124,8 +1138,14 @@ export function computeDefaultCapsule(
           it.season !== "Toutes saisons"
         )
     );
-    const fav = pool.filter((it) => favColors.includes(it.hex));
-    const pickFrom = fav.length ? fav : pool;
+    // Le rang du filet (filetSaison, 15/11/2026) : saison de la capsule ET styles du profil, puis saison seule, puis tout le pool.
+    // Les couleurs choisies ne départagent qu'à l'intérieur du rang retenu — jamais une pièce hors saison parce qu'elle est de la bonne couleur.
+    const deSaison = (it: CatalogItem) => it.season === bucket || it.season === "Toutes saisons";
+    const duStyle = (it: CatalogItem) => !styles.length || styles.some((st) => styleFit(it, st));
+    const rangs = strategy.filetSaison === "respectee" ? [pool.filter((it) => deSaison(it) && duStyle(it)), pool.filter(deSaison), pool] : [pool];
+    const rang = rangs.find((r) => r.length) ?? [];
+    const fav = rang.filter((it) => favColors.includes(it.hex));
+    const pickFrom = fav.length ? fav : rang;
     if (pickFrom.length) out = [...out, pickFrom[0]];
   };
   (["haut", "chaussures", "sac", "bijou", "veste", "manteau", "pull", "accessoire"] as CategoryKey[]).forEach(ensure);

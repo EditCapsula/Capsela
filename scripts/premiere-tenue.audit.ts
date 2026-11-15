@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
-import { CHALEUR_HORS_SAISON, computeDefaultCapsule, currentSeasonKey, saisonCapsuleDuJour, weatherForDay } from "../src/lib/capsule";
+import { CHALEUR_HORS_SAISON, STRATEGIE_AVANT_FILET_SAISON, STRATEGIE_PRODUCTION, computeDefaultCapsule, currentSeasonKey, saisonCapsuleDuJour, weatherForDay, type SelectionStrategy } from "../src/lib/capsule";
 import type { CatalogItem } from "../src/lib/catalog";
 import { CATS, type Weather } from "../src/lib/data";
 import { genererTenueDiversifiee } from "../src/lib/diversite";
@@ -43,11 +43,11 @@ function trios(styles: StyleId[]): StyleId[][] {
   return r;
 }
 
-function mesurer(catalogue: CatalogItem[], genre: "femme" | "homme" | null, styles: StyleId[], temp: number, label: string, ctx: Contexte, patch: Partial<Profile> = {}) {
+function mesurer(catalogue: CatalogItem[], genre: "femme" | "homme" | null, styles: StyleId[], temp: number, label: string, ctx: Contexte, patch: Partial<Profile> = {}, strategie: SelectionStrategy = STRATEGIE_PRODUCTION) {
   // Genre non renseigné (15/11/2026) : la capsule du compte signalé montre des pièces homme, 33 au lieu de 40.
   const profil = genre ? profilAudit({ gender: genre, styles, patch }) : profilAudit({ gender: "femme", styles, patch: { ...patch, gender: null } });
   const w: Weather = weatherForDay(temp, label, currentSeasonKey(), CHALEUR_HORS_SAISON);
-  const capsule = computeDefaultCapsule(profil, w, [], saisonCapsuleDuJour(w.temp), catalogue);
+  const capsule = computeDefaultCapsule(profil, w, [], saisonCapsuleDuJour(w.temp), catalogue, strategie);
   const pool = composeWardrobePool([], capsule, CAT_KEYS);
   const poolGeneration = composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: ctx.occasion, saison: w, exclureHorsOccasion: true, pieceAdaptee: true, genre });
   let echecs = 0;
@@ -62,7 +62,7 @@ function mesurer(catalogue: CatalogItem[], genre: "femme" | "homme" | null, styl
   }
   const parCat = new Map<string, number>();
   for (const p of poolGeneration) parCat.set(p.cat, (parCat.get(p.cat) ?? 0) + 1);
-  return { capsule: capsule.length, pool: poolGeneration.length, echecs, raisons, parCat };
+  return { capsule: capsule.length, ids: capsule.map((p) => p.id).sort((a, b) => a - b).join(","), pool: poolGeneration.length, echecs, raisons, parCat };
 }
 
 describe("première tenue d'un compte neuf (dressing vide)", () => {
@@ -164,6 +164,42 @@ describe("première tenue d'un compte neuf (dressing vide)", () => {
           console.log(`${temp}° ${ctx.nom} : capsule ${m.capsule}, échecs ${m.echecs}/${TIRAGES}` + (m.raisons.size ? ` (${[...m.raisons].map(([k, n]) => `${k} ×${n}`).join(", ")})` : "") + ` | ${[...m.parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`);
         }
     }
+
+    // 3. LE CORRECTIF DU FILET (filetSaison, capsule.ts) — AVANT / APRÈS dans la même exécution, même catalogue, un seul levier.
+    //    a) le cas signalé ; b) toutes les capsules des trios, sans palette puis avec chaque palette : combien changent, et les échecs.
+    console.log("\n=== Correctif du filet : cas signalé (homme, couleurs + intensité), avant → après ===");
+    const casSignale: Partial<Profile> = { paletteCouleurs: PALETTE_SIGNALEE, paletteIntensite: "Profondes et intenses" };
+    for (const [temp, label] of TEMPS)
+      for (const ctx of CONTEXTES) {
+        const av = mesurer(catalogue, "homme", ["classique_chic", "casual_chic", "minimaliste"], temp, label, ctx, casSignale, STRATEGIE_AVANT_FILET_SAISON);
+        const ap = mesurer(catalogue, "homme", ["classique_chic", "casual_chic", "minimaliste"], temp, label, ctx, casSignale, STRATEGIE_PRODUCTION);
+        console.log(`${temp}° ${ctx.nom} : échecs ${av.echecs}/${TIRAGES} → ${ap.echecs}/${TIRAGES} ; capsule ${av.capsule} → ${ap.capsule} | après : ${[...ap.parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`);
+      }
+    const PALETTES: [string, Partial<Profile>][] = [
+      ["sans palette", {}],
+      ["Profondes et intenses", { paletteIntensite: "Profondes et intenses" }],
+      ["Douces et discrètes", { paletteIntensite: "Douces et discrètes" }],
+      ["Lumineuses", { paletteIntensite: "Lumineuses" }],
+      ["Tons chauds", { paletteAffinite: "Tons chauds" }],
+      ["Tons froids", { paletteAffinite: "Tons froids" }],
+      ["couleurs signalées", { paletteCouleurs: PALETTE_SIGNALEE }],
+      ["couleurs + Profondes", casSignale],
+    ];
+    console.log("\n=== Correctif du filet : tous les trios × 3 températures × Quotidien, par palette ===");
+    for (const [genre, styles] of [["femme", STYLES_FEMME], ["homme", STYLES_HOMME]] as const)
+      for (const [nom, patch] of PALETTES) {
+        let cellules = 0, changees = 0, echAv = 0, echAp = 0;
+        for (const trio of trios(styles))
+          for (const [temp, label] of TEMPS) {
+            cellules++;
+            const av = mesurer(catalogue, genre, trio, temp, label, CONTEXTES[0], patch, STRATEGIE_AVANT_FILET_SAISON);
+            const ap = mesurer(catalogue, genre, trio, temp, label, CONTEXTES[0], patch, STRATEGIE_PRODUCTION);
+            if (av.ids !== ap.ids) changees++;
+            if (av.echecs) echAv++;
+            if (ap.echecs) echAp++;
+          }
+        console.log(`${genre} · ${nom} : ${changees}/${cellules} capsules changées ; cellules en échec ${echAv} → ${echAp}`);
+      }
 
     // 2. Tous les trios, par genre : les cellules en échec seulement.
     for (const [genre, styles] of [["femme", STYLES_FEMME], ["homme", STYLES_HOMME]] as const) {
