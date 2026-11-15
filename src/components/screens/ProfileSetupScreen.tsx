@@ -984,7 +984,9 @@ export default function ProfileSetupScreen() {
 
   const continueButton = pied && (
     <>
-      <Button className="mt-[22px]" onClick={pied.actif ? pied.onClick : undefined} disabled={!pied.actif}>
+      {/* Étape Style : le bouton suit de près « Mes styles sélectionnés » (15/11/2026, demandé : « réduis la marge entre le style
+          sélectionné et le CTA ») ; ailleurs, l'écart d'origine. */}
+      <Button className={meta.key === "style" ? "mt-[4px]" : "mt-[22px]"} onClick={pied.actif ? pied.onClick : undefined} disabled={!pied.actif}>
         {pied.libelle}
       </Button>
       {pied.lien && (
@@ -1030,7 +1032,7 @@ export default function ProfileSetupScreen() {
           {/* Les gestes J'aime / Pas pour moi, posés ici par DecouverteStyles (15/11/2026) : jamais sous le pli. */}
           {meta.key === "style" && <div ref={setCibleGestes} />}
           {meta.key === "style" && (
-            <div className="mb-[10px]">
+            <div className="mb-[6px]">
               <MesStylesSelectionnes
                 gender={draft.gender}
                 styles={stylesDuGenre(draft.styles, draft.gender)}
