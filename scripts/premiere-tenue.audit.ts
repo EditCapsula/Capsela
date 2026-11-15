@@ -33,6 +33,8 @@ interface Contexte { nom: string; occasion: OccasionKey; workMode: WorkMode; dat
 const CONTEXTES: Contexte[] = [
   { nom: "Quotidien", occasion: "quotidien", workMode: "Présentiel" as WorkMode, dateContext: "Restaurant / date romantique" as DateContext },
   { nom: "Travail présentiel", occasion: "travail_formel", workMode: "Présentiel" as WorkMode, dateContext: "Restaurant / date romantique" as DateContext },
+  // « Je suis en congés » ou une période de congés (occasionParDefaut, jourConsulte.ts) : l'occasion par défaut est Cocooning.
+  { nom: "Cocooning", occasion: "cocooning", workMode: "Présentiel" as WorkMode, dateContext: "Restaurant / date romantique" as DateContext },
 ];
 
 function trios(styles: StyleId[]): StyleId[][] {
