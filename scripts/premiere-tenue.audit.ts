@@ -5,7 +5,7 @@ import type { CatalogItem } from "../src/lib/catalog";
 import { CATS, type Weather } from "../src/lib/data";
 import { genererTenueDiversifiee } from "../src/lib/diversite";
 import { composeWardrobePool } from "../src/lib/selectors";
-import type { Affinite, Intensite, Profile, StyleId } from "../src/lib/profile";
+import { paletteHexes, type Affinite, type Intensite, type Profile, type StyleId } from "../src/lib/profile";
 import type { DateContext, OccasionKey, WorkMode } from "../src/lib/types";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { STYLES_FEMME, STYLES_HOMME, assertCatalogueStyles, profilAudit } from "./harnaisAudit";
@@ -53,7 +53,7 @@ function mesurer(catalogue: CatalogItem[], genre: "femme" | "homme" | null, styl
   let echecs = 0;
   const raisons = new Map<string, number>();
   for (let t = 0; t < TIRAGES; t++) {
-    const r = genererTenueDiversifiee({ pool: poolGeneration, weather: w, occasion: ctx.occasion, workMode: ctx.workMode, dateContext: ctx.dateContext, preferredHexes: [], gender: genre, morphology: null, colorimetrie: null, recents: [] });
+    const r = genererTenueDiversifiee({ pool: poolGeneration, weather: w, occasion: ctx.occasion, workMode: ctx.workMode, dateContext: ctx.dateContext, preferredHexes: paletteHexes(profil), gender: genre, morphology: null, colorimetrie: null, recents: [] });
     if (r.noCompleteOutfit || !r.ids.length) {
       echecs++;
       const k = String(r.reason ?? "sans raison");
@@ -130,6 +130,18 @@ describe("première tenue d'un compte neuf (dressing vide)", () => {
             const m = mesurer(catalogue, genre, ["classique_chic", "casual_chic", "minimaliste"], 10, "Nuageux", ctx, { paletteAffinite: a, paletteIntensite: i });
             console.log(`${genre} · ${a ?? "—"} · ${i ?? "—"} · ${ctx.nom} : capsule ${m.capsule}, échecs ${m.echecs}/${TIRAGES}` + (m.raisons.size ? ` (${[...m.raisons].map(([k, n]) => `${k} ×${n}`).join(", ")})` : "") + ` | ${[...m.parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`);
           }
+
+    // 1 quater. La palette du compte signalé (capture du 15/11/2026) : six couleurs CHOISIES, transmises au moteur comme couleurs préférées
+    // (paletteHexes, comme regen). Rose pâle, gris perle, menthe, turquoise, lavande, bleu ciel — au plus près des pastilles affichées.
+    const PALETTE_SIGNALEE = ["#EBCFCB", "#D3D0CB", "#B7D3C1", "#3A9A9E", "#A99BC4", "#A9BFCB"];
+    for (const genre of ["homme", "femme"] as const) {
+      console.log(`\n=== Trio signalé, ${genre}, palette de six couleurs choisies ===`);
+      for (const [temp, label] of TEMPS)
+        for (const ctx of CONTEXTES) {
+          const m = mesurer(catalogue, genre, ["classique_chic", "casual_chic", "minimaliste"], temp, label, ctx, { paletteCouleurs: PALETTE_SIGNALEE });
+          console.log(`${temp}° ${ctx.nom} : capsule ${m.capsule}, échecs ${m.echecs}/${TIRAGES}` + (m.raisons.size ? ` (${[...m.raisons].map(([k, n]) => `${k} ×${n}`).join(", ")})` : "") + ` | ${[...m.parCat].map(([c, n]) => `${c} ${n}`).join(", ")}`);
+        }
+    }
 
     // 2. Tous les trios, par genre : les cellules en échec seulement.
     for (const [genre, styles] of [["femme", STYLES_FEMME], ["homme", STYLES_HOMME]] as const) {
