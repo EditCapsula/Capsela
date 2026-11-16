@@ -30,6 +30,8 @@ jobs:
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
           SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
+          # Seul l'audit visuels-coherence l'emploie (16/11/2026 : le modèle de vision compare deux visuels ; lecture seule).
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AUDITS: ${{ inputs.audits }}
         run: |
           set -euo pipefail
