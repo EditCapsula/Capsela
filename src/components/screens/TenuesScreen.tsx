@@ -16,7 +16,7 @@ import { useQuotaTenues } from "@/components/QuotaTenues";
 import SelecteurOccasion from "@/components/SelecteurOccasion";
 import { CATLABEL, OCCASIONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
-import { resolveItemImage } from "@/lib/catalogImages";
+import { resolvePhotoCatalogue, resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, saisonCalendairePour, saisonCapsuleDuJour } from "@/lib/capsule";
 import { conseilCouleur } from "@/lib/conseilsCouleurs";
 import { accordsEcartes, basculerRetour, ecrireRetours, fusionnerRetours, lireRetours, type RetourAccord, type TableRetours } from "@/lib/retoursAccords";
@@ -98,6 +98,15 @@ function VignetteChoix({
 }) {
   const image = resolveItemImage(it);
   const suggeree = isCatalogId(it.id);
+  // UNE IMAGE QUI NE SE CHARGE PAS (16/11/2026, signalé en capture : des cases vides dans « Choisir des chaussures », alors que leurs
+  // visuels existent — un refus passager du stockage, 429, laissait la case vide pour de bon). En cas d'échec : la photo du catalogue si
+  // le visuel posé n'a pas répondu, puis une seconde tentative de la même adresse ; à défaut, la couleur de la pièce.
+  const repli = resolvePhotoCatalogue(it).url;
+  const essais = [image.url, repli && repli !== image.url ? repli : undefined, image.url ? `${image.url}${image.url.includes("?") ? "&" : "?"}r=1` : undefined].filter(
+    (u): u is string => Boolean(u)
+  );
+  const [essai, setEssai] = useState(0);
+  const url = essais[essai];
   return (
     <div className={"flex flex-col " + (pleine ? "min-w-0" : "flex-shrink-0 w-[104px]")}>
       <button
@@ -105,14 +114,16 @@ function VignetteChoix({
         onClick={onVoir}
         aria-label={t("{nom}. Voir le détail", { nom: it.name })}
         className="relative w-full aspect-square rounded-bloc overflow-hidden cursor-pointer"
-        style={{ background: image.url ? "var(--color-photo-bg)" : it.hex }}
+        style={{ background: url ? "var(--color-photo-bg)" : it.hex }}
       >
-        {image.url && (
+        {url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={image.url}
+            key={url}
+            src={url}
             alt=""
             loading="lazy"
+            onError={() => setEssai((e) => e + 1)}
             style={{
               width: "100%",
               height: "100%",
