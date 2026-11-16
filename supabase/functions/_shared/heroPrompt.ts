@@ -67,15 +67,17 @@ export function buildHeroImagePrompt(row: VestiaireRow, trend?: TrendRule | null
   // ne se reconnaissait pas. L'opacité suit le DEN du nom : jamais inventée au-delà des données du catalogue.
   const collants = /collant/i.test(`${row.sous_type ?? ""} ${row.name ?? ""}`);
   const den = Number((`${row.name ?? ""}`.match(/(\d+)\s*(?:\+|–|-)?\s*(?:\d+\s*)?DEN/i) ?? [])[1] ?? NaN);
+  // LA TEINTE SUIT LE DEN (16/11/2026, arbitré : « des teintes différentes selon les deniers » — la couleur du catalogue reste la même,
+  // seule son intensité perçue change) : d'un voile fumé et transparent à 15–20 DEN jusqu'à un noir profond et mat à 100 DEN et plus.
   const opacite = !Number.isFinite(den)
     ? "Keep the exact opacity of the product."
     : den <= 20
-      ? "Sheer, transparent nylon: the surface behind shows through softly, with a light sheen."
+      ? "Sheer, transparent nylon in a light smoky tint of the product color — clearly the lightest of the range: the surface behind shows through softly, with a light sheen."
       : den <= 40
-        ? "Semi-opaque: slightly see-through, the fine knit texture visible."
+        ? "Semi-opaque, in a veiled, softened shade of the product color — lighter than opaque tights, darker than sheer ones: slightly see-through, the fine knit texture visible."
         : den <= 80
-          ? "Opaque: dense, even, uniform fabric, matte."
-          : "Very opaque, thick and warm: dense, soft, matte knit.";
+          ? "Opaque, in the full matte shade of the product color: dense, even, uniform fabric."
+          : "Very opaque, thick and warm, in the deepest, richest shade of the product color — the darkest of the range: dense, soft, matte knit.";
   const presentation = collants
     ? [
         "Single pair of tights only, fully unfolded and laid flat.",
