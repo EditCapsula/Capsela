@@ -1,5 +1,6 @@
 "use client";
 
+import { ActionRonde, IconeAutre } from "@/components/CarrouselHero";
 import { useVotesSuggestion } from "@/components/useVotesSuggestion";
 import TitrePage from "@/components/TitrePage";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -797,9 +798,12 @@ export default function CapsuleScreen() {
               La planche : le moteur de flat lay de la Tenue du jour (FlatLayCapsela, contexte look-detail), pas une grille. Les
               flèches et le glissement ne changent que la pièce de l'emplacement choisi dessous (brief, 3.2).
             */}
+            {/* « AUTRE TENUE » DANS LA CARTE (16/11/2026, demandé : « intégré dans le flat lay, affiché comme partout dans l'application ») :
+                la carte porte la planche puis, dessous sur le même fond, l'action ronde de l'accueil et de la page Tenue (ActionRonde). */}
+            <div className="rounded-feuille overflow-hidden" style={{ background: "var(--color-hero-background)" }}>
             <div
-              className="relative rounded-feuille overflow-hidden"
-              style={{ aspectRatio: "100 / 100", background: "var(--color-hero-background)", touchAction: "pan-y" }}
+              className="relative"
+              style={{ aspectRatio: "100 / 100", touchAction: "pan-y" }}
               onTouchStart={(e) => (toucher.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
               onTouchEnd={(e) => {
                 const debut = toucher.current;
@@ -874,24 +878,14 @@ export default function CapsuleScreen() {
                 </>
               )}
             </div>
-
             {/* « Autre tenue » (13/11/2026) : la tenue suivante du moteur, dans les pièces de la capsule — les emplacements dessous
                 restent là pour la retoucher. */}
             {tenueDuMoteur && (
-              <div className="flex justify-end mt-[8px]">
-                <button
-                  type="button"
-                  onClick={autreTenueComposer}
-                  className="inline-flex items-center gap-[7px] min-h-[44px] px-[4px] text-[13px] text-ink cursor-pointer active:opacity-70"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-                    <path d="M20 4v5h-5" />
-                  </svg>
-                  Autre tenue
-                </button>
+              <div className="flex items-center px-[14px] pb-[6px] -mt-[6px]" aria-live="polite">
+                <ActionRonde icone={<IconeAutre />} libelle="Autre tenue" label="Propose-moi une autre tenue" onClick={autreTenueComposer} />
               </div>
             )}
+            </div>
 
             {/* Les emplacements : le choisi en terracotta, sa position discrète dessous (« 3 / 11 », « Sans » pour un emplacement vide). */}
             {/* data-tour : la 3e étape de la visite guidée de la Capsule (lib/visites.ts). */}
