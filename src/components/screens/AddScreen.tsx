@@ -8,7 +8,7 @@ import { aUnMotif, MOTIFS } from "@/lib/motifs";
 import { confierPhoto, confierTicket } from "@/lib/importTenue";
 import { etatAjout } from "@/lib/etatAjout";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { decisionAcces } from "@/lib/autorisations";
+import { TICKET_DE_CAISSE_VISIBLE, decisionAcces } from "@/lib/autorisations";
 import { lireTicket } from "@/lib/lectureTicket";
 import BadgePremium from "@/components/BadgePremium";
 import Rangee from "@/components/Rangee";
@@ -588,7 +588,7 @@ export default function AddScreen() {
                     </span>
                     <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
                   </Rangee>
-                  {creation && (
+                  {creation && TICKET_DE_CAISSE_VISIBLE && (
                     <Rangee
                       onClick={() => void choisirTicket()}
                       disabled={lectureTicket === "en_cours" || lectureTicket === "verification"}
