@@ -35,6 +35,7 @@ import {
   UNITES_MOYENNES_PAR_PIECE,
   unitesDe,
   volumeDe,
+  volumePorteAuTrajet,
   cibleDeVolume,
   composerValiseVariee,
   conseilMeteo,
@@ -1286,7 +1287,7 @@ export default function ValiseScreen() {
     // Tenues complètes seulement (12/11/2026, levier `complets`, mesuré par scripts/valise-complets.audit.ts : trajets d'un séjour avec
     // randonnée couverts 0 → 100 % en S et M, sans recul ailleurs).
     const seulDressing = rep.uniquementDressing ?? (idCible ? state.valises.find((v) => v.id === idCible)?.uniquementDressing === true : false);
-    const r = composerValiseVariee(dressing, seulDressing ? [] : capsuleDe(situations), situations, capaciteDe(rep.bagage), generer, { variete: true, adaptation: !seulDressing, complets: true }, undefined, cibleDeVolume(rep.bagage));
+    const r = composerValiseVariee(dressing, seulDressing ? [] : capsuleDe(situations), situations, capaciteDe(rep.bagage), generer, { variete: true, adaptation: !seulDressing, complets: true, trajetHorsCapacite: true }, undefined, cibleDeVolume(rep.bagage));
     setFaites(2);
     await pause(300);
     if (!actif.current) return;
@@ -2062,13 +2063,18 @@ function Resultat({
     valise.affaires?.quantites?.[id] != null || !LINGE_PAR_JOUR.includes(id) ? quantiteDe(valise.affaires?.quantites, id) : lingeParJour;
   const volumeLinge = affaires.filter((a) => LINGE_PAR_JOUR.includes(a.id)).reduce((t, a) => t + quantiteAffaire(a.id) * UNITE_LINGE, 0);
   const manuelles = quantitesValides(valise.quantites, ids);
-  const { quantites } = quantitesDeLaValise({ pieces, planning, looks, situations: valise.situations, lavage, manuelles, capacite, volumeLinge });
-  // Le remplissage compte les quantités (07/11/2026) et le linge (12/11/2026) : il suit ce qui est réellement emporté.
-  const volumePieces = volumeAvecQuantites(pieces, quantites);
+  // La tenue du trajet ne compte pas (16/11/2026, arbitré, volumePorteAuTrajet) : portée pendant le voyage, elle n'est pas dans le
+  // bagage. Le bagage offre donc sa capacité EN PLUS d'elle — pour les quantités proposées, « Alléger » et « Remplacer ».
+  const porteAuTrajet = volumePorteAuTrajet(looks, valise.situations, (id) => unitesDe(pieces.find((p) => p.id === id)?.cat ?? "haut"));
+  const capaciteUtile = capacite + porteAuTrajet;
+  const { quantites } = quantitesDeLaValise({ pieces, planning, looks, situations: valise.situations, lavage, manuelles, capacite: capaciteUtile, volumeLinge });
+  // Le remplissage compte les quantités (07/11/2026) et le linge (12/11/2026) : il suit ce qui est réellement emporté — la tenue du
+  // trajet en moins.
+  const volumePieces = volumeAvecQuantites(pieces, quantites) - porteAuTrajet;
   const volume = volumePieces + volumeLinge;
   const depasse = etatJauge(volume, capacite) === "depassee";
   // « Alléger » ne propose de retirer des pièces que si les PIÈCES elles-mêmes débordent : le linge seul ne fait perdre aucune tenue.
-  const aAlleger = volumePieces > capacite ? allegement(ids, looks, capacite, (id) => unitesDe(pieces.find((p) => p.id === id)?.cat ?? "haut")) : [];
+  const aAlleger = volumePieces > capacite ? allegement(ids, looks, capaciteUtile, (id) => unitesDe(pieces.find((p) => p.id === id)?.cat ?? "haut")) : [];
   /** La valise pleine dit la taille qui conviendrait (option 3) ; null : même la plus grande déborde. */
   const tailleQuiConvient = depasse ? bagageQuiConvient(volume, valise.bagage) : null;
   const tauxRemplissage = Math.round((volume / capacite) * 100);
@@ -2138,8 +2144,8 @@ function Resultat({
   // l'ouverture de la feuille — pas avant, c'est le calcul le plus coûteux.
   const idRemplacee = feuille?.type === "remplacer" ? feuille.id : null;
   const alts = useMemo(
-    () => (idRemplacee != null ? alternatives(idRemplacee, valise.pieceIds, base, valise.situations, generer, 6, capaciteDe(valise.bagage)) : []),
-    [idRemplacee, valise.pieceIds, valise.situations, base, generer, valise.bagage]
+    () => (idRemplacee != null ? alternatives(idRemplacee, valise.pieceIds, base, valise.situations, generer, 6, capaciteUtile) : []),
+    [idRemplacee, valise.pieceIds, valise.situations, base, generer, capaciteUtile]
   );
 
   // « Alléger » : les pièces cochées ; « Ajouter une tenue » : la proposition du moteur pour la situation choisie (calculée au
@@ -2591,7 +2597,7 @@ function Resultat({
                   const t = proposition.tenue;
                   const piecesT = dansLOrdreDuLook(t.ids.map((id) => base.find((x) => x.id === id)).filter((x): x is Item => !!x));
                   const idsTotal = new Set([...valise.pieceIds, ...t.ids]);
-                  const total = volumeDe(base.filter((x) => idsTotal.has(x.id)));
+                  const total = volumeDe(base.filter((x) => idsTotal.has(x.id))) - porteAuTrajet;
                   return (
                     <Card rayon="tuile" className="mt-4 p-[14px]">
                       <div className="flex gap-[3px]">

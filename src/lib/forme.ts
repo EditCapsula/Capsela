@@ -53,3 +53,37 @@ export function vestePlusLongueQueLeManteau(veste: Pick<Item, "cat" | "longueur"
   if (veste.cat !== "veste" || manteau.cat !== "manteau" || !veste.longueur || !manteau.longueur) return false;
   return RANG_LONGUEUR[veste.longueur] > RANG_LONGUEUR[manteau.longueur];
 }
+
+/**
+ * LA LONGUEUR LUE DANS LE NOM — pour PROPOSER celle des pièces du catalogue (16/11/2026, choisi par la propriétaire : « un tri
+ * automatique d'après le nom des pièces, que tu relis avant que je l'applique », puis l'analyse des images pour le reste). Ce n'est
+ * jamais une lecture du moteur : la proposition est relue, puis écrite dans la colonne `longueur` (migration 0064) par un SQL validé.
+ *
+ * Seuls des mots qui disent la longueur DU VÊTEMENT : « court », « mini », « crop » ; « midi », « mi-long » ; « long », « maxi »,
+ * « cheville ». Un mot qui suit « manches », « col » ou « épaules » parle d'autre chose (« chemise manches longues »). « Genou » n'est
+ * pas retenu : au-dessus ou au-dessous, il ne tranche pas. Aucun mot, ou deux longueurs contraires : null, la pièce passe à l'image.
+ */
+const MOTS_LONGUEUR: readonly { valeur: Longueur; mots: readonly string[] }[] = [
+  { valeur: "courte", mots: ["court", "courte", "courts", "courtes", "mini", "crop", "cropped", "ras"] },
+  { valeur: "midi", mots: ["midi", "mi-long", "mi-longue", "milong", "milongue"] },
+  { valeur: "longue", mots: ["long", "longue", "longs", "longues", "maxi", "cheville", "chevilles"] },
+];
+const PORTEURS = new Set(["manche", "manches", "col", "cols", "epaule", "epaules"]);
+
+export function longueurDepuisLeNom(cat: CategoryKey, ...textes: (string | null | undefined)[]): Longueur | null {
+  if (!aUneLongueur(cat)) return null;
+  const t = textes
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/mi[\s-]+long(ue)?s?/g, (m) => (m.includes("longue") ? "mi-longue" : "mi-long"));
+  const mots = t.split(/[^a-z0-9-]+/).filter(Boolean);
+  const trouvees = new Set<Longueur>();
+  mots.forEach((m, i) => {
+    if (PORTEURS.has(mots[i - 1] ?? "")) return;
+    for (const { valeur, mots: liste } of MOTS_LONGUEUR) if (liste.includes(m)) trouvees.add(valeur);
+  });
+  return trouvees.size === 1 ? [...trouvees][0] : null;
+}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
 import { GENERATIONS_GRATUITES_PAR_JOUR, LIMITE_DRESSING_GRATUIT } from "@/lib/premium";
+import { TICKET_DE_CAISSE_VISIBLE } from "@/lib/autorisations";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 
@@ -102,11 +103,16 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
     desc: "Montre ta tenue à Capsela : ce qui fonctionne, ce que tu peux ajuster.",
   },
   // Premium depuis le 30/10/2026 (décidé : « la fonctionnalité ticket de caisse est premium »), LIRE_TICKET dans autorisations.ts.
-  {
-    glyphe: G_CINTRE,
-    titre: "Ajout depuis un ticket de caisse",
-    desc: "Photographie ton ticket : une fiche par vêtement acheté, avec le magasin en marque.",
-  },
+  // Masqué tant que le ticket l'est (TICKET_DE_CAISSE_VISIBLE, 16/11/2026) : l'écran ne promet pas ce que l'app ne montre pas.
+  ...(TICKET_DE_CAISSE_VISIBLE
+    ? [
+        {
+          glyphe: G_CINTRE,
+          titre: "Ajout depuis un ticket de caisse",
+          desc: "Photographie ton ticket : une fiche par vêtement acheté, avec le magasin en marque.",
+        },
+      ]
+    : []),
 ];
 
 interface Formule {

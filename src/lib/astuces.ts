@@ -1,3 +1,4 @@
+import { TICKET_DE_CAISSE_VISIBLE } from "./autorisations";
 import { aTraduire } from "./langue";
 
 /*
@@ -19,7 +20,8 @@ export const ASTUCES: readonly string[] = [
   // analyze-dressing-photo, detourer-photo.
   aTraduire("Une photo suffit pour ajouter une pièce : Capsela reconnaît sa catégorie et sa couleur, puis la détoure."),
   // Ajouter → ticket de caisse (lectureTicket.ts) : une fiche préremplie par article. Fonction Premium (LIRE_TICKET) : l'astuce le dit.
-  aTraduire("Avec Premium, photographie ton ticket de caisse : Capsela prépare une fiche pour chaque vêtement acheté."),
+  // Masquée tant que le ticket l'est (TICKET_DE_CAISSE_VISIBLE, 16/11/2026).
+  ...(TICKET_DE_CAISSE_VISIBLE ? [aTraduire("Avec Premium, photographie ton ticket de caisse : Capsela prépare une fiche pour chaque vêtement acheté.")] : []),
   // Valise (valise.ts) : pièces du dressing, complétées par la capsule, puis les looks du séjour.
   aTraduire("Tu pars bientôt ? Capsela prépare ta valise : les pièces à emporter et les looks de ton séjour."),
   // Planifier : tenue pour une date, un moment et un lieu.

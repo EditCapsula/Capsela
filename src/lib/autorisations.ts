@@ -18,6 +18,17 @@ import type { EtatPremium } from "./premium";
  * supabase/functions/_shared/premium.ts (le test miroir exige les deux), puis
  * redéployer la fonction `stylist-advice`.
  */
+/**
+ * LE TICKET DE CAISSE, MASQUÉ PARTOUT (16/11/2026, décidé par la propriétaire après un retour utilisateur : « les visuels générés à titre
+ * indicatif ne conviennent pas » ; « cacher cette fonctionnalité dans un premier temps de partout dans l'app, on la remettra dans un lot
+ * ultérieur »). Rien n'est supprimé : le code, la fonction `lire-ticket` et `visuel-article` restent. Seules les entrées disparaissent —
+ * « Ajouter une pièce », l'écran Premium, l'astuce du chargement. true les rend toutes.
+ *
+ * Les textes légaux ne le citent plus non plus (16/11/2026, docs/legal : CGU, CGV, confidentialité) : le remettre, c'est aussi y
+ * remettre ses mentions — la lecture du ticket et ce qui en est gardé — avant la mise en ligne.
+ */
+export const TICKET_DE_CAISSE_VISIBLE = false;
+
 export const REGLES_ACCES: Record<"AVIS_DE_STYLISTE" | "PREPARER_VALISE" | "LIRE_TICKET", RegleAcces> = {
   AVIS_DE_STYLISTE: "ACCES_LIBRE",
   // Préparer sa valise : GRATUITE depuis le 30/10/2026 (décidé : « enlève le premium de la préparation de valise »). Le 06/11/2026,
