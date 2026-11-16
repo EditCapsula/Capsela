@@ -254,6 +254,19 @@ export function isColRoule(it: Item): boolean {
   return it.cat === "pull" && /col roul/.test(`${it.subtype ?? ""} ${it.name || ""}`.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase());
 }
 
+/**
+ * R-B26 — PAS DE PULL NI DE GILET SUR UNE ROBE PULL (16/11/2026, demandé : « pas de pull ou de gilet sur une robe pull »). Une robe en
+ * maille (« robe pull », « robe en maille », « robe tricot ») est déjà la maille de la tenue : aucune pièce de la catégorie pull
+ * (pull, gilet, cardigan) ne se pose dessus — ni le calque d'une robe, ni le gilet du télétravail (R-S27), ni la compensation du
+ * froid (R-B18, qui prend alors une veste ou un manteau), ni la maille ouverte d'une idée de tenue. Une veste, un manteau restent
+ * possibles. Lue sur le nom et le sous-type, comme les autres familles de pièces.
+ */
+export function estRobePull(it: Pick<Item, "cat" | "name" | "subtype">): boolean {
+  if (it.cat !== "robe") return false;
+  const t = `${it.subtype ?? ""} ${it.name || ""}`.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+  return /\bpull\b|\bmaille\b|tricot|\bknit/.test(t);
+}
+
 /** R-B10 — deux chemises/chemisiers ensemble, quel que soit leur rôle de superposition. */
 function isShirtLike(it: Item): boolean {
   return it.subtype === "Chemise" || it.subtype === "Chemisier";
@@ -1712,7 +1725,9 @@ export function generateOutfit(
     !leviers?.vesteEnTeletravail &&
     (vesteFraicheRequise || weather.temp < SEUIL_MANTEAU) &&
     !chosen.some((c) => c.cat === "pull") &&
-    !ids.some((id) => pool.find((x) => x.id === id)?.cat === "pull")
+    !ids.some((id) => pool.find((x) => x.id === id)?.cat === "pull") &&
+    // R-B26 : jamais un gilet sur une robe pull.
+    !chosen.some(estRobePull)
   ) {
     const gilets = poolFor(["pull"], false).filter((i) => i.cat === "pull" && fermetureMaille(i) === "ouverte" && !ids.includes(i.id));
     const gilet = rand(harmoniser(gilets, chosen, false));
@@ -1730,7 +1745,11 @@ export function generateOutfit(
   if (useRobe && !dressy && !hasVeste && Math.random() < 0.3) {
     // Une chemise ample sur une combinaison sans manches en est aussi un, même notée « base » (16/10/2026, chemiseAmpleSurCombinaison).
     const robeLayerCandidates = hardBase.filter(
-      (i) => TOP_LAYER_CATS.includes(i.cat) && (rolePieceOf(i) === "calque" || (primaryTop != null && chemiseAmpleSurCombinaison(i, primaryTop)))
+      (i) =>
+        TOP_LAYER_CATS.includes(i.cat) &&
+        (rolePieceOf(i) === "calque" || (primaryTop != null && chemiseAmpleSurCombinaison(i, primaryTop))) &&
+        // R-B26 : sur une robe pull, aucune pièce de la catégorie pull.
+        !(i.cat === "pull" && chosen.some(estRobePull))
     );
     // Calque près du visage : la colorimétrie s'y applique (sans préférence
     // de palette, qui n'y a jamais joué — sans colorimétrie, liste inchangée).
@@ -1829,7 +1848,8 @@ export function generateOutfit(
     if (!alreadyCompensated) {
       const compensationCandidates = hardBaseNoTemp.filter((i) => {
         if (chosen.some((c) => c.id === i.id)) return false;
-        const isCalquePull = i.cat === "pull" && rolePieceOf(i) === "calque";
+        // R-B26 : sur une robe pull, la compensation du froid est une veste ou un manteau, jamais un gilet.
+        const isCalquePull = i.cat === "pull" && rolePieceOf(i) === "calque" && !chosen.some(estRobePull);
         if (!isCalquePull && !OUTERWEAR_CATS.includes(i.cat)) return false;
         return i.meteoMinTemp == null || weather.temp >= i.meteoMinTemp;
       });
@@ -2180,6 +2200,10 @@ export function candidatsDeRemplacement(
   let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId && !dejaPortees.has(i.id));
   // R-S22 — symétrique du tirage : en Cocooning, pas d'écharpe proposée en accessoire.
   if (occasion === "cocooning") candidates = candidates.filter((i) => i.accessoireType !== "Écharpe");
+  // R-B26 — symétrique du tirage : sur une robe pull, aucune pièce de la catégorie pull (pull, gilet, cardigan).
+  if (outfitItems.some((i) => i.id !== pieceId && estRobePull(i))) candidates = candidates.filter((i) => i.cat !== "pull");
+  // Et une robe pull ne remplace pas une robe sous laquelle la tenue porte déjà un pull ou un gilet.
+  if (outfitItems.some((i) => i.id !== pieceId && i.cat === "pull")) candidates = candidates.filter((i) => !estRobePull(i));
   // R-S23 — symétrique du tirage : la tenue porte déjà une pièce sans manches, le remplaçant en a (exclu en automne-hiver, préféré sinon).
   if (outfitItems.some((i) => i.id !== pieceId && i.manches === "sans")) {
     const avecManches = candidates.filter((i) => i.manches !== "sans");
@@ -3088,6 +3112,8 @@ function porterMailleOuverte(ids: number[], pivot: Item, pool: Item[], occasion:
   const pieces = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
   const dessous = pieces.some((p) => (p.cat === "haut" && rolePieceOf(p) === "base") || p.cat === "robe");
   if (!dessous) return null;
+  // R-B26 : jamais une maille ouverte sur une robe pull.
+  if (pieces.some(estRobePull)) return null;
   const dejaCouvert = pieces.some((p) => p.cat === "pull" || (TOP_LAYER_CATS.includes(p.cat) && rolePieceOf(p) === "calque"));
   if (dejaCouvert) return null;
   const vestes = new Set(pieces.filter((p) => p.cat === "veste").map((p) => p.id));
