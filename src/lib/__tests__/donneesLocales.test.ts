@@ -22,6 +22,7 @@ describe("clesLocalesDuCompte", () => {
       "capsela.valises.u1",
       "capsela.valise.u1",
       "capsela.recommandees.u1",
+      "capsela.tenuesDuJour.u1",
       "capsela.accords.u1",
       "capsela.piecesEcartees.u1",
       "capsela.favorisPieces.u1",

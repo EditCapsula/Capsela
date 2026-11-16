@@ -19,6 +19,8 @@ export function clesLocalesDuCompte(userId: string | null): string[] {
     `capsela.valise.${compte}`,
     // Les tenues recommandées ces derniers jours (recommandationsRecentes.ts).
     `capsela.recommandees.${compte}`,
+    // Les tenues du jour et le carrousel gardés pour la journée (tenuesGardees.ts, 16/11/2026).
+    `capsela.tenuesDuJour.${compte}`,
     // Les retours sur les accords de saison (retoursAccords.ts).
     `capsela.accords.${compte}`,
     // Les pièces de capsule écartées (« J'ai déjà », piecesEcartees.ts).

@@ -1,5 +1,6 @@
 "use client";
 
+import { cleContexte, garderCarrousel, garderTenue, lireGardees, tenueRestituable } from "./tenuesGardees";
 import { remplacerDansIds } from "./remplacementPiece";
 import { oublierContexte } from "./memoireEcrans";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -1678,6 +1679,36 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     s.occasionManual ? s : { ...s, occasion: occasionParDefaut(profile.prefs, dateDuJour(s.jourDecalage)) };
 
   /*
+   * LA TENUE GARDÉE AVANT TOUT NOUVEAU TIRAGE (16/11/2026, tenuesGardees.ts — demandé : « si j'actualise la page les tenues doivent
+   * rester exactement les mêmes ; si je ferme l'app, les mêmes sauf si j'actualise via Autre tenue »). Pour aujourd'hui, et hors
+   * exploration d'un style : la tenue déjà montrée pour ce contexte (occasion, mode de travail, type de rendez-vous) est rendue telle
+   * quelle si toutes ses pièces se retrouvent ; sinon, le moteur compose, comme avant. « Autre tenue » n'y passe jamais : il tire.
+   */
+  const restaurerOuRegen = (s: AppState, ...args: Parameters<typeof regen> extends [AppState, ...infer R] ? R : never): AppState => {
+    if (s.jourDecalage === 0 && !s.exploredStyleId) {
+      const g = lireGardees(userId, jourLocal());
+      const t = g.tenues[cleContexte({ occasion: s.occasion || "all", workMode: s.workMode, dateContext: s.dateContext })];
+      const resolution = [...s.items, ...vestiaireRef.current];
+      if (tenueRestituable(t, (id) => resolution.some((p) => p.id === id))) {
+        return {
+          ...s,
+          outfit: [...t.ids],
+          outfitMissingCats: t.missingCats as AppState["outfitMissingCats"],
+          outfitFormalityDowngraded: t.formalityDowngraded,
+          outfitOccasionRelachee: t.occasionRelachee,
+          outfitNoCompleteOutfit: t.noCompleteOutfit,
+          outfitFailureReason: t.failureReason as AppState["outfitFailureReason"],
+          outfitValidated: false,
+          dismissedSuggestions: [],
+          planAppliqueId: null,
+          plansEcartes: s.planAppliqueId && !s.plansEcartes.includes(s.planAppliqueId) ? [...s.plansEcartes, s.planAppliqueId] : s.plansEcartes,
+        };
+      }
+    }
+    return regen(s, ...args);
+  };
+
+  /*
    * UNE TENUE PAR JOUR CONSULTÉ (27/09/2026). Quitter un jour garde sa tenue
    * (et ses drapeaux) sous sa date ; y revenir la rend telle quelle — jamais
    * un nouveau tirage, et la tenue d'aujourd'hui (validée, notée) n'est pas
@@ -1731,12 +1762,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     jourLocal(),
     jourCarrousel,
     state.items.map((i) => i.id).join("."),
-    meteoDuJour.label,
-    Math.round(meteoDuJour.temp),
     profile.styles.join("."),
     profile.gender ?? "",
     state.workMode,
   ].join("|");
+  // LA MÉTÉO N'EST PLUS DANS LA CLÉ (16/11/2026) : un degré de plus à l'instant recalculait toutes les cartes. Les cartes sont tirées
+  // une fois la vraie météo connue (l'effet ci-dessous attend la localisation), puis gardées pour la journée (tenuesGardees.ts).
   /**
    * Tire les propositions des slides suivantes de l'ordre du jour, jusqu'à en avoir `cible` d'affichées (la tenue du jour comprise) ou
    * jusqu'au bout de l'ordre. Une slide tentée (même vide) ne l'est plus : `tentees`. La slide de la tenue du jour n'a pas besoin de
@@ -1773,9 +1804,41 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     if (!ready || !dressingLoaded || geoLoading || !vestiaireResolu) return;
     if (stateRef.current.carrousel?.cle === cleCarrousel) return;
     if (!stateRef.current.outfit.length && !stateRef.current.outfitNoCompleteOutfit) return;
-    setState((s) => (s.carrousel?.cle === cleCarrousel ? s : completerCarrousel(s, cleCarrousel, NB_SLIDES_INITIALES)));
+    setState((s) => {
+      if (s.carrousel?.cle === cleCarrousel) return s;
+      // Les cartes gardées pour aujourd'hui, dans le même contexte, si toutes leurs pièces se retrouvent (tenuesGardees.ts).
+      const garde = lireGardees(userId, jourLocal()).carrousel;
+      const resolution = [...s.items, ...vestiaireRef.current];
+      const existe = (id: number) => resolution.some((p) => p.id === id);
+      if (garde && garde.cle === cleCarrousel && Object.values(garde.propositions).every((ids) => ids.every(existe))) {
+        return { ...s, carrousel: { cle: garde.cle, propositions: garde.propositions as NonNullable<AppState["carrousel"]>["propositions"], tentees: garde.tentees as NonNullable<NonNullable<AppState["carrousel"]>["tentees"]> } };
+      }
+      return completerCarrousel(s, cleCarrousel, NB_SLIDES_INITIALES);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.screen, state.jourDecalage, state.outfit.length, state.outfitNoCompleteOutfit, cleCarrousel, ready, dressingLoaded, geoLoading, vestiaireResolu]);
+
+  // GARDE LES CARTES DU CARROUSEL (16/11/2026) : à chaque tirage, « Autre tenue » d'une carte ou retouche, la journée les retrouve.
+  useEffect(() => {
+    const c = state.carrousel;
+    if (!c || state.jourDecalage !== 0 || !c.cle.startsWith(`${jourLocal()}|`)) return;
+    garderCarrousel(userId, jourLocal(), { cle: c.cle, propositions: c.propositions as Record<string, number[]>, tentees: (c.tentees ?? []) as string[] });
+  }, [state.carrousel, state.jourDecalage, userId]);
+
+  // GARDE LA TENUE DU JOUR (16/11/2026, tenuesGardees.ts) : aujourd'hui, hors exploration et hors tenue planifiée (qui a ses propres
+  // pièces), la tenue affichée est gardée pour son contexte — c'est elle que rendent un rechargement et une réouverture.
+  useEffect(() => {
+    if (!ready || !dressingLoaded || !state.outfit.length || state.exploredStyleId || state.jourDecalage !== 0 || state.planAppliqueId) return;
+    garderTenue(userId, jourLocal(), cleContexte({ occasion: state.occasion || "all", workMode: state.workMode, dateContext: state.dateContext }), {
+      ids: state.outfit,
+      missingCats: state.outfitMissingCats,
+      formalityDowngraded: state.outfitFormalityDowngraded,
+      occasionRelachee: state.outfitOccasionRelachee,
+      noCompleteOutfit: state.outfitNoCompleteOutfit,
+      failureReason: state.outfitFailureReason ?? null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.outfit, state.jourDecalage, state.exploredStyleId, state.planAppliqueId, ready, dressingLoaded, userId]);
 
   // Mémorise la tenue AFFICHÉE pour le jour consulté, avec sa météo : c'est ce
   // que les jours suivants éviteront de reproposer. Jamais pendant l'exploration
@@ -1802,7 +1865,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // n'apparaîtrait cochée à l'ouverture de Tenue.
   useEffect(() => {
     if (ready && dressingLoaded && !geoLoading && vestiaireResolu && !stateRef.current.outfit.length) {
-      setState((s) => regen(withDefaultOccasion(s)));
+      // La tenue gardée pour aujourd'hui d'abord (tenuesGardees.ts) : recharger ou rouvrir l'app rend la même.
+      setState((s) => restaurerOuRegen(withDefaultOccasion(s)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, dressingLoaded, geoLoading, vestiaireResolu, defaultCapsule]);
@@ -3119,11 +3183,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     dismissDressingError: () => setState((s) => ({ ...s, dressingError: null })),
     fermerPieceAjoutee: () => setState((s) => ({ ...s, pieceAjoutee: null })),
 
-    setOccasion: (o) => setState((s) => regen({ ...s, occasion: o, occasionManual: true })),
-    setWorkMode: (m) => setState((s) => regen({ ...s, workMode: m })),
+    // Revenir à une occasion déjà vue aujourd'hui rend sa tenue (tenuesGardees.ts) ; une nouvelle occasion est composée.
+    setOccasion: (o) => setState((s) => restaurerOuRegen({ ...s, occasion: o, occasionManual: true })),
+    setWorkMode: (m) => setState((s) => restaurerOuRegen({ ...s, workMode: m })),
     setTravelMode: (m) => setState((s) => regen({ ...s, travelMode: m, travelTipDismissed: false })),
     dismissTravelTip: () => setState((s) => ({ ...s, travelTipDismissed: true })),
-    setDateContext: (c) => setState((s) => regen({ ...s, dateContext: c })),
+    setDateContext: (c) => setState((s) => restaurerOuRegen({ ...s, dateContext: c })),
     setCapsuleSeason: (s) => setState((st) => ({ ...st, capsuleSeason: s })),
     setExploredStyle: (id) => setState((st) => ({ ...st, exploredStyleId: id })),
     clearExploredStyle: () => setState((st) => ({ ...st, exploredStyleId: null })),
