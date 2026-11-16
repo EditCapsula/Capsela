@@ -74,9 +74,9 @@ const HAUTS: CategoryKey[] = ["haut", "pull"];
  * Une robe et une combinaison comptent pour une robe (l'ensemble d'une pièce).
  */
 /**
- * LES COLLANTS PLIÉS, EN ACCESSOIRE (16/11/2026, demandé : « pour les collants il faut générer un autre visuel où le collant est présenté
- * comme un accessoire complémentaire »). Allumé une fois leurs visuels posés régénérés (heroPrompt.ts) et validés : ils remplacent alors
- * la photo du catalogue (catalogImages.ts) et se posent comme un accessoire. Éteint : la règle d'avant (photo du catalogue, posés comme un bas).
+ * LES COLLANTS DÉPLIÉS À PLAT (16/11/2026, brief « Présentation des collants ») : leur visuel posé, régénéré (heroPrompt.ts) puis validé,
+ * remplace la photo du catalogue (catalogImages.ts) quand cet interrupteur est allumé. Dans le flat lay, ils restent posés en hauteur,
+ * comme un bas — la forme d'un collant déplié. Éteint : la photo du catalogue, comme avant.
  */
 export const COLLANTS_PLIES = false;
 
@@ -573,7 +573,7 @@ export interface OptionsFlatLay {
   proportions?: boolean;
   /** Levier de mesure : `false` reproduit l'avant du 16/11/2026 (une robe seule sans priorité de taille sur ses accessoires). */
   robeDominante?: boolean;
-  /** `true` : les collants posés en hauteur, comme un bas (la règle tant que COLLANTS_PLIES est éteint) ; `false` : en accessoire. */
+  /** Les collants posés en hauteur, comme un bas (par défaut) ; `false` : en petit accessoire (essayé le 16/11/2026 avec des collants pliés). */
   collantsEnBas?: boolean;
   /**
    * true : le t-shirt porté sous un pull est dessiné (05/11/2026, Capsule › Composer : la personne y choisit chaque pièce, et un haut
@@ -728,7 +728,7 @@ export function composerFlatLay(
       // d'une paire de boucles d'oreilles).
       // Depuis le 16/11/2026 (demandé : « le collant présenté comme un accessoire complémentaire ») : leur visuel les montre pliés, et
       // ils se posent comme un accessoire. `collantsEnBas` (levier de mesure) reproduit la pose d'avant.
-      const collants = piece.accessoireType === "Collants" && (options.collantsEnBas ?? !COLLANTS_PLIES);
+      const collants = piece.accessoireType === "Collants" && options.collantsEnBas !== false;
       const t = (collants ? PROPORTION_COLLANTS : (PROPORTION_PIECE[piece.cat] ?? 0.5)) * U;
       let l = PROPORTION_PAR_COTE.includes(piece.cat) && !collants ? (ratio >= 1 ? t : t * ratio) : t * ratio;
       if (l > largeurMax) l = largeurMax;
@@ -751,7 +751,7 @@ export function composerFlatLay(
     const premiere = gauche.map(({ piece, role }) => poser(piece, role));
     // Les accessoires (hors collants, posés comme un vêtement) ne prolongent plus la colonne de droite : chacun va dans la colonne la plus
     // courte, sous ses pièces (05/11/2026, « éviter que les accessoires soient trop regroupés dans un coin ou trop éloignés de la tenue »).
-    const estPetit = (r: { piece: PieceFlatLay; role: RoleFlatLay }) => r.role === "accessoire" && (r.piece.accessoireType !== "Collants" || !(options.collantsEnBas ?? !COLLANTS_PLIES));
+    const estPetit = (r: { piece: PieceFlatLay; role: RoleFlatLay }) => r.role === "accessoire" && (r.piece.accessoireType !== "Collants" || options.collantsEnBas === false);
     const droiteposee = droite.filter((r) => !estPetit(r)).map(({ piece, role }) => poser(piece, role));
     const petits = droite.filter(estPetit).map(({ piece, role }) => poser(piece, role));
     const disposer = (capacite: number): PlacementFlatLay[][] => {

@@ -62,16 +62,30 @@ export function buildHeroImagePrompt(row: VestiaireRow, trend?: TrendRule | null
     .slice(coupe)
     .split("\n")
     .filter((l) => /^No (?!person|model|mannequin|visible body|body parts|hanger|furniture|props|text|logo|brand|additional)/.test(l));
-  // LES COLLANTS, PRÉSENTÉS COMME UN ACCESSOIRE (16/11/2026, demandé : « pour les collants il faut générer un autre visuel où le collant
-  // est présenté comme un accessoire complémentaire »). Étalés de tout leur long, ils prenaient la place d'un bas dans le flat lay ; pliés,
-  // ils se posent comme un petit accessoire à côté de la tenue.
+  // LES COLLANTS, DÉPLIÉS À PLAT (16/11/2026, brief « Présentation des collants », photo de référence de la propriétaire : la ceinture
+  // repliée en haut, les deux jambes posées à plat l'une à côté de l'autre, les pieds en bas). Le pliage en rectangle, essayé le même jour,
+  // ne se reconnaissait pas. L'opacité suit le DEN du nom : jamais inventée au-delà des données du catalogue.
   const collants = /collant/i.test(`${row.sous_type ?? ""} ${row.name ?? ""}`);
+  const den = Number((`${row.name ?? ""}`.match(/(\d+)\s*(?:\+|–|-)?\s*(?:\d+\s*)?DEN/i) ?? [])[1] ?? NaN);
+  // LA TEINTE SUIT LE DEN (16/11/2026, arbitré : « des teintes différentes selon les deniers » — la couleur du catalogue reste la même,
+  // seule son intensité perçue change) : d'un voile fumé et transparent à 15–20 DEN jusqu'à un noir profond et mat à 100 DEN et plus.
+  const opacite = !Number.isFinite(den)
+    ? "Keep the exact opacity of the product."
+    : den <= 20
+      ? "Sheer, transparent nylon in a light smoky tint of the product color — clearly the lightest of the range: the surface behind shows through softly, with a light sheen."
+      : den <= 40
+        ? "Semi-opaque, in a veiled, softened shade of the product color — lighter than opaque tights, darker than sheer ones: slightly see-through, the fine knit texture visible."
+        : den <= 80
+          ? "Opaque, in the full matte shade of the product color: dense, even, uniform fabric."
+          : "Very opaque, thick and warm, in the deepest, richest shade of the product color — the darkest of the range: dense, soft, matte knit.";
   const presentation = collants
     ? [
-        "Single pair of tights only.",
-        "The tights are neatly folded into a small, compact, soft rectangle, presented as a complementary accessory beside an outfit — never laid out full length, never shaped like legs.",
-        "Shot from directly above, like a stylist's flat lay for a fashion magazine.",
-        "The fabric, its sheerness or opacity and its color stay clearly readable.",
+        "Single pair of tights only, fully unfolded and laid flat.",
+        "Seen from directly above at 90 degrees, like an editorial flat lay for a fashion magazine.",
+        "The waistband is neatly folded over once at the top and clearly visible; the two legs lie flat side by side, straight down, symmetric, slightly apart, with the feet visible at the bottom.",
+        "Flat garment only: never shaped like real legs, no three-dimensional volume, no folding into a square or a rectangle.",
+        opacite,
+        "Keep the exact color, opacity, texture, pattern, finish and waistband details of the product: do not add or invent any detail.",
       ]
     : [
         "Single fashion item only.",
