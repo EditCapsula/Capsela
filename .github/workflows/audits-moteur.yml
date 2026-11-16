@@ -14,6 +14,10 @@ on:
       audits:
         description: "Audits à lancer, noms séparés par des virgules, sans « .audit.ts » (ex. couverture-occasions,coherence-bornes)"
         required: true
+      ids:
+        description: "Facultatif : ids d'articles à rejuger (audit visuels-coherence), séparés par des virgules"
+        required: false
+        default: ""
 
 jobs:
   mesurer:
@@ -33,6 +37,7 @@ jobs:
           # Seul l'audit visuels-coherence l'emploie (16/11/2026 : le modèle de vision compare deux visuels ; lecture seule).
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AUDITS: ${{ inputs.audits }}
+          IDS: ${{ inputs.ids }}
         run: |
           set -euo pipefail
           if [ -z "$SB_SECRET_KEY" ]; then
