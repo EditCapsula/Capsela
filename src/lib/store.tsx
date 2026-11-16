@@ -1567,6 +1567,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       morphology: profile.morphology,
       // La colorimétrie du profil (30/09/2026) : couleurs de sa saison près du visage.
       colorimetrie: colorimetrieMoteur(profile.colorimetrie),
+      coupesPreferees: profile.preferencesSilhouette?.coupes ?? null,
       recents,
     });
     // Tracking (repli progressif de formalité, section 8 du brief 21/08/2026)
@@ -1811,7 +1812,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       const resolution = [...s.items, ...vestiaireRef.current];
       const existe = (id: number) => resolution.some((p) => p.id === id);
       if (garde && garde.cle === cleCarrousel && Object.values(garde.propositions).every((ids) => ids.every(existe))) {
-        return { ...s, carrousel: { cle: garde.cle, propositions: garde.propositions as NonNullable<AppState["carrousel"]>["propositions"], tentees: garde.tentees as NonNullable<NonNullable<AppState["carrousel"]>["tentees"]> } };
+        // Seules les cartes TIRÉES reviennent (16/11/2026, signalé : « sur le web, je n'ai que des tenues pour le quotidien ») : une carte
+        // tentée sans tenue (le moteur n'avait rien trouvé à ce moment-là) était gardée « tentée » et ne l'était plus jamais de la
+        // journée — l'accueil n'affichait alors que la tenue du jour. Les cartes manquantes sont retentées, les gardées restent les mêmes.
+        const propositions = garde.propositions as NonNullable<AppState["carrousel"]>["propositions"];
+        const repris = { ...s, carrousel: { cle: garde.cle, propositions, tentees: Object.keys(propositions) as NonNullable<NonNullable<AppState["carrousel"]>["tentees"]> } };
+        return completerCarrousel(repris, cleCarrousel, NB_SLIDES_INITIALES);
       }
       return completerCarrousel(s, cleCarrousel, NB_SLIDES_INITIALES);
     });

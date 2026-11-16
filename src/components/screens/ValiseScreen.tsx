@@ -1041,7 +1041,7 @@ export default function ValiseScreen() {
   };
   const dressing = state.items;
   const generer = useMemo(
-    () => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie), piecesValise, profile.morphology),
+    () => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie), piecesValise, profile.morphology, profile.preferencesSilhouette?.coupes ?? null),
     [profile, piecesValise]
   );
 

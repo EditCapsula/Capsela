@@ -73,6 +73,13 @@ const HAUTS: CategoryKey[] = ["haut", "pull"];
  * La pièce héro : robe, puis manteau, veste / blazer, ensemble (combinaison), pantalon / jupe, top — l'ordre du brief.
  * Une robe et une combinaison comptent pour une robe (l'ensemble d'une pièce).
  */
+/**
+ * LES COLLANTS PLIÉS, EN ACCESSOIRE (16/11/2026, demandé : « pour les collants il faut générer un autre visuel où le collant est présenté
+ * comme un accessoire complémentaire »). Allumé une fois leurs visuels posés régénérés (heroPrompt.ts) et validés : ils remplacent alors
+ * la photo du catalogue (catalogImages.ts) et se posent comme un accessoire. Éteint : la règle d'avant (photo du catalogue, posés comme un bas).
+ */
+export const COLLANTS_PLIES = false;
+
 export function attribuerRoles<T extends { id: number; cat: CategoryKey }>(pieces: T[]): { piece: T; role: RoleFlatLay }[] {
   const reste = [...pieces];
   const prendre = (cats: CategoryKey[]) => {
@@ -564,6 +571,10 @@ export interface OptionsFlatLay {
   accessoiresFixes?: boolean;
   /** false : les tailles d'avant le 04/11/2026, réglées rôle par rôle (le levier de la mesure avant / après de PROPORTION_PIECE). */
   proportions?: boolean;
+  /** Levier de mesure : `false` reproduit l'avant du 16/11/2026 (une robe seule sans priorité de taille sur ses accessoires). */
+  robeDominante?: boolean;
+  /** `true` : les collants posés en hauteur, comme un bas (la règle tant que COLLANTS_PLIES est éteint) ; `false` : en accessoire. */
+  collantsEnBas?: boolean;
   /**
    * true : le t-shirt porté sous un pull est dessiné (05/11/2026, Capsule › Composer : la personne y choisit chaque pièce, et un haut
    * choisi mais invisible donnait des flèches « Hauts » qui ne changeaient rien). Partout ailleurs, la règle commune le laisse hors planche.
@@ -715,7 +726,9 @@ export function composerFlatLay(
       const ratio = piece.ratio > 0 ? piece.ratio : 1;
       // Les collants se posent comme un bas, en hauteur (05/11/2026, vu en rendu réel : posés comme un accessoire, ils faisaient la taille
       // d'une paire de boucles d'oreilles).
-      const collants = piece.accessoireType === "Collants";
+      // Depuis le 16/11/2026 (demandé : « le collant présenté comme un accessoire complémentaire ») : leur visuel les montre pliés, et
+      // ils se posent comme un accessoire. `collantsEnBas` (levier de mesure) reproduit la pose d'avant.
+      const collants = piece.accessoireType === "Collants" && (options.collantsEnBas ?? !COLLANTS_PLIES);
       const t = (collants ? PROPORTION_COLLANTS : (PROPORTION_PIECE[piece.cat] ?? 0.5)) * U;
       let l = PROPORTION_PAR_COTE.includes(piece.cat) && !collants ? (ratio >= 1 ? t : t * ratio) : t * ratio;
       if (l > largeurMax) l = largeurMax;
@@ -738,7 +751,7 @@ export function composerFlatLay(
     const premiere = gauche.map(({ piece, role }) => poser(piece, role));
     // Les accessoires (hors collants, posés comme un vêtement) ne prolongent plus la colonne de droite : chacun va dans la colonne la plus
     // courte, sous ses pièces (05/11/2026, « éviter que les accessoires soient trop regroupés dans un coin ou trop éloignés de la tenue »).
-    const estPetit = (r: { piece: PieceFlatLay; role: RoleFlatLay }) => r.role === "accessoire" && r.piece.accessoireType !== "Collants";
+    const estPetit = (r: { piece: PieceFlatLay; role: RoleFlatLay }) => r.role === "accessoire" && (r.piece.accessoireType !== "Collants" || !(options.collantsEnBas ?? !COLLANTS_PLIES));
     const droiteposee = droite.filter((r) => !estPetit(r)).map(({ piece, role }) => poser(piece, role));
     const petits = droite.filter(estPetit).map(({ piece, role }) => poser(piece, role));
     const disposer = (capacite: number): PlacementFlatLay[][] => {
@@ -775,9 +788,27 @@ export function composerFlatLay(
       return (Math.max(...h) - Math.min(...h)) / Math.max(...h);
     };
     const meilleure = Math.max(...candidates.map(echelle));
-    const colonnes = candidates
-      .filter((c) => echelle(c) >= meilleure * 0.97)
-      .reduce((m, c) => (desequilibre(c) < desequilibre(m) - 1e-9 ? c : m));
+    // LA ROBE DOMINE (16/11/2026, demandé en capture — une robe, un sac, des bottines et des collants empilés à droite : « la pièce
+    // principale doit toujours être dominante, et les accessoires doivent être organisés autour d'elle sans créer une mosaïque de
+    // produits »). Quand la tenue tient en UNE pièce principale (robe, combinaison), elle reste seule à gauche, à sa taille ; tout le reste
+    // — veste ou manteau, sac, chaussures, collants, accessoires — forme UNE colonne à côté d'elle, jamais plus haute que 90 % de la
+    // robe : ses pièces rétrécissent ensemble, à proportions gardées (au plus de moitié). Jamais de troisième colonne.
+    const robeSeule = options.robeDominante !== false && premiere.length === 1 && ROBES.includes(premiere[0].cat) && droiteposee.length + petits.length > 0;
+    const colonneDeLaRobe = (): PlacementFlatLay[][] => {
+      const autres = [...droiteposee, ...petits];
+      const ecarts = ecartV * (autres.length - 1);
+      const cible = 0.9 * premiere[0].h - ecarts;
+      const brute = hauteurDe(autres) - ecarts;
+      const f = brute > cible ? Math.max(0.5, cible / brute) : 1;
+      for (const q of autres) {
+        q.l *= f;
+        q.h *= f;
+      }
+      return [premiere.slice(), autres];
+    };
+    const colonnes = robeSeule
+      ? colonneDeLaRobe()
+      : candidates.filter((c) => echelle(c) >= meilleure * 0.97).reduce((m, c) => (desequilibre(c) < desequilibre(m) - 1e-9 ? c : m));
     const H = Math.max(...colonnes.map(hauteurDe));
     let x = 0;
     for (const c of colonnes) {

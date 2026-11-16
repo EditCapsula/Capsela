@@ -482,6 +482,7 @@ function composerTenuePlan(e: {
       gender: e.profile.gender,
       morphology: e.profile.morphology,
       colorimetrie: colorimetrieMoteur(e.profile.colorimetrie),
+      coupesPreferees: e.profile.preferencesSilhouette?.coupes ?? null,
       humeur: e.humeur,
       soireeHabillee: occ === "soiree" && soireeHabillee({ typeLieu: e.typeLieu, humeur: e.humeur }),
     });

@@ -62,12 +62,26 @@ export function buildHeroImagePrompt(row: VestiaireRow, trend?: TrendRule | null
     .slice(coupe)
     .split("\n")
     .filter((l) => /^No (?!person|model|mannequin|visible body|body parts|hanger|furniture|props|text|logo|brand|additional)/.test(l));
+  // LES COLLANTS, PRÉSENTÉS COMME UN ACCESSOIRE (16/11/2026, demandé : « pour les collants il faut générer un autre visuel où le collant
+  // est présenté comme un accessoire complémentaire »). Étalés de tout leur long, ils prenaient la place d'un bas dans le flat lay ; pliés,
+  // ils se posent comme un petit accessoire à côté de la tenue.
+  const collants = /collant/i.test(`${row.sous_type ?? ""} ${row.name ?? ""}`);
+  const presentation = collants
+    ? [
+        "Single pair of tights only.",
+        "The tights are neatly folded into a small, compact, soft rectangle, presented as a complementary accessory beside an outfit — never laid out full length, never shaped like legs.",
+        "Shot from directly above, like a stylist's flat lay for a fashion magazine.",
+        "The fabric, its sheerness or opacity and its color stay clearly readable.",
+      ]
+    : [
+        "Single fashion item only.",
+        "The whole item is fully visible: nothing cropped, nothing hidden, nothing folded over in a way that hides its shape.",
+        "Shot from directly above, the item laid out on a surface like a stylist's flat lay for a fashion magazine.",
+        POSE[base.canonCategory] || "The item lies naturally with soft folds.",
+        ORIENTATION[base.canonCategory] || "Upright, consistent orientation.",
+      ];
   const gabarit = [
-    "Single fashion item only.",
-    "The whole item is fully visible: nothing cropped, nothing hidden, nothing folded over in a way that hides its shape.",
-    "Shot from directly above, the item laid out on a surface like a stylist's flat lay for a fashion magazine.",
-    POSE[base.canonCategory] || "The item lies naturally with soft folds.",
-    ORIENTATION[base.canonCategory] || "Upright, consistent orientation.",
+    ...presentation,
     "Realistic proportions, true to a real garment: no distortion, no exaggeration of any part.",
     "Same camera, same top-down angle and same distance for every item: the item is centered and fills about 75% of the frame along its longest side, with an empty margin on all four sides.",
     "Not worn, not on a hanger: no person, no model, no mannequin, no ghost mannequin, no visible body, no body parts, no legs, no feet, no hanger.",

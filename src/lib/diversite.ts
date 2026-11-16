@@ -1,3 +1,4 @@
+import type { CoupePreferee } from "./preferencesSilhouette";
 import { meilleurTirageMorphologique } from "./silhouetteRonde";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import { isRainy, type Weather } from "./data";
@@ -240,6 +241,8 @@ export interface ParametresDiversifies {
   gender: "femme" | "homme" | null;
   morphology: string | null;
   colorimetrie?: ColorimetrieMoteur | null;
+  /** Les coupes préférées du profil (16/11/2026, R-S31, coupesPieces.ts) : sans effet tant que la règle n'est pas allumée. */
+  coupesPreferees?: readonly CoupePreferee[] | null;
   recents: LookRecent[];
 }
 
@@ -258,7 +261,7 @@ export function genererTenueDiversifiee(p: ParametresDiversifies): TenueDiversif
     generateOutfitWithFallback(p.pool, p.weather, p.occasion, p.workMode, p.dateContext, p.preferredHexes, p.gender, undefined, undefined, p.colorimetrie);
   const sansEffet = { applique: false, candidats: 1, eligibles: 1, penalite: 0 };
   // Sans historique récent, un tirage — ou, pour une silhouette ronde, le meilleur de quelques tirages (meilleurTirageMorphologique).
-  if (!p.recents.length) return { ...meilleurTirageMorphologique(tirer, p.pool, p.morphology), diversite: sansEffet };
+  if (!p.recents.length) return { ...meilleurTirageMorphologique(tirer, p.pool, p.morphology, undefined, undefined, p.coupesPreferees), diversite: sansEffet };
   const premier = tirer();
   if (premier.noCompleteOutfit) return { ...premier, diversite: sansEffet };
 
@@ -269,7 +272,7 @@ export function genererTenueDiversifiee(p: ParametresDiversifies): TenueDiversif
   }
   const notes: CandidatNote[] = resultats.map((r) => {
     const pieces = r.ids.map((id) => p.pool.find((x) => x.id === id)).filter((x): x is Item => Boolean(x));
-    const { score } = computeLookScore(pieces, p.occasion, p.preferredHexes, p.morphology, new Set(), p.weather, p.workMode, p.dateContext, p.pool, p.colorimetrie);
+    const { score } = computeLookScore(pieces, p.occasion, p.preferredHexes, p.morphology, new Set(), p.weather, p.workMode, p.dateContext, p.pool, p.colorimetrie, undefined, undefined, p.coupesPreferees);
     return { ids: r.ids, score };
   });
   const choix = choisirParDiversite(notes, p.recents, p.pool, p.weather);

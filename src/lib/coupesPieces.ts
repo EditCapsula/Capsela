@@ -53,3 +53,18 @@ export function accordCoupe(it: PieceCoupe, preferees: readonly CoupePreferee[] 
   const c = coupesDeLaPiece(it);
   return preferees.some((p) => c.has(p)) ? 1 : 0;
 }
+
+/**
+ * LES COUPES PRÉFÉRÉES DANS LES TENUES (16/11/2026, demandé : « est-ce que tu prends bien en compte les préférences en termes de coupes
+ * d'un utilisateur ? » — jusqu'ici, la capsule seule les lisait ; « oui, prépare-le »). Même principe que la silhouette ronde (R-S20) :
+ * un BONUS de tenue (R-S31), sans malus ni phrase — deux vêtements ou plus d'une coupe préférée : +6 ; un seul : +3 —, et, là où le
+ * moteur ne tire qu'une fois, le meilleur de quelques tirages (meilleurTirageMorphologique). Une coupe inconnue ne compte pas.
+ * HORS PRODUCTION tant que la mesure avant / après (scripts/coupes-preferees-moteur.audit.ts) n'est pas validée.
+ */
+export const BONUS_COUPES_PREFEREES_EN_PRODUCTION = false;
+
+export function bonusCoupesPreferees(pieces: readonly PieceCoupe[], preferees: readonly CoupePreferee[] | null | undefined): 0 | 3 | 6 {
+  if (!preferees?.length) return 0;
+  const n = pieces.filter((p) => accordCoupe(p, preferees) === 1).length;
+  return n >= 2 ? 6 : n === 1 ? 3 : 0;
+}

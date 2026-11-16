@@ -1,4 +1,5 @@
 import { estPhotoDetouree } from "./dressing";
+import { COLLANTS_PLIES } from "./flatLay";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type { Item } from "./types";
 import { VESTIAIRE_ID_OFFSET, isVestiaireId } from "./vestiaire";
@@ -33,7 +34,8 @@ function visuelCatalogue(item: Item): ResolvedItemImage {
   const standard = visuelStandard(item);
   // Les collants : la photo du catalogue, jamais le visuel posé à plat, qui rend mal (14/10/2026, demandé). ARBITRAGE ÉDITORIAL à ce seul
   // type de pièce ; sans photo catalogue, le repli d'avant (hero) reste.
-  if (item.accessoireType === "Collants" && standard.kind === "generated") return standard;
+  // Depuis le 16/11/2026, leur visuel posé les montre PLIÉS, en accessoire (heroPrompt.ts) : il rend bien, la règle commune s'applique.
+  if (item.accessoireType === "Collants" && standard.kind === "generated" && !COLLANTS_PLIES) return standard;
   if (standard.kind === "generated" && item.imageHeroUrl) return { kind: "generated", url: item.imageHeroUrl };
   return heroEnRepli(item, standard);
 }

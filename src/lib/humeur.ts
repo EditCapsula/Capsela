@@ -1,3 +1,4 @@
+import type { CoupePreferee } from "./preferencesSilhouette";
 import { meilleurTirageMorphologique } from "./silhouetteRonde";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import type { Weather } from "./data";
@@ -162,6 +163,8 @@ export interface ParametresHumeur {
   gender: "femme" | "homme" | null;
   morphology: string | null;
   colorimetrie?: ColorimetrieMoteur | null;
+  /** Les coupes préférées du profil (16/11/2026, R-S31, coupesPieces.ts) : sans effet tant que la règle n'est pas allumée. */
+  coupesPreferees?: readonly CoupePreferee[] | null;
   humeur: Humeur | null;
   /** Soirée habillée (soireeHabillee, occasions.ts) : le palier 4 de l'occasion « soiree ». Sans effet pour les autres occasions. */
   soireeHabillee?: boolean;
@@ -172,7 +175,7 @@ export function genererTenueHumeur(p: ParametresHumeur): GeneratedOutfitWithFall
   const tirer = () =>
     generateOutfitWithFallback(p.pool, p.weather, p.occasion, p.workMode, p.dateContext, p.preferredHexes, p.gender, undefined, undefined, p.colorimetrie, p.soireeHabillee);
   // Sans humeur, un tirage — ou, pour une silhouette ronde, le meilleur de quelques tirages (meilleurTirageMorphologique, 15/11/2026).
-  if (!p.humeur) return meilleurTirageMorphologique(tirer, p.pool, p.morphology);
+  if (!p.humeur) return meilleurTirageMorphologique(tirer, p.pool, p.morphology, undefined, undefined, p.coupesPreferees);
   const premier = tirer();
   if (premier.noCompleteOutfit) return premier;
   const resultats: GeneratedOutfitWithFallback[] = [premier];
@@ -182,7 +185,7 @@ export function genererTenueHumeur(p: ParametresHumeur): GeneratedOutfitWithFall
   }
   const notes: CandidatHumeur[] = resultats.map((r) => {
     const pieces = r.ids.map((id) => p.pool.find((x) => x.id === id)).filter((x): x is Item => Boolean(x));
-    const { score } = computeLookScore(pieces, p.occasion, p.preferredHexes, p.morphology, new Set(), p.weather, p.workMode, p.dateContext, p.pool, p.colorimetrie);
+    const { score } = computeLookScore(pieces, p.occasion, p.preferredHexes, p.morphology, new Set(), p.weather, p.workMode, p.dateContext, p.pool, p.colorimetrie, undefined, undefined, p.coupesPreferees);
     return { ids: r.ids, score };
   });
   return resultats[Math.max(0, choisirParHumeur(notes, p.pool, p.humeur))];
