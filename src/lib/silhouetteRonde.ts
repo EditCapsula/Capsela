@@ -1,3 +1,5 @@
+import { BONUS_COUPES_PREFEREES_EN_PRODUCTION, bonusCoupesPreferees } from "./coupesPieces";
+import type { CoupePreferee } from "./preferencesSilhouette";
 import { coupeOf, matiereOf } from "./attributes";
 import type { CategoryKey, Item } from "./types";
 
@@ -140,14 +142,23 @@ export function meilleurTirageMorphologique<T extends { ids: number[]; noComplet
   pool: readonly Item[],
   morphology: string | null | undefined,
   corpulence?: Corpulence | null,
-  actif: boolean = BONUS_SILHOUETTE_RONDE_EN_PRODUCTION
+  actif: boolean = BONUS_SILHOUETTE_RONDE_EN_PRODUCTION,
+  /** Les coupes préférées du profil (16/11/2026, coupesPieces.ts) : comptent avec la silhouette ronde quand leur règle est allumée. */
+  coupes?: readonly CoupePreferee[] | null,
+  coupesActif: boolean = BONUS_COUPES_PREFEREES_EN_PRODUCTION
 ): T {
   const premier = tirer();
-  if (!actif || !estSilhouetteRonde(morphology, corpulence) || premier.noCompleteOutfit || !premier.ids.length) return premier;
-  const note = (r: T) => bonusSilhouetteRonde(r.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => !!p), morphology, corpulence);
+  const ronde = actif && estSilhouetteRonde(morphology, corpulence);
+  const parCoupes = coupesActif && !!coupes?.length;
+  if ((!ronde && !parCoupes) || premier.noCompleteOutfit || !premier.ids.length) return premier;
+  const note = (r: T) => {
+    const pieces = r.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => !!p);
+    return (ronde ? bonusSilhouetteRonde(pieces, morphology, corpulence) : 0) + (parCoupes ? bonusCoupesPreferees(pieces, coupes) : 0);
+  };
+  const plafond = (ronde ? 6 : 0) + (parCoupes ? 6 : 0);
   let meilleur = premier;
   let meilleureNote = note(premier);
-  for (let i = 1; i < TIRAGES_MORPHOLOGIQUES && meilleureNote < 6; i++) {
+  for (let i = 1; i < TIRAGES_MORPHOLOGIQUES && meilleureNote < plafond; i++) {
     const r = tirer();
     if (r.noCompleteOutfit || !r.ids.length) continue;
     const n = note(r);

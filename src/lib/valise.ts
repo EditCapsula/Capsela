@@ -1,3 +1,4 @@
+import type { CoupePreferee } from "./preferencesSilhouette";
 import { meilleurTirageMorphologique } from "./silhouetteRonde";
 import { previsionPour, type Prevision } from "./prevision";
 import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
@@ -433,7 +434,9 @@ export function generateurMoteur(
    */
   piecesValise: Item[] = [],
   /** La morphologie du profil (15/11/2026) : la règle de la silhouette ronde s'applique aux looks de la valise (meilleurTirageMorphologique). */
-  morphologie: string | null = null
+  morphologie: string | null = null,
+  /** Les coupes préférées du profil (16/11/2026, R-S31) : comptent dans le meilleur tirage quand leur règle est allumée. */
+  coupesPreferees: readonly CoupePreferee[] | null = null
 ): Generateur {
   return (poolComplet, s) => {
     // Les pièces réservées de cette situation seulement (baignade, randonnée, pluie) : piecesPourLaSituation. Une veste de pluie du
@@ -468,7 +471,10 @@ export function generateurMoteur(
     const r = meilleurTirageMorphologique(
       () => generateOutfitWithFallback(pool, meteo, occasion, "Présentiel", undefined, couleurs, genre, undefined, leviers, colorimetrie),
       pool,
-      morphologie
+      morphologie,
+      undefined,
+      undefined,
+      coupesPreferees
     );
     if (r.noCompleteOutfit || !r.ids.length) return null;
     // Les chaussures et le sac ajoutés suivent les règles du moteur (météo, occasion, couleur, saison) : 12/10/2026, demandé « tenir compte des règles du moteur ».

@@ -5,6 +5,8 @@ import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_ENTRETIEN, PREFS_SOIREE_HABILLEE, effectiveFormality, isBag, isRainy, isSunny, necessiteLeSoleil } from "./data";
 import { detectSacType } from "./attributes";
 import { BONUS_SILHOUETTE_RONDE_EN_PRODUCTION, bonusSilhouetteRonde, type Corpulence } from "./silhouetteRonde";
+import { BONUS_COUPES_PREFEREES_EN_PRODUCTION, bonusCoupesPreferees } from "./coupesPieces";
+import type { CoupePreferee } from "./preferencesSilhouette";
 import { vestePlusLongueQueLeManteau } from "./forme";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, currentSeasonKey, estDeSaison } from "./capsule";
@@ -316,6 +318,8 @@ export interface LeviersMesure {
   sansAccordsWada?: boolean;
   /** R-S20, le bonus de la silhouette ronde (15/11/2026, silhouetteRonde.ts) : true / false force la règle ; absent, la production. */
   silhouetteRonde?: boolean;
+  /** R-S31, le bonus des coupes préférées (16/11/2026, coupesPieces.ts) : true / false force la règle ; absent, la production. */
+  coupesPreferees?: boolean;
   /**
    * PLANCHER DE FORMALITÉ IMPOSÉ (11/11/2026, ouverture du niveau 2 « casual chic / smart casual ») : remplace, le temps d'une mesure,
    * le palier que l'occasion demande (effectiveFormality) au départ du repli de formalité. Mesure seulement : aucun appelant de
@@ -2516,9 +2520,11 @@ export function computeLookScore(
   /** Colorimétrie du profil — R-S18 (bonus seul). Non renseignée, score d'origine. */
   colorimetrie?: ColorimetrieMoteur | null,
   /** Levier de mesure (LeviersMesure.sansAccordsWada) : sans lui, R-S19 compte. */
-  leviers?: Pick<LeviersMesure, "sansAccordsWada" | "silhouetteRonde">,
+  leviers?: Pick<LeviersMesure, "sansAccordsWada" | "silhouetteRonde" | "coupesPreferees">,
   /** La silhouette déclarée (fine / moyenne / ronde, silhouetteRonde.ts) — la question n'est pas encore posée : personne ne la passe. */
-  corpulence?: Corpulence | null
+  corpulence?: Corpulence | null,
+  /** Les coupes préférées du profil (16/11/2026, R-S31) : null ou absentes, aucun effet. */
+  coupesPreferees?: readonly CoupePreferee[] | null
 ): LookScore {
   const clothing = pieces.filter((i) => CLOTHING_CATS.includes(i.cat));
   const accessories = pieces.filter((i) => ACCESSORY_CATS.includes(i.cat));
@@ -2613,6 +2619,12 @@ export function computeLookScore(
   if (leviers?.silhouetteRonde ?? BONUS_SILHOUETTE_RONDE_EN_PRODUCTION) {
     const b = bonusSilhouetteRonde(pieces, morphology, corpulence);
     if (b) bon("R-S20", b);
+  }
+  // R-S31 — LES COUPES PRÉFÉRÉES (16/11/2026, coupesPieces.ts). Un BONUS seul, sans phrase ni malus : les vêtements d'une coupe que la
+  // personne a dit préférer. Une coupe inconnue ne compte pas. Seuils de score inchangés.
+  if (leviers?.coupesPreferees ?? BONUS_COUPES_PREFEREES_EN_PRODUCTION) {
+    const b = bonusCoupesPreferees(clothing, coupesPreferees);
+    if (b) bon("R-S31", b);
   }
 
   // R-S10 — palette personnelle du profil (préférence molle, jamais exclusive)

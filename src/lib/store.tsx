@@ -1567,6 +1567,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       morphology: profile.morphology,
       // La colorimétrie du profil (30/09/2026) : couleurs de sa saison près du visage.
       colorimetrie: colorimetrieMoteur(profile.colorimetrie),
+      coupesPreferees: profile.preferencesSilhouette?.coupes ?? null,
       recents,
     });
     // Tracking (repli progressif de formalité, section 8 du brief 21/08/2026)
