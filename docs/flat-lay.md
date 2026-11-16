@@ -19,6 +19,11 @@ zone et ses marges.
    blazer 0,75, manteau 1,0, jupe 0,75, short 0,6, robe 1,65, sac 0,55, chaussures 0,52, accessoire 0,5, bijou 0,45, collants 0,85),
    mesurée sur les planches de référence ; la même tenue montre les mêmes pièces, aux mêmes proportions, sur tous les écrans.
 
+5. **La robe domine** (16/11/2026, demandé : « la pièce principale doit toujours être dominante, et les accessoires doivent être
+   organisés autour d'elle sans créer une mosaïque de produits »). Une tenue en une pièce (robe, combinaison) : la robe reste seule à
+   gauche, à sa taille ; tout le reste forme UNE colonne à côté d'elle, dont les hauteurs cumulées ne dépassent pas 90 % de la robe (ses
+   pièces rétrécissent ensemble, au plus de moitié). Jamais de troisième colonne. Levier de mesure : `robeDominante: false`.
+
 Disposition : à gauche le haut puis le bas, ou la robe seule ; à droite la veste ou le manteau, le sac, les chaussures, puis les
 accessoires. Plusieurs dispositions sont essayées (deux ou trois colonnes) : la planche retient celle qui donne les pièces les plus
 grandes et, à taille presque égale, celle dont les colonnes ont les hauteurs les plus proches. Chaque accessoire va dans la colonne la

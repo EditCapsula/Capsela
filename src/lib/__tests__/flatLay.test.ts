@@ -828,10 +828,26 @@ describe("trop de pièces pour deux colonnes (05/11/2026, robe + sac + chaussure
     expect(robe.h / (c.hauteur - (c.margeHaute ?? c.marge) - c.marge)).toBeGreaterThan(0.6);
   });
   it("les collants se posent en hauteur, comme un bas, et non comme un petit accessoire", () => {
-    const r = composerFlatLay(tenue, "x", { contexte: "look-detail" }).pieces;
+    // Proportion d'origine : sans la règle de la robe dominante (16/11/2026), qui réduit ensemble les pièces posées à côté d'une robe.
+    const r = composerFlatLay(tenue, "x", { contexte: "look-detail", robeDominante: false }).pieces;
     const robe = r.find((q) => q.cat === "robe")!;
     const collants = r.find((q) => q.id === 9)!;
     expect(collants.h / robe.h).toBeCloseTo(0.85 / 1.65, 1);
+  });
+  it("la robe domine (16/11/2026) : seule à gauche, le reste en une colonne qui cumule au plus 90 % de sa hauteur", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const) {
+      const r = composerFlatLay(tenue, "x", { contexte }).pieces;
+      const robe = r.find((q) => q.cat === "robe")!;
+      const autres = r.filter((q) => q.id !== robe.id);
+      // Une seule colonne à côté de la robe : toutes au même x.
+      expect(new Set(autres.map((q) => Math.round(q.x))).size).toBe(1);
+      // Leurs hauteurs cumulées restent sous 90 % de la robe (l'espace en plus se répartit entre elles, sur la hauteur de la robe).
+      expect(autres.reduce((t, q) => t + q.h, 0)).toBeLessThanOrEqual(robe.h * 0.9 + 1e-6);
+      // Les collants gardent leur rang de bas, plus grands que les chaussures.
+      const collants = r.find((q) => q.id === 9)!;
+      const chaussures = r.find((q) => q.cat === "chaussures")!;
+      expect(collants.h).toBeGreaterThan(chaussures.h);
+    }
   });
 });
 

@@ -564,6 +564,8 @@ export interface OptionsFlatLay {
   accessoiresFixes?: boolean;
   /** false : les tailles d'avant le 04/11/2026, réglées rôle par rôle (le levier de la mesure avant / après de PROPORTION_PIECE). */
   proportions?: boolean;
+  /** Levier de mesure : `false` reproduit l'avant du 16/11/2026 (une robe seule sans priorité de taille sur ses accessoires). */
+  robeDominante?: boolean;
   /**
    * true : le t-shirt porté sous un pull est dessiné (05/11/2026, Capsule › Composer : la personne y choisit chaque pièce, et un haut
    * choisi mais invisible donnait des flèches « Hauts » qui ne changeaient rien). Partout ailleurs, la règle commune le laisse hors planche.
@@ -775,9 +777,27 @@ export function composerFlatLay(
       return (Math.max(...h) - Math.min(...h)) / Math.max(...h);
     };
     const meilleure = Math.max(...candidates.map(echelle));
-    const colonnes = candidates
-      .filter((c) => echelle(c) >= meilleure * 0.97)
-      .reduce((m, c) => (desequilibre(c) < desequilibre(m) - 1e-9 ? c : m));
+    // LA ROBE DOMINE (16/11/2026, demandé en capture — une robe, un sac, des bottines et des collants empilés à droite : « la pièce
+    // principale doit toujours être dominante, et les accessoires doivent être organisés autour d'elle sans créer une mosaïque de
+    // produits »). Quand la tenue tient en UNE pièce principale (robe, combinaison), elle reste seule à gauche, à sa taille ; tout le reste
+    // — veste ou manteau, sac, chaussures, collants, accessoires — forme UNE colonne à côté d'elle, jamais plus haute que 90 % de la
+    // robe : ses pièces rétrécissent ensemble, à proportions gardées (au plus de moitié). Jamais de troisième colonne.
+    const robeSeule = options.robeDominante !== false && premiere.length === 1 && ROBES.includes(premiere[0].cat) && droiteposee.length + petits.length > 0;
+    const colonneDeLaRobe = (): PlacementFlatLay[][] => {
+      const autres = [...droiteposee, ...petits];
+      const ecarts = ecartV * (autres.length - 1);
+      const cible = 0.9 * premiere[0].h - ecarts;
+      const brute = hauteurDe(autres) - ecarts;
+      const f = brute > cible ? Math.max(0.5, cible / brute) : 1;
+      for (const q of autres) {
+        q.l *= f;
+        q.h *= f;
+      }
+      return [premiere.slice(), autres];
+    };
+    const colonnes = robeSeule
+      ? colonneDeLaRobe()
+      : candidates.filter((c) => echelle(c) >= meilleure * 0.97).reduce((m, c) => (desequilibre(c) < desequilibre(m) - 1e-9 ? c : m));
     const H = Math.max(...colonnes.map(hauteurDe));
     let x = 0;
     for (const c of colonnes) {
