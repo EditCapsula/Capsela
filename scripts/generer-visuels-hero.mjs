@@ -6,7 +6,9 @@
 // temps, après validation visuelle de l'essai).
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const CLE = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-const IDS = (process.env.IDS || "").split(",").map((s) => Number(s.trim())).filter(Number.isFinite);
+// « collants » (16/11/2026) : les collants actifs du catalogue (sous-type ou nom), au lieu d'une liste d'ids.
+const PAR_CATEGORIE = (process.env.IDS || "").trim().toLowerCase() === "collants";
+let IDS = PAR_CATEGORIE ? [] : (process.env.IDS || "").split(",").map((s) => Number(s.trim())).filter(Number.isFinite);
 const FORCE = process.env.FORCE === "1";
 // Depuis la photo du catalogue (16/11/2026) : la photo sert de référence, le visuel posé représente la même pièce.
 const DEPUIS_PHOTO = process.env.DEPUIS_PHOTO === "1";
@@ -14,6 +16,17 @@ const DEPUIS_PHOTO = process.env.DEPUIS_PHOTO === "1";
 if (!SUPABASE_URL || !CLE) {
   console.error("SUPABASE_URL et SB_SECRET_KEY sont requis.");
   process.exit(1);
+}
+if (PAR_CATEGORIE && SUPABASE_URL && CLE) {
+  const url = `${SUPABASE_URL}/rest/v1/vestiaire_universel?select=id,name,sous_type&frozen=eq.false&or=(sous_type.ilike.*collant*,name.ilike.*collant*)`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${CLE}`, apikey: CLE } });
+  const lignes = await res.json().catch(() => []);
+  if (!res.ok || !Array.isArray(lignes)) {
+    console.error(`Lecture des collants impossible (${res.status}).`);
+    process.exit(1);
+  }
+  IDS = lignes.map((l) => l.id);
+  console.log(`Collants : ${lignes.map((l) => `#${l.id} ${l.name}`).join(" · ")}`);
 }
 if (!IDS.length) {
   console.error("IDS est requis (ids séparés par des virgules) : pas de balayage du catalogue sans lot d'essai validé.");
