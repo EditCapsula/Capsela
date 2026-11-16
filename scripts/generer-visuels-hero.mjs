@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 // Script admin (08/10/2026) — génère les visuels « hero » (flat lay) du catalogue via l'Edge Function generate-hero-image.
 //
-// Usage : SUPABASE_URL=... SB_SECRET_KEY=... IDS=448,449,455 [FORCE=1] node scripts/generer-visuels-hero.mjs
+// Usage : SUPABASE_URL=... SB_SECRET_KEY=... IDS=448,449,455 [FORCE=1] [DEPUIS_PHOTO=1] node scripts/generer-visuels-hero.mjs
 // Sans IDS : REFUSE de balayer le catalogue (un lot d'essai se fait avec des ids explicites ; le balayage complet est un second
 // temps, après validation visuelle de l'essai).
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const CLE = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const IDS = (process.env.IDS || "").split(",").map((s) => Number(s.trim())).filter(Number.isFinite);
 const FORCE = process.env.FORCE === "1";
+// Depuis la photo du catalogue (16/11/2026) : la photo sert de référence, le visuel posé représente la même pièce.
+const DEPUIS_PHOTO = process.env.DEPUIS_PHOTO === "1";
 
 if (!SUPABASE_URL || !CLE) {
   console.error("SUPABASE_URL et SB_SECRET_KEY sont requis.");
@@ -23,7 +25,7 @@ for (const id of IDS) {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-hero-image`, {
     method: "POST",
     headers: { Authorization: `Bearer ${CLE}`, apikey: CLE, "Content-Type": "application/json" },
-    body: JSON.stringify({ item_id: id, force: FORCE }),
+    body: JSON.stringify({ item_id: id, force: FORCE, depuis_photo: DEPUIS_PHOTO }),
   });
   const corps = await res.json().catch(() => ({}));
   if (corps.ok) console.log(`#${id} ${corps.deja ? "déjà généré" : "généré"} ${corps.ratio ?? ""} ${corps.url}`);

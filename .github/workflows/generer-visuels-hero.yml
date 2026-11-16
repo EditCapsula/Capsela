@@ -14,6 +14,10 @@ on:
         description: "Régénérer même si un visuel hero existe"
         type: boolean
         default: false
+      depuis_photo:
+        description: "Partir de la photo du catalogue (même pièce, posée à plat)"
+        type: boolean
+        default: false
 
 jobs:
   hero:
@@ -29,3 +33,4 @@ jobs:
           SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
           IDS: ${{ inputs.ids }}
           FORCE: ${{ inputs.force && '1' || '0' }}
+          DEPUIS_PHOTO: ${{ inputs.depuis_photo && '1' || '0' }}
