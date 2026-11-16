@@ -366,7 +366,7 @@ export default function TenuesScreen() {
    * La température n'est prise que si elle est RÉELLE : aujourd'hui, hors valeurs par défaut ; un autre jour, sa prévision. Sans
    * elle, rien n'est séparé (le manteau reste dans le look, comme avant) : aucune recommandation « selon la météo » sans météo.
    */
-  const tempReelle = temperatureReelle({ decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp });
+  const tempReelle = temperatureReelle({ decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp, minDuJour: jourConsulte.minDuJour });
   // Les manteaux que le moteur admet ici (même appel que « Changer cette pièce ») : seulement par le froid, et pour proposer un manteau
   // quand la tenue n'en a pas (04/11/2026). « Voir une autre proposition » fait passer un autre de ces candidats devant.
   const [manteauChoisi, setManteauChoisi] = useState<number | null>(null);

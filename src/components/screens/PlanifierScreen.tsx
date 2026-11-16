@@ -967,11 +967,13 @@ export default function PlanifierScreen() {
    * Une composition reprise (photo d'un avis, plan déjà fait) reste telle qu'elle a été composée. Le plan enregistre toutes les pièces.
    */
   // Par le froid, les manteaux que le moteur admet pour cette date (le même pool que la composition) : une tenue sans manteau en reçoit un.
+  // LA MINIMALE DU CRÉNEAU décide de la couche extérieure (16/11/2026, arbitré : « avec le minimum du jour », comme l'accueil) ; le moteur
+  // garde la moyenne du créneau pour composer.
   const candidatsResultat =
-    !composition && meteoMoment && meteoMoment.temp < SEUIL_MANTEAU && pieces.length
+    !composition && meteoMoment && meteoMoment.tempMin < SEUIL_MANTEAU && pieces.length
       ? candidatsDeRemplacement(pieces, dressingSeul ? state.items : [...state.items, ...capsuleDeLaDate], -1, "manteau", occ ?? "all", workMode, dateContext, meteoUtilisee)
       : [];
-  const tempResultat = composition ? null : (meteoMoment?.temp ?? null);
+  const tempResultat = composition ? null : (meteoMoment?.tempMin ?? null);
   const coloResultat = colorimetrieMoteur(profile.colorimetrie);
   const { principal: piecesDuLook } = separerCoucheExterieure(pieces, tempResultat, candidatsResultat);
   /** Rien à garder : état vide du moteur — une composition imposée en a toujours une. */
@@ -2202,11 +2204,13 @@ export default function PlanifierScreen() {
           const alertePlan = meteoPlanVive ? alerteMeteoPlan(pieces, meteoPlanVive) : null;
           const tempPlan = meteoPlanVive?.temp ?? t.temp ?? null;
           const meteoMoteurPlan = tempPlan != null ? weatherForDay(tempPlan, meteoPlanVive?.label ?? t.weatherLabel ?? "Nuageux", saisonCalendairePour(d), CHALEUR_HORS_SAISON) : null;
+          // La couche extérieure suit la minimale du créneau (16/11/2026) ; « Adaptée à … » et le moteur gardent la moyenne.
+          const tempCouchePlan = meteoPlanVive?.tempMin ?? tempPlan;
           const candidatsPlan =
-            meteoMoteurPlan && tempPlan != null && tempPlan < SEUIL_MANTEAU
+            meteoMoteurPlan && tempCouchePlan != null && tempCouchePlan < SEUIL_MANTEAU
               ? candidatsDeRemplacement(pieces, wardrobePool, -1, "manteau", t.occasion, (t.sousChoix ?? "Présentiel") as WorkMode, (t.sousChoix ?? DATE_CONTEXTS[0][0]) as DateContext, meteoMoteurPlan)
               : [];
-          const sepPlan = separerCoucheExterieure(pieces, tempPlan, candidatsPlan);
+          const sepPlan = separerCoucheExterieure(pieces, tempCouchePlan, candidatsPlan);
           // Une tenue planifiée : la même configuration pour son flat lay et la liste de ses pièces (13/11/2026).
           const configPlan = (look: Item[]) => ({
             look,
@@ -2320,7 +2324,7 @@ export default function PlanifierScreen() {
                 onPiece={passee ? undefined : (it, look) => remplacement.ouvrir(it, configPlan(look))}
                 statut={passee ? "Ton look était planifié" : "Ta tenue planifiée"}
                 pieces={pieces}
-                temperature={tempPlan}
+                temperature={tempCouchePlan}
                 quand={passee ? "ce jour-là" : "prévus"}
                 candidatsExterieur={passee ? [] : candidatsPlan}
                 indicateurs={<IndicateursTenue items={indicateursPlan} />}
