@@ -27,6 +27,7 @@ import {
   situationsDuProgramme,
   type TailleBagage,
   unitesDe,
+  volumePorteAuTrajet,
 } from "../src/lib/valise";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { assertCatalogueStyles, profilAudit } from "./harnaisAudit";
@@ -92,6 +93,8 @@ const TAILLES: TailleBagage[] = ["S", "M", "L"];
 const VARIANTES: { nom: string; leviers: LeviersValise }[] = [
   { nom: "écran (avant)", leviers: { variete: true, adaptation: true } },
   { nom: "écran + complets", leviers: { variete: true, adaptation: true, complets: true } },
+  // 16/11/2026 : la tenue du trajet hors de la capacité (arbitré), même exécution, seul ce levier change.
+  { nom: "+ trajet porté", leviers: { variete: true, adaptation: true, complets: true, trajetHorsCapacite: true } },
 ];
 
 interface Mesure { creneaux: number; couverts: number; trajets: number; trajetsCouverts: number; adaptes: number; visibles: number; masques: number; volume: number }
@@ -167,7 +170,11 @@ describe("valise : tenues complètes seulement", () => {
                   adaptes,
                   visibles: visibles.length,
                   masques: r.looks.length - visibles.length,
-                  volume: pieces.reduce((t, p) => t + unitesDe(p.cat), 0) / capacite,
+                  // Le volume DANS le bagage : la tenue du trajet en moins quand le levier la sort de la capacité (comme l'écran).
+                  volume:
+                    (pieces.reduce((t, p) => t + unitesDe(p.cat), 0) -
+                      (v.leviers.trajetHorsCapacite ? volumePorteAuTrajet(visibles, situations, (id) => unitesDe(tous.get(id)?.cat ?? "haut")) : 0)) /
+                    capacite,
                 };
                 const cle = `${v.nom}|${taille}|${sejour.nom}`;
                 cumul.set(cle, [...(cumul.get(cle) ?? []), m]);

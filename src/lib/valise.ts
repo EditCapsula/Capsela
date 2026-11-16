@@ -1245,7 +1245,37 @@ export function capsuleDuSejour(
  *
  * Les seuils (poids, coût d'une pièce de capsule) sont un ARBITRAGE ÉDITORIAL à confirmer sur la mesure.
  */
+/** Une situation du trajet (aller, retour) : celle du programme qui sert la sous-occasion « Voyage / trajet ». */
+export const estSituationTrajet = (s: Pick<SituationValise, "sousIds">): boolean => s.sousIds?.includes("trajet") === true;
+
+/**
+ * LA TENUE DU TRAJET NE COMPTE PAS DANS LA CAPACITÉ (16/11/2026, arbitré par la propriétaire : « Non » à « on continue de la compter ? »).
+ * On la porte sur soi pendant le voyage : elle n'est pas dans le bagage. Avant, elle comptait (« l'app ne sait pas ce qui est porté »).
+ *
+ * Ce qui est retiré du volume : le look d'un trajet, une fois (un exemplaire de chaque pièce ; les quantités en plus restent comptées).
+ * Avec deux looks de trajet différents (aller, retour), le bagage doit contenir l'autre à chaque trajet : seul le PLUS LÉGER des deux est
+ * retiré. Un look est « de trajet » dès qu'il répond à une situation de trajet ; s'il y en a plusieurs, le plus léger est retenu — jamais
+ * plus que ce qui est réellement porté. Sans trajet au programme : 0, comme avant. Pure.
+ */
+export function volumePorteAuTrajet(
+  looks: readonly { ids: readonly number[]; situations: Iterable<number> }[],
+  situations: readonly Pick<SituationValise, "sousIds">[],
+  unites: (id: number) => number
+): number {
+  const trajets = new Set(situations.flatMap((s, i) => (estSituationTrajet(s) ? [i] : [])));
+  if (!trajets.size) return 0;
+  const volumes = looks
+    .filter((l) => [...l.situations].some((i) => trajets.has(i)))
+    .map((l) => [...new Set(l.ids)].reduce((t, id) => t + unites(id), 0));
+  return volumes.length ? Math.min(...volumes) : 0;
+}
+
 export interface LeviersValise {
+  /**
+   * La tenue du trajet hors de la capacité (16/11/2026, volumePorteAuTrajet). Absent : le comportement d'avant, où elle comptait — le
+   * levier de mesure. La production le passe à true.
+   */
+  trajetHorsCapacite?: boolean;
   variete?: boolean;
   adaptation?: boolean;
   /**
@@ -1389,8 +1419,20 @@ export function composerValiseVariee(
   };
   // Les tenues d'une situation qui TIENNENT dans le bagage : les adaptées d'abord ; à défaut d'une adaptée qui tienne, les autres
   // (mesuré, exécution n° 18 : une valise S restreinte aux seules adaptées perdait un créneau sur cinq, faute de place).
+  // La tenue portée au trajet (16/11/2026, volumePorteAuTrajet) : retirée du volume une fois un look de trajet attribué. Pour un créneau
+  // de trajet, le look candidat compte déjà : s'il est plus léger que celui d'un autre trajet, c'est lui qui est retiré, et ce qui est
+  // déjà dans le sac doit encore tenir.
+  const trajets = new Set(situations.flatMap((s, i) => (estSituationTrajet(s) ? [i] : [])));
+  const porte = (candidat?: { ids: number[]; i: number }): number => {
+    if (!leviers.trajetHorsCapacite || !trajets.size) return 0;
+    const looksTrajet = [...attribues.entries()]
+      .filter(([, sit]) => [...sit].some((i) => trajets.has(i)))
+      .map(([cle]) => ({ ids: retenus.get(cle)?.ids ?? [], situations: [...trajets] }));
+    if (candidat && trajets.has(candidat.i)) looksTrajet.push({ ids: candidat.ids, situations: [...trajets] });
+    return volumePorteAuTrajet(looksTrajet, situations, (id) => unitesDe(tous.get(id)?.cat ?? "haut"));
+  };
   const tenables = (i: number) => {
-    const tient = (c: CandidatVarie) => volume(sac) + volume(c.ids.filter((id) => !sac.has(id))) <= capacite;
+    const tient = (c: CandidatVarie) => volume(sac) + volume(c.ids.filter((id) => !sac.has(id))) - porte({ ids: c.ids, i }) <= capacite;
     const d = options(i).filter(tient);
     return d.length ? d : liste.filter((c) => c.situations.has(i) && tient(c));
   };
@@ -1442,13 +1484,13 @@ export function composerValiseVariee(
   // Sous la cible de volume : des tenues que la valise n'a pas encore, dans la capacité, adaptées d'abord, la moins répétitive d'abord.
   if (cible != null && leviers.variete) {
     for (;;) {
-      if (volume(sac) >= Math.min(cible, capacite)) break;
+      if (volume(sac) - porte() >= Math.min(cible, capacite)) break;
       let meilleur: CandidatVarie | null = null;
       let cout = Infinity;
       for (const c of liste) {
         if (retenus.has(c.cle)) continue;
         const nouveaux = c.ids.filter((id) => !sac.has(id));
-        if (!nouveaux.length || volume(sac) + volume(nouveaux) > capacite) continue;
+        if (!nouveaux.length || volume(sac) + volume(nouveaux) - porte() > capacite) continue;
         if (leviers.adaptation && c.adapteA.size === 0) continue;
         const k =
           c.ids.reduce((t, id) => t + (POIDS_REPETITION[tous.get(id)?.cat ?? "accessoire"] ?? 0) * (usages.get(id) ?? 0), 0) +
