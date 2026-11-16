@@ -65,7 +65,10 @@ export interface Profile {
 
 export const DEFAULT_PREFS: ProfilePrefs = {
   notifEnabled: true,
-  notifTime: "08:00",
+  // 7 h par défaut (16/11/2026, demandé : « par défaut les notifications doivent être reçues à 7 h et non 8 h »), réglable dans
+  // Réglages › Notifications. Les comptes enregistrés à 08:00 passent à 07:00 par un SQL à part, montré avant (arbitré : un 8 h
+  // choisi ne se distingue pas d'un 8 h par défaut). L'heure du compte est reprogrammée à chaque lancement et retour dans l'app.
+  notifTime: "07:00",
   geoConsent: false,
   weatherFromGeo: false,
   unitSystem: "metric",
