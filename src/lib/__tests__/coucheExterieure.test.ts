@@ -97,4 +97,14 @@ describe("la température qui peut parler de météo", () => {
     expect(temperatureReelle({ decalage: 2, sourceMeteo: "ville", tempDuJour: 8, prevue: 4 })).toBe(4);
     expect(temperatureReelle({ decalage: 2, sourceMeteo: "ville", tempDuJour: 8, prevue: null })).toBeNull();
   });
+
+  it("la minimale du jour décide quand la prévision la donne (16/11/2026) : stable, quelle que soit l'heure", () => {
+    // 11° à 13° dans la journée, 13° à l'instant : la minimale, 11°, passe sous le seuil — la strate s'affiche toute la journée.
+    expect(temperatureReelle({ decalage: 0, sourceMeteo: "position", tempDuJour: 13, prevue: null, minDuJour: 11 })).toBe(11);
+    expect(temperatureReelle({ decalage: 0, sourceMeteo: "position", tempDuJour: 11, prevue: null, minDuJour: 11 })).toBe(11);
+    expect(temperatureReelle({ decalage: 3, sourceMeteo: "ville", tempDuJour: 8, prevue: 14, minDuJour: 9 })).toBe(9);
+    // Sans prévision, la règle d'avant ; sans vraie météo aujourd'hui, rien.
+    expect(temperatureReelle({ decalage: 0, sourceMeteo: "ville", tempDuJour: 13, prevue: null, minDuJour: null })).toBe(13);
+    expect(temperatureReelle({ decalage: 0, sourceMeteo: "defaut", tempDuJour: 13, prevue: null, minDuJour: 5 })).toBeNull();
+  });
 });

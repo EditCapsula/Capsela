@@ -687,7 +687,15 @@ interface CapselaContextValue {
    */
   meteoPourMoment: (moment: MomentJournee) => MeteoMoment | null;
   /** Le jour consulté : sa date, sa prévision (null si aucune), et l'attente de celle-ci. */
-  jourConsulte: { decalage: number; date: Date; meteoPrevue: { temp: number; label: string } | null; amplitude: { min: number; max: number } | null; previsionEnChargement: boolean };
+  jourConsulte: {
+    decalage: number;
+    date: Date;
+    meteoPrevue: { temp: number; label: string } | null;
+    amplitude: { min: number; max: number } | null;
+    previsionEnChargement: boolean;
+    /** La minimale prévue du jour consulté (6 h – 24 h ; aujourd'hui, à partir de maintenant), ou null sans prévision — coucheExterieure.ts. */
+    minDuJour: number | null;
+  };
   /** Capsule par défaut personnalisée (suggestions du catalogue). */
   defaultCapsule: Item[];
   /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
@@ -1206,6 +1214,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     const m = previsionPour(previsionJour.prevision, cle, "Toute la journée");
     return m ? { min: Math.round(m.tempMin), max: Math.round(m.tempMax) } : null;
   }, [state.jourDecalage, previsionJour, villeMeteo, dateConsultee]);
+  /*
+   * LA MINIMALE DU JOUR, POUR LA COUCHE EXTÉRIEURE (16/11/2026, signalé : « pourquoi la strate extérieur s'affiche de façon aléatoire »,
+   * arbitré : « avec le minimum du jour »). La strate « Pour l'extérieur » suivait la température de l'INSTANT : un jour entre 11° et 13°,
+   * elle apparaissait et disparaissait au gré des rafraîchissements, de part et d'autre du seuil de 12°. Elle suit désormais la minimale
+   * prévue de la journée (aujourd'hui, ce qu'il en reste), stable du matin au soir. Sans prévision : null, et la règle d'avant s'applique.
+   */
+  const minDuJour = useMemo(() => {
+    if (previsionJour?.ville !== villeMeteo || !previsionJour.prevision) return null;
+    const m = previsionPour(previsionJour.prevision, jourLocal(dateConsultee), "Toute la journée");
+    return m ? Math.round(m.tempMin) : null;
+  }, [previsionJour, villeMeteo, dateConsultee]);
   // LA SOIRÉE DU JOUR CONSULTÉ (01/11/2026, demandé : « il faut vérifier la température de fin de journée pour être pertinent ») :
   // la minimale des créneaux 18 h – 24 h, pour le conseil « il va faire frais ce soir ». Sans prévision, rien.
   const tempSoir = useMemo(() => {
@@ -3672,6 +3691,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       meteoPrevue: meteoPrevue ? { temp: meteoPrevue.temp, label: meteoPrevue.label } : null,
       amplitude,
       previsionEnChargement,
+      minDuJour,
     },
     defaultCapsule,
     wardrobePool,

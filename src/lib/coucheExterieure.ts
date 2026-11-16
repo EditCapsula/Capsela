@@ -91,8 +91,19 @@ export function autresManteaux(candidats: Item[], tenue: Item[], exterieur: Item
 /**
  * La température qui peut justifier « selon la météo » : aujourd'hui, celle du jour si elle n'est pas faite des valeurs par défaut
  * (choisirMeteo, weather.ts) ; un autre jour, sa prévision. Sinon null : rien n'est séparé, rien n'est dit de la météo.
+ *
+ * LA MINIMALE DU JOUR D'ABORD (16/11/2026, arbitré : « avec le minimum du jour ») : quand la prévision la donne (`minDuJour`, store), c'est
+ * elle qui décide de la couche extérieure — stable toute la journée, la même sur toutes les cartes. On prend son manteau pour le moment
+ * le plus froid, pas pour l'heure où l'on ouvre l'app. Sans prévision, la règle d'avant.
  */
-export function temperatureReelle(args: { decalage: number; sourceMeteo: string; tempDuJour: number; prevue: number | null | undefined }): number | null {
-  if (args.decalage === 0) return args.sourceMeteo !== "defaut" ? args.tempDuJour : null;
-  return typeof args.prevue === "number" ? args.prevue : null;
+export function temperatureReelle(args: {
+  decalage: number;
+  sourceMeteo: string;
+  tempDuJour: number;
+  prevue: number | null | undefined;
+  minDuJour?: number | null;
+}): number | null {
+  const min = typeof args.minDuJour === "number" && Number.isFinite(args.minDuJour) ? args.minDuJour : null;
+  if (args.decalage === 0) return args.sourceMeteo !== "defaut" ? (min ?? args.tempDuJour) : null;
+  return min ?? (typeof args.prevue === "number" ? args.prevue : null);
 }

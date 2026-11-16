@@ -209,7 +209,7 @@ export default function HomeScreen() {
    * LE MANTEAU À PART, SUR L'ACCUEIL AUSSI (04/11/2026, demandé : « aligne sur tous les hero » ; coucheExterieure.ts) : la composition
    * montre le look seul ; le manteau ajouté par le froid se montre dessous, dans « Pour l'extérieur », qui mène à la page Tenue.
    */
-  const tempReelle = temperatureReelle({ decalage: jourConsulte.decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp });
+  const tempReelle = temperatureReelle({ decalage: jourConsulte.decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp, minDuJour: jourConsulte.minDuJour });
   // Par le froid seulement, les manteaux que le moteur admet pour cette occasion : une tenue sans manteau en reçoit un, à part.
   const manteauxPour = (pieces: Item[], occasion: OccasionKey) =>
     tempReelle != null && tempReelle < SEUIL_MANTEAU && pieces.length
