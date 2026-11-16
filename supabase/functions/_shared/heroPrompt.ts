@@ -80,10 +80,14 @@ export function buildHeroImagePrompt(row: VestiaireRow, trend?: TrendRule | null
           : "Very opaque, thick and warm, in the deepest, richest shade of the product color — the darkest of the range: dense, soft, matte knit.";
   const presentation = collants
     ? [
-        "Single pair of tights only, fully unfolded and laid flat.",
-        "Seen from directly above at 90 degrees, like an editorial flat lay for a fashion magazine.",
-        "The waistband is neatly folded over once at the top and clearly visible; the two legs lie flat side by side, straight down, symmetric, slightly apart, with the feet visible at the bottom.",
-        "Flat garment only: never shaped like real legs, no three-dimensional volume, no folding into a square or a rectangle.",
+        // FORME DE LA PHOTO DE RÉFÉRENCE (16/11/2026) : la première version (« jambes côte à côte, symétriques, ceinture visible »)
+        // a donné un legging vu de face, avec culotte et entrejambe. La photo partagée montre autre chose : le haut roulé en un
+        // boudin compact, deux jambes fines qui se chevauchent, des pieds au talon marqué tournés vers l'extérieur.
+        "Single pair of tights only, laid flat on a surface, seen from directly above at 90 degrees, like a product photo for a hosiery brand.",
+        "The whole top part (waistband and panty section) is rolled and folded over several times into one short, compact horizontal band across the top, slightly offset to one side; no panty section, no crotch and no hip shape is visible.",
+        "Below this band, the two legs hang straight down, very narrow, lying close together and partly overlapping along most of their length, tapering gently toward the ankles and separating only near the bottom.",
+        "Each leg ends with a clearly shaped foot: a soft rounded toe and a visible heel, the two feet turned slightly outward.",
+        "Thin, soft, flat fabric with a few fine natural creases along the legs: never shaped like real legs, never like leggings or trousers, no three-dimensional volume, no folding into a square.",
         opacite,
         "Keep the exact color, opacity, texture, pattern, finish and waistband details of the product: do not add or invent any detail.",
       ]
