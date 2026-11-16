@@ -23,6 +23,9 @@ import type { EtatPremium } from "./premium";
  * indicatif ne conviennent pas » ; « cacher cette fonctionnalité dans un premier temps de partout dans l'app, on la remettra dans un lot
  * ultérieur »). Rien n'est supprimé : le code, la fonction `lire-ticket` et `visuel-article` restent. Seules les entrées disparaissent —
  * « Ajouter une pièce », l'écran Premium, l'astuce du chargement. true les rend toutes.
+ *
+ * Les textes légaux ne le citent plus non plus (16/11/2026, docs/legal : CGU, CGV, confidentialité) : le remettre, c'est aussi y
+ * remettre ses mentions — la lecture du ticket et ce qui en est gardé — avant la mise en ligne.
  */
 export const TICKET_DE_CAISSE_VISIBLE = false;
 
