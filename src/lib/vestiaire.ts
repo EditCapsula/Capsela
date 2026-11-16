@@ -1,6 +1,7 @@
 import { sansBarre } from "./barre";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { manchesDepuis } from "./manches";
+import { aUneLongueur, longueurDepuis } from "./forme";
 import { detectAccessoireType, detectBijouType, detectMatiere, detectSacType } from "./attributes";
 import type { CatalogItem } from "./catalog";
 import { FALLBACK_HEX } from "./data";
@@ -83,6 +84,8 @@ export interface VestiaireRow {
   id: number;
   /** Migration 0060 — le nom anglais, facultatif ; absent de la ligne tant qu'elle n'est pas exécutée. */
   name_en?: string | null;
+  /** Migration 0064 (16/11/2026) — la longueur (courte, midi, longue) d'une robe, d'une jupe, d'un manteau, d'une veste ; facultative. */
+  longueur?: string | null;
   category: string | null;
   url_image: string | null;
   /** Migration 0049 — visuel « hero » (flat lay), absent de la ligne tant qu'elle n'est pas exécutée. */
@@ -389,6 +392,9 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     matiere: mapMatiere(row.matiere),
     matiereBrute: row.matiere?.trim() || undefined,
     ...(row.name_en?.trim() ? { nameEn: sansBarre(row.name_en.trim()) } : {}),
+    // La longueur du catalogue (16/11/2026, migration 0064) : lue seulement pour les catégories qui en ont une (forme.ts). Vide, la pièce
+    // reste inconnue, comme avant — R-B25 ne joue que si les deux longueurs sont connues.
+    ...(aUneLongueur(cat) && longueurDepuis(row.longueur) ? { longueur: longueurDepuis(row.longueur) } : {}),
     coupe: mapCoupe(row.coupe),
     sacType: cat === "sac" ? detectSacType(name) || undefined : undefined,
     bijouType: cat === "bijou" ? detectBijouType(name) || undefined : undefined,
