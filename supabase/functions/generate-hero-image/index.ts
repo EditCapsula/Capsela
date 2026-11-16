@@ -8,6 +8,12 @@
 // Sortie : { ok: true, url, ratio } ou { ok: false, code, message }. Si la migration 0049 (colonne url_image_hero) n'est pas
 // exécutée, la fonction le dit avant tout appel payant.
 //
+// DEPUIS LA PHOTO DU CATALOGUE (16/11/2026, arbitré : « option 2, commence par les robes »). L'audit visuels-coherence a montré que le
+// visuel hero, dessiné d'après la seule description, ne représente souvent pas la même pièce que la photo du catalogue (338 écarts
+// majeurs sur 619, dont la « Robe pull midi cintrée »). Avec `depuis_photo: true`, la photo du catalogue (url_image) est donnée au
+// modèle comme RÉFÉRENCE (images/edits) : il pose à plat CE vêtement-là. Sans l'option, la génération d'avant, inchangée. L'ancien
+// fichier n'est jamais effacé (le nouveau a son propre nom) : revenir en arrière, c'est remettre l'ancienne URL dans la colonne.
+//
 // Même secret que generate-catalog-image : OPENAI_API_KEY (+ IMAGE_GENERATION_MODEL). Qualité propre au hero : HERO_IMAGE_QUALITY
 // (défaut « medium » : le flat lay demande plus de détail qu'une vignette).
 
@@ -41,10 +47,12 @@ Deno.serve(async (req) => {
 
   let itemId: number;
   let force = false;
+  let depuisPhoto = false;
   try {
     const body = await req.json();
     itemId = Number(body.item_id);
     force = body.force === true;
+    depuisPhoto = body.depuis_photo === true;
     if (!Number.isFinite(itemId)) throw new Error("item_id invalide");
   } catch {
     return reponse({ ok: false, code: "entree", message: "item_id manquant ou invalide." }, 400);
@@ -53,9 +61,9 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceRoleKey);
   const { data: article, error: erreurLecture } = await supabase
     .from("vestiaire_universel")
-    .select("id, name, category, sous_type, couleur_dominante, matiere, genre, coupe, niveau_tendance, silhouette_mode, details_mode, prompt_image_override, url_image_hero")
+    .select("id, name, category, sous_type, couleur_dominante, matiere, genre, coupe, niveau_tendance, silhouette_mode, details_mode, prompt_image_override, url_image_hero, url_image")
     .eq("id", itemId)
-    .maybeSingle<VestiaireRow & { url_image_hero: string | null }>();
+    .maybeSingle<VestiaireRow & { url_image_hero: string | null; url_image: string | null }>();
   if (erreurLecture) {
     // La colonne n'existe pas : la migration 0049 n'est pas exécutée. Rien n'est généré, rien n'est payé.
     return reponse({ ok: false, code: "migration", message: `Lecture impossible (${erreurLecture.message}) — la migration 0049 est-elle exécutée ?` }, 409);
@@ -70,11 +78,23 @@ Deno.serve(async (req) => {
     return reponse({ ok: false, code: "incoherent", message: `Incohérence catégorie/sujet : « ${construit.canonCategory} » mais sujet « ${construit.noun} ». Génération annulée avant tout appel API.` }, 422);
   }
 
+  // La référence : la photo du catalogue, lue avant tout appel payant.
+  let reference: Blob | null = null;
+  if (depuisPhoto) {
+    if (!article.url_image) return reponse({ ok: false, code: "reference", message: "Pas de photo du catalogue (url_image) à prendre pour référence." }, 422);
+    const r = await fetch(article.url_image);
+    if (!r.ok) return reponse({ ok: false, code: "reference", message: `Photo du catalogue illisible (${r.status}).` }, 502);
+    const type = r.headers.get("content-type") || "image/webp";
+    reference = new Blob([await r.arrayBuffer()], { type });
+  }
+
   let png: Uint8Array | null = null;
   let derniereErreur = "";
   for (let essai = 0; essai < 2 && !png; essai++) {
     try {
-      png = await appelerImage(openaiKey, model, quality, construit.prompt);
+      png = reference
+        ? await appelerImageDepuisPhoto(openaiKey, model, quality, `${CONSIGNE_REFERENCE}\n\n${construit.prompt}`, reference)
+        : await appelerImage(openaiKey, model, quality, construit.prompt);
     } catch (e) {
       derniereErreur = e instanceof Error ? e.message : String(e);
     }
@@ -121,6 +141,32 @@ async function appelerImage(cle: string, model: string, quality: string, prompt:
     body: JSON.stringify({ model, prompt, size: "1024x1024", quality, n: 1, background: "transparent", output_format: "png" }),
   });
   if (!res.ok) throw new Error(`Échec génération image (${res.status}) : ${(await res.text().catch(() => "")).slice(0, 300)}`);
+  const data = await res.json();
+  const b64 = data?.data?.[0]?.b64_json;
+  if (!b64) throw new Error("Réponse OpenAI sans image (b64_json manquant).");
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+/** La consigne qui précède le prompt hero quand la photo du catalogue sert de référence. */
+const CONSIGNE_REFERENCE = [
+  "The reference image shows the exact garment to depict.",
+  "Reproduce THIS garment exactly: same type, cut, neckline or collar, sleeves, length, closures (buttons, zip, wrap, tie, belt), pockets,",
+  "pattern, color and material. Do not redesign it, do not add or remove any detail.",
+  "Only change the presentation: laid flat, seen from above, with natural soft folds, as described below.",
+].join(" ");
+
+async function appelerImageDepuisPhoto(cle: string, model: string, quality: string, prompt: string, reference: Blob): Promise<Uint8Array> {
+  const form = new FormData();
+  form.append("model", model);
+  form.append("prompt", prompt);
+  form.append("image", reference, reference.type.includes("png") ? "reference.png" : reference.type.includes("jpeg") ? "reference.jpg" : "reference.webp");
+  form.append("size", "1024x1024");
+  form.append("quality", quality);
+  form.append("background", "transparent");
+  form.append("output_format", "png");
+  form.append("n", "1");
+  const res = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", headers: { Authorization: `Bearer ${cle}` }, body: form });
+  if (!res.ok) throw new Error(`Échec génération image depuis la photo (${res.status}) : ${(await res.text().catch(() => "")).slice(0, 300)}`);
   const data = await res.json();
   const b64 = data?.data?.[0]?.b64_json;
   if (!b64) throw new Error("Réponse OpenAI sans image (b64_json manquant).");
