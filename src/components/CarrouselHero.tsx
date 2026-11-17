@@ -66,6 +66,8 @@ export interface CarteHeroProps {
   onPiece?: (it: Item) => void;
   /** Le sous-titre sous « Pourquoi cette tenue ? » (12/11/2026) : une tenue recommandée. Faux : affiché tel quel (plan, valise). */
   pourquoi?: boolean;
+  /** Posée dans une carte qui la porte déjà (l'accueil, 17/11/2026 : le jour, la météo et les points du carrousel dans la même carte) : ni fond ni filet. */
+  sansCadre?: boolean;
 }
 
 /**
@@ -73,14 +75,14 @@ export interface CarteHeroProps {
  * seul, arbitré le 14/10/2026 (option 3h), puis Tenue le même jour ; les autres hero gardent --color-hero-background. Le texte réduit à gauche, la composition — point focal — à droite, deux actions
  * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
  */
-export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, onFantome, ajouts, portee, onPiece, pourquoi = false }: CarteHeroProps) {
+export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, onFantome, ajouts, portee, onPiece, pourquoi = false, sansCadre = false }: CarteHeroProps) {
   const ouvrirFiche = useOuvrirPiece();
   const ouvrirPiece = onPiece ?? ouvrirFiche;
   return (
     <div
       // flex-1 : toutes les slides prennent la hauteur de la plus haute (la piste les étire) — pas de saut de hauteur au glissé (18/10/2026).
       className="rounded-hero grid gap-2 flex-1 grille-hero"
-      style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", minHeight: 307 }}
+      style={sansCadre ? { minHeight: 280 } : { background: "var(--color-card)", border: "1px solid var(--color-border)", minHeight: 307 }}
     >
       <div className="flex flex-col min-w-0">
         <div className="flex items-center gap-[7px]">
