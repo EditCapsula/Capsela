@@ -214,8 +214,13 @@ const HAUTEUR_COTES_RECETTE = 1.2;
  */
 // Le sac de 0,55 à 0,62 (« agrandir légèrement le sac », même jour). Le haut de 0,8 à 0,72 (« le haut est trop grand vs le bas, il faut
 // que ce soit plus harmonieux », même jour, capture d'un haut et d'une jupe) : le haut ne pèse plus plus que le bas qu'il surmonte.
-// Les chaussures de 0,52 à 0,75 (« agrandis les chaussures comme sur ma version », même jour : environ 30 % de la largeur de la planche).
-const PROPORTION_RECETTE: Partial<Record<CategoryKey, number>> = { jupe: 0.92, sac: 0.62, haut: 0.72, pull: 0.72, chaussures: 0.75 };
+const PROPORTION_RECETTE: Partial<Record<CategoryKey, number>> = { jupe: 0.92, sac: 0.62, haut: 0.72, pull: 0.72 };
+/**
+ * Les chaussures sous la veste, plus grandes : 0,75 du pantalon au lieu de 0,52 (17/11/2026, « agrandis les chaussures comme sur ma
+ * version » : environ 30 % de la largeur de la planche). Seulement sous une veste (arbitré le même jour) : appliquées à toutes les tenues,
+ * des ballerines ou des mules devenaient presque aussi larges que le haut d'une tenue haut et bas.
+ */
+const CHAUSSURES_SOUS_VESTE = 0.75;
 /** La taille d'une petite pièce face à sa proportion habituelle, dans une recette : la ceinture et les bijoux se lisent plus petits que le sac. */
 const PETITE_PIECE: Partial<Record<CategoryKey, number>> = { accessoire: 0.85, bijou: 0.8 };
 /** Des collants, en hauteur (une pièce longue, posée à plat comme un bas), pantalon = 1. */
@@ -871,6 +876,13 @@ export function composerFlatLay(
       // Avec une veste, elle a sa colonne à elle, à la taille du haut, et les chaussures dessous, alignées sur elle (17/11/2026, demandé :
       // « mets les chaussures à la place du sac, aligne les chaussures et la veste » — un temps le sac, le même jour) ; le sac, les collants
       // et les petites pièces se rangent à côté.
+      if (dessus.length)
+        for (const q of chaussures) {
+          const f = CHAUSSURES_SOUS_VESTE / (PROPORTION_PIECE.chaussures ?? 0.52);
+          const ratioQ = q.l / q.h;
+          q.l = Math.min(largeurMax, q.l * f);
+          q.h = q.l / ratioQ;
+        }
       const moyennes = dessus.length ? [...dessus, ...chaussures, ...autres] : [...sac, ...autres, ...chaussures];
       const petitesPieces = [...(dessus.length ? sac : []), ...droiteposee.filter(collants), ...petits];
       const Hc = H * hauteurCotes;
