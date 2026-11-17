@@ -28,6 +28,7 @@
     "@capacitor/local-notifications": "8.3.1",
     "@capacitor/share": "8.0.3",
     "@next/third-parties": "^16.3.3",
+    "@revenuecat/purchases-capacitor": "14.1.1",
     "@sentry/nextjs": "^10.71.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.1",

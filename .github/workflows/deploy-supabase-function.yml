@@ -48,7 +48,9 @@ jobs:
             # d'authentification (02/11/2026, supabase/functions/_shared/admobSsv.ts). Toutes les autres gardent le JWT.
             # --yes (04/11/2026) : la CLI récente demande une confirmation avant de déployer, et ne peut pas la poser ici (pas de
             # terminal) — sans ce drapeau, rien n'est déployé et le workflow échoue (« Re-run with --yes to confirm »).
-            if [ "$name" = "video-recompense" ]; then
+            # revenuecat-webhook (17/11/2026) : appelée par RevenueCat, sans jeton Supabase ; l'en-tête Authorization configuré dans
+            # RevenueCat, comparé au secret REVENUECAT_WEBHOOK_SECRET, tient lieu d'authentification (_shared/revenuecat.ts).
+            if [ "$name" = "video-recompense" ] || [ "$name" = "revenuecat-webhook" ]; then
               supabase functions deploy "$name" --project-ref tkrbzrazejrxavtfspll --no-verify-jwt --yes
             else
               supabase functions deploy "$name" --project-ref tkrbzrazejrxavtfspll --yes

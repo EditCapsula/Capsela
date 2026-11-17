@@ -34,10 +34,13 @@ import { AlerteMeteoLook, PlansDuJour, usePlanApplique } from "@/components/Plan
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
-import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/components/CarrouselHero";
+import { ActionRonde, BoutonPorter, CarrouselHero, CarteHero, LienVoirLook, MentionPortee, type EtatPorter } from "@/components/CarrouselHero";
+import { FeuilleChoisirTenue, SelecteurOccasion } from "@/components/ChoisirMaTenue";
+import { afficherToast } from "@/components/ToastCapsela";
+import { cleSlideIds, messagePortee, pieceDeRetour, porteeLe } from "@/lib/retourPiece";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
-import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
+import { composerSlides, cleTenue as cleSlide, slideDeLOccasion, SLIDES, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
 
 /** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
 const glypheUnivers = (d: string) => (
@@ -420,6 +423,39 @@ export default function HomeScreen() {
   const piecesDe = (ids: number[]) => ids.map((id) => resolvePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
   const dejaSauvegardee = (ids: number[]) => state.savedLooks.some((l) => cleSlide(l.pieceIds) === cleSlide(ids));
 
+  /*
+   * « CHOISIR MA TENUE » ET « PORTER CETTE TENUE » (17/11/2026, maquette « Capsela — Tenue du jour », validée). Le surtitre de la tenue
+   * devient le sélecteur d'occasion (ChoisirMaTenue) ; « Porter cette tenue » devient l'action principale de la carte, « Voir le look »
+   * passe sous le titre. Une fois portée : « Portée aujourd'hui · Annuler », et le message de confirmation de l'app (ToastCapsela) dit la
+   * pièce de retour s'il y en a une (pieceDeRetour : le Journal, au-delà de SEUIL_RETOUR_JOURS) — jamais une phrase sans donnée.
+   * Seulement pour aujourd'hui : un autre jour ne se porte pas, une tenue passée se lit au Journal.
+   */
+  const [feuilleTenue, setFeuilleTenue] = useState(false);
+  const [versPremiere, setVersPremiere] = useState<{ index: number; cle: number } | undefined>(undefined);
+  const choisirOccasion = (o: OccasionKey) => {
+    actions.setOccasion(o);
+    setVersPremiere((v) => ({ index: 0, cle: (v?.cle ?? 0) + 1 }));
+    // Une occasion à sous-choix (Travail, Rendez-vous) garde la feuille ouverte : ses pastilles s'y affichent.
+    if (o !== "travail_formel" && o !== "date") setFeuilleTenue(false);
+  };
+  const porteeDuJour = jourConsulte.decalage === 0 ? porteeLe(state.history) : null;
+  const etatPorter = (ids: number[], occasion: OccasionKey, sauf: number[] | undefined, estLaTenueDuJour: boolean): EtatPorter | undefined => {
+    if (jourConsulte.decalage !== 0 || passee) return undefined;
+    const vues = ids.filter((id) => !(sauf ?? []).includes(id));
+    if ((estLaTenueDuJour && porteeAujourdhui) || (porteeDuJour && cleSlideIds(porteeDuJour.pieceIds) === cleSlideIds(vues)))
+      return { etat: "portee", onAnnuler: actions.annulerPorteeDuJour };
+    if (porteeDuJour || state.outfitValidated) return { etat: "aucun" };
+    return {
+      etat: "a_porter",
+      onPorter: () => {
+        const retour = pieceDeRetour(piecesDe(vues), state.history);
+        actions.porterCesPieces(ids, occasion, sauf);
+        afficherToast(t(messagePortee(retour)), actions.annulerPorteeDuJour);
+      },
+    };
+  };
+  const surtitreOccasion = (o: OccasionKey | null) => SLIDES.find((d) => d.id === slideDeLOccasion(o))?.surtitre ?? null;
+
 
   const carteSlide = (slide: SlideCarrousel) => {
     const duJour = slide.source !== "proposition";
@@ -496,6 +532,9 @@ export default function HomeScreen() {
         avantActions={blocSlide ?? undefined}
         pied={duJour && planApplique?.alerte ? <AlerteMeteoLook planApplique={planApplique} /> : undefined}
         portee={duJour && porteeAujourdhui}
+        // Le sélecteur d'occasion : pas pendant un séjour (le carrousel est celui de la valise) ni sur une tenue planifiée.
+        onSelecteur={!enSejour && slide.source !== "plan" ? () => setFeuilleTenue(true) : undefined}
+        porter={etatPorter(slide.ids, slide.occasion, duJour ? sansExterieur : slide.ids.filter((id) => !idsDuLook.includes(id)), duJour)}
         pourquoi={!(slide.source === "plan" && texteHero) && !enSejour}
         onPiece={toucherPiece(
           pieces,
@@ -520,6 +559,9 @@ export default function HomeScreen() {
     label: passee?.weatherLabel ?? null,
     onChange: setRetro,
   };
+  // La carte seule (sans carrousel) : le même sélecteur et le même « Porter cette tenue » que les slides.
+  const selecteurSeul = hasOutfit && !passee && !texteHero && !enSejour && !sansGenre ? surtitreOccasion(occasionKey ?? null) : null;
+  const porterSeul = hasOutfit && !sansGenre ? etatPorter(state.outfit, occasionKey ?? "quotidien", sansExterieur, true) : undefined;
   /** La carte qui porte le jour, sa météo et la tenue (17/11/2026). */
   const carteDuJour = (contenu: React.ReactNode) => (
     <div className="mx-4 rounded-hero overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
@@ -565,6 +607,7 @@ export default function HomeScreen() {
             className="mt-3"
             classeSlide=""
             enveloppe={(piste) => carteDuJour(piste)}
+            versSlide={versPremiere}
             slides={slides.map(carteSlide)}
             libelles={slides.map((sl) => sl.surtitre)}
             onAvantDerniere={actions.etendreCarrousel}
@@ -588,6 +631,9 @@ export default function HomeScreen() {
         {/* Sans tenue possible (15/11/2026, capture : le texte tenait dans la moitié gauche, la droite restait vide), le texte prend toute
             la largeur de la carte : il n'y a pas de composition à côté. */}
         <div className="flex flex-col min-w-0" style={!passee && sansTenue ? { gridColumn: "1 / -1" } : undefined}>
+          {selecteurSeul ? (
+            <SelecteurOccasion libelle={selecteurSeul} onClick={() => setFeuilleTenue(true)} />
+          ) : (
           <div className="flex items-center gap-[7px]">
             <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -596,6 +642,7 @@ export default function HomeScreen() {
               {passee ? (retroActif === 1 ? t("Ton look d’hier") : t("Ton look passé")) : texteHero ? sansLeJour(texteHero.surtitre) : t("Ton look du jour")}
             </span>
           </div>
+          )}
 
           {passee ? (
             <>
@@ -661,8 +708,13 @@ export default function HomeScreen() {
                     {sousTitreHero}
                   </div>
                 )}
-                {porteeAujourdhui && <MentionPortee />}
+                {!porterSeul && porteeAujourdhui && <MentionPortee />}
               </div>
+              {porterSeul ? (
+                <div className="mt-[2px]">
+                  <LienVoirLook onClick={actions.goTenues} />
+                </div>
+              ) : (
               <div className="mt-auto pt-4">
                 <Button
                   variante="principal"
@@ -673,6 +725,7 @@ export default function HomeScreen() {
                   {t("Voir le look")}
                 </Button>
               </div>
+              )}
             </>
           ) : (
             <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
@@ -701,10 +754,15 @@ export default function HomeScreen() {
         )}
 
         {!passee && !sansTenue && blocExterieur && <div style={{ gridColumn: "1 / -1" }}>{blocExterieur}</div>}
+        {hasOutfit && !sansGenre && porterSeul && porterSeul.etat !== "aucun" && (
+          <div className="mt-[4px]" style={{ gridColumn: "1 / -1" }}>
+            <BoutonPorter porter={porterSeul} />
+          </div>
+        )}
         {/* LES DEUX ACTIONS : « Sauvegarder » range la tenue dans Mes looks (l'ancien « J'adore », même enregistrement) ; « Autre tenue »
             propose une autre tenue (l'ancien « Pas pour moi » : le refus est enregistré, la suivante l'évite, même quota). */}
         {hasOutfit && !passee && !sansGenre && (
-          <div className="flex items-center mt-0" style={{ gridColumn: "1 / -1" }} aria-live="polite">
+          <div className={`flex items-center mt-0 ${porterSeul ? "justify-center" : ""}`} style={{ gridColumn: "1 / -1" }} aria-live="polite">
             <ActionRonde
               icone={
                 <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -803,6 +861,32 @@ export default function HomeScreen() {
         </div>
       </div>
 
+      <FeuilleChoisirTenue
+        open={feuilleTenue}
+        onClose={() => setFeuilleTenue(false)}
+        occasion={occasionKey ?? null}
+        workMode={state.workMode}
+        dateContext={state.dateContext}
+        onOccasion={choisirOccasion}
+        onWorkMode={(m) => {
+          if (occasionKey !== "travail_formel") actions.setOccasion("travail_formel");
+          actions.setWorkMode(m);
+          setFeuilleTenue(false);
+        }}
+        onDateContext={(c) => {
+          if (occasionKey !== "date") actions.setOccasion("date");
+          actions.setDateContext(c);
+          setFeuilleTenue(false);
+        }}
+        onLooks={() => {
+          setFeuilleTenue(false);
+          actions.goLooks();
+        }}
+        onPortees={() => {
+          setFeuilleTenue(false);
+          actions.goHistory();
+        }}
+      />
       {/* Quota « Autre tenue » : la même feuille de quota partout. */}
       {quota.feuille}
       {/* La feuille Voir / Remplacer d'une pièce du flat lay, et sa confirmation (RemplacementPiece). */}

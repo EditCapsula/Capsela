@@ -645,13 +645,16 @@ input.capin[type="date"]::-webkit-date-and-time-value {
  * « resserre ») : la colonne du titre faisait 105 px quand « Décontracté », le mot le plus large des titres, en demande 120 — il
  * débordait sur les pièces. La composition passe de 140 à 116 px et la marge intérieure se resserre : 124 px pour le titre.
  */
+/* LA PLANCHE DE L'ACCUEIL AGRANDIE (17/11/2026, signalé : « les pièces sont bien trop petites […] là c'est trop timide ») : la colonne
+   de la composition passe de 181 px au plus (55,5 %) à 63 % de la carte. « Porter cette tenue » a quitté la colonne du texte pour
+   toute la largeur, sous la tenue : il n'y reste que le titre, qui garde 108 px au moins. */
 .grille-hero {
-  grid-template-columns: minmax(0, 1fr) clamp(140px, 55.5%, 181px);
+  grid-template-columns: minmax(108px, 1fr) minmax(0, 63%);
   padding: 20px 14px 10px 18px;
 }
 @media (max-width: 359px) {
   .grille-hero {
-    grid-template-columns: minmax(0, 1fr) 116px;
+    grid-template-columns: minmax(96px, 1fr) minmax(0, 60%);
     padding: 20px 10px 10px 14px;
   }
 }

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
+import { achatsIntegresIci, acheter, chargerFormules, restaurer, type FormuleStore } from "@/lib/achats";
+import { useAuth } from "@/lib/auth";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
 import { GENERATIONS_GRATUITES_PAR_JOUR, LIMITE_DRESSING_GRATUIT } from "@/lib/premium";
@@ -163,6 +165,12 @@ const FORMULES: Formule[] = [
 const prixAffiches = () => Capacitor.getPlatform() !== "ios";
 
 export default function PremiumScreen() {
+  // L'APPLI iOS AVEC SES ACHATS INTÉGRÉS (17/11/2026, achats.ts) : un autre pied, les prix du store, l'achat et la restauration.
+  if (achatsIntegresIci()) return <PremiumStore />;
+  return <PremiumSansAchat />;
+}
+
+function PremiumSansAchat() {
   const { state, actions } = useCapsela();
   const avecPrix = prixAffiches();
   const [formule, setFormule] = useState<Formule["id"]>("annuel");
@@ -346,6 +354,228 @@ export default function PremiumScreen() {
             style={{ minHeight: 44 }}
           >
             Conditions et confidentialité
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** La liste des avantages, partagée par les deux écrans. */
+function ListeAvantages() {
+  return (
+    <div className="mt-[18px]" style={{ borderTop: "1px solid var(--color-border)" }}>
+      {AVANTAGES.map((a) => (
+        <div key={a.titre} className="py-[14px]" style={{ borderBottom: "1px solid var(--color-border)" }}>
+          <div className="flex items-center gap-[9px]">
+            <span className="text-terracotta-deep">
+              <Glyphe>{a.glyphe}</Glyphe>
+            </span>
+            <div className="t-titre-carte text-ink">{a.titre}</div>
+            {a.bientot && <Badge tone="neutre">Bientôt</Badge>}
+          </div>
+          <div className="text-[12px] text-muted-3 leading-[1.5] mt-1" style={{ textWrap: "pretty" }}>
+            {a.desc}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/*
+ * L'ÉCRAN PREMIUM DE L'APP iOS, AVEC L'ACHAT INTÉGRÉ (17/11/2026, refus App Review 2.1(b) ; achats.ts). Ce qu'Apple exige d'un écran
+ * d'abonnement (3.1.2) : le prix et la durée de chaque formule, tels que le store les donne (devise de la personne) ; le renouvellement
+ * automatique et la façon de l'annuler ; « Restaurer mes achats » ; les conditions d'utilisation et la politique de confidentialité.
+ * Les formules viennent de l'offre RevenueCat : tant qu'elles ne sont pas lues, aucun prix n'est écrit (jamais un prix inventé) ; si
+ * elles ne le sont pas du tout, l'écran le dit et propose de réessayer. Le droit s'applique dès la confirmation d'Apple
+ * (premiumConfirmeParLeStore) ; la fonction revenuecat-webhook l'écrit dans premium_access.
+ */
+const TEXTE_RENOUVELLEMENT =
+  "Abonnement à renouvellement automatique. Le paiement est débité sur ton compte Apple à la confirmation de l'achat. L'abonnement se renouvelle automatiquement, au même prix et pour la même durée, sauf s'il est annulé au moins 24 heures avant la fin de la période en cours. Tu peux le gérer ou l'annuler à tout moment dans les réglages de ton compte Apple.";
+
+function PremiumStore() {
+  const { state, actions, etatPremium } = useCapsela();
+  const { userId } = useAuth();
+  const [essai, setEssai] = useState(0);
+  // Les formules lues pour une demande (personne, essai) : une autre demande en cours se lit « chargement ».
+  const cle = `${userId ?? ""}|${essai}`;
+  const [lues, setLues] = useState<{ cle: string; formules: FormuleStore[] | null } | null>(null);
+  const formules: FormuleStore[] | null | "chargement" = !userId ? null : lues?.cle === cle ? lues.formules : "chargement";
+  const [duree, setDuree] = useState<FormuleStore["duree"]>("annuel");
+  const [occupe, setOccupe] = useState<"achat" | "restauration" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId) return;
+    let annule = false;
+    void chargerFormules(userId).then((f) => {
+      if (!annule) setLues({ cle, formules: f });
+    });
+    return () => {
+      annule = true;
+    };
+  }, [userId, cle]);
+
+  const liste = Array.isArray(formules) ? formules : [];
+  const choisie = liste.find((f) => f.duree === duree) ?? liste[0] ?? null;
+  const dejaPremium = etatPremium === "premium";
+
+  const conclure = (r: Awaited<ReturnType<typeof acheter>>, apres: "achat" | "restauration") => {
+    if (r === "premium") {
+      actions.premiumConfirmeParLeStore();
+      setMessage(apres === "achat" ? "Bienvenue dans Capsela Premium." : "Ton abonnement Premium est restauré.");
+    } else if (r === "sans_droit") {
+      setMessage(apres === "achat" ? "L'achat n'a pas été confirmé par Apple. Rien ne t'a été facturé." : "Aucun abonnement actif n'a été trouvé sur ce compte Apple.");
+    } else if (r === "erreur") {
+      setMessage("L'App Store ne répond pas pour le moment. Réessaie dans un instant.");
+    } else {
+      setMessage(null);
+    }
+  };
+
+  return (
+    <div className="absolute inset-0 flex flex-col bg-cream">
+      <div className="flex-shrink-0 px-6 pt-[6px]">
+        <AppHeader
+          showAvatar={false}
+          onBack={() => actions.go(state.premiumReturn)}
+          backLabel="Fermer"
+          titre={<>Capsela <span className="italic">Premium</span></>}
+        />
+      </div>
+
+      <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-2 pb-5">
+        <div className="t-chapeau text-muted-3" style={{ textWrap: "pretty" }}>
+          Un peu plus de place, un peu d&apos;avance : des outils pour aller plus loin avec ta garde-robe.
+        </div>
+        <ListeAvantages />
+
+        {dejaPremium ? (
+          <div className="mt-[22px] rounded-tuile bg-warm-bg px-[14px] py-[13px] text-[13px] text-ink leading-[1.45]" role="status">
+            Ton abonnement Premium est actif. Tu peux le gérer dans les réglages de ton compte Apple.
+          </div>
+        ) : (
+          <>
+            <div className="mt-[22px]">
+              <span className="t-surtitre text-muted">Choisis ta formule</span>
+            </div>
+            {formules === "chargement" ? (
+              <div className="mt-[10px] text-[12px] text-muted" role="status">
+                Chargement des formules…
+              </div>
+            ) : liste.length === 0 ? (
+              <div className="mt-[10px] text-[12px] text-muted-3 leading-[1.5]">
+                Les formules ne sont pas disponibles pour le moment.{" "}
+                <button type="button" className="text-terracotta-deep underline cursor-pointer" onClick={() => setEssai((n) => n + 1)}>
+                  Réessayer
+                </button>
+              </div>
+            ) : (
+              <div role="radiogroup" aria-label="Formule d'abonnement" className="flex flex-col gap-2 mt-[10px]">
+                {liste.map((f) => {
+                  const on = f.duree === choisie?.duree;
+                  return (
+                    <button
+                      key={f.duree}
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setDuree(f.duree)}
+                      className="w-full flex items-center gap-[13px] text-left rounded-carte px-4 py-3 cursor-pointer transition-colors"
+                      style={{
+                        minHeight: 72,
+                        background: on ? "var(--color-card)" : "rgba(251,248,243,.35)",
+                        border: on ? "1.5px solid var(--color-terracotta-deep)" : "1px solid var(--color-border)",
+                      }}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="w-[22px] h-[22px] flex-shrink-0 rounded-full flex items-center justify-center"
+                        style={{ border: `1.5px solid ${on ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)"}` }}
+                      >
+                        <span className="w-3 h-3 rounded-full" style={{ background: on ? "var(--color-terracotta-deep)" : "transparent" }} />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block t-label font-semibold" style={{ color: on ? "var(--color-terracotta-deep)" : "var(--color-muted)" }}>
+                          {f.duree === "annuel" ? "Premium annuel" : "Premium mensuel"}
+                        </span>
+                        <span className="block t-chiffre mt-[3px] whitespace-nowrap" style={{ color: on ? "var(--color-ink)" : "var(--color-muted-3)" }}>
+                          {f.prix} {f.duree === "annuel" ? "/ an" : "/ mois"}
+                        </span>
+                        <span className="block text-[11px] text-muted-3 mt-[2px]">
+                          {f.duree === "annuel" ? (f.prixMensuel ? `Soit ${f.prixMensuel} / mois, facturé une fois par an` : "Facturé une fois par an") : "Facturé chaque mois, sans engagement"}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="text-[11px] text-muted leading-[1.5] mt-[14px]" style={{ textWrap: "pretty" }}>
+              {TEXTE_RENOUVELLEMENT}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="relative flex-shrink-0 px-6 pt-[10px] pb-[18px] border-t border-border">
+        {message && (
+          <div className="mb-[10px] text-[12px] text-ink leading-[1.45] text-center" role="status" aria-live="polite">
+            {message}
+          </div>
+        )}
+        {!dejaPremium && (
+          <Button
+            variante="sombre"
+            disabled={!choisie || occupe !== null || !userId}
+            onClick={async () => {
+              if (!choisie || !userId) return;
+              setOccupe("achat");
+              setMessage(null);
+              conclure(await acheter(userId, choisie), "achat");
+              setOccupe(null);
+            }}
+          >
+            {occupe === "achat" ? "Ouverture de l'App Store…" : choisie ? `S'abonner · ${choisie.prix} ${choisie.duree === "annuel" ? "/ an" : "/ mois"}` : "S'abonner"}
+          </Button>
+        )}
+        <div className="flex items-center justify-center flex-wrap mt-[4px]">
+          <button
+            type="button"
+            disabled={occupe !== null || !userId}
+            onClick={async () => {
+              if (!userId) return;
+              setOccupe("restauration");
+              setMessage(null);
+              conclure(await restaurer(userId), "restauration");
+              setOccupe(null);
+            }}
+            className="text-[11px] text-muted cursor-pointer px-[10px] flex items-center"
+            style={{ minHeight: 44 }}
+          >
+            {occupe === "restauration" ? "Restauration…" : "Restaurer mes achats"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              actions.goLegal();
+              actions.openLegalDoc("cgu");
+            }}
+            className="text-[11px] text-muted cursor-pointer px-[10px] flex items-center"
+            style={{ minHeight: 44 }}
+          >
+            Conditions d&apos;utilisation
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              actions.goLegal();
+              actions.openLegalDoc("confidentialite");
+            }}
+            className="text-[11px] text-muted cursor-pointer px-[10px] flex items-center"
+            style={{ minHeight: 44 }}
+          >
+            Confidentialité
           </button>
         </div>
       </div>
