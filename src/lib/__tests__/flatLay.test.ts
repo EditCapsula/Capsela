@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { CHEVAUCHEMENT_MAX, CONTEXTES, LARGEUR_ACCESSOIRE_MIN, LARGEUR_HERO_MAX, LIMITE_INCLINAISON, MASQUE_MAX, PART_VISUELLE, PROPORTION_PIECE, attribuerRoles, composerFlatLay, echelleVisuelle, generateur, type PieceFlatLay, type PlacementFlatLay } from "../flatLay";
+import { CHEVAUCHEMENT_MAX, CONTEXTES, LARGEUR_ACCESSOIRE_MIN, LARGEUR_HERO_MAX, LIMITE_INCLINAISON, MASQUE_MAX, PART_VISUELLE, PROPORTION_PIECE, attribuerRoles, composerFlatLay as composerProduction, echelleVisuelle, generateur, type PieceFlatLay, type PlacementFlatLay } from "../flatLay";
 import type { CategoryKey } from "../types";
+
+/**
+ * Les règles d'avant la composition par recette (17/11/2026, RECETTES_EN_PRODUCTION) : ces tests les décrivent et restent valables pour
+ * le levier `recettes: false`, celui de la mesure avant / après. La recette a ses propres tests, en fin de fichier.
+ */
+const composerFlatLay: typeof composerProduction = (pieces, graine, options = {}) => composerProduction(pieces, graine, { recettes: false, ...options });
 
 let n = 0;
 const p = (cat: CategoryKey, ratio = 0.8): PieceFlatLay => ({ id: ++n, cat, ratio });
@@ -927,5 +933,55 @@ describe("Capsule › Composer : le haut choisi sous un pull est dessiné (05/11
     expect(avec.masquees).not.toContain(1);
     const sans = composerFlatLay(tenue, "x", { contexte: "look-detail" });
     expect(sans.pieces.some((q) => q.id === 1)).toBe(false);
+  });
+});
+
+describe("la composition par recette (17/11/2026, en production)", () => {
+  const ids = (r: ReturnType<typeof composerProduction>) => r.pieces;
+  const colonneDe = (pose: PlacementFlatLay[], id: number) => Math.round(pose.find((q) => q.id === id)!.x);
+  it("robe : seule à gauche ; sac puis chaussures au centre ; collants, ceinture et bijou à droite, plus petits que le sac", () => {
+    const robe = p("robe", 0.45), sac = p("sac", 1.1), chaussures = p("chaussures", 1.3);
+    const collants = { ...p("accessoire", 0.35), accessoireType: "Collants" };
+    const ceinture = { ...p("accessoire", 2.2), accessoireType: "Ceinture" }, bijou = p("bijou", 1);
+    const pose = ids(composerProduction([robe, sac, chaussures, collants, ceinture, bijou], "g", { contexte: "hero-home", hauteurZone: 112 }));
+    expect(pose.map((q) => q.id).sort()).toEqual([robe, sac, chaussures, collants, ceinture, bijou].map((q) => q.id).sort());
+    const x = (id: number) => colonneDe(pose, id);
+    expect(x(robe.id)).toBeLessThan(x(sac.id));
+    expect(x(sac.id)).toBe(x(chaussures.id));
+    expect(x(ceinture.id)).toBeGreaterThan(x(sac.id));
+    const taille = (id: number) => { const q = pose.find((o) => o.id === id)!; return Math.max(q.l, q.h); };
+    expect(taille(ceinture.id)).toBeLessThan(taille(sac.id));
+    expect(taille(bijou.id)).toBeLessThan(taille(ceinture.id));
+    const robeP = pose.find((q) => q.id === robe.id)!;
+    for (const q of pose) if (q.id !== robe.id) expect(q.h).toBeLessThan(robeP.h);
+  });
+  it("haut + bas + veste : la veste dans sa colonne, au moins à la hauteur du haut, sans chevaucher le haut ni le bas", () => {
+    const haut = p("haut", 1), bas = p("pantalon", 0.42), veste = p("veste", 0.75), sac = p("sac", 0.9), chaussures = p("chaussures", 1.3);
+    const pose = ids(composerProduction([haut, bas, veste, sac, chaussures], "g", { contexte: "hero-home", hauteurZone: 112 }));
+    const q = (id: number) => pose.find((o) => o.id === id)!;
+    expect(q(veste.id).h).toBeGreaterThanOrEqual(q(haut.id).h);
+    expect(colonneDe(pose, veste.id)).toBeGreaterThan(colonneDe(pose, haut.id));
+    expect(colonneDe(pose, sac.id)).toBeGreaterThan(colonneDe(pose, veste.id));
+    const b = (o: PlacementFlatLay) => boiteDe(o);
+    for (const autre of [haut, bas]) {
+      const a = b(q(veste.id)), c = b(q(autre.id));
+      expect(a.x0 >= c.x1 - 1e-6 || a.x1 <= c.x0 + 1e-6).toBe(true);
+    }
+  });
+  it("trois accessoires au plus, et rien ne dépasse la zone", () => {
+    const pieces = [p("haut", 1), p("pantalon", 0.42), p("sac", 1), p("chaussures", 1.3), p("accessoire", 2), p("bijou", 1), p("accessoire", 1), p("bijou", 1)];
+    const r = composerProduction(pieces, "g", { contexte: "hero-home", hauteurZone: 112 });
+    expect(r.pieces.filter((q) => q.cat === "accessoire" || q.cat === "bijou").length).toBeLessThanOrEqual(3);
+    for (const q of r.pieces) {
+      const bx = boiteDe(q);
+      expect(bx.x0).toBeGreaterThanOrEqual(-1e-6);
+      expect(bx.x1).toBeLessThanOrEqual(100 + 1e-6);
+      expect(bx.y1).toBeLessThanOrEqual(112 + 1e-6);
+    }
+  });
+  it("levier de mesure : `recettes: false` reproduit l'avant", () => {
+    const pieces = [p("robe", 0.45), p("sac", 1), p("chaussures", 1.3)];
+    const avant = composerProduction(pieces, "g", { contexte: "hero-home", recettes: false }).pieces.map((q) => [q.id, q.x, q.y]);
+    expect(composerFlatLay(pieces, "g", { contexte: "hero-home" }).pieces.map((q) => [q.id, q.x, q.y])).toEqual(avant);
   });
 });

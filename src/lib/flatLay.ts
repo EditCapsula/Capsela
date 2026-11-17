@@ -193,16 +193,16 @@ const ACCESSOIRES_EN_GRILLE = 2;
  * Aucune colonne n'est plus haute que les pièces principales : une colonne trop haute rétrécit ses seules pièces (au plus de 45 %), les
  * pièces principales gardent la leur. Deux colonnes qui tiennent ensemble sous la hauteur principale n'en font qu'une. Les images restent
  * des visuels indépendants, posés côte à côte, sans chevauchement ni superposition. Trois accessoires au plus, au lieu de deux.
- * Levier de mesure : `recettes: false` reproduit la règle d'avant (dont « la robe domine » du 16/11/2026). HORS PRODUCTION tant que
- * l'avant / après n'est pas validé.
+ * Levier de mesure : `recettes: false` reproduit la règle d'avant (dont « la robe domine » du 16/11/2026). EN PRODUCTION depuis le
+ * 17/11/2026, validé par la propriétaire sur l'avant / après de scripts/flatlay-recettes.audit.ts (six tenues du brief, images réelles).
  */
-export const RECETTES_EN_PRODUCTION = false;
+export const RECETTES_EN_PRODUCTION = true;
 const ACCESSOIRES_EN_RECETTE = 3;
 /**
  * Les tailles propres à la recette (17/11/2026, demandé sur l'avant / après : « agrandis un peu la jupe, il faut que la jupe représente la
  * même largeur que le pantalon ») : la jupe passe de 0,75 à 0,92 du pantalon, pour peser dans sa tenue autant que le pantalon dans la sienne.
  */
-const PROPORTION_RECETTE: Partial<Record<CategoryKey, number>> = { jupe: 0.92 };
+const PROPORTION_RECETTE: Partial<Record<CategoryKey, number>> = { jupe: 0.92, sac: 0.62 }; // le sac de 0,55 à 0,62 (« agrandir légèrement le sac », même jour)
 /** La taille d'une petite pièce face à sa proportion habituelle, dans une recette : la ceinture et les bijoux se lisent plus petits que le sac. */
 const PETITE_PIECE: Partial<Record<CategoryKey, number>> = { accessoire: 0.85, bijou: 0.8 };
 /** Des collants, en hauteur (une pièce longue, posée à plat comme un bas), pantalon = 1. */
@@ -862,7 +862,8 @@ export function composerFlatLay(
       };
       const cols = [moyennes, petitesPieces].filter((c) => c.length);
       // Deux colonnes qui tiennent ensemble sous la hauteur principale n'en font qu'une : la planche est plus large, donc plus grande.
-      if (cols.length === 2 && hauteurDe(cols[0]) + ecartV + hauteurDe(cols[1]) <= H) cols.splice(0, 2, [...cols[0], ...cols[1]]);
+      // Jamais avec une veste : elle garde sa colonne à elle (« la veste doit avoir à peu près la taille du haut »).
+      if (!dessus.length && cols.length === 2 && hauteurDe(cols[0]) + ecartV + hauteurDe(cols[1]) <= H) cols.splice(0, 2, [...cols[0], ...cols[1]]);
       cols.forEach((c) => (c.some((q) => DESSUS.includes(q.cat)) ? c : ajuster(c)));
       // LES PIÈCES PRINCIPALES GARDENT LA HAUTEUR DE LA CARTE (vu au premier rendu : trois colonnes à leur taille élargissaient la planche,
       // et la robe rétrécissait d'un tiers). La largeur que les colonnes de côté peuvent prendre se déduit de la hauteur utile : si elles
