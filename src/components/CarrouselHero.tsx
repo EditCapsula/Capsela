@@ -7,7 +7,6 @@ import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { ZoneLookDuJour } from "@/components/ZoneLookDuJour";
 import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import Button from "@/components/Button";
-import { SelecteurOccasion } from "@/components/ChoisirMaTenue";
 import type { CategoryKey, Item } from "@/lib/types";
 
 /**
@@ -71,52 +70,6 @@ export interface CarteHeroProps {
   pourquoi?: boolean;
   /** Posée dans une carte qui la porte déjà (l'accueil, 17/11/2026 : le jour, la météo et les points du carrousel dans la même carte) : ni fond ni filet. */
   sansCadre?: boolean;
-  /** Le surtitre devient le sélecteur d'occasion (« POUR LE TRAVAIL ▾ », 17/11/2026, ChoisirMaTenue) : il ouvre la feuille. */
-  onSelecteur?: () => void;
-  /** « Porter cette tenue », l'action principale de la carte (17/11/2026, maquette « Tenue du jour ») ; sans elle, « Voir le look » d'avant. */
-  porter?: EtatPorter;
-}
-
-/** L'action principale d'une tenue de l'accueil : à porter, portée (avec « Annuler »), ou rien (une autre tenue est déjà portée). */
-export type EtatPorter = { etat: "a_porter"; onPorter: () => void } | { etat: "portee"; onAnnuler: () => void } | { etat: "aucun" };
-
-/**
- * « PORTER CETTE TENUE » (17/11/2026, maquette « Capsela — Tenue du jour ») : le bouton principal, pleine largeur, de la carte du jour.
- * Une fois portée : « Portée aujourd'hui · Annuler », au même endroit et à la même hauteur (rien ne saute) ; « Annuler » défait le port
- * (annulerPorteeDuJour). Une autre tenue déjà portée aujourd'hui : rien (une tenue par jour).
- */
-export function BoutonPorter({ porter }: { porter: EtatPorter }) {
-  if (porter.etat === "aucun") return null;
-  if (porter.etat === "a_porter")
-    return (
-      <Button variante="principal" onClick={porter.onPorter} className="!normal-case !tracking-[0.02em] !text-[15px]">
-        {t("Porter cette tenue")}
-      </Button>
-    );
-  return (
-    <div className="w-full min-h-[52px] rounded-full flex items-center justify-center gap-[8px] px-4 text-[15px] font-semibold" style={{ background: "var(--color-terracotta-deep)", color: "var(--color-cream)" }} role="status">
-      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-        <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      <span>{t("Portée aujourd'hui")}</span>
-      <span aria-hidden="true">·</span>
-      <button type="button" onClick={porter.onAnnuler} className="underline underline-offset-[3px] cursor-pointer min-h-[44px]">
-        {t("Annuler")}
-      </button>
-    </div>
-  );
-}
-
-/** « Voir le look » discret, sous le titre, quand « Porter cette tenue » prend la place du bouton (17/11/2026). */
-export function LienVoirLook({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className="inline-flex items-center gap-[4px] min-h-[44px] self-start text-[12.5px] text-ink-soft cursor-pointer active:opacity-70">
-      {t("Voir le look")}
-      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-        <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </button>
-  );
 }
 
 /**
@@ -124,7 +77,7 @@ export function LienVoirLook({ onClick }: { onClick: () => void }) {
  * seul, arbitré le 14/10/2026 (option 3h), puis Tenue le même jour ; les autres hero gardent --color-hero-background. Le texte réduit à gauche, la composition — point focal — à droite, deux actions
  * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
  */
-export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, onFantome, ajouts, portee, onPiece, pourquoi = false, sansCadre = false, avantActions, onSelecteur, porter }: CarteHeroProps) {
+export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, onFantome, ajouts, portee, onPiece, pourquoi = false, sansCadre = false, avantActions }: CarteHeroProps) {
   const ouvrirFiche = useOuvrirPiece();
   const ouvrirPiece = onPiece ?? ouvrirFiche;
   return (
@@ -134,16 +87,12 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
       style={sansCadre ? { minHeight: 280 } : { background: "var(--color-card)", border: "1px solid var(--color-border)", minHeight: 307 }}
     >
       <div className="flex flex-col min-w-0">
-        {onSelecteur ? (
-          <SelecteurOccasion libelle={surtitre} onClick={onSelecteur} />
-        ) : (
-          <div className="flex items-center gap-[7px]">
-            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
-              <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="t-surtitre text-ink whitespace-nowrap">{t(surtitre)}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-[7px]">
+          <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
+            <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="t-surtitre text-ink whitespace-nowrap">{t(surtitre)}</span>
+        </div>
         {/* Un cran plus petit depuis que le titre nomme les pièces de la tenue (17/10/2026, titreDeLaTenue) : à 27 px, « La robe
             portefeuille et les baskets blanches » prenait cinq lignes. */}
         <div className="relative t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
@@ -162,20 +111,12 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
             {sousTitre}
           </div>
         )}
-        {porter ? (
-          <div className="mt-[2px]">
-            <LienVoirLook onClick={onVoir} />
-          </div>
-        ) : (
-          <>
-            {portee && <MentionPortee />}
-            <div className="mt-auto pt-4">
-              <Button variante="principal" pleine={false} onClick={onVoir} className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap">
-                {t("Voir le look")}
-              </Button>
-            </div>
-          </>
-        )}
+        {portee && <MentionPortee />}
+        <div className="mt-auto pt-4">
+          <Button variante="principal" pleine={false} onClick={onVoir} className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap">
+            {t("Voir le look")}
+          </Button>
+        </div>
       </div>
 
       <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "4px -10px 0 -6px" }}>
@@ -187,12 +128,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
       </div>
 
       {avantActions && <div style={{ gridColumn: "1 / -1" }}>{avantActions}</div>}
-      {porter && porter.etat !== "aucun" && (
-        <div className="mt-[4px]" style={{ gridColumn: "1 / -1" }}>
-          <BoutonPorter porter={porter} />
-        </div>
-      )}
-      <div className={`flex items-center ${porter ? "justify-center" : ""}`} style={{ gridColumn: "1 / -1" }} aria-live="polite">
+      <div className="flex items-center" style={{ gridColumn: "1 / -1" }} aria-live="polite">
         <ActionRonde icone={<IconeCoeur plein={sauvegardee} />} libelle={sauvegardee ? t("Sauvegardée") : t("Sauvegarder")} actif={sauvegardee} onClick={onSauvegarder} />
         <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(29,26,22,.2)" }} />
         {/* data-tour : la visite guidée de l'accueil (lib/visites.ts) met en évidence celle de la première slide, affichée à l'arrivée. */}
