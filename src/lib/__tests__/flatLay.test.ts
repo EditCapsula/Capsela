@@ -955,9 +955,9 @@ describe("la composition par recette (17/11/2026, en production)", () => {
     const robeP = pose.find((q) => q.id === robe.id)!;
     for (const q of pose) if (q.id !== robe.id) expect(q.h).toBeLessThan(robeP.h);
   });
-  it("haut + bas + veste : la veste dans sa colonne, au moins à la hauteur du haut, sans chevaucher le haut ni le bas", () => {
+  it("haut + bas + veste, côte à côte (levier) : la veste dans sa colonne, au moins à la hauteur du haut, sans chevaucher le haut ni le bas", () => {
     const haut = p("haut", 1), bas = p("pantalon", 0.42), veste = p("veste", 0.75), sac = p("sac", 0.9), chaussures = p("chaussures", 1.3);
-    const pose = ids(composerProduction([haut, bas, veste, sac, chaussures], "g", { contexte: "hero-home", hauteurZone: 112 }));
+    const pose = ids(composerProduction([haut, bas, veste, sac, chaussures], "g", { contexte: "hero-home", hauteurZone: 112, chevauchement: 0, hauteurCotes: 1 }));
     const q = (id: number) => pose.find((o) => o.id === id)!;
     expect(q(veste.id).h).toBeGreaterThanOrEqual(q(haut.id).h);
     expect(colonneDe(pose, veste.id)).toBeGreaterThan(colonneDe(pose, haut.id));
@@ -967,6 +967,20 @@ describe("la composition par recette (17/11/2026, en production)", () => {
       const a = b(q(veste.id)), c = b(q(autre.id));
       expect(a.x0 >= c.x1 - 1e-6 || a.x1 <= c.x0 + 1e-6).toBe(true);
     }
+  });
+  it("rapprochées (17/11/2026) : la veste recouvre un peu le haut et le bas, au plus 30 % de sa largeur, et les pièces grandissent", () => {
+    const haut = p("haut", 1), bas = p("pantalon", 0.42), veste = p("veste", 0.75), sac = p("sac", 0.9), chaussures = p("chaussures", 1.3);
+    const pieces = [haut, bas, veste, sac, chaussures];
+    const pose = ids(composerProduction(pieces, "g", { contexte: "hero-home", hauteurZone: 112 }));
+    const avant = ids(composerProduction(pieces, "g", { contexte: "hero-home", hauteurZone: 112, chevauchement: 0, hauteurCotes: 1 }));
+    const q = (l: PlacementFlatLay[], id: number) => l.find((o) => o.id === id)!;
+    const v = boiteDe(q(pose, veste.id));
+    for (const autre of [haut, bas]) {
+      const c = boiteDe(q(pose, autre.id));
+      expect(Math.max(0, c.x1 - v.x0)).toBeLessThanOrEqual(0.3 * (v.x1 - v.x0) + 1e-6);
+    }
+    expect(q(pose, bas.id).h).toBeGreaterThan(q(avant, bas.id).h);
+    expect(q(pose, veste.id).h).toBeGreaterThan(q(avant, veste.id).h);
   });
   it("trois accessoires au plus, et rien ne dépasse la zone", () => {
     const pieces = [p("haut", 1), p("pantalon", 0.42), p("sac", 1), p("chaussures", 1.3), p("accessoire", 2), p("bijou", 1), p("accessoire", 1), p("bijou", 1)];

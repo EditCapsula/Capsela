@@ -58,8 +58,14 @@ describe("composition par recette", () => {
       const sep = cas.temperature != null ? separerCoucheExterieure(cas.pieces.map(enItem), cas.temperature) : null;
       const dansLaPlanche = sep ? cas.pieces.filter((q) => sep.principal.some((i) => i.id === q.id)) : cas.pieces;
       const ligne: Record<string, unknown> = { nom: cas.nom, exterieur: sep?.exterieur ? cas.pieces.find((q) => q.id === sep.exterieur!.id)?.chemin : null };
-      for (const [bras, recettes] of [["avant", false], ["après", true]] as const) {
-        const r = composerFlatLay(dansLaPlanche.map(enPiece), "graine-audit", { contexte: "hero-home", hauteurZone: 112, recettes });
+      // Le levier mesuré (FLATLAY_LEVIER) : « recettes » (la règle d'avant contre la recette, 17/11/2026) ou « chevauchement » (la recette
+      // côte à côte contre la recette rapprochée, même jour : CHEVAUCHEMENT_RECETTE, HAUTEUR_COTES_RECETTE).
+      const leviers =
+        process.env.FLATLAY_LEVIER === "chevauchement"
+          ? ([["avant", { chevauchement: 0, hauteurCotes: 1 }], ["après", {}]] as const)
+          : ([["avant", { recettes: false }], ["après", { recettes: true }]] as const);
+      for (const [bras, levier] of leviers) {
+        const r = composerFlatLay(dansLaPlanche.map(enPiece), "graine-audit", { contexte: "hero-home", hauteurZone: 112, ...levier });
         const pose = r.pieces.map((q) => ({ ...q, chemin: cas.pieces.find((x) => x.id === q.id)!.chemin, bornes: objectBounds(`${B}${cas.pieces.find((x) => x.id === q.id)!.chemin}.webp`) }));
         const aire = (q: { l: number; h: number }) => q.l * q.h;
         const principales = pose.filter((q) => ["robe", "combinaison", "haut", "pull", "pantalon", "jean", "jupe", "short", "veste"].includes(q.cat));
