@@ -875,7 +875,8 @@ export function composerFlatLay(
       const veste = cols.flat().find((q) => DESSUS.includes(q.cat));
       if (veste) {
         const hautPose = premiere.find((q) => HAUTS.includes(q.cat));
-        const cible = hautPose ? hautPose.h : PROPORTION_PIECE[veste.cat]! * U;
+        // 15 % plus haute que le haut (« agrandis encore un peu la veste », le même jour) : une veste est plus longue qu'un t-shirt.
+        const cible = (hautPose ? hautPose.h : PROPORTION_PIECE[veste.cat]! * U) * 1.15;
         const ratioV = veste.l / veste.h;
         veste.h = cible;
         veste.l = Math.min(largeurMax, cible * ratioV);
