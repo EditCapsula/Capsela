@@ -43,3 +43,8 @@ la colonne du texte, puis « Sauvegarder | Autre tenue ». Pour la retrouver : `
 `git show 7411a00:src/components/screens/HomeScreen.tsx` ; seuls ces deux fichiers portent la carte. À garder en tout cas, revenir ou non
 sur la carte : la planche agrandie (`.grille-hero`, `globals.css`) et les réglages de la recette (`flatLay.ts` : CHEVAUCHEMENT_RECETTE,
 HAUTEUR_COTES_RECETTE, CHAUSSURES_SOUS_VESTE, PROPORTION_COLLANTS_RECETTE), demandés séparément.
+
+**Revenue le 17/11/2026, le soir même** (demandé : « reviens à la homepage telle qu'elle est aujourd'hui ») : `CarrouselHero.tsx` et
+`HomeScreen.tsx` ont repris leur version du commit `7411a00`. La maquette reste disponible : commit `5121616` pour ces deux fichiers ;
+`ChoisirMaTenue.tsx`, `retourPiece.ts` et les actions `porterCesPieces` / `annulerPorteeDuJour` du store sont restés dans le code, sans
+appelant sur l'accueil. La planche agrandie et les réglages de la recette sont gardés.
