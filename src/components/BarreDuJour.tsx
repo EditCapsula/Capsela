@@ -7,6 +7,7 @@ import { useDonneesJour, type RetroJour } from "@/components/JourMeteo";
 import { JOUR_MAX, libelleJour, libelleJourCourt } from "@/lib/jourConsulte";
 import { useCapsela } from "@/lib/store";
 import { degres } from "@/lib/unites";
+import { langue } from "@/lib/langue";
 
 /**
  * LA BARRE DU JOUR DE L'ACCUEIL (maquette « Accueil V9 », 07/10/2026) : à gauche le jour et la ville, à droite la température
@@ -129,6 +130,111 @@ export default function BarreDuJour({
       </div>
       {note && noteOuverte && (
         <div role="status" className="text-[11.5px] text-ink-soft leading-[1.45] mt-[2px] rounded-[12px] bg-warm-bg px-3 py-2">
+          {note}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const JOURS_ABREGES = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
+const MOIS_ABREGES = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const DAYS_EN_ABREGES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS_EN_ABREGES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * L'EN-TÊTE DU JOUR DANS LA CARTE DE LA TENUE (17/11/2026, arbitré sur une maquette : « intègre-les dans la card »). Les mêmes données et
+ * les mêmes gestes que BarreDuJour (useDonneesJour) : les chevrons changent le jour consulté ou remontent aux tenues passées, la ville
+ * ouvre « Localisation & météo », le « i » dit d'où vient la météo. Deux lignes centrées : le jour et sa date, puis la ville et la météo,
+ * avec « max · min » — la minimale décide de « Pour l'extérieur » (coucheExterieure.ts) : elle reste à l'écran.
+ */
+export function EnTeteJour({ retro, className = "" }: { retro?: RetroJour; className?: string }) {
+  const { actions } = useCapsela();
+  const [noteOuverte, setNoteOuverte] = useState(false);
+  const { geoCity, geoLoading, decalage, date, enRetro, enAttente, temp, label, note, amplitude } = useDonneesJour(retro);
+  const soleil = !!label && /soleil|dégagé|clair|ensoleill/i.test(label);
+  const jour = enRetro ? -retro!.jours : decalage;
+  const d = enRetro ? retro!.date : date;
+  const anglais = langue() === "en";
+  const dateCourte = anglais ? `${DAYS_EN_ABREGES[d.getDay()]} ${MONTHS_EN_ABREGES[d.getMonth()]} ${d.getDate()}` : `${JOURS_ABREGES[d.getDay()]} ${d.getDate()} ${MOIS_ABREGES[d.getMonth()]}`;
+  const nomJour = libelleJourCourt(jour, d);
+  // « Aujourd'hui · Lun. 17 nov. » ; un autre jour (« Mar. 18 ») n'a pas besoin de se répéter : sa date seule.
+  const relatif = Math.abs(jour) <= 1;
+  return (
+    <div className={className} data-tour="jour-meteo">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => (retro && decalage === 0 ? retro.precedent != null && retro.onChange(retro.precedent) : actions.choisirJour(decalage - 1))}
+          disabled={retro && decalage === 0 ? retro.precedent == null : decalage === 0}
+          aria-label={retro && decalage === 0 ? "Tenue passée précédente" : "Jour précédent"}
+          className={chevron}
+        >
+          <Chevron vers="gauche" />
+        </button>
+        <button
+          onClick={() => (enRetro ? retro!.onChange(0) : decalage > 0 && actions.choisirJour(0))}
+          aria-label={enRetro ? `${libelleJour(-retro!.jours, retro!.date)}. Revenir à aujourd'hui` : decalage > 0 ? `${libelleJour(decalage, date)}. Revenir à aujourd'hui` : libelleJour(decalage, date)}
+          aria-live="polite"
+          className={"flex-1 min-w-0 min-h-[40px] truncate text-center " + (enRetro || decalage > 0 ? "cursor-pointer" : "cursor-default")}
+        >
+          {/* Le jour et sa date dans la typographie du surtitre de la tenue (« Ton look du jour », t-surtitre), demandé le 17/11/2026. */}
+          <span className="t-surtitre text-ink">{relatif ? `${nomJour} · ${dateCourte}` : dateCourte}</span>
+        </button>
+        <button
+          onClick={() => (enRetro ? retro!.onChange(retro!.suivant) : actions.choisirJour(decalage + 1))}
+          disabled={enRetro ? false : decalage >= JOUR_MAX}
+          aria-label={enRetro ? "Tenue passée suivante" : "Jour suivant"}
+          className={chevron}
+        >
+          <Chevron vers="droite" />
+        </button>
+      </div>
+      <div className="flex items-center justify-center gap-3 text-[12.5px] font-medium min-w-0">
+        <button
+          onClick={() => actions.goPreferences("localisation")}
+          aria-label={`Localisation : ${geoCity.city}. Régler la localisation et la météo`}
+          className="flex items-center gap-[5px] min-w-0 min-h-[36px] text-ink cursor-pointer"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-muted" style={{ display: "block" }}>
+            <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+              <path d="M12 12.3a2.3 2.3 0 1 0 0-4.6 2.3 2.3 0 0 0 0 4.6z" />
+            </g>
+          </svg>
+          <span className="truncate">{enAttente ? (geoLoading ? "Localisation…" : "Prévision…") : enRetro ? "Météo enregistrée" : geoCity.city}</span>
+        </button>
+        {note && (
+          <button
+            type="button"
+            onClick={() => setNoteOuverte((v) => !v)}
+            aria-expanded={noteOuverte}
+            aria-label="D'où vient cette météo ?"
+            className="w-[24px] h-[36px] -ml-2 flex items-center justify-center flex-shrink-0 cursor-pointer text-terracotta"
+          >
+            <IconeInfo />
+          </button>
+        )}
+        {!enAttente && temp != null && (
+          <>
+            <span aria-hidden="true" className="w-px h-[16px] bg-border flex-shrink-0" />
+            <span className="flex items-center gap-[5px] flex-shrink-0 whitespace-nowrap" aria-label={`${degres(temp)}${label ? `, ${libelle(label)}` : ""}${amplitude ? `, max ${degres(amplitude.max)}, min ${degres(amplitude.min)}` : ""}`}>
+              <span aria-hidden="true" className="text-terracotta">
+                <IconeTuile nom={soleil ? "apresmidi" : "nuage"} taille={17} />
+              </span>
+              {/* Les tailles de la barre du jour d'avant (température 15 px, condition 13 px), reprises telles quelles : mêmes styles qu'ailleurs. */}
+              <span aria-hidden="true" className="text-[15px] font-medium text-ink tabular-nums">{degres(temp)}</span>
+              {label && <span aria-hidden="true" className="text-[13px] text-muted max-[359px]:hidden">{libelle(label)}</span>}
+            </span>
+          </>
+        )}
+      </div>
+      {!enAttente && temp != null && amplitude && (
+        <div aria-hidden="true" className="text-center text-[11px] text-muted-3 tabular-nums -mt-[6px]">
+          Max {degres(amplitude.max)} · min {degres(amplitude.min)}
+        </div>
+      )}
+      {note && noteOuverte && (
+        <div role="status" className="text-[11.5px] text-ink-soft leading-[1.45] mt-[4px] rounded-[12px] bg-warm-bg px-3 py-2">
           {note}
         </div>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import LegalDocOverlay from "@/components/legal/LegalDocOverlay";
+import { lireVersionPubliee, miseAJourDisponible, numeroInstalle, plateformeStore, urlStore } from "@/lib/miseAJour";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
@@ -20,7 +21,7 @@ if (typeof document !== "undefined" && Capacitor.getPlatform() === "ios") {
 }
 import { arreterPublicite, demarrerPublicite } from "@/lib/publicite";
 import { ecouterToucherNotification, synchroniserNotifications } from "@/lib/notifications";
-import { notificationsDesValises, notifProfilACompleter } from "@/lib/centreNotifications";
+import { notificationsDesValises, notifMiseAJour, notifProfilACompleter } from "@/lib/centreNotifications";
 import { demarrerNotifications, noterNotifications } from "@/lib/notificationsStore";
 import { prochaineActionProfil } from "@/lib/profile";
 import { jourLocal } from "@/lib/outfitFeedback";
@@ -135,6 +136,22 @@ function Screens() {
     noterNotifications(notificationsDesValises(valisesNotif, jourLocal()));
     if (cleActionProfil) noterNotifications(notifProfilACompleter(cleActionProfil, messageActionProfil));
   }, [connecte, profilCompletPub, valisesNotif, cleActionProfil, messageActionProfil]);
+
+  // LA MISE À JOUR DE L'APP (17/11/2026, miseAJour.ts) : dans l'app seulement, une fois connecté ; une version plus récente dans le
+  // store devient une notification (une par version) qui ouvre la fiche du store. Sans donnée (avant la migration 0065) : rien.
+  useEffect(() => {
+    const plateforme = plateformeStore();
+    if (!connecte || !plateforme) return;
+    let fini = false;
+    void lireVersionPubliee(plateforme).then((publiee) => {
+      if (fini || !publiee || !miseAJourDisponible(numeroInstalle(), publiee)) return;
+      const url = urlStore(plateforme, publiee.url);
+      if (url) noterNotifications([notifMiseAJour(plateforme, publiee.version, url)]);
+    });
+    return () => {
+      fini = true;
+    };
+  }, [connecte]);
 
   // LA NOTIFICATION DE LA TENUE DU JOUR (04/11/2026, notifications.ts) : remise en accord avec les Préférences à chaque lancement,
   // une fois le profil complet — la demande d'autorisation du téléphone ne coupe donc jamais le questionnaire d'inscription.

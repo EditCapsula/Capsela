@@ -152,3 +152,28 @@ export function lookSuivantConforme<T extends { ids: number[]; occasions: readon
     courante
   );
 }
+
+/**
+ * « TON SÉJOUR EN COURS » (17/11/2026, brief « Widget Séjour en cours », SejourEnCours.tsx) : ce que la carte de l'accueil dit du séjour
+ * du jour, tiré des mêmes données que l'écran Valise — la valise du jour (valiseDuJour), le rang du jour dans ses jours (joursDuSejour) et
+ * ses looks (looksVisibles, ce que l'onglet Looks montre). null hors séjour : avant le départ (la carte « Prochain départ » s'en charge)
+ * et après le retour.
+ */
+export interface SejourEnCours {
+  valise: ValiseGardee;
+  /** 1 le jour du départ. */
+  jour: number;
+  /** Le nombre de jours du séjour, départ et retour compris. */
+  total: number;
+  /** Les tenues préparées : les looks que l'écran de la valise montre. */
+  tenues: number;
+}
+
+export function sejourEnCours(valises: readonly ValiseGardee[], jour: string, pool: readonly Item[]): SejourEnCours | null {
+  const v = valiseDuJour(valises, jour);
+  if (!v) return null;
+  const jours = joursDuSejour(v.depart, v.retour);
+  const rang = jours.indexOf(jour);
+  if (rang < 0) return null;
+  return { valise: v, jour: rang + 1, total: jours.length, tenues: looksVisibles(v, pool).length };
+}

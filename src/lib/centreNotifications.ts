@@ -31,7 +31,8 @@ export type TypeNotification =
   | "profil_a_completer"
   | "valise_a_completer"
   | "valise_prete"
-  | "valise_preparatifs";
+  | "valise_preparatifs"
+  | "mise_a_jour";
 
 export interface NotificationCapsela {
   /** Identifiant du compte (uuid) ou local (« local-… ») tant qu'elle n'y est pas. */
@@ -248,4 +249,18 @@ export const notifAlerteMeteo = (planId: string, jour: string, cause: string, ti
   titre,
   message,
   cible: "accueil",
+});
+
+/**
+ * UNE MISE À JOUR DISPONIBLE DANS LE STORE (17/11/2026, miseAJour.ts) : une notification par version publiée — la même version n'est
+ * notée qu'une fois. Elle ouvre la fiche du store (`store:<adresse>`).
+ */
+export const notifMiseAJour = (plateforme: "android" | "ios", version: string, url: string): NouvelleNotification => ({
+  cle: `mise_a_jour:${plateforme}:${version}`,
+  type: "mise_a_jour",
+  categorie: "conseils",
+  titre: "Mise à jour disponible",
+  message: `La version ${version} de Capsela est disponible sur ${plateforme === "android" ? "Google Play" : "l'App Store"}.`,
+  cible: `store:${url}`,
+  meta: { plateforme, version },
 });

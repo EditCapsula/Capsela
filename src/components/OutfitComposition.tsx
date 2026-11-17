@@ -5,6 +5,8 @@ import { resolveHeroImage, resolveItemImage } from "@/lib/catalogImages";
 import { margesDe, type Marges } from "@/lib/catalogMarges";
 import { composerPlanche, composerTenue, formesSilhouette } from "@/lib/compositionEditoriale";
 import type { CategoryKey, Item } from "@/lib/types";
+import { styleLargeurPlanche } from "@/lib/tailleConteneur";
+import { useTailleConteneur } from "@/lib/useTailleConteneur";
 
 /**
  * Grille non chevauchante et hiérarchisée d'une tenue (mutualisée 22/08/2026,
@@ -542,6 +544,8 @@ function CompositionPlanche({
    */
   // Le cadrage vaut pour UNE tenue dans UNE taille de zone : sa clé change, il est ignoré et remesuré.
   const [taille, setTaille] = useState("");
+  // La même taille, en nombres, pour la largeur de la planche (17/11/2026, tailleConteneur.ts : pas de cqw avant iOS 16).
+  const [tailleZone, setTailleZone] = useState<{ w: number; h: number } | null>(null);
   const cle = pieces.map((p) => p.item.id).join(",") + "|" + notes.map((n) => annotations?.[n.item.id]).join(",") + "|" + taille;
   const [mesure, setMesure] = useState<{ cle: string; s: number; ox: number; oy: number; dx: number; dy: number } | null>(null);
   const cadrage = mesure?.cle === cle ? mesure : null;
@@ -583,7 +587,14 @@ function CompositionPlanche({
   useLayoutEffect(() => {
     const zone = zoneRef.current;
     if (!zone || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => setTaille(`${zone.clientWidth}x${zone.clientHeight}`));
+    const lire = () => {
+      setTaille(`${zone.clientWidth}x${zone.clientHeight}`);
+      const w = zone.clientWidth;
+      const h = zone.clientHeight;
+      setTailleZone((t) => (t && t.w === w && t.h === h ? t : w > 0 ? { w, h } : null));
+    };
+    lire();
+    const ro = new ResizeObserver(lire);
     ro.observe(zone);
     return () => ro.disconnect();
   }, []);
@@ -605,7 +616,7 @@ function CompositionPlanche({
         className="transition-opacity duration-[420ms] ease-out motion-reduce:transition-none"
         style={{
           position: "relative",
-          width: `min(100cqw, calc(100cqh * ${100 / hauteur}))`,
+          width: styleLargeurPlanche(tailleZone, hauteur),
           aspectRatio: `100 / ${hauteur}`,
           opacity: attendreCadrage && !cadrage ? 0 : 1,
           transformOrigin: cadrage ? `${cadrage.ox}px ${cadrage.oy}px` : undefined,
@@ -800,10 +811,11 @@ const ALIGNE_SVG = { debut: "Min", centre: "Mid", fin: "Max" } as const;
 
 export function SilhouettePlanche({ formes, accentHero = false }: { formes: { cat: CategoryKey; photoUrl?: string | null }[]; accentHero?: boolean }) {
   const { pieces, hauteur } = composerPlanche(formesSilhouette(formes), { accentHero });
+  const [zone, tailleZone] = useTailleConteneur<HTMLDivElement>();
   if (!pieces.length) return null;
   return (
-    <div aria-hidden="true" className="w-full h-full flex items-center justify-center" style={{ containerType: "size" }}>
-      <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / hauteur}))`, aspectRatio: `100 / ${hauteur}` }}>
+    <div ref={zone} aria-hidden="true" className="w-full h-full flex items-center justify-center" style={{ containerType: "size" }}>
+      <div style={{ position: "relative", width: styleLargeurPlanche(tailleZone, hauteur), aspectRatio: `100 / ${hauteur}` }}>
         {pieces.map(({ item, role, case: c, aligne }, i) => {
           const delais = {
             ["--delai-entree" as string]: `${300 + i * 140}ms`,

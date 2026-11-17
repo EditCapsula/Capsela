@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ouvrirStore } from "@/lib/miseAJour";
 import BottomSheet from "@/components/BottomSheet";
 import AppHeader from "@/components/AppHeader";
 import Card from "@/components/Card";
@@ -43,6 +44,8 @@ export default function NotificationsScreen() {
 
   const ouvrir = (n: NotificationCapsela) => {
     if (!n.lue) marquerNotificationLue(n.cle);
+    // Une mise à jour (17/11/2026, miseAJour.ts) : la fiche du store, dont l'adresse contient elle-même des « : ».
+    if (n.cible?.startsWith("store:")) return void ouvrirStore(n.cible.slice("store:".length));
     const [ecran, id] = (n.cible ?? "").split(":");
     switch (ecran) {
       case "valise": {
@@ -151,7 +154,7 @@ export default function NotificationsScreen() {
               <li key={n.cle} className="border-b border-divider last:border-b-0">
                 <button type="button" onClick={() => ouvrir(n)} className="w-full flex items-start gap-3 px-4 py-[14px] text-left cursor-pointer active:bg-warm-bg" style={{ minHeight: 64 }}>
                   <span aria-hidden="true" className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
-                    {ICONES[n.categorie === "valise" ? "valise" : n.type === "alerte_meteo" ? "meteo" : n.type === "profil_a_completer" ? "profil" : n.type === "look_sauvegarde" ? "look" : n.type === "piece_remplacee_plan" ? "remplacement" : "cintre"]}
+                    {ICONES[n.categorie === "valise" ? "valise" : n.type === "alerte_meteo" ? "meteo" : n.type === "profil_a_completer" ? "profil" : n.type === "look_sauvegarde" ? "look" : n.type === "piece_remplacee_plan" ? "remplacement" : n.type === "mise_a_jour" ? "miseAJour" : "cintre"]}
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="flex items-baseline justify-between gap-3">
@@ -208,7 +211,12 @@ export default function NotificationsScreen() {
 }
 
 const trait = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-const ICONES: Record<"cintre" | "look" | "remplacement" | "valise" | "meteo" | "profil", React.ReactNode> = {
+const ICONES: Record<"cintre" | "look" | "remplacement" | "valise" | "meteo" | "profil" | "miseAJour", React.ReactNode> = {
+  miseAJour: (
+    <svg width="18" height="18" viewBox="0 0 24 24">
+      <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14" {...trait} />
+    </svg>
+  ),
   cintre: (
     <svg width="18" height="18" viewBox="0 0 24 24">
       <path d="M12 3.2a1.9 1.9 0 00-.6 3.7v1.1L4.6 12.9a1.4 1.4 0 00.8 2.55h13.2a1.4 1.4 0 00.8-2.55L12.6 8V6.9A1.9 1.9 0 0012 3.2z" {...trait} />

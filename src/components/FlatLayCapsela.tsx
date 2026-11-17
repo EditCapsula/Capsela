@@ -10,6 +10,7 @@ import { composerFlatLay, hauteurDuContexte, type ContexteFlatLay } from "@/lib/
 import { choisirTemplate } from "@/lib/flatLayTemplates";
 import type { CategoryKey, Item } from "@/lib/types";
 import { fermetureMaille } from "@/lib/attributes";
+import { styleLargeurPlanche } from "@/lib/tailleConteneur";
 
 /**
  * LE FLAT LAY ÉDITORIAL DE CAPSELA (08/10/2026) — les pièces d'un look posées comme sur une planche de stylisme : une pièce
@@ -102,12 +103,17 @@ export function FlatLayCapsela({
   // 140 (au-delà, les gabarits n'ont pas été pensés pour). Sans mesure (premier rendu, cadre nul) : le format du contexte.
   const cadre = useRef<HTMLDivElement>(null);
   const [formatCadre, setFormatCadre] = useState<number | null>(null);
+  // La taille du cadre, en pixels, pour la largeur de la planche (17/11/2026, tailleConteneur.ts : pas de cqw avant iOS 16).
+  const [tailleCadre, setTailleCadre] = useState<{ w: number; h: number } | null>(null);
   useLayoutEffect(() => {
     const el = cadre.current;
     if (!el) return;
     const lire = () => {
       const { width, height } = el.getBoundingClientRect();
-      if (width > 0 && height > 0) setFormatCadre(Math.round(Math.min(140, Math.max(100, (100 * height) / width))));
+      if (width > 0 && height > 0) {
+        setFormatCadre(Math.round(Math.min(140, Math.max(100, (100 * height) / width))));
+        setTailleCadre((t) => (t && t.w === width && t.h === height ? t : { w: width, h: height }));
+      }
     };
     lire();
     const ro = new ResizeObserver(lire);
@@ -222,7 +228,7 @@ export function FlatLayCapsela({
       // Une planche vide reste montée (le cadre se mesure) mais ne capte aucun geste destiné à ce qui est dessous.
       style={{ containerType: "size", opacity: attendre ? 0 : 1, isolation: "isolate", pointerEvents: composition.length ? undefined : "none" }}
     >
-      <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / HAUTEUR}))`, aspectRatio: `100 / ${HAUTEUR}` }}>
+      <div style={{ position: "relative", width: styleLargeurPlanche(tailleCadre, HAUTEUR), aspectRatio: `100 / ${HAUTEUR}` }}>
         {composition.map((p) => {
           const entree = images.find(({ it }) => it.id === p.id)!;
           const { it, img, fantome, ajout } = entree;

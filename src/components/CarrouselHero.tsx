@@ -60,12 +60,16 @@ export interface CarteHeroProps {
   ajouts?: { item: Item; onAjouter: () => void }[];
   /** Sous les actions, sur toute la largeur (alerte météo d'un look planifié). */
   pied?: React.ReactNode;
+  /** Au-dessus des actions, sur toute la largeur (« Pour l'extérieur », 17/11/2026, demandé : la strate au-dessus de « Sauvegarder » et « Autre tenue »). */
+  avantActions?: React.ReactNode;
   /** La tenue a été portée aujourd'hui (« Porter cette tenue ») : la carte le dit (15/10/2026, demandé). */
   portee?: boolean;
   /** Toucher une pièce (12/11/2026, RemplacementPiece) : la feuille Voir / Remplacer. Sans lui, la fiche directe, comme avant. */
   onPiece?: (it: Item) => void;
   /** Le sous-titre sous « Pourquoi cette tenue ? » (12/11/2026) : une tenue recommandée. Faux : affiché tel quel (plan, valise). */
   pourquoi?: boolean;
+  /** Posée dans une carte qui la porte déjà (l'accueil, 17/11/2026 : le jour, la météo et les points du carrousel dans la même carte) : ni fond ni filet. */
+  sansCadre?: boolean;
 }
 
 /**
@@ -73,14 +77,14 @@ export interface CarteHeroProps {
  * seul, arbitré le 14/10/2026 (option 3h), puis Tenue le même jour ; les autres hero gardent --color-hero-background. Le texte réduit à gauche, la composition — point focal — à droite, deux actions
  * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
  */
-export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, onFantome, ajouts, portee, onPiece, pourquoi = false }: CarteHeroProps) {
+export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, onFantome, ajouts, portee, onPiece, pourquoi = false, sansCadre = false, avantActions }: CarteHeroProps) {
   const ouvrirFiche = useOuvrirPiece();
   const ouvrirPiece = onPiece ?? ouvrirFiche;
   return (
     <div
       // flex-1 : toutes les slides prennent la hauteur de la plus haute (la piste les étire) — pas de saut de hauteur au glissé (18/10/2026).
       className="rounded-hero grid gap-2 flex-1 grille-hero"
-      style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", minHeight: 307 }}
+      style={sansCadre ? { minHeight: 280 } : { background: "var(--color-card)", border: "1px solid var(--color-border)", minHeight: 307 }}
     >
       <div className="flex flex-col min-w-0">
         <div className="flex items-center gap-[7px]">
@@ -123,6 +127,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
         )}
       </div>
 
+      {avantActions && <div style={{ gridColumn: "1 / -1" }}>{avantActions}</div>}
       <div className="flex items-center" style={{ gridColumn: "1 / -1" }} aria-live="polite">
         <ActionRonde icone={<IconeCoeur plein={sauvegardee} />} libelle={sauvegardee ? t("Sauvegardée") : t("Sauvegarder")} actif={sauvegardee} onClick={onSauvegarder} />
         <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(29,26,22,.2)" }} />
@@ -162,6 +167,7 @@ export function CarrouselHero({
   className = "mt-3",
   retrait = 0,
   ecart = 0,
+  enveloppe,
 }: {
   slides: React.ReactNode[];
   libelles: string[];
@@ -178,6 +184,11 @@ export function CarrouselHero({
   retrait?: number;
   /** L'espace entre deux slides, en px. */
   ecart?: number;
+  /**
+   * Ce qui entoure la piste, sans les points (17/11/2026, accueil : la carte qui porte aussi le jour et la météo ; les points restent
+   * dessous, hors de la carte — demandé).
+   */
+  enveloppe?: (piste: React.ReactNode) => React.ReactNode;
 }) {
   const piste = useRef<HTMLDivElement>(null);
   const [actif, setActif] = useState(0);
@@ -237,8 +248,7 @@ export function CarrouselHero({
     }
   };
 
-  return (
-    <div className={className} role="region" aria-roledescription={t("carrousel")} aria-label={t(label)}>
+  const laPiste = (
       <div
         ref={piste}
         onScroll={surDefilement}
@@ -260,6 +270,10 @@ export function CarrouselHero({
           </div>
         ))}
       </div>
+  );
+  return (
+    <div className={className} role="region" aria-roledescription={t("carrousel")} aria-label={t(label)}>
+      {enveloppe ? enveloppe(laPiste) : laPiste}
       {n > 1 && (
         <div className="flex items-center justify-center gap-[6px] mt-[10px]">
           {slides.map((_, i) => (

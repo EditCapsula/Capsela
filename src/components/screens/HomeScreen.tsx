@@ -1,6 +1,8 @@
 "use client";
 
 import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
+import { SejourEnCours } from "@/components/SejourEnCours";
+import { sejourEnCours } from "@/lib/valiseDuJour";
 import TitrePage from "@/components/TitrePage";
 import { t } from "@/lib/langue";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
@@ -23,7 +25,7 @@ import { applyGenderChange, libelleStyles, paletteHexes, type Gender } from "@/l
 import { GenderModal } from "@/components/ProfilUI";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import BarreDuJour from "@/components/BarreDuJour";
+import { EnTeteJour } from "@/components/BarreDuJour";
 import { CarteProchainDepart, useRappelValise } from "@/components/RappelValise";
 import BadgePremium from "@/components/BadgePremium";
 import { retourPrecedent, retourSuivant, retoursAvecTenue, tenuePassee } from "@/lib/retro";
@@ -120,6 +122,11 @@ function CarteUnivers({
 const FANTOME_CHAUSSURES: CategoryKey[] = ["chaussures"];
 const AUCUN_FANTOME: CategoryKey[] = [];
 
+/** Le surtitre d'une tenue sans le jour en tête (« Aujourd'hui · », « Demain · », « Mar. 18 · ») : l'en-tête de la carte le dit (17/11/2026). */
+function sansLeJour(surtitre: string): string {
+  return surtitre.replace(/^(Aujourd'hui|Demain|Hier|Today|Tomorrow|Yesterday|[A-Z][a-zé]{2,3}\.? \d{1,2})\s·\s/, "");
+}
+
 export default function HomeScreen() {
   const { state, vestiairePool, wardrobePool, defaultCapsule, meteoDuJour, jourConsulte, valiseConsultee, actions, weather, sourceMeteo } = useCapsela();
   const rappelValise = useRappelValise();
@@ -195,6 +202,8 @@ export default function HomeScreen() {
   // alors que state.outfit peut venir d'un style exploré ou d'une entrée
   // d'historique rejouée.
   const resolvePool = [...state.items, ...vestiairePool];
+  // LE SÉJOUR EN COURS (17/11/2026, SejourEnCours.tsx) : pendant un séjour, la carte du séjour remplace la ligne « Ta valise · La journée ».
+  const sejour = sejourEnCours(state.valises, jourLocal(jourConsulte.date), resolvePool);
   const piecesResolues = state.outfit
     .map((id) => resolvePool.find((i) => i.id === id))
     .filter((it): it is Item => Boolean(it));
@@ -449,10 +458,12 @@ export default function HomeScreen() {
     const titre = slide.source === "plan" && planHero ? { a: titreDuPlan(planHero), b: "" } : texteSlide.titre;
     const sousTitre = slide.source === "plan" && texteHero ? texteHero.sousTitre : texteSlide.phrase;
     // Le libellé d'une tenue planifiée est contextuel (« Look du jour », « Look planifié »…) ; les autres disent leur occasion.
-    const surtitre = slide.source === "plan" && texteHero ? texteHero.surtitre : slide.surtitre;
+    // L'en-tête de la carte dit déjà le jour (17/11/2026) : le surtitre ne le redit pas (« Aujourd'hui · Quotidien » → « Quotidien »).
+    const surtitre = sansLeJour(slide.source === "plan" && texteHero ? texteHero.surtitre : slide.surtitre);
     return (
       <CarteHero
         key={slide.id}
+        sansCadre
         surtitre={surtitre}
         titre={titre}
         sousTitre={sousTitre}
@@ -481,14 +492,9 @@ export default function HomeScreen() {
           if (!enSejour) quota.demander(() => actions.autreIdeeSlide(slide.id as SlideId));
         }}
         autreDesactive={quota.tirageEnCours || (enSejour && !duJour)}
-        pied={
-          blocSlide || (duJour && planApplique?.alerte) ? (
-            <>
-              {blocSlide && <div style={{ gridColumn: "1 / -1" }}>{blocSlide}</div>}
-              {duJour && planApplique?.alerte && <AlerteMeteoLook planApplique={planApplique} />}
-            </>
-          ) : undefined
-        }
+        // « Pour l'extérieur » au-dessus des deux actions (17/11/2026, demandé), comme sur la carte sans carrousel ; l'alerte météo reste dessous.
+        avantActions={blocSlide ?? undefined}
+        pied={duJour && planApplique?.alerte ? <AlerteMeteoLook planApplique={planApplique} /> : undefined}
         portee={duJour && porteeAujourdhui}
         pourquoi={!(slide.source === "plan" && texteHero) && !enSejour}
         onPiece={toucherPiece(
@@ -504,6 +510,24 @@ export default function HomeScreen() {
       />
     );
   };
+
+  const retroJour = {
+    jours: retroActif,
+    date: dateRetro,
+    precedent: retourPrecedent(retours, retroActif),
+    suivant: retourSuivant(retours, retroActif),
+    temp: passee?.temp ?? null,
+    label: passee?.weatherLabel ?? null,
+    onChange: setRetro,
+  };
+  /** La carte qui porte le jour, sa météo et la tenue (17/11/2026). */
+  const carteDuJour = (contenu: React.ReactNode) => (
+    <div className="mx-4 rounded-hero overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+      <EnTeteJour retro={retroJour} className="px-2 pt-[6px]" />
+      <div aria-hidden="true" className="mx-4 mt-[4px] border-t border-border" />
+      {contenu}
+    </div>
+  );
 
   return (
     <div ref={zoneAccueil} onScroll={defilementAccueil.onScroll} className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-safe-nav">
@@ -521,44 +545,45 @@ export default function HomeScreen() {
         <TitrePage>
           {t("Bonjour,")} <span className="italic">{firstNameOrYou}</span>
         </TitrePage>
-        {/* LE JOUR ET SA MÉTÉO (navigation par date, partagée avec Tenue) : le jour se change par ses chevrons, la météo
-            ouvre les réglages « Localisation & météo » (BarreDuJour, maquette V9). */}
-        <BarreDuJour
-          className="mt-1"
-          meteoEnLigne
-          retro={{
-            jours: retroActif,
-            date: dateRetro,
-            precedent: retourPrecedent(retours, retroActif),
-            suivant: retourSuivant(retours, retroActif),
-            temp: passee?.temp ?? null,
-            label: passee?.weatherLabel ?? null,
-            onChange: setRetro,
-          }}
-        />
         {/* Ce qui est planifié ce jour-là (Planifier) : un rappel qui mène à la fiche du plan. Rien sans plan. */}
-        {retroActif === 0 && <PlansDuJour depuis="home" className="mt-3" />}
+        {retroActif === 0 && sejour && <SejourEnCours sejour={sejour} className="mt-3" />}
+        {retroActif === 0 && <PlansDuJour depuis="home" className="mt-3" sansJourneeValise={!!sejour} />}
         {/* LE PROCHAIN DÉPART (06/11/2026, rappelsValise.ts) : de J-7 à J-1, sous le jour et sa météo, avant la tenue — compacte, elle ne
             lui dispute pas la place. Seulement pour aujourd'hui : un autre jour consulté n'est pas « maintenant ». */}
         {rappelValise && retroActif === 0 && state.jourDecalage === 0 && <CarteProchainDepart rappel={rappelValise} className="mt-3" />}
       </div>
 
+      {/* LE JOUR, LA MÉTÉO ET LA TENUE DANS UNE SEULE CARTE (17/11/2026, arbitré sur une maquette : « intègre-les dans la card », les points
+          du carrousel aussi, gardés tels qu'ils sont dans l'app). En tête, le jour et sa date, la ville et la météo, max · min et le « i » de
+          la source (EnTeteJour, mêmes données et mêmes gestes que la barre d'avant) ; dessous les tenues, sans cadre à elles ; puis les
+          points. Le surtitre de chaque tenue ne redit plus le jour. */}
       {carrouselActif ? (
-        // data-tour : la cible de la visite guidée « Aujourd'hui » (lib/visites.ts).
+        // data-tour : la cible de la visite guidée « Aujourd'hui » (lib/visites.ts). Les points du carrousel restent SOUS la carte
+        // (17/11/2026, demandé après un essai à l'intérieur) : seule la piste est dans la carte (`enveloppe`).
         <div data-tour="accueil-tenue">
-          <CarrouselHero slides={slides.map(carteSlide)} libelles={slides.map((sl) => sl.surtitre)} onAvantDerniere={actions.etendreCarrousel} />
+          <CarrouselHero
+            className="mt-3"
+            classeSlide=""
+            enveloppe={(piste) => carteDuJour(piste)}
+            slides={slides.map(carteSlide)}
+            libelles={slides.map((sl) => sl.surtitre)}
+            onAvantDerniere={actions.etendreCarrousel}
+          />
         </div>
       ) : (
+      <div className="mt-3">
+      {carteDuJour(
       // LE LOOK DU JOUR : fond blanc cassé des cartes (--color-card) et leur filet (--color-border), comme les slides du carrousel (option 3h,
       // 14/10/2026 : l'accueil, puis Tenue le même jour ; les autres hero gardent --color-hero-background). Texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
       // jour passé, aucune tenue possible, la tenue qui se compose, la tenue. Seul, quand le carrousel n'a pas lieu d'être.
       <div
         // data-tour : la tenue du jour sans carrousel (une seule proposition) est aussi la cible de la visite (lib/visites.ts).
         data-tour="accueil-tenue"
-        className="mx-4 mt-3 rounded-hero grid gap-2 grille-hero"
+        className="grid gap-2 grille-hero"
         // 358 × 307 px sur 390 (calibrage du 08/10/2026) : la marge du hero est de 16 px, 8 px de moins que la gouttière du reste de
         // l'écran. La colonne de la composition fait 181 px (zone 181 × 203), moins sur un écran étroit : le texte garde sa place.
-        style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", minHeight: 307 }}
+        // Depuis le 17/11/2026, dans la carte qui porte aussi le jour et la météo : ni fond ni filet à elle.
+        style={{ minHeight: 280 }}
       >
         {/* Sans tenue possible (15/11/2026, capture : le texte tenait dans la moitié gauche, la droite restait vide), le texte prend toute
             la largeur de la carte : il n'y a pas de composition à côté. */}
@@ -568,7 +593,7 @@ export default function HomeScreen() {
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="t-surtitre text-ink whitespace-nowrap">
-              {passee ? (retroActif === 1 ? t("Ton look d’hier") : t("Ton look passé")) : texteHero ? texteHero.surtitre : t("Ton look du jour")}
+              {passee ? (retroActif === 1 ? t("Ton look d’hier") : t("Ton look passé")) : texteHero ? sansLeJour(texteHero.surtitre) : t("Ton look du jour")}
             </span>
           </div>
 
@@ -720,6 +745,8 @@ export default function HomeScreen() {
         {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu. Le lien « Voir une autre proposition » n'est plus là
             (08/10/2026, demandé : « on a déjà "Sauvegarder" et "Autre tenue" ») ; la page Tenue garde « Autre tenue ». */}
         {planApplique?.alerte && hasOutfit && <AlerteMeteoLook planApplique={planApplique} />}
+      </div>
+      )}
       </div>
       )}
 

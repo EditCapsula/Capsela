@@ -182,6 +182,31 @@ export const PROPORTION_PIECE: Partial<Record<CategoryKey, number>> = {
 };
 /** Le nombre d'accessoires posés dans une planche en colonnes, sur tous les heros (05/11/2026). */
 const ACCESSOIRES_EN_GRILLE = 2;
+/**
+ * LA COMPOSITION PAR RECETTE (17/11/2026, brief « Refonte du moteur de composition visuelle des tenues — Editorial Flat Lay ») : la planche
+ * se compose d'après la NATURE des pièces, et non plus seulement leur nombre. Trois groupes, trois places :
+ *   · les pièces principales, à gauche, à leur taille : la robe seule, ou le haut au-dessus du bas ;
+ *   · les pièces moyennes, au centre : la veste de la tenue (jamais le manteau de « Pour l'extérieur », retiré avant la planche par
+ *     separerCoucheExterieure), puis les chaussures — ou, sans veste, le sac au-dessus des chaussures ;
+ *   · les petites pièces, à droite : le sac quand la veste a pris sa place, les collants, la ceinture, les bijoux, chacune à SA taille
+ *     (une ceinture plus petite qu'un sac, un bijou plus petit qu'une ceinture).
+ * Aucune colonne n'est plus haute que les pièces principales : une colonne trop haute rétrécit ses seules pièces (au plus de 45 %), les
+ * pièces principales gardent la leur. Deux colonnes qui tiennent ensemble sous la hauteur principale n'en font qu'une. Les images restent
+ * des visuels indépendants, posés côte à côte, sans chevauchement ni superposition. Trois accessoires au plus, au lieu de deux.
+ * Levier de mesure : `recettes: false` reproduit la règle d'avant (dont « la robe domine » du 16/11/2026). EN PRODUCTION depuis le
+ * 17/11/2026, validé par la propriétaire sur l'avant / après de scripts/flatlay-recettes.audit.ts (six tenues du brief, images réelles).
+ */
+export const RECETTES_EN_PRODUCTION = true;
+const ACCESSOIRES_EN_RECETTE = 3;
+/**
+ * Les tailles propres à la recette (17/11/2026, demandé sur l'avant / après : « agrandis un peu la jupe, il faut que la jupe représente la
+ * même largeur que le pantalon ») : la jupe passe de 0,75 à 0,92 du pantalon, pour peser dans sa tenue autant que le pantalon dans la sienne.
+ */
+// Le sac de 0,55 à 0,62 (« agrandir légèrement le sac », même jour). Le haut de 0,8 à 0,72 (« le haut est trop grand vs le bas, il faut
+// que ce soit plus harmonieux », même jour, capture d'un haut et d'une jupe) : le haut ne pèse plus plus que le bas qu'il surmonte.
+const PROPORTION_RECETTE: Partial<Record<CategoryKey, number>> = { jupe: 0.92, sac: 0.62, haut: 0.72, pull: 0.72 };
+/** La taille d'une petite pièce face à sa proportion habituelle, dans une recette : la ceinture et les bijoux se lisent plus petits que le sac. */
+const PETITE_PIECE: Partial<Record<CategoryKey, number>> = { accessoire: 0.85, bijou: 0.8 };
 /** Des collants, en hauteur (une pièce longue, posée à plat comme un bas), pantalon = 1. */
 const PROPORTION_COLLANTS = 0.85;
 /** Les catégories dont la proportion vaut pour le PLUS GRAND CÔTÉ (un objet posé), et non pour la hauteur (un vêtement). */
@@ -573,6 +598,8 @@ export interface OptionsFlatLay {
   proportions?: boolean;
   /** Levier de mesure : `false` reproduit l'avant du 16/11/2026 (une robe seule sans priorité de taille sur ses accessoires). */
   robeDominante?: boolean;
+  /** Levier de mesure de la composition par recette (17/11/2026, RECETTES_EN_PRODUCTION) : `false` la règle d'avant, `true` la recette. */
+  recettes?: boolean;
   /** Les collants posés en hauteur, comme un bas (par défaut) ; `false` : en petit accessoire (essayé le 16/11/2026 avec des collants pliés). */
   collantsEnBas?: boolean;
   /**
@@ -663,7 +690,8 @@ export function composerFlatLay(
   // Les accessoires : on garde les plus utiles, en nombre limité par le contexte et le nombre de pièces.
   const accessoires = roles.filter((r) => r.role === "accessoire").sort((a, b) => rangAccessoire(a.piece.cat) - rangAccessoire(b.piece.cat));
   // En colonnes, deux accessoires au plus sur tous les heros (la règle commune du 05/11/2026) : visibles, sans prendre le dessus.
-  const plafond = proportionnee ? ACCESSOIRES_EN_GRILLE : config.maxAccessoires[nb >= 6 ? 1 : 0];
+  const parRecette = proportionnee && (options.recettes ?? RECETTES_EN_PRODUCTION);
+  const plafond = proportionnee ? (parRecette ? ACCESSOIRES_EN_RECETTE : ACCESSOIRES_EN_GRILLE) : config.maxAccessoires[nb >= 6 ? 1 : 0];
   const gardes = new Set(accessoires.slice(0, plafond).map((r) => r.piece));
   const ecartees: number[] = accessoires.filter((r) => !gardes.has(r.piece)).map((r) => r.piece.id);
 
@@ -729,7 +757,7 @@ export function composerFlatLay(
       // Depuis le 16/11/2026 (demandé : « le collant présenté comme un accessoire complémentaire ») : leur visuel les montre pliés, et
       // ils se posent comme un accessoire. `collantsEnBas` (levier de mesure) reproduit la pose d'avant.
       const collants = piece.accessoireType === "Collants" && options.collantsEnBas !== false;
-      const t = (collants ? PROPORTION_COLLANTS : (PROPORTION_PIECE[piece.cat] ?? 0.5)) * U;
+      const t = (collants ? PROPORTION_COLLANTS : ((parRecette ? PROPORTION_RECETTE[piece.cat] : undefined) ?? PROPORTION_PIECE[piece.cat] ?? 0.5)) * U;
       let l = PROPORTION_PAR_COTE.includes(piece.cat) && !collants ? (ratio >= 1 ? t : t * ratio) : t * ratio;
       if (l > largeurMax) l = largeurMax;
       return { id: piece.id, cat: piece.cat, role, visualScale: 1, x: 0, y: 0, l, h: l / ratio, angle: 0, z: profondeur(role, piece.cat) };
@@ -806,7 +834,89 @@ export function composerFlatLay(
       }
       return [premiere.slice(), autres];
     };
-    const colonnes = robeSeule
+    // LA RECETTE (cf. RECETTES_EN_PRODUCTION) : pièces principales, moyennes, petites — chacune dans sa colonne.
+    const principalesOk = premiere.length > 0 && (ROBES.includes(premiere[0].cat) || premiere.some((q) => BAS.includes(q.cat)));
+    const recette = (): PlacementFlatLay[][] => {
+      const H = hauteurDe(premiere);
+      const collants = (q: PlacementFlatLay) => roles.some((r) => r.piece.id === q.id && r.piece.accessoireType === "Collants");
+      const dessus = droiteposee.filter((q) => DESSUS.includes(q.cat));
+      const sac = droiteposee.filter((q) => q.cat === "sac");
+      const chaussures = droiteposee.filter((q) => q.cat === "chaussures");
+      const autres = droiteposee.filter((q) => !dessus.includes(q) && !sac.includes(q) && !chaussures.includes(q) && !collants(q));
+      for (const q of petits) {
+        const f = PETITE_PIECE[q.cat] ?? 1;
+        q.l *= f;
+        q.h *= f;
+      }
+      // Avec une veste, elle a sa colonne à elle, à la taille du haut ; sac, chaussures et petites pièces se rangent à côté.
+      const moyennes = dessus.length ? [...dessus, ...autres] : [...sac, ...autres, ...chaussures];
+      const petitesPieces = [...(dessus.length ? [...sac, ...chaussures] : []), ...droiteposee.filter(collants), ...petits];
+      const ajuster = (c: PlacementFlatLay[]) => {
+        if (!c.length) return c;
+        const ecarts = ecartV * (c.length - 1);
+        const brute = hauteurDe(c) - ecarts;
+        const f = brute > H - ecarts ? Math.max(0.55, (H - ecarts) / brute) : 1;
+        for (const q of c) {
+          q.l *= f;
+          q.h *= f;
+        }
+        return c;
+      };
+      const cols = [moyennes, petitesPieces].filter((c) => c.length);
+      // Deux colonnes qui tiennent ensemble sous la hauteur principale n'en font qu'une : la planche est plus large, donc plus grande.
+      // Jamais avec une veste : elle garde sa colonne à elle (« la veste doit avoir à peu près la taille du haut »).
+      if (!dessus.length && cols.length === 2 && hauteurDe(cols[0]) + ecartV + hauteurDe(cols[1]) <= H) cols.splice(0, 2, [...cols[0], ...cols[1]]);
+      cols.forEach((c) => (c.some((q) => DESSUS.includes(q.cat)) ? c : ajuster(c)));
+      // LES PIÈCES PRINCIPALES GARDENT LA HAUTEUR DE LA CARTE (vu au premier rendu : trois colonnes à leur taille élargissaient la planche,
+      // et la robe rétrécissait d'un tiers). La largeur que les colonnes de côté peuvent prendre se déduit de la hauteur utile : si elles
+      // la dépassent, elles rétrécissent ensemble (au plus de 15 %), jamais les pièces principales ; au-delà, toute la planche se resserre.
+      const largeurDe = (c: PlacementFlatLay[]) => Math.max(...c.map((q) => q.l));
+      const largeurPrincipale = largeurDe(premiere);
+      const permise = (largeurUtile * H) / hauteurUtile - largeurPrincipale - ecartH * cols.length;
+      // LA VESTE GARDE LA TAILLE DU HAUT (17/11/2026, demandé sur l'avant / après : « agrandis la veste, elle doit avoir à peu près la même
+      // taille que le haut ») : ni la hauteur de sa colonne ni la largeur permise ne la rétrécissent ; ses voisines plient à sa place.
+      const veste = cols.flat().find((q) => DESSUS.includes(q.cat));
+      if (veste) {
+        const hautPose = premiere.find((q) => HAUTS.includes(q.cat));
+        // 15 % plus haute que le haut (« agrandis encore un peu la veste », le même jour) : une veste est plus longue qu'un t-shirt.
+        const cible = (hautPose ? hautPose.h : PROPORTION_PIECE[veste.cat]! * U) * 1.15;
+        const ratioV = veste.l / veste.h;
+        veste.h = cible;
+        veste.l = Math.min(largeurMax, cible * ratioV);
+        veste.h = veste.l / ratioV;
+      }
+      const largeurSans = (c: PlacementFlatLay[]) => Math.max(0, ...c.filter((q) => q !== veste).map((q) => q.l));
+      const fixe = veste ? veste.l : 0;
+      const prise = cols.reduce((t, c) => t + (c.includes(veste!) ? Math.max(0, largeurSans(c) - fixe) : largeurDe(c)), 0);
+      const reste = permise - fixe;
+      if (prise > reste && prise > 0) {
+        // Au plus de 15 % : en deçà, sac et chaussures ne se lisaient plus (vu au rendu) ; c'est alors toute la planche qui se resserre.
+        const f = Math.max(0.85, Math.max(0, reste) / prise);
+        for (const q of cols.flat()) {
+          if (q === veste) continue;
+          q.l *= f;
+          q.h *= f;
+        }
+      }
+      // La colonne de la veste ne dépasse pas la hauteur principale : ses voisines rétrécissent, pas elle.
+      for (const c of cols) {
+        if (!veste || !c.includes(veste)) continue;
+        const autres = c.filter((q) => q !== veste);
+        const dispo = H - veste.h - ecartV * (c.length - 1);
+        const brute = autres.reduce((t, q) => t + q.h, 0);
+        if (brute > dispo && brute > 0) {
+          const f = Math.max(0.5, dispo / brute);
+          for (const q of autres) {
+            q.l *= f;
+            q.h *= f;
+          }
+        }
+      }
+      return [premiere.slice(), ...cols];
+    };
+    const colonnes = parRecette && principalesOk
+      ? recette()
+      : robeSeule
       ? colonneDeLaRobe()
       : candidates.filter((c) => echelle(c) >= meilleure * 0.97).reduce((m, c) => (desequilibre(c) < desequilibre(m) - 1e-9 ? c : m));
     const H = Math.max(...colonnes.map(hauteurDe));
