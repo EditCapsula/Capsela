@@ -210,22 +210,24 @@ export default function HomeScreen() {
    * montre le look seul ; le manteau ajouté par le froid se montre dessous, dans « Pour l'extérieur », qui mène à la page Tenue.
    */
   const tempReelle = temperatureReelle({ decalage: jourConsulte.decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp, minDuJour: jourConsulte.minDuJour });
-  // Par le froid seulement, les manteaux que le moteur admet pour cette occasion : une tenue sans manteau en reçoit un, à part.
+  // Les manteaux que le moteur admet pour cette occasion et cette météo (17/11/2026 : à toute température, hors maison — plus seulement
+  // par le froid) : une tenue sans manteau en reçoit un, à part. Leurs bornes choisissent un trench à 16°, rien à partir de 22°.
   const manteauxPour = (pieces: Item[], occasion: OccasionKey) =>
-    tempReelle != null && tempReelle < SEUIL_MANTEAU && pieces.length
+    tempReelle != null && !estContexteMaison(occasion, state.workMode) && pieces.length
       ? candidatsDeRemplacement(pieces, wardrobePool, -1, "manteau", occasion, state.workMode, state.dateContext, meteoDuJour)
       : [];
   // Les manteaux de la CAPSULE admis pour la tenue (12/11/2026, R-B25 arbitré) : proposés quand le manteau de la tenue est plus court que
   // sa veste et que le dressing n'en a pas d'assez long (separerCoucheExterieure).
   const manteauxCapsulePour = (pieces: Item[], occasion: OccasionKey) =>
-    tempReelle != null && tempReelle < SEUIL_MANTEAU && pieces.length
+    tempReelle != null && !estContexteMaison(occasion, state.workMode) && pieces.length
       ? candidatsDeRemplacement(pieces, defaultCapsule, -1, "manteau", occasion, state.workMode, state.dateContext, meteoDuJour)
       : [];
   const tenueSeparee = separerCoucheExterieure(
     hasOutfit ? piecesResolues : [],
     tempReelle,
     manteauxPour(hasOutfit ? piecesResolues : [], occasionKey),
-    manteauxCapsulePour(hasOutfit ? piecesResolues : [], occasionKey)
+    manteauxCapsulePour(hasOutfit ? piecesResolues : [], occasionKey),
+    estContexteMaison(occasionKey, state.workMode)
   );
   const outfitPieces = tenueSeparee.principal;
   const exterieur = tenueSeparee.exterieur;
@@ -416,7 +418,13 @@ export default function HomeScreen() {
     // concernées ») : la tenue du jour est déjà séparée plus haut ; une proposition d'une autre occasion l'est ici, même règle, même météo.
     const sepSlide = duJour
       ? tenueSeparee
-      : separerCoucheExterieure(piecesDe(slide.ids), tempReelle, manteauxPour(piecesDe(slide.ids), slide.occasion), manteauxCapsulePour(piecesDe(slide.ids), slide.occasion));
+      : separerCoucheExterieure(
+          piecesDe(slide.ids),
+          tempReelle,
+          manteauxPour(piecesDe(slide.ids), slide.occasion),
+          manteauxCapsulePour(piecesDe(slide.ids), slide.occasion),
+          estContexteMaison(slide.occasion, state.workMode)
+        );
     const pieces = sepSlide.principal;
     const exterieurSlide = sepSlide.exterieur;
     // Le look qu'on sauvegarde est celui qu'on voit : sans le manteau montré à part, ni celui qu'une proposition remplace (R-B25).
