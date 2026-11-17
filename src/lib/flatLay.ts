@@ -202,7 +202,9 @@ const ACCESSOIRES_EN_RECETTE = 3;
  * Les tailles propres à la recette (17/11/2026, demandé sur l'avant / après : « agrandis un peu la jupe, il faut que la jupe représente la
  * même largeur que le pantalon ») : la jupe passe de 0,75 à 0,92 du pantalon, pour peser dans sa tenue autant que le pantalon dans la sienne.
  */
-const PROPORTION_RECETTE: Partial<Record<CategoryKey, number>> = { jupe: 0.92, sac: 0.62 }; // le sac de 0,55 à 0,62 (« agrandir légèrement le sac », même jour)
+// Le sac de 0,55 à 0,62 (« agrandir légèrement le sac », même jour). Le haut de 0,8 à 0,72 (« le haut est trop grand vs le bas, il faut
+// que ce soit plus harmonieux », même jour, capture d'un haut et d'une jupe) : le haut ne pèse plus plus que le bas qu'il surmonte.
+const PROPORTION_RECETTE: Partial<Record<CategoryKey, number>> = { jupe: 0.92, sac: 0.62, haut: 0.72, pull: 0.72 };
 /** La taille d'une petite pièce face à sa proportion habituelle, dans une recette : la ceinture et les bijoux se lisent plus petits que le sac. */
 const PETITE_PIECE: Partial<Record<CategoryKey, number>> = { accessoire: 0.85, bijou: 0.8 };
 /** Des collants, en hauteur (une pièce longue, posée à plat comme un bas), pantalon = 1. */
