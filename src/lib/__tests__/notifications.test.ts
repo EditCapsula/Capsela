@@ -47,3 +47,15 @@ describe("prochaineTenueProgrammee (diagnostic, 13/11/2026)", () => {
     expect(prochaineTenueProgrammee([{ id: 1, schedule: { at: new Date(2026, 10, 13, 8, 0) } }, { id: 3 }], maintenant)).toBeNull();
   });
 });
+
+describe("toucher la notification (17/11/2026)", () => {
+  it("la tenue du jour et l'essai ouvrent la tenue d'aujourd'hui ; le rappel de reprise, non", async () => {
+    const { ouvreLaTenueDuJour, ID_TENUE_DU_JOUR, JOURS_PROGRAMMES, ID_ESSAI } = await import("../notifications");
+    expect(ouvreLaTenueDuJour(ID_TENUE_DU_JOUR)).toBe(true);
+    expect(ouvreLaTenueDuJour(ID_TENUE_DU_JOUR + JOURS_PROGRAMMES - 1)).toBe(true);
+    expect(ouvreLaTenueDuJour(ID_TENUE_DU_JOUR + JOURS_PROGRAMMES)).toBe(false);
+    expect(ouvreLaTenueDuJour(ID_ESSAI)).toBe(true);
+    expect(ouvreLaTenueDuJour(100)).toBe(false);
+    expect(ouvreLaTenueDuJour(undefined)).toBe(false);
+  });
+});
