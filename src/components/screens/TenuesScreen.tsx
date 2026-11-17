@@ -1117,8 +1117,9 @@ export default function TenuesScreen() {
               <span className="w-8 h-8 rounded-full bg-terracotta-deep text-cream flex items-center justify-center text-base flex-shrink-0">
                 ✓
               </span>
-              {/* « TENUE CHOISIE ✓ » (12/11/2026, brief, 4) : le retour explicite après « Choisir cette tenue ». */}
-              <div className="text-[13px] text-ink font-semibold" role="status">{t("Tenue choisie")}</div>
+              {/* « TENUE CHOISIE ✓ » (12/11/2026, brief, 4) : le retour explicite après « Choisir cette tenue ». Devenu « Bonne journée avec
+                  cette tenue ! » le 17/11/2026 (demandé), avec « Porter cette tenue » pour le bouton, le libellé de l'accueil. */}
+              <div className="text-[13px] text-ink font-semibold" role="status">{t("Bonne journée avec cette tenue !")}</div>
             </div>
           ) : (
             <Button
@@ -1145,7 +1146,7 @@ export default function TenuesScreen() {
                 border: !vesteWithoutBase && statut.cle === "a_completer" ? "1px solid var(--color-terracotta-deep)" : undefined,
               }}
             >
-              {t("Choisir cette tenue")}
+              {t("Porter cette tenue")}
             </Button>
           )}
 
