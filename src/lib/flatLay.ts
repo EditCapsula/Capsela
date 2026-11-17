@@ -214,11 +214,15 @@ const HAUTEUR_COTES_RECETTE = 1.2;
  */
 // Le sac de 0,55 à 0,62 (« agrandir légèrement le sac », même jour). Le haut de 0,8 à 0,72 (« le haut est trop grand vs le bas, il faut
 // que ce soit plus harmonieux », même jour, capture d'un haut et d'une jupe) : le haut ne pèse plus plus que le bas qu'il surmonte.
-const PROPORTION_RECETTE: Partial<Record<CategoryKey, number>> = { jupe: 0.92, sac: 0.62, haut: 0.72, pull: 0.72 };
+// Les chaussures de 0,52 à 0,75 (« agrandis les chaussures comme sur ma version », même jour : environ 30 % de la largeur de la planche).
+const PROPORTION_RECETTE: Partial<Record<CategoryKey, number>> = { jupe: 0.92, sac: 0.62, haut: 0.72, pull: 0.72, chaussures: 0.75 };
 /** La taille d'une petite pièce face à sa proportion habituelle, dans une recette : la ceinture et les bijoux se lisent plus petits que le sac. */
 const PETITE_PIECE: Partial<Record<CategoryKey, number>> = { accessoire: 0.85, bijou: 0.8 };
 /** Des collants, en hauteur (une pièce longue, posée à plat comme un bas), pantalon = 1. */
 const PROPORTION_COLLANTS = 0.85;
+/** Les collants d'une recette (17/11/2026, demandé sur l'avant / après : « il faut agrandir les collants », essayés à 1,25 puis 1,6, puis
+ * « pour les collants reprends la taille du avant ») : 1,05 du pantalon. */
+const PROPORTION_COLLANTS_RECETTE = 1.05;
 /** Les catégories dont la proportion vaut pour le PLUS GRAND CÔTÉ (un objet posé), et non pour la hauteur (un vêtement). */
 const PROPORTION_PAR_COTE: CategoryKey[] = ["chaussures", "sac", "accessoire", "bijou"];
 /** La hauteur du bas, en part de la hauteur de la zone, avant l'ajustement à la zone : l'unité des proportions. */
@@ -773,7 +777,7 @@ export function composerFlatLay(
       // Depuis le 16/11/2026 (demandé : « le collant présenté comme un accessoire complémentaire ») : leur visuel les montre pliés, et
       // ils se posent comme un accessoire. `collantsEnBas` (levier de mesure) reproduit la pose d'avant.
       const collants = piece.accessoireType === "Collants" && options.collantsEnBas !== false;
-      const t = (collants ? PROPORTION_COLLANTS : ((parRecette ? PROPORTION_RECETTE[piece.cat] : undefined) ?? PROPORTION_PIECE[piece.cat] ?? 0.5)) * U;
+      const t = (collants ? (parRecette ? PROPORTION_COLLANTS_RECETTE : PROPORTION_COLLANTS) : ((parRecette ? PROPORTION_RECETTE[piece.cat] : undefined) ?? PROPORTION_PIECE[piece.cat] ?? 0.5)) * U;
       let l = PROPORTION_PAR_COTE.includes(piece.cat) && !collants ? (ratio >= 1 ? t : t * ratio) : t * ratio;
       if (l > largeurMax) l = largeurMax;
       return { id: piece.id, cat: piece.cat, role, visualScale: 1, x: 0, y: 0, l, h: l / ratio, angle: 0, z: profondeur(role, piece.cat) };
@@ -864,10 +868,11 @@ export function composerFlatLay(
         q.l *= f;
         q.h *= f;
       }
-      // Avec une veste, elle a sa colonne à elle, à la taille du haut, et le sac dessous (17/11/2026, demandé : « le sac mets-le en
-      // dessous de la veste ») ; les chaussures et les petites pièces se rangent à côté.
-      const moyennes = dessus.length ? [...dessus, ...sac, ...autres] : [...sac, ...autres, ...chaussures];
-      const petitesPieces = [...(dessus.length ? chaussures : []), ...droiteposee.filter(collants), ...petits];
+      // Avec une veste, elle a sa colonne à elle, à la taille du haut, et les chaussures dessous, alignées sur elle (17/11/2026, demandé :
+      // « mets les chaussures à la place du sac, aligne les chaussures et la veste » — un temps le sac, le même jour) ; le sac, les collants
+      // et les petites pièces se rangent à côté.
+      const moyennes = dessus.length ? [...dessus, ...chaussures, ...autres] : [...sac, ...autres, ...chaussures];
+      const petitesPieces = [...(dessus.length ? sac : []), ...droiteposee.filter(collants), ...petits];
       const Hc = H * hauteurCotes;
       const ajuster = (c: PlacementFlatLay[]) => {
         if (!c.length) return c;

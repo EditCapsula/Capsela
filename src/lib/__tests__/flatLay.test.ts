@@ -961,10 +961,11 @@ describe("la composition par recette (17/11/2026, en production)", () => {
     const q = (id: number) => pose.find((o) => o.id === id)!;
     expect(q(veste.id).h).toBeGreaterThanOrEqual(q(haut.id).h);
     expect(colonneDe(pose, veste.id)).toBeGreaterThan(colonneDe(pose, haut.id));
-    // Le sac sous la veste, dans sa colonne (17/11/2026, demandé) ; les chaussures à côté.
-    expect(colonneDe(pose, sac.id)).toBe(colonneDe(pose, veste.id));
-    expect(q(sac.id).y).toBeGreaterThan(q(veste.id).y);
-    expect(colonneDe(pose, chaussures.id)).toBeGreaterThan(colonneDe(pose, veste.id));
+    // Les chaussures sous la veste, dans sa colonne et centrées sur elle (17/11/2026, demandé) ; le sac à côté.
+    expect(colonneDe(pose, chaussures.id)).toBe(colonneDe(pose, veste.id));
+    expect(q(chaussures.id).y).toBeGreaterThan(q(veste.id).y);
+    expect(q(chaussures.id).x).toBeCloseTo(q(veste.id).x, 6);
+    expect(colonneDe(pose, sac.id)).toBeGreaterThan(colonneDe(pose, veste.id));
     const b = (o: PlacementFlatLay) => boiteDe(o);
     for (const autre of [haut, bas]) {
       const a = b(q(veste.id)), c = b(q(autre.id));
