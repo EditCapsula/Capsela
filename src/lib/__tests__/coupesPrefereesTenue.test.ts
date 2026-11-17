@@ -25,9 +25,14 @@ describe("bonusCoupesPreferees", () => {
 
 describe("computeLookScore — R-S31", () => {
   const look = [fluide, pantalon, chaussures];
-  it("éteinte (production d'aujourd'hui) : le score ne change pas", () => {
+  it("en production depuis le 17/11/2026 : sans levier, le bonus s'applique comme levier allumé", () => {
+    const parDefaut = computeLookScore(look, "quotidien", [], null, new Set(), MILD, "Présentiel", "Verre", [], null, undefined, null, ["fluides"]).score;
+    const allume = computeLookScore(look, "quotidien", [], null, new Set(), MILD, "Présentiel", "Verre", [], null, { coupesPreferees: true }, null, ["fluides"]).score;
+    expect(parDefaut).toBe(allume);
+  });
+  it("sans coupe préférée : le score ne change pas", () => {
     const sans = computeLookScore(look, "quotidien", [], null, new Set(), MILD).score;
-    expect(computeLookScore(look, "quotidien", [], null, new Set(), MILD, "Présentiel", "Verre", [], null, undefined, null, ["fluides"]).score).toBe(sans);
+    expect(computeLookScore(look, "quotidien", [], null, new Set(), MILD, "Présentiel", "Verre", [], null, undefined, null, null).score).toBe(sans);
   });
   it("allumée : un bonus, jamais un malus", () => {
     const off = computeLookScore(look, "quotidien", [], null, new Set(), MILD, "Présentiel", "Verre", [], null, { coupesPreferees: false }, null, ["fluides"]).score;

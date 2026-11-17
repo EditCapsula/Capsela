@@ -59,9 +59,12 @@ export function accordCoupe(it: PieceCoupe, preferees: readonly CoupePreferee[] 
  * d'un utilisateur ? » — jusqu'ici, la capsule seule les lisait ; « oui, prépare-le »). Même principe que la silhouette ronde (R-S20) :
  * un BONUS de tenue (R-S31), sans malus ni phrase — deux vêtements ou plus d'une coupe préférée : +6 ; un seul : +3 —, et, là où le
  * moteur ne tire qu'une fois, le meilleur de quelques tirages (meilleurTirageMorphologique). Une coupe inconnue ne compte pas.
- * HORS PRODUCTION tant que la mesure avant / après (scripts/coupes-preferees-moteur.audit.ts) n'est pas validée.
+ * EN PRODUCTION depuis le 17/11/2026 (arbitré par la propriétaire après lecture de la mesure avant / après,
+ * scripts/coupes-preferees-moteur.audit.ts, 16 styles × 4 saisons × 8 occasions) : sans historique (premiers jours, Accueil sans humeur,
+ * valise), la part de vêtements de la coupe préférée par tenue double à peu près (ajustées 0,21 → 0,42) ; avec historique, l'effet reste
+ * faible (2 à 13 % des choix changent) ; aucune tenue impossible, témoin sans préférence inchangé.
  */
-export const BONUS_COUPES_PREFEREES_EN_PRODUCTION = false;
+export const BONUS_COUPES_PREFEREES_EN_PRODUCTION = true;
 
 export function bonusCoupesPreferees(pieces: readonly PieceCoupe[], preferees: readonly CoupePreferee[] | null | undefined): 0 | 3 | 6 {
   if (!preferees?.length) return 0;
