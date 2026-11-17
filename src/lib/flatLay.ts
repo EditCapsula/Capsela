@@ -198,6 +198,11 @@ const ACCESSOIRES_EN_GRILLE = 2;
  */
 export const RECETTES_EN_PRODUCTION = false;
 const ACCESSOIRES_EN_RECETTE = 3;
+/**
+ * Les tailles propres à la recette (17/11/2026, demandé sur l'avant / après : « agrandis un peu la jupe, il faut que la jupe représente la
+ * même largeur que le pantalon ») : la jupe passe de 0,75 à 0,92 du pantalon, pour peser dans sa tenue autant que le pantalon dans la sienne.
+ */
+const PROPORTION_RECETTE: Partial<Record<CategoryKey, number>> = { jupe: 0.92 };
 /** La taille d'une petite pièce face à sa proportion habituelle, dans une recette : la ceinture et les bijoux se lisent plus petits que le sac. */
 const PETITE_PIECE: Partial<Record<CategoryKey, number>> = { accessoire: 0.85, bijou: 0.8 };
 /** Des collants, en hauteur (une pièce longue, posée à plat comme un bas), pantalon = 1. */
@@ -750,7 +755,7 @@ export function composerFlatLay(
       // Depuis le 16/11/2026 (demandé : « le collant présenté comme un accessoire complémentaire ») : leur visuel les montre pliés, et
       // ils se posent comme un accessoire. `collantsEnBas` (levier de mesure) reproduit la pose d'avant.
       const collants = piece.accessoireType === "Collants" && options.collantsEnBas !== false;
-      const t = (collants ? PROPORTION_COLLANTS : (PROPORTION_PIECE[piece.cat] ?? 0.5)) * U;
+      const t = (collants ? PROPORTION_COLLANTS : ((parRecette ? PROPORTION_RECETTE[piece.cat] : undefined) ?? PROPORTION_PIECE[piece.cat] ?? 0.5)) * U;
       let l = PROPORTION_PAR_COTE.includes(piece.cat) && !collants ? (ratio >= 1 ? t : t * ratio) : t * ratio;
       if (l > largeurMax) l = largeurMax;
       return { id: piece.id, cat: piece.cat, role, visualScale: 1, x: 0, y: 0, l, h: l / ratio, angle: 0, z: profondeur(role, piece.cat) };
