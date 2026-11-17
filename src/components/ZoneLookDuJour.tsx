@@ -6,7 +6,7 @@ import { hauteurDuContexte } from "@/lib/flatLay";
 import { composerSilhouette } from "@/lib/silhouetteFlatLay";
 import { useAuth } from "@/lib/auth";
 import type { CategoryKey, Item } from "@/lib/types";
-import { styleLargeurPlanche } from "@/lib/tailleConteneur";
+import { styleTaillePlanche } from "@/lib/tailleConteneur";
 import { useTailleConteneur } from "@/lib/useTailleConteneur";
 
 /** Au-delà, la planche apparaît même si une image tarde : la silhouette ne doit pas masquer un look prêt. */
@@ -116,7 +116,7 @@ function SilhouetteFlatLay({ formes }: { formes: { cat: CategoryKey; photoUrl?: 
   if (!pieces.length) return null;
   return (
     <div ref={zone} aria-hidden="true" className="absolute inset-0 w-full h-full flex items-center justify-center" style={{ containerType: "size", isolation: "isolate" }}>
-      <div style={{ position: "relative", width: styleLargeurPlanche(tailleZone, hauteur), aspectRatio: `100 / ${hauteur}` }}>
+      <div style={{ position: "relative", ...styleTaillePlanche(tailleZone, hauteur) }}>
         {pieces.map((p, i) => {
           const delais = {
             ["--delai-entree" as string]: `${300 + i * 140}ms`,

@@ -22,3 +22,17 @@ describe("tailleConteneur", () => {
     expect(hauteurVisuelStyle(800, false)).toBe(460);
   });
 });
+
+import { styleTaillePlanche, taillesDecouverteStyle } from "../tailleConteneur";
+describe("tailles explicites", () => {
+  it("la planche mesurée a une largeur et une hauteur en pixels", () => {
+    expect(styleTaillePlanche({ w: 300, h: 250 }, 125)).toEqual({ width: "200px", height: "250px", aspectRatio: "100 / 125" });
+    expect(styleTaillePlanche(null, 125).height).toBeUndefined();
+  });
+  it("la découverte des styles : visuel 3:4 et looks 4:5 qui tiennent dans la largeur", () => {
+    const t = taillesDecouverteStyle(330, true);
+    expect(t.visuel).toEqual({ w: 238, h: 317 });
+    expect(t.look).toEqual({ w: 80, h: 100 });
+    expect(t.visuel.w + 8 + t.look.w).toBeLessThanOrEqual(330);
+  });
+});

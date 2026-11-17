@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
 import { GENERATIONS_GRATUITES_PAR_JOUR, LIMITE_DRESSING_GRATUIT } from "@/lib/premium";
@@ -153,8 +154,17 @@ const FORMULES: Formule[] = [
   { id: "mensuel", label: "Premium mensuel", prix: "4,99 € / mois", sous: "Sans engagement" },
 ];
 
+/*
+ * SANS PRIX SUR iOS (17/11/2026, avant la vidéo demandée par l'App Review, guideline 2.1) : sur l'App Store, un abonnement numérique
+ * passe obligatoirement par l'achat intégré d'Apple (3.1.1), et l'app n'en propose aucun. Afficher des tarifs sans moyen de payer
+ * exposait à un refus. Dans l'app iOS, l'écran garde les avantages et « Me prévenir à l'ouverture », sans formules ni prix ; Android
+ * et le web ne changent pas.
+ */
+const prixAffiches = () => Capacitor.getPlatform() !== "ios";
+
 export default function PremiumScreen() {
   const { state, actions } = useCapsela();
+  const avecPrix = prixAffiches();
   const [formule, setFormule] = useState<Formule["id"]>("annuel");
   const [note, setNote] = useState(false);
   const choisie = FORMULES.find((f) => f.id === formule) ?? FORMULES[0];
@@ -224,6 +234,8 @@ export default function PremiumScreen() {
           ))}
         </div>
 
+        {avecPrix && (
+        <>
         <div className="mt-[22px]">
           <span className="t-surtitre text-muted">Choisis ta formule</span>
         </div>
@@ -281,6 +293,8 @@ export default function PremiumScreen() {
             );
           })}
         </div>
+        </>
+        )}
       </div>
 
       <div className="relative flex-shrink-0 px-6 pt-[10px] pb-[18px] border-t border-border">
@@ -294,6 +308,7 @@ export default function PremiumScreen() {
           </div>
         )}
 
+        {avecPrix && (
         <div aria-live="polite">
           <div className="t-label text-muted">Offre sélectionnée</div>
           <div className="flex items-baseline flex-wrap gap-x-[10px] gap-y-[2px] mt-[2px]">
@@ -304,13 +319,14 @@ export default function PremiumScreen() {
             </span>
           </div>
         </div>
+        )}
 
         {/* Ce bouton ne prend pas d'argent, et son libellé ne le laisse pas
             croire. « S'abonner » sur un écran sans caisse est la promesse la
             plus coûteuse qu'on puisse faire ici. */}
         <Button
           variante="sombre"
-          className="mt-2"
+          className={avecPrix ? "mt-2" : undefined}
           onClick={() => {
             setNote(true);
             setTimeout(() => setNote(false), 2600);
