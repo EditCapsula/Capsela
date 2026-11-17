@@ -64,6 +64,9 @@ jobs:
           # « Continuer avec Apple » (docs/connexion-apple.md) : « 1 » une fois Apple et Supabase réglés ; exigé par l'App Store tant que
           # Google est proposé (règle 4.8). Absente : le bouton n'est pas affiché.
           NEXT_PUBLIC_CONNEXION_APPLE: ${{ vars.CONNEXION_APPLE }}
+          # Les achats intégrés (17/11/2026, src/lib/achats.ts) : la clé PUBLIQUE iOS de RevenueCat (« appl_… »), variable du dépôt
+          # REVENUECAT_IOS_KEY. Absente : l'écran Premium reste sans prix ni achat.
+          NEXT_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
           # La version affichée en pied de page (12/11/2026, src/lib/versionApp.ts) : le nom saisi au lancement et le numéro de build
           # (celui du store). Absents sur une pull request : l'app affiche alors la date et le commit.
           CAPSELA_VERSION_NAME: ${{ inputs.version }}

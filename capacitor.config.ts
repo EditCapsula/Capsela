@@ -29,6 +29,8 @@ const config: CapacitorConfig = {
       "@capacitor/geolocation",
       "@capacitor/share",
       "@capacitor/filesystem",
+      // Les achats intégrés (17/11/2026, src/lib/achats.ts) : l'abonnement Premium par l'App Store, via RevenueCat.
+      "@revenuecat/purchases-capacitor",
     ],
   },
   plugins: {

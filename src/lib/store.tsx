@@ -376,6 +376,11 @@ export interface Actions {
    */
   verifierEtatPremium: () => Promise<EtatPremium>;
   /**
+   * Un abonnement confirmé par le store (achat intégré, achats.ts) : le droit s'applique aussitôt, sans attendre que la fonction
+   * revenuecat-webhook ait écrit premium_access (quelques secondes) ; la table reste la référence au prochain chargement.
+   */
+  premiumConfirmeParLeStore: () => void;
+  /**
    * Pose (ou retire, avec null) la photo de l'Avis de styliste. Toute
    * nouvelle photo remet l'analyse à zéro ; l'URL locale de la précédente est
    * libérée. Sert aussi à « Nouvelle analyse » et à la suppression.
@@ -2335,6 +2340,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       if (etat !== "inconnu") setEtatPremium(etat);
       return etat;
     },
+    premiumConfirmeParLeStore: () => setEtatPremium("premium"),
     backFromLegal: () => setState((s) => ({ ...s, screen: s.legalReturn || "profile" })),
     openLegalDoc: (slug) => setState((s) => ({ ...s, legalDoc: slug })),
     closeLegalDoc: () => setState((s) => ({ ...s, legalDoc: null })),
