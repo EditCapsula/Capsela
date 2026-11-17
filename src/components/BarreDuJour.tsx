@@ -177,14 +177,8 @@ export function EnTeteJour({ retro, className = "" }: { retro?: RetroJour; class
           aria-live="polite"
           className={"flex-1 min-w-0 min-h-[40px] truncate text-center " + (enRetro || decalage > 0 ? "cursor-pointer" : "cursor-default")}
         >
-          {relatif ? (
-            <>
-              <span className="text-[15px] font-semibold text-ink">{nomJour}</span>
-              <span className="text-[13px] text-muted"> · {dateCourte}</span>
-            </>
-          ) : (
-            <span className="text-[15px] font-semibold text-ink">{dateCourte}</span>
-          )}
+          {/* Le jour et sa date dans la typographie du surtitre de la tenue (« Ton look du jour », t-surtitre), demandé le 17/11/2026. */}
+          <span className="t-surtitre text-ink">{relatif ? `${nomJour} · ${dateCourte}` : dateCourte}</span>
         </button>
         <button
           onClick={() => (enRetro ? retro!.onChange(retro!.suivant) : actions.choisirJour(decalage + 1))}
@@ -195,7 +189,7 @@ export function EnTeteJour({ retro, className = "" }: { retro?: RetroJour; class
           <Chevron vers="droite" />
         </button>
       </div>
-      <div className="flex items-center justify-center gap-3 text-[12.5px] min-w-0">
+      <div className="flex items-center justify-center gap-3 text-[12.5px] font-medium min-w-0">
         <button
           onClick={() => actions.goPreferences("localisation")}
           aria-label={`Localisation : ${geoCity.city}. Régler la localisation et la météo`}
@@ -227,8 +221,9 @@ export function EnTeteJour({ retro, className = "" }: { retro?: RetroJour; class
               <span aria-hidden="true" className="text-terracotta">
                 <IconeTuile nom={soleil ? "apresmidi" : "nuage"} taille={17} />
               </span>
-              <span aria-hidden="true" className="text-[14px] font-medium text-ink tabular-nums">{degres(temp)}</span>
-              {label && <span aria-hidden="true" className="text-muted max-[359px]:hidden">{libelle(label)}</span>}
+              {/* Les tailles de la barre du jour d'avant (température 15 px, condition 13 px), reprises telles quelles : mêmes styles qu'ailleurs. */}
+              <span aria-hidden="true" className="text-[15px] font-medium text-ink tabular-nums">{degres(temp)}</span>
+              {label && <span aria-hidden="true" className="text-[13px] text-muted max-[359px]:hidden">{libelle(label)}</span>}
             </span>
           </>
         )}
