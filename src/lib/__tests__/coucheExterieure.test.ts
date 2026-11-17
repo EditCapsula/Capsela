@@ -47,7 +47,9 @@ describe("la tenue et sa couche extérieure", () => {
     expect(r.exterieur).toBe(manteau);
     expect(r.suggere).toBe(true);
     expect(r.principal).toEqual(t);
-    expect(separerCoucheExterieure(t, 18, [manteau]).exterieur).toBeNull();
+    // 17/11/2026 : sous 22 °C, plus seulement par le froid. Le choix suit les candidats que le moteur admet (leurs bornes) : à 18°, le trench, rien sans candidat.
+    expect(separerCoucheExterieure(t, 18, [trench]).exterieur).toBe(trench);
+    expect(separerCoucheExterieure(t, 18, []).exterieur).toBeNull();
   });
 
   it("2 ter. aucun manteau adapté dans le dressing : un manteau de la capsule, dans la strate extérieure (12/11/2026)", () => {
@@ -65,10 +67,27 @@ describe("la tenue et sa couche extérieure", () => {
     expect(principal).toContain(blazer);
   });
 
-  it("9. un trench porté comme pièce de style (au-dessus du seuil) reste dans le look", () => {
-    const { principal, exterieur } = separerCoucheExterieure([robe, ballerines, trench], SEUIL_MANTEAU);
-    expect(exterieur).toBeNull();
-    expect(principal).toContain(trench);
+  it("9. tout manteau à part sous 22 °C (17/11/2026, arbitré : avant, un trench au-dessus de 12° restait dans le look)", () => {
+    for (const t of [SEUIL_MANTEAU, 16, 20]) {
+      const { principal, exterieur } = separerCoucheExterieure([robe, ballerines, trench], t);
+      expect(exterieur).toBe(trench);
+      expect(principal).not.toContain(trench);
+    }
+  });
+
+  it("9 ter. à partir de 22 °C, aucune strate extérieure, ni manteau séparé ni manteau proposé (17/11/2026)", () => {
+    expect(separerCoucheExterieure([robe, ballerines, trench], 21).exterieur).toBe(trench);
+    const r = separerCoucheExterieure([robe, ballerines, trench], 22, [manteau], [manteau]);
+    expect(r.exterieur).toBeNull();
+    expect(r.conseilManteauPlusLong).toBe(false);
+    expect(separerCoucheExterieure([robe, ballerines], 25, [trench]).exterieur).toBeNull();
+  });
+
+  it("9 bis. à la maison (Cocooning, Télétravail) : rien n'est séparé ni proposé", () => {
+    const r = separerCoucheExterieure([robe, ballerines, trench], 8, [manteau], [manteau], true);
+    expect(r.exterieur).toBeNull();
+    expect(r.principal).toContain(trench);
+    expect(separerCoucheExterieure([robe, ballerines], 8, [manteau], [], true).exterieur).toBeNull();
   });
 
   it("météo inconnue : rien n'est séparé, aucune recommandation « selon la météo »", () => {

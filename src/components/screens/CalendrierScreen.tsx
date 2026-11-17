@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { trierPiecesDeTenue } from "@/lib/ordrePieces";
 import AppHeader from "@/components/AppHeader";
 import Button from "@/components/Button";
 import { IconeTuile } from "@/components/PlanifierUI";
@@ -100,7 +101,9 @@ function Vignette({ piece, taille }: { piece: Item; taille?: number }) {
 }
 
 /** Les pièces d'une tenue, avec leur nom dessous : quatre au plus, la quatrième place disant « +n » au-delà. */
-function Tuiles({ pieces }: { pieces: Item[] }) {
+function Tuiles({ pieces: recues }: { pieces: Item[] }) {
+  // Les pièces principales d'abord, les accessoires en dernier (ordrePieces.ts, 17/11/2026) : ce sont elles que montrent les trois places.
+  const pieces = trierPiecesDeTenue(recues);
   const visibles = pieces.length > 4 ? pieces.slice(0, 3) : pieces;
   const reste = pieces.length - visibles.length;
   return (
@@ -128,8 +131,9 @@ function MiniTuiles({ pieces }: { pieces: Item[] }) {
   if (!pieces.length) {
     return <span aria-hidden="true" className="rounded-champ border border-dashed border-border flex-shrink-0" style={{ width: 76, height: 30 }} />;
   }
-  const visibles = pieces.length > 4 ? pieces.slice(0, 3) : pieces;
-  const reste = pieces.length - visibles.length;
+  const tries = trierPiecesDeTenue(pieces);
+  const visibles = tries.length > 4 ? tries.slice(0, 3) : tries;
+  const reste = tries.length - visibles.length;
   return (
     <span aria-hidden="true" className="flex items-center gap-[4px] flex-shrink-0">
       {visibles.map((p) => (

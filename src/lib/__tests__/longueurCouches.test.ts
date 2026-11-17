@@ -71,7 +71,8 @@ describe("Pour l'extérieur — le manteau trop court pour la veste (12/11/2026,
     expect(r.exterieur).toBeNull();
     expect(r.conseilManteauPlusLong).toBe(true);
   });
-  it("seulement par le froid", () => {
-    expect(separerCoucheExterieure(tenue, SEUIL_MANTEAU + 3).conseilManteauPlusLong).toBe(false);
+  it("sous 22 °C hors maison (17/11/2026), jamais à la maison", () => {
+    expect(separerCoucheExterieure(tenue, SEUIL_MANTEAU + 3).conseilManteauPlusLong).toBe(true);
+    expect(separerCoucheExterieure(tenue, SEUIL_MANTEAU + 3, [], [], true).conseilManteauPlusLong).toBe(false);
   });
 });

@@ -28,7 +28,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { CATS, DATE_CONTEXTS, OCCASIONS, WORK_MODES, occasionShortLabel, type Weather } from "@/lib/data";
 import { sansTenueCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
-import { candidatsDeRemplacement, SEUIL_MANTEAU } from "@/lib/logic";
+import { candidatsDeRemplacement, estContexteMaison } from "@/lib/logic";
 import { humeursProposees, libelleHumeur, genererTenueHumeur, type Humeur } from "@/lib/humeur";
 import { soireeHabillee } from "@/lib/occasions";
 import { clePieces, jourLocal } from "@/lib/outfitFeedback";
@@ -967,16 +967,18 @@ export default function PlanifierScreen() {
    * manteau ajouté par le froid se montre à part, avec la PRÉVISION de l'événement (meteoMoment) — sans prévision, rien n'est séparé.
    * Une composition reprise (photo d'un avis, plan déjà fait) reste telle qu'elle a été composée. Le plan enregistre toutes les pièces.
    */
-  // Par le froid, les manteaux que le moteur admet pour cette date (le même pool que la composition) : une tenue sans manteau en reçoit un.
+  // Les manteaux que le moteur admet pour cette date (le même pool que la composition) : une tenue sans manteau en reçoit un. Sous 22 °C
+  // hors maison depuis le 17/11/2026 (avant : par le froid seulement) ; leurs bornes choisissent la pièce.
+  const chezSoiResultat = estContexteMaison(occ ?? "all", workMode);
   // LA MINIMALE DU CRÉNEAU décide de la couche extérieure (16/11/2026, arbitré : « avec le minimum du jour », comme l'accueil) ; le moteur
   // garde la moyenne du créneau pour composer.
   const candidatsResultat =
-    !composition && meteoMoment && meteoMoment.tempMin < SEUIL_MANTEAU && pieces.length
+    !composition && meteoMoment && !chezSoiResultat && pieces.length
       ? candidatsDeRemplacement(pieces, dressingSeul ? state.items : [...state.items, ...capsuleDeLaDate], -1, "manteau", occ ?? "all", workMode, dateContext, meteoUtilisee)
       : [];
   const tempResultat = composition ? null : (meteoMoment?.tempMin ?? null);
   const coloResultat = colorimetrieMoteur(profile.colorimetrie);
-  const { principal: piecesDuLook } = separerCoucheExterieure(pieces, tempResultat, candidatsResultat);
+  const { principal: piecesDuLook } = separerCoucheExterieure(pieces, tempResultat, candidatsResultat, [], chezSoiResultat);
   /** Rien à garder : état vide du moteur — une composition imposée en a toujours une. */
   const sansTenue = !composition && (!tenue || tenue.noCompleteOutfit);
   /** Les mots de l'état sans tenue : dressing vide, pièces manquantes, ou pas de combinaison pour l'occasion (emptyStateCopy.ts). */
@@ -2044,6 +2046,7 @@ export default function PlanifierScreen() {
                   temperature={tempResultat}
                   quand="prévus"
                   candidatsExterieur={candidatsResultat}
+                  chezSoi={chezSoiResultat}
                   indicateurs={<IndicateursTenue items={indicateursResultat} />}
                   vide="Aucune pièce à montrer pour l'instant."
                   actions={
@@ -2207,11 +2210,12 @@ export default function PlanifierScreen() {
           const meteoMoteurPlan = tempPlan != null ? weatherForDay(tempPlan, meteoPlanVive?.label ?? t.weatherLabel ?? "Nuageux", saisonCalendairePour(d), CHALEUR_HORS_SAISON) : null;
           // La couche extérieure suit la minimale du créneau (16/11/2026) ; « Adaptée à … » et le moteur gardent la moyenne.
           const tempCouchePlan = meteoPlanVive?.tempMin ?? tempPlan;
+          const chezSoiPlan = estContexteMaison(t.occasion, (t.sousChoix ?? "Présentiel") as WorkMode);
           const candidatsPlan =
-            meteoMoteurPlan && tempCouchePlan != null && tempCouchePlan < SEUIL_MANTEAU
+            meteoMoteurPlan && tempCouchePlan != null && !chezSoiPlan
               ? candidatsDeRemplacement(pieces, wardrobePool, -1, "manteau", t.occasion, (t.sousChoix ?? "Présentiel") as WorkMode, (t.sousChoix ?? DATE_CONTEXTS[0][0]) as DateContext, meteoMoteurPlan)
               : [];
-          const sepPlan = separerCoucheExterieure(pieces, tempCouchePlan, candidatsPlan);
+          const sepPlan = separerCoucheExterieure(pieces, tempCouchePlan, candidatsPlan, [], chezSoiPlan);
           // Une tenue planifiée : la même configuration pour son flat lay et la liste de ses pièces (13/11/2026).
           const configPlan = (look: Item[]) => ({
             look,
@@ -2328,6 +2332,7 @@ export default function PlanifierScreen() {
                 temperature={tempCouchePlan}
                 quand={passee ? "ce jour-là" : "prévus"}
                 candidatsExterieur={passee ? [] : candidatsPlan}
+                chezSoi={chezSoiPlan}
                 indicateurs={<IndicateursTenue items={indicateursPlan} />}
                 vide="Les pièces de ce look ne sont plus dans ton dressing."
                 actions={

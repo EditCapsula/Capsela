@@ -19,7 +19,7 @@ if (typeof document !== "undefined" && Capacitor.getPlatform() === "ios") {
   if (meta && !/viewport-fit/.test(meta.content)) meta.setAttribute("content", `${meta.content}, viewport-fit=cover`);
 }
 import { arreterPublicite, demarrerPublicite } from "@/lib/publicite";
-import { synchroniserNotifications } from "@/lib/notifications";
+import { ecouterToucherNotification, synchroniserNotifications } from "@/lib/notifications";
 import { notificationsDesValises, notifProfilACompleter } from "@/lib/centreNotifications";
 import { demarrerNotifications, noterNotifications } from "@/lib/notificationsStore";
 import { prochaineActionProfil } from "@/lib/profile";
@@ -51,7 +51,7 @@ import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import DateNaissanceScreen from "./screens/DateNaissanceScreen";
 import { doitDemanderNaissance } from "@/lib/ageMinimum";
-import { decisionSession, PREMIERE_ETAPE } from "@/lib/onboarding";
+import { decisionSession, ECRANS_AVANT_CONNEXION, PREMIERE_ETAPE } from "@/lib/onboarding";
 import ProfileScreen from "./screens/ProfileScreen";
 import PreferencesScreen from "./screens/PreferencesScreen";
 import LegalScreen from "./screens/LegalScreen";
@@ -182,6 +182,26 @@ function Screens() {
   useEffect(() => {
     ecranRef.current = state.screen;
   });
+  // TOUCHER LA NOTIFICATION OUVRE LA TENUE DU JOUR (17/11/2026, signalé : elle ouvrait la Capsule, l'écran retenu). L'écran est aussi
+  // retenu comme écran à rouvrir : quand le toucher LANCE l'app, la décision d'ouverture de session (plus bas) arrive après lui et
+  // rouvre l'écran retenu — la tenue, désormais. Le jour revient à aujourd'hui.
+  const actionsRef = useRef(actions);
+  useEffect(() => {
+    actionsRef.current = actions;
+  });
+  useEffect(
+    () =>
+      ecouterToucherNotification(() => {
+        memoriserEcran("tenues");
+        // Au lancement, l'app est encore sur ses écrans d'avant la connexion : la session rouvrira l'écran retenu, une fois les données
+        // chargées (composer la tenue avant, ce serait la composer sur un dressing vide). App déjà ouverte : on y va tout de suite.
+        if (ECRANS_AVANT_CONNEXION.has(ecranRef.current)) return;
+        actionsRef.current.choisirJour(0);
+        actionsRef.current.goTenues();
+      }),
+    []
+  );
+
   useEffect(() => {
     const gerer = () => {
       const page = lirePage(document);

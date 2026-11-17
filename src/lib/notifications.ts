@@ -67,6 +67,41 @@ export function heureDeNotification(valeur: string | undefined | null): { hour: 
   return { hour, minute };
 }
 
+/**
+ * TOUCHER LA NOTIFICATION OUVRE LA TENUE DU JOUR (17/11/2026, signalé : « au clic cela doit renvoyer vers ma tenue du jour pas vers
+ * la capsule »). Rien n'écoutait le toucher : l'app s'ouvrait sur l'écran retenu (ecranRestaure.ts), la Capsule ce jour-là. Les
+ * notifications de la tenue du jour (1 à JOURS_PROGRAMMES) et l'essai des Réglages (ID_ESSAI) mènent à la tenue d'aujourd'hui ; le rappel
+ * de reprise garde le comportement d'avant.
+ */
+export function ouvreLaTenueDuJour(id: number | undefined | null): boolean {
+  return typeof id === "number" && ((id >= ID_TENUE_DU_JOUR && id < ID_TENUE_DU_JOUR + JOURS_PROGRAMMES) || id === ID_ESSAI);
+}
+
+/**
+ * Écoute le toucher d'une notification ; rend de quoi arrêter l'écoute. Le module garde l'événement jusqu'à ce qu'on l'écoute
+ * (retainUntilConsumed) : un toucher qui LANCE l'app est donc reçu même si l'écoute démarre après le chargement.
+ */
+export function ecouterToucherNotification(surTenue: () => void): () => void {
+  if (!notificationsDisponiblesIci()) return () => {};
+  let fini = false;
+  let retirer: (() => void) | null = null;
+  void import("@capacitor/local-notifications")
+    .then(({ LocalNotifications }) =>
+      LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
+        if (ouvreLaTenueDuJour(action?.notification?.id)) surTenue();
+      })
+    )
+    .then((h) => {
+      if (fini) void h.remove();
+      else retirer = () => void h.remove();
+    })
+    .catch((e) => console.warn("[notifications] écoute du toucher impossible", e));
+  return () => {
+    fini = true;
+    retirer?.();
+  };
+}
+
 export function notificationsDisponiblesIci(): boolean {
   return Capacitor.isNativePlatform();
 }

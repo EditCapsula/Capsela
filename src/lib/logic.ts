@@ -461,6 +461,8 @@ export interface LeviersMesure {
   sansCollantParDefaut?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
+  /** Reproduit le comportement d'AVANT le 17/11/2026 : un manteau sans meteo_max_temp pouvait être proposé à 22 °C et plus (SEUIL_SANS_EXTERIEUR). */
+  sansPlafondExterieur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
   saisonDeclareeRelachee?: boolean;
   /**
@@ -504,6 +506,18 @@ export const SEUIL_SOIREE_FRAICHE = 21;
  * ARBITRAGE ÉDITORIAL. Levier de mesure : LeviersMesure.sansManteauParLeFroid.
  */
 export const SEUIL_MANTEAU = 12;
+/**
+ * PLUS AUCUN VÊTEMENT D'EXTÉRIEUR À PARTIR DE 22 °C (17/11/2026, arbitré par la propriétaire, brief « Paramétrage des températures
+ * maximales des vêtements d'extérieur ») : à partir de ce seuil, aucun manteau (manteau, trench, caban, doudoune, parka, imperméable) n'est
+ * proposé, même sans meteo_max_temp déclarée — c'est le cas des manteaux ajoutés au dressing. En dessous, chaque pièce garde son propre
+ * plafond (meteo_max_temp : trench 20°, manteau droit en laine 12°…). Les vestes et blazers ne sont pas concernés (pièces de la tenue).
+ * Levier de mesure : LeviersMesure.sansPlafondExterieur.
+ */
+export const SEUIL_SANS_EXTERIEUR = 22;
+/** Vrai quand la pièce est un vêtement d'extérieur et qu'il fait trop chaud pour en proposer un (SEUIL_SANS_EXTERIEUR). */
+export function exterieurTropChaud(i: Pick<Item, "cat">, temperature: number): boolean {
+  return i.cat === "manteau" && temperature >= SEUIL_SANS_EXTERIEUR;
+}
 const MANTEAU_TECHNIQUE = /doudoune|parka|anorak|k-?way|coupe-vent|polaire|softshell/i;
 /** Un manteau échappe au plancher de formalité de l'occasion — sauf un manteau technique en contexte habillé. */
 export function manteauHorsPlancher(i: Item, dressy: boolean): boolean {
@@ -1156,6 +1170,7 @@ export function generateOutfit(
     items.filter((i) => {
       if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp && !TEMP_COMPENSATED_CATS.includes(i.cat)) return false;
       if (i.meteoMaxTemp != null && weather.temp > i.meteoMaxTemp) return false;
+      if (!leviers?.sansPlafondExterieur && exterieurTropChaud(i, weather.temp)) return false;
       return true;
     });
 
@@ -1203,7 +1218,9 @@ export function generateOutfit(
   const relacheMeteo = (items: Item[]): Item[] =>
     leviers?.replMeteoRelacheMax
       ? items
-      : items.filter((i) => i.meteoMaxTemp == null || weather.temp <= i.meteoMaxTemp);
+      : items.filter(
+          (i) => (i.meteoMaxTemp == null || weather.temp <= i.meteoMaxTemp) && (leviers?.sansPlafondExterieur || !exterieurTropChaud(i, weather.temp))
+        );
   const hardBaseMeteoRelachee = relacheMeteo(hardBaseNoTemp);
   const hardBaseNoOccMeteoRelachee = relacheMeteo(hardBaseNoOcc);
 
@@ -2331,6 +2348,7 @@ export function candidatsDeRemplacement(
     candidates = candidates.filter((i) => {
       if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp) return false;
       if (i.meteoMaxTemp != null && weather.temp > i.meteoMaxTemp) return false;
+      if (exterieurTropChaud(i, weather.temp)) return false;
       return true;
     });
   }

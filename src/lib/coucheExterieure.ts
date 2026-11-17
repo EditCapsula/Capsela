@@ -4,10 +4,9 @@
  * Le moteur n'est pas réécrit : il compose la tenue comme avant, manteau compris (« LE MANTEAU PAR LE FROID », logic.ts, sous
  * SEUIL_MANTEAU). Cette fonction décide seulement, À L'AFFICHAGE, quelle pièce se montre à part, dans « Pour l'extérieur » :
  *
- *   · un MANTEAU (catégorie `manteau` : manteau, trench, caban, doudoune, parka, imperméable — data.ts), quand la météo du jour est
- *     connue ET sous SEUIL_MANTEAU, le seuil où le moteur l'ajoute PAR LE FROID. C'est le seul cas où un manteau entre dans une tenue
- *     comme couche de dessus ajoutée pour la météo : le seuil est celui du moteur, aucun n'est inventé ;
- *   · au-dessus, un manteau que le moteur a mis dans la tenue (un trench porté comme pièce de style) reste DANS le look ;
+ *   · un MANTEAU (catégorie `manteau` : manteau, trench, caban, doudoune, parka, imperméable — data.ts), dès que la météo du jour est
+ *     connue, sous SEUIL_SANS_EXTERIEUR (22 °C) et hors maison (Cocooning, Télétravail) — 17/11/2026, arbitré ; avant, sous SEUIL_MANTEAU
+ *     seulement, un trench porté au-dessus restait dans le look. Le choix du manteau suit ses bornes de température (meteo_max_temp) ;
  *   · une VESTE (blazer, veste légère…) reste toujours dans le look : c'est une pièce de la tenue, pas un manteau extérieur ;
  *   · sans météo connue, rien n'est séparé : on ne présente jamais une recommandation « selon la météo » sans météo.
  *
@@ -15,7 +14,7 @@
  */
 
 import { vestePlusLongueQueLeManteau } from "./forme";
-import { SEUIL_MANTEAU } from "./logic";
+import { SEUIL_SANS_EXTERIEUR } from "./logic";
 import type { Item } from "./types";
 
 export interface TenueSeparee {
@@ -54,11 +53,21 @@ export function separerCoucheExterieure(
    * le manteau de la tenue est plus court que la veste qu'il couvre (R-B25, la veste de formalité reste), « on propose une pièce de la
    * capsule qui fonctionne avec la tenue ».
    */
-  candidatsCapsule: Item[] = []
+  candidatsCapsule: Item[] = [],
+  /**
+   * Vrai à la maison (estContexteMaison : Cocooning, Télétravail) — 17/11/2026, arbitré : « tout manteau dans la strate Extérieur, sauf en
+   * Cocooning et en télétravail ». Rien n'y est séparé ni proposé.
+   */
+  chezSoi = false
 ): TenueSepareeEtendue {
-  const froid = typeof temperature === "number" && Number.isFinite(temperature) && temperature < SEUIL_MANTEAU;
+  // TOUT MANTEAU À PART SOUS 22 °C (17/11/2026, arbitré par la propriétaire : « ce n'est pas pour toutes les températures, c'est pour
+  // en dessous de 22 degrés » ; remplace « par le froid seulement, sous SEUIL_MANTEAU » du 04/11) : météo connue, hors maison et sous
+  // SEUIL_SANS_EXTERIEUR, le manteau de la tenue se montre dans « Pour l'extérieur » ; une tenue sans manteau reçoit le premier que le
+  // moteur admet (candidatsDeRemplacement : ses bornes meteo_max_temp choisissent un trench à 16°). À partir de 22 °C, aucune strate.
+  // Jamais de manteau inventé : sans candidat, rien.
+  const meteoConnue = typeof temperature === "number" && Number.isFinite(temperature);
   const rien = { remplace: null, conseilManteauPlusLong: false };
-  if (!froid) return { principal: pieces, exterieur: null, suggere: false, ...rien };
+  if (!meteoConnue || chezSoi || temperature >= SEUIL_SANS_EXTERIEUR) return { principal: pieces, exterieur: null, suggere: false, ...rien };
   const exterieur = pieces.find((p) => p.cat === "manteau") ?? null;
   if (exterieur) {
     const principal = pieces.filter((p) => p.id !== exterieur.id);

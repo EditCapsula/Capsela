@@ -31,6 +31,7 @@ export function HeroTenue({
   temperature,
   quand,
   candidatsExterieur,
+  chezSoi = false,
   indicateurs,
   badge,
   onPiece,
@@ -51,6 +52,8 @@ export function HeroTenue({
   quand?: string;
   /** Les manteaux que le moteur admet ici : par le froid, une tenue sans manteau en reçoit un, à part (separerCoucheExterieure). */
   candidatsExterieur?: Item[];
+  /** À la maison (Cocooning, Télétravail) : rien n'est séparé ni proposé (17/11/2026, coucheExterieure.ts). */
+  chezSoi?: boolean;
   /** La ligne d'indicateurs sous le visuel (IndicateursTenue), quand l'écran en a. */
   indicateurs?: React.ReactNode;
   /** Une pastille à droite du surtitre (« Ton dressing + ta capsule »…). */
@@ -62,7 +65,7 @@ export function HeroTenue({
   onPiece?: (it: Item, look: Item[]) => void;
 }) {
   const ouvrirFiche = useOuvrirPiece();
-  const { principal, exterieur, conseilManteauPlusLong } = separerCoucheExterieure(piecesRecues, temperature, candidatsExterieur);
+  const { principal, exterieur, conseilManteauPlusLong } = separerCoucheExterieure(piecesRecues, temperature, candidatsExterieur, [], chezSoi);
   const pieces = principal;
   const ouvrirPiece = onPiece ? (it: Item) => onPiece(it, pieces) : ouvrirFiche;
   const total = pieces.length;

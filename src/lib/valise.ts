@@ -1,4 +1,5 @@
 import type { CoupePreferee } from "./preferencesSilhouette";
+import { ORDRE_PIECES } from "./ordrePieces";
 import { meilleurTirageMorphologique } from "./silhouetteRonde";
 import { previsionPour, type Prevision } from "./prevision";
 import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
@@ -921,7 +922,7 @@ const CATEGORIE_COURTE: Record<CategoryKey, string> = {
   bijou: "bijou",
   accessoire: "accessoire",
 };
-const ORDRE_RESUME: CategoryKey[] = ["robe", "combinaison", "haut", "pull", "pantalon", "jean", "jupe", "short", "veste", "manteau", "chaussures", "sac", "bijou", "accessoire"];
+const ORDRE_RESUME = ORDRE_PIECES; // ordrePieces.ts : le même ordre que l'affichage des tenues
 
 /**
  * Le nom d'un look, fait de ses pièces : « Chemise · Pantalon · Mocassins ·

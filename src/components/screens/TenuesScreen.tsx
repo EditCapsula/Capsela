@@ -27,7 +27,7 @@ import { useCapsela } from "@/lib/store";
 import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { RailPiecesTenue } from "@/components/HeroTenue";
-import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, fraicheurDuSoir, isCompleteOutfit, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
+import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, estContexteMaison, fraicheurDuSoir, isCompleteOutfit, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
 
 /** Première lettre en capitale : « il va faire frais ce soir » en tête de phrase. */
@@ -378,33 +378,35 @@ export default function TenuesScreen() {
    * elle, rien n'est séparé (le manteau reste dans le look, comme avant) : aucune recommandation « selon la météo » sans météo.
    */
   const tempReelle = temperatureReelle({ decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp, minDuJour: jourConsulte.minDuJour });
-  // Les manteaux que le moteur admet ici (même appel que « Changer cette pièce ») : seulement par le froid, et pour proposer un manteau
-  // quand la tenue n'en a pas (04/11/2026). « Voir une autre proposition » fait passer un autre de ces candidats devant.
+  // Les manteaux que le moteur admet ici (même appel que « Changer cette pièce ») : sous 22 °C hors maison depuis le 17/11/2026
+  // (avant : par le froid seulement), pour proposer un manteau quand la tenue n'en a pas (04/11/2026). « Voir une autre proposition » fait passer un autre de ces candidats devant.
   const [manteauChoisi, setManteauChoisi] = useState<number | null>(null);
+  // À la maison (Cocooning, Télétravail), ni manteau à part ni manteau proposé (17/11/2026, arbitré).
+  const chezSoi = estContexteMaison(state.occasion || "all", state.workMode);
   const candidatsManteau = useMemo(() => {
-    if (tempReelle == null || tempReelle >= SEUIL_MANTEAU) return [];
+    if (tempReelle == null || chezSoi) return [];
     const c = candidatsDeRemplacement(outfitPieces, displayPool, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour);
     const choisi = c.find((i) => i.id === manteauChoisi);
     return choisi ? [choisi, ...c.filter((i) => i.id !== choisi.id)] : c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tempReelle, state.outfit, displayPool, state.occasion, state.workMode, state.dateContext, meteoDuJour, manteauChoisi]);
+  }, [tempReelle, chezSoi, state.outfit, displayPool, state.occasion, state.workMode, state.dateContext, meteoDuJour, manteauChoisi]);
   // Les manteaux de la CAPSULE admis pour la tenue (12/11/2026, R-B25 arbitré) : proposés quand le manteau de la tenue est plus court que
   // sa veste et que le dressing n'en a pas d'assez long ; sinon « Pour finaliser ta tenue » (separerCoucheExterieure).
   // « Voir une autre proposition » fait passer le manteau choisi devant, de la capsule comme du dressing.
   const candidatsCapsule = useMemo(() => {
-    if (tempReelle == null || tempReelle >= SEUIL_MANTEAU) return [];
+    if (tempReelle == null || chezSoi) return [];
     const c = candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour);
     const choisi = c.find((i) => i.id === manteauChoisi);
     return choisi ? [choisi, ...c.filter((i) => i.id !== choisi.id)] : c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tempReelle, state.outfit, defaultCapsule, state.occasion, state.workMode, state.dateContext, meteoDuJour, manteauChoisi]);
+  }, [tempReelle, chezSoi, state.outfit, defaultCapsule, state.occasion, state.workMode, state.dateContext, meteoDuJour, manteauChoisi]);
   const {
     principal: piecesDuLook,
     exterieur,
     suggere: exterieurSuggere,
     remplace: manteauRemplace,
     conseilManteauPlusLong,
-  } = separerCoucheExterieure(outfitPieces, tempReelle, candidatsManteau, candidatsCapsule);
+  } = separerCoucheExterieure(outfitPieces, tempReelle, candidatsManteau, candidatsCapsule, chezSoi);
   const [exterieurOuvert, setExterieurOuvert] = useState(false);
   // « Je le porte aussi » : le manteau n'est compté comme porté que si on le choisit. Revient à non à chaque nouveau manteau.
   const [porterPour, setPorterPour] = useState<number | null>(null);

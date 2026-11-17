@@ -9,6 +9,8 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Le fond des barres système (FondSysteme.java) : enregistré avant le démarrage de Capacitor.
         registerPlugin(FondSysteme.class);
+        // Les restrictions de batterie (ReglagesBatterie.java) : la notification de la tenue du jour arrive à l'heure sans elles.
+        registerPlugin(ReglagesBatterie.class);
         super.onCreate(savedInstanceState);
     }
 }
