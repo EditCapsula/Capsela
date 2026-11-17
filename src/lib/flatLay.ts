@@ -841,8 +841,9 @@ export function composerFlatLay(
         q.l *= f;
         q.h *= f;
       }
-      const moyennes = dessus.length ? [...dessus, ...autres, ...chaussures] : [...sac, ...autres, ...chaussures];
-      const petitesPieces = [...(dessus.length ? sac : []), ...droiteposee.filter(collants), ...petits];
+      // Avec une veste, elle a sa colonne à elle, à la taille du haut ; sac, chaussures et petites pièces se rangent à côté.
+      const moyennes = dessus.length ? [...dessus, ...autres] : [...sac, ...autres, ...chaussures];
+      const petitesPieces = [...(dessus.length ? [...sac, ...chaussures] : []), ...droiteposee.filter(collants), ...petits];
       const ajuster = (c: PlacementFlatLay[]) => {
         if (!c.length) return c;
         const ecarts = ecartV * (c.length - 1);
@@ -857,19 +858,49 @@ export function composerFlatLay(
       const cols = [moyennes, petitesPieces].filter((c) => c.length);
       // Deux colonnes qui tiennent ensemble sous la hauteur principale n'en font qu'une : la planche est plus large, donc plus grande.
       if (cols.length === 2 && hauteurDe(cols[0]) + ecartV + hauteurDe(cols[1]) <= H) cols.splice(0, 2, [...cols[0], ...cols[1]]);
-      cols.forEach(ajuster);
+      cols.forEach((c) => (c.some((q) => DESSUS.includes(q.cat)) ? c : ajuster(c)));
       // LES PIÈCES PRINCIPALES GARDENT LA HAUTEUR DE LA CARTE (vu au premier rendu : trois colonnes à leur taille élargissaient la planche,
       // et la robe rétrécissait d'un tiers). La largeur que les colonnes de côté peuvent prendre se déduit de la hauteur utile : si elles
-      // la dépassent, elles rétrécissent ensemble (au plus de 40 %), jamais les pièces principales.
+      // la dépassent, elles rétrécissent ensemble (au plus de 15 %), jamais les pièces principales ; au-delà, toute la planche se resserre.
       const largeurDe = (c: PlacementFlatLay[]) => Math.max(...c.map((q) => q.l));
       const largeurPrincipale = largeurDe(premiere);
       const permise = (largeurUtile * H) / hauteurUtile - largeurPrincipale - ecartH * cols.length;
-      const prise = cols.reduce((t, c) => t + largeurDe(c), 0);
-      if (prise > permise && prise > 0) {
-        const f = Math.max(0.6, permise / prise);
+      // LA VESTE GARDE LA TAILLE DU HAUT (17/11/2026, demandé sur l'avant / après : « agrandis la veste, elle doit avoir à peu près la même
+      // taille que le haut ») : ni la hauteur de sa colonne ni la largeur permise ne la rétrécissent ; ses voisines plient à sa place.
+      const veste = cols.flat().find((q) => DESSUS.includes(q.cat));
+      if (veste) {
+        const hautPose = premiere.find((q) => HAUTS.includes(q.cat));
+        const cible = hautPose ? hautPose.h : PROPORTION_PIECE[veste.cat]! * U;
+        const ratioV = veste.l / veste.h;
+        veste.h = cible;
+        veste.l = Math.min(largeurMax, cible * ratioV);
+        veste.h = veste.l / ratioV;
+      }
+      const largeurSans = (c: PlacementFlatLay[]) => Math.max(0, ...c.filter((q) => q !== veste).map((q) => q.l));
+      const fixe = veste ? veste.l : 0;
+      const prise = cols.reduce((t, c) => t + (c.includes(veste!) ? Math.max(0, largeurSans(c) - fixe) : largeurDe(c)), 0);
+      const reste = permise - fixe;
+      if (prise > reste && prise > 0) {
+        // Au plus de 15 % : en deçà, sac et chaussures ne se lisaient plus (vu au rendu) ; c'est alors toute la planche qui se resserre.
+        const f = Math.max(0.85, Math.max(0, reste) / prise);
         for (const q of cols.flat()) {
+          if (q === veste) continue;
           q.l *= f;
           q.h *= f;
+        }
+      }
+      // La colonne de la veste ne dépasse pas la hauteur principale : ses voisines rétrécissent, pas elle.
+      for (const c of cols) {
+        if (!veste || !c.includes(veste)) continue;
+        const autres = c.filter((q) => q !== veste);
+        const dispo = H - veste.h - ecartV * (c.length - 1);
+        const brute = autres.reduce((t, q) => t + q.h, 0);
+        if (brute > dispo && brute > 0) {
+          const f = Math.max(0.5, dispo / brute);
+          for (const q of autres) {
+            q.l *= f;
+            q.h *= f;
+          }
         }
       }
       return [premiere.slice(), ...cols];
