@@ -29,3 +29,17 @@ Un effet du store les tire une fois la tenue du jour posée, seulement pour aujo
 - **Plan du jour et slides** (signalé : « il manque une tenue Soirée, il n'y a que deux slides ») : un plan pour aujourd'hui prenait toujours la slide Travail ; un plan « Soirée » faisait donc disparaître la proposition Travail, puis la proposition Soirée tombait (mêmes pièces principales que le plan, écartées comme déjà montrées). Désormais le plan occupe la slide de SON occasion, déplacée en tête ; un plan d'une occasion sans slide (sport, voyage…) garde la première place (`composerSlides`, testé).
 - **Pièce touchée sur l'accueil** : la fiche détaillée complète s'ouvre dans une feuille posée sur l'accueil (`FicheEnFeuille`, l'écran `PieceScreen` tel quel) ; le retour, le voile, la poignée et Échap la referment. Ailleurs, la fiche s'ouvre en page, comme avant.
 - **« Portée aujourd'hui »** : après « Porter cette tenue », la carte de la tenue du jour le dit (coche terracotta + texte, `MentionPortee`). Reconnue par `outfitValidated` ou par une tenue du Journal d'aujourd'hui faite des mêmes pièces. **Limite** : après un rechargement, la tenue du jour est recalculée par le moteur et peut différer de celle portée ; la mention n'apparaît alors pas. Afficher la tenue portée à la place de la proposition serait une décision produit distincte.
+
+## La carte du jour avant la maquette « Tenue du jour » (sauvegarde du 17/11/2026)
+
+La maquette « Capsela — Tenue du jour » a été codée sur l'accueil le 17/11/2026 (commit `5121616`) : le surtitre devient le sélecteur
+d'occasion (« POUR LE TRAVAIL ▾ », `ChoisirMaTenue.tsx`), « Porter cette tenue » devient l'action principale (`BoutonPorter`,
+`CarrouselHero.tsx`), « Voir le look » passe sous le titre (`LienVoirLook`), la confirmation passe par `ToastCapsela` avec « Annuler »
+(`annulerPorteeDuJour`, `pieceDeRetour`). La propriétaire l'a gardée en production en demandant de sauvegarder la version d'avant : « il est
+probable que l'on revienne dessus ».
+
+**La version d'avant** est le commit `7411a00` (sur `main` dans l'historique de la fusion) : surtitre ✦ fixe, bouton « Voir le look » dans
+la colonne du texte, puis « Sauvegarder | Autre tenue ». Pour la retrouver : `git show 7411a00:src/components/CarrouselHero.tsx` et
+`git show 7411a00:src/components/screens/HomeScreen.tsx` ; seuls ces deux fichiers portent la carte. À garder en tout cas, revenir ou non
+sur la carte : la planche agrandie (`.grille-hero`, `globals.css`) et les réglages de la recette (`flatLay.ts` : CHEVAUCHEMENT_RECETTE,
+HAUTEUR_COTES_RECETTE, CHAUSSURES_SOUS_VESTE, PROPORTION_COLLANTS_RECETTE), demandés séparément.
