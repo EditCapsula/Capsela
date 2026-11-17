@@ -967,8 +967,8 @@ export default function PlanifierScreen() {
    * manteau ajouté par le froid se montre à part, avec la PRÉVISION de l'événement (meteoMoment) — sans prévision, rien n'est séparé.
    * Une composition reprise (photo d'un avis, plan déjà fait) reste telle qu'elle a été composée. Le plan enregistre toutes les pièces.
    */
-  // Les manteaux que le moteur admet pour cette date (le même pool que la composition) : une tenue sans manteau en reçoit un. À toute
-  // température hors maison depuis le 17/11/2026 (avant : par le froid seulement) ; leurs bornes choisissent la pièce.
+  // Les manteaux que le moteur admet pour cette date (le même pool que la composition) : une tenue sans manteau en reçoit un. Sous 22 °C
+  // hors maison depuis le 17/11/2026 (avant : par le froid seulement) ; leurs bornes choisissent la pièce.
   const chezSoiResultat = estContexteMaison(occ ?? "all", workMode);
   // LA MINIMALE DU CRÉNEAU décide de la couche extérieure (16/11/2026, arbitré : « avec le minimum du jour », comme l'accueil) ; le moteur
   // garde la moyenne du créneau pour composer.

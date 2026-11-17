@@ -47,7 +47,7 @@ describe("la tenue et sa couche extérieure", () => {
     expect(r.exterieur).toBe(manteau);
     expect(r.suggere).toBe(true);
     expect(r.principal).toEqual(t);
-    // 17/11/2026 : à toute température. Le choix suit les candidats que le moteur admet (leurs bornes) : à 18°, le trench, rien sans candidat.
+    // 17/11/2026 : sous 22 °C, plus seulement par le froid. Le choix suit les candidats que le moteur admet (leurs bornes) : à 18°, le trench, rien sans candidat.
     expect(separerCoucheExterieure(t, 18, [trench]).exterieur).toBe(trench);
     expect(separerCoucheExterieure(t, 18, []).exterieur).toBeNull();
   });
@@ -67,12 +67,20 @@ describe("la tenue et sa couche extérieure", () => {
     expect(principal).toContain(blazer);
   });
 
-  it("9. tout manteau à part, quelle que soit la température (17/11/2026, arbitré : avant, un trench au-dessus de 12° restait dans le look)", () => {
+  it("9. tout manteau à part sous 22 °C (17/11/2026, arbitré : avant, un trench au-dessus de 12° restait dans le look)", () => {
     for (const t of [SEUIL_MANTEAU, 16, 20]) {
       const { principal, exterieur } = separerCoucheExterieure([robe, ballerines, trench], t);
       expect(exterieur).toBe(trench);
       expect(principal).not.toContain(trench);
     }
+  });
+
+  it("9 ter. à partir de 22 °C, aucune strate extérieure, ni manteau séparé ni manteau proposé (17/11/2026)", () => {
+    expect(separerCoucheExterieure([robe, ballerines, trench], 21).exterieur).toBe(trench);
+    const r = separerCoucheExterieure([robe, ballerines, trench], 22, [manteau], [manteau]);
+    expect(r.exterieur).toBeNull();
+    expect(r.conseilManteauPlusLong).toBe(false);
+    expect(separerCoucheExterieure([robe, ballerines], 25, [trench]).exterieur).toBeNull();
   });
 
   it("9 bis. à la maison (Cocooning, Télétravail) : rien n'est séparé ni proposé", () => {

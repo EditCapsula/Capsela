@@ -378,7 +378,7 @@ export default function TenuesScreen() {
    * elle, rien n'est séparé (le manteau reste dans le look, comme avant) : aucune recommandation « selon la météo » sans météo.
    */
   const tempReelle = temperatureReelle({ decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp, minDuJour: jourConsulte.minDuJour });
-  // Les manteaux que le moteur admet ici (même appel que « Changer cette pièce ») : à toute température hors maison depuis le 17/11/2026
+  // Les manteaux que le moteur admet ici (même appel que « Changer cette pièce ») : sous 22 °C hors maison depuis le 17/11/2026
   // (avant : par le froid seulement), pour proposer un manteau quand la tenue n'en a pas (04/11/2026). « Voir une autre proposition » fait passer un autre de ces candidats devant.
   const [manteauChoisi, setManteauChoisi] = useState<number | null>(null);
   // À la maison (Cocooning, Télétravail), ni manteau à part ni manteau proposé (17/11/2026, arbitré).

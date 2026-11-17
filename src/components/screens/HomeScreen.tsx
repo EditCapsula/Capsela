@@ -210,7 +210,7 @@ export default function HomeScreen() {
    * montre le look seul ; le manteau ajouté par le froid se montre dessous, dans « Pour l'extérieur », qui mène à la page Tenue.
    */
   const tempReelle = temperatureReelle({ decalage: jourConsulte.decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp, minDuJour: jourConsulte.minDuJour });
-  // Les manteaux que le moteur admet pour cette occasion et cette météo (17/11/2026 : à toute température, hors maison — plus seulement
+  // Les manteaux que le moteur admet pour cette occasion et cette météo (17/11/2026 : sous 22 °C, hors maison — plus seulement
   // par le froid) : une tenue sans manteau en reçoit un, à part. Leurs bornes choisissent un trench à 16°, rien à partir de 22°.
   const manteauxPour = (pieces: Item[], occasion: OccasionKey) =>
     tempReelle != null && !estContexteMaison(occasion, state.workMode) && pieces.length
