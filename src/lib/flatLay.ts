@@ -864,9 +864,10 @@ export function composerFlatLay(
         q.l *= f;
         q.h *= f;
       }
-      // Avec une veste, elle a sa colonne à elle, à la taille du haut ; sac, chaussures et petites pièces se rangent à côté.
-      const moyennes = dessus.length ? [...dessus, ...autres] : [...sac, ...autres, ...chaussures];
-      const petitesPieces = [...(dessus.length ? [...sac, ...chaussures] : []), ...droiteposee.filter(collants), ...petits];
+      // Avec une veste, elle a sa colonne à elle, à la taille du haut, et le sac dessous (17/11/2026, demandé : « le sac mets-le en
+      // dessous de la veste ») ; les chaussures et les petites pièces se rangent à côté.
+      const moyennes = dessus.length ? [...dessus, ...sac, ...autres] : [...sac, ...autres, ...chaussures];
+      const petitesPieces = [...(dessus.length ? chaussures : []), ...droiteposee.filter(collants), ...petits];
       const Hc = H * hauteurCotes;
       const ajuster = (c: PlacementFlatLay[]) => {
         if (!c.length) return c;
