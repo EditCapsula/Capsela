@@ -492,14 +492,9 @@ export default function HomeScreen() {
           if (!enSejour) quota.demander(() => actions.autreIdeeSlide(slide.id as SlideId));
         }}
         autreDesactive={quota.tirageEnCours || (enSejour && !duJour)}
-        pied={
-          blocSlide || (duJour && planApplique?.alerte) ? (
-            <>
-              {blocSlide && <div style={{ gridColumn: "1 / -1" }}>{blocSlide}</div>}
-              {duJour && planApplique?.alerte && <AlerteMeteoLook planApplique={planApplique} />}
-            </>
-          ) : undefined
-        }
+        // « Pour l'extérieur » au-dessus des deux actions (17/11/2026, demandé), comme sur la carte sans carrousel ; l'alerte météo reste dessous.
+        avantActions={blocSlide ?? undefined}
+        pied={duJour && planApplique?.alerte ? <AlerteMeteoLook planApplique={planApplique} /> : undefined}
         portee={duJour && porteeAujourdhui}
         pourquoi={!(slide.source === "plan" && texteHero) && !enSejour}
         onPiece={toucherPiece(
@@ -525,6 +520,15 @@ export default function HomeScreen() {
     label: passee?.weatherLabel ?? null,
     onChange: setRetro,
   };
+  /** La carte qui porte le jour, sa météo et la tenue (17/11/2026). */
+  const carteDuJour = (contenu: React.ReactNode) => (
+    <div className="mx-4 rounded-hero overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+      <EnTeteJour retro={retroJour} className="px-2 pt-[6px]" />
+      <div aria-hidden="true" className="mx-4 mt-[4px] border-t border-border" />
+      {contenu}
+    </div>
+  );
+
   return (
     <div ref={zoneAccueil} onScroll={defilementAccueil.onScroll} className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-safe-nav">
       <div className="px-6">
@@ -553,15 +557,22 @@ export default function HomeScreen() {
           du carrousel aussi, gardés tels qu'ils sont dans l'app). En tête, le jour et sa date, la ville et la météo, max · min et le « i » de
           la source (EnTeteJour, mêmes données et mêmes gestes que la barre d'avant) ; dessous les tenues, sans cadre à elles ; puis les
           points. Le surtitre de chaque tenue ne redit plus le jour. */}
-      <div className="mx-4 mt-3 rounded-hero overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
-        <EnTeteJour retro={retroJour} className="px-2 pt-[6px]" />
-        <div aria-hidden="true" className="mx-4 mt-[4px] border-t border-border" />
       {carrouselActif ? (
-        // data-tour : la cible de la visite guidée « Aujourd'hui » (lib/visites.ts).
+        // data-tour : la cible de la visite guidée « Aujourd'hui » (lib/visites.ts). Les points du carrousel restent SOUS la carte
+        // (17/11/2026, demandé après un essai à l'intérieur) : seule la piste est dans la carte (`enveloppe`).
         <div data-tour="accueil-tenue">
-          <CarrouselHero className="pb-[8px]" classeSlide="" slides={slides.map(carteSlide)} libelles={slides.map((sl) => sl.surtitre)} onAvantDerniere={actions.etendreCarrousel} />
+          <CarrouselHero
+            className="mt-3"
+            classeSlide=""
+            enveloppe={(piste) => carteDuJour(piste)}
+            slides={slides.map(carteSlide)}
+            libelles={slides.map((sl) => sl.surtitre)}
+            onAvantDerniere={actions.etendreCarrousel}
+          />
         </div>
       ) : (
+      <div className="mt-3">
+      {carteDuJour(
       // LE LOOK DU JOUR : fond blanc cassé des cartes (--color-card) et leur filet (--color-border), comme les slides du carrousel (option 3h,
       // 14/10/2026 : l'accueil, puis Tenue le même jour ; les autres hero gardent --color-hero-background). Texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
       // jour passé, aucune tenue possible, la tenue qui se compose, la tenue. Seul, quand le carrousel n'a pas lieu d'être.
@@ -737,6 +748,7 @@ export default function HomeScreen() {
       </div>
       )}
       </div>
+      )}
 
       {/* ══ EXPLORER CAPSELA — « Tout pour ton style » : les quatre univers de l'app. Sous le carrousel, 8 px au lieu de 28 (15/10/2026,
           demandé) : les repères de pagination ajoutent déjà 32 px sous la slide ; le repère se trouve ainsi à égale distance de la slide et du surtitre. */}
