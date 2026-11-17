@@ -30,6 +30,7 @@ import { CENTRE_AIDE, CENTRE_AIDE_VALIDE } from "@/lib/centreAide";
 import { DEFAULT_PREFS, WORK_DAYS, type ProfilePrefs } from "@/lib/profile";
 import { ajouterPeriode, jourLocal, libellePeriode, periodesAVenir, periodesDe, periodeValide, retirerPeriode } from "@/lib/conges";
 import Input from "@/components/Input";
+import { batterieLibre, batterieReglableIci, ouvrirReglagesBatterie } from "@/lib/reglagesBatterie";
 import { diagnostiquerNotifications, envoyerNotificationEssai, erreurNotifications, notificationsDisponiblesIci, synchroniserNotifications, type DiagnosticNotifications, type EtatNotifications } from "@/lib/notifications";
 import { useCapsela } from "@/lib/store";
 import type { VueReglages } from "@/lib/types";
@@ -165,10 +166,56 @@ function DiagnosticNotif({
               ? "Ton téléphone bloque les notifications de Capsela. Autorise-les dans ses réglages (Applications, Capsela, Notifications)."
               : essai === "indisponible"
                 ? `Le téléphone n'a pas pu programmer la notification d'essai${erreurNotifications() ? ` (code ${erreurNotifications()})` : ""}.`
-                : "Android peut retarder la notification de la tenue du jour pour économiser la batterie. Si elle n'arrive pas, retire Capsela des applications mises en veille, dans les réglages de batterie du téléphone."}
+                : "Android peut retarder la notification de la tenue du jour pour économiser la batterie."}
         </div>
       </div>
     </Card>
+  );
+}
+
+/**
+ * « POUR LA RECEVOIR À L'HEURE » (17/11/2026, arbitré : notification programmée à 7 h, reçue après 10 h). Une batterie restreinte
+ * retient la notification jusqu'au réveil du téléphone (reglagesBatterie.ts). Android seulement, notification activée, et seulement
+ * quand Capsela est restreinte — ou quand l'état est inconnu (ancienne version de l'app : la phrase, sans bouton). Relu au retour
+ * dans l'app, pour disparaître une fois la restriction levée.
+ */
+function AideBatterie({ actif }: { actif: boolean }) {
+  const [libre, setLibre] = useState<boolean | null | undefined>(undefined);
+  const [echec, setEchec] = useState(false);
+  useEffect(() => {
+    if (!actif || !batterieReglableIci()) return;
+    let fini = false;
+    const lire = () => void batterieLibre().then((l) => !fini && setLibre(l));
+    lire();
+    const auRetour = () => document.visibilityState === "visible" && lire();
+    document.addEventListener("visibilitychange", auRetour);
+    return () => {
+      fini = true;
+      document.removeEventListener("visibilitychange", auRetour);
+    };
+  }, [actif]);
+  if (!actif || !batterieReglableIci() || libre === undefined || libre === true) return null;
+  return (
+    <div className="px-4 py-[12px] border-t border-border">
+      <div className="text-[11px] text-muted-3 leading-[1.45]">
+        Pour la recevoir à l&apos;heure, retire les restrictions de batterie de Capsela : dans la fiche de l&apos;application, Batterie, puis
+        « Non restreinte ».
+      </div>
+      {libre === false && (
+        <button
+          type="button"
+          onClick={async () => setEchec(!(await ouvrirReglagesBatterie()))}
+          className="min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer"
+        >
+          Ouvrir les réglages de batterie
+        </button>
+      )}
+      {echec && (
+        <div className="text-[11px] text-rust leading-[1.45]" role="alert">
+          Le téléphone n&apos;a pas ouvert ses réglages : Paramètres, Applications, Capsela, Batterie.
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -435,6 +482,7 @@ export default function PreferencesScreen() {
               className="border-none bg-transparent text-[13px] text-ink font-sans outline-none min-h-[32px]"
             />
           </Ligne>
+          <AideBatterie actif={prefs.notifEnabled} />
           {/* La phrase « Les notifications arrivent dans l'application Capsela sur Android. Le site n'en envoie pas. », affichée
               sur le site, a été retirée le 05/11/2026 (demandé : « cette phrase ne sert à rien »). */}
           {prefs.notifEnabled && (etatNotif === "refusee" || (etatNotif === null && diagNotif && !diagNotif.autorisee)) && (
