@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estPlanValise, looksValiseDuJour, lookSuivant, lookSuivantConforme, piecesDeLaValise, valiseDuJour, valisePeutHabiller } from "../valiseDuJour";
+import { estPlanValise, looksValiseDuJour, lookSuivant, lookSuivantConforme, piecesDeLaValise, sejourEnCours, valiseDuJour, valisePeutHabiller } from "../valiseDuJour";
 import type { ValiseGardee } from "../valises";
 import type { Item } from "../types";
 
@@ -114,5 +114,29 @@ describe("valisePeutHabiller (30/10/2026)", () => {
     expect(valisePeutHabiller([piece(5, "robe")])).toBe(true);
     expect(valisePeutHabiller([piece(3, "chaussures"), piece(4, "sac"), piece(1, "haut")])).toBe(false);
     expect(valisePeutHabiller([])).toBe(false);
+  });
+});
+
+describe("sejourEnCours (17/11/2026, widget « Ton séjour en cours »)", () => {
+  it("jour X sur Y, tenues préparées = looks montrés par la valise", () => {
+    const r = sejourEnCours([valise()], "2026-10-26", pool);
+    expect(r?.valise.id).toBe("v1");
+    expect(r?.jour).toBe(2);
+    expect(r?.total).toBe(3);
+    expect(r?.tenues).toBe(2);
+    expect(sejourEnCours([valise()], "2026-10-25", pool)?.jour).toBe(1);
+    expect(sejourEnCours([valise()], "2026-10-27", pool)?.jour).toBe(3);
+  });
+  it("rien avant le départ ni après le retour", () => {
+    expect(sejourEnCours([valise()], "2026-10-24", pool)).toBeNull();
+    expect(sejourEnCours([valise()], "2026-10-28", pool)).toBeNull();
+  });
+  it("plusieurs valises : celle du séjour du jour", () => {
+    const autre = valise({ id: "v2", destination: "Rome", depart: "2026-11-02", retour: "2026-11-05" });
+    expect(sejourEnCours([autre, valise()], "2026-10-26", pool)?.valise.destination).toBe("Lisbonne");
+    expect(sejourEnCours([autre, valise()], "2026-11-03", pool)?.valise.destination).toBe("Rome");
+  });
+  it("un look dont une pièce n'est plus là ne compte pas", () => {
+    expect(sejourEnCours([valise()], "2026-10-26", pool.filter((p) => p.id !== 5))?.tenues).toBe(1);
   });
 });

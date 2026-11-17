@@ -146,12 +146,21 @@ export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<Re
  * pas lue). L'aperçu montre les pièces enregistrées du plan, jamais un visuel
  * générique ; une pièce retirée du dressing depuis n'y figure plus.
  */
-export function PlansDuJour({ depuis, className = "" }: { depuis: "home" | "tenues"; className?: string }) {
+export function PlansDuJour({
+  depuis,
+  className = "",
+  sansJourneeValise = false,
+}: {
+  depuis: "home" | "tenues";
+  className?: string;
+  /** Le look de la journée de la valise n'est pas rappelé : la carte « Ton séjour en cours » le remplace (accueil, 17/11/2026). */
+  sansJourneeValise?: boolean;
+}) {
   const { state, vestiairePool, jourConsulte, valiseConsultee, actions } = useCapsela();
   // Un plan dont la tenue est DÉJÀ celle du hero n'est pas rappelé dessous (14/10/2026, signalé : « inutile de remettre la carte, le hero pousse
   // la tenue planifiée »). Pendant un séjour, les looks de la valise de ce jour (journée écartée, soir) sont rappelés comme les autres
   // (20/10/2026, valiseDuJour.ts) ; les toucher ouvre la valise.
-  const deLaValise = [valiseConsultee?.journee, valiseConsultee?.soir].filter((t): t is TenuePlanifiee => !!t);
+  const deLaValise = [sansJourneeValise ? null : valiseConsultee?.journee, valiseConsultee?.soir].filter((t): t is TenuePlanifiee => !!t);
   const plans = [...plansDuJour(state.tenuesPlanifiees, jourLocal(jourConsulte.date)), ...deLaValise].filter(
     (t) => t.id !== state.planAppliqueId && !memeTenue(t.pieceIds, state.outfit)
   );

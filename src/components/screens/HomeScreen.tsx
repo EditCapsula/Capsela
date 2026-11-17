@@ -1,6 +1,8 @@
 "use client";
 
 import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
+import { SejourEnCours } from "@/components/SejourEnCours";
+import { sejourEnCours } from "@/lib/valiseDuJour";
 import TitrePage from "@/components/TitrePage";
 import { t } from "@/lib/langue";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
@@ -195,6 +197,8 @@ export default function HomeScreen() {
   // alors que state.outfit peut venir d'un style exploré ou d'une entrée
   // d'historique rejouée.
   const resolvePool = [...state.items, ...vestiairePool];
+  // LE SÉJOUR EN COURS (17/11/2026, SejourEnCours.tsx) : pendant un séjour, la carte du séjour remplace la ligne « Ta valise · La journée ».
+  const sejour = sejourEnCours(state.valises, jourLocal(jourConsulte.date), resolvePool);
   const piecesResolues = state.outfit
     .map((id) => resolvePool.find((i) => i.id === id))
     .filter((it): it is Item => Boolean(it));
@@ -537,7 +541,8 @@ export default function HomeScreen() {
           }}
         />
         {/* Ce qui est planifié ce jour-là (Planifier) : un rappel qui mène à la fiche du plan. Rien sans plan. */}
-        {retroActif === 0 && <PlansDuJour depuis="home" className="mt-3" />}
+        {retroActif === 0 && sejour && <SejourEnCours sejour={sejour} className="mt-3" />}
+        {retroActif === 0 && <PlansDuJour depuis="home" className="mt-3" sansJourneeValise={!!sejour} />}
         {/* LE PROCHAIN DÉPART (06/11/2026, rappelsValise.ts) : de J-7 à J-1, sous le jour et sa météo, avant la tenue — compacte, elle ne
             lui dispute pas la place. Seulement pour aujourd'hui : un autre jour consulté n'est pas « maintenant ». */}
         {rappelValise && retroActif === 0 && state.jourDecalage === 0 && <CarteProchainDepart rappel={rappelValise} className="mt-3" />}
