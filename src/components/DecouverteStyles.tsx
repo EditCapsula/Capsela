@@ -4,6 +4,8 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import Card from "@/components/Card";
 import { BoutonRond, CarteGlissante, FlecheParcours, IconeCoeur, IconeCroix } from "@/components/ParcoursVote";
+import { hauteurVisuelStyle } from "@/lib/tailleConteneur";
+import { useTailleConteneur } from "@/lib/useTailleConteneur";
 import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfigFor, visuelEtapeStyle, voterStyle, type Gender, type StyleId } from "@/lib/profile";
 
 /*
@@ -50,6 +52,10 @@ export default function DecouverteStyles({
   const choisi = styles.includes(id);
   const visuel = visuelEtapeStyle(gender, id);
   const looks = looksPortesStyle(gender, id);
+  // La largeur de la rangée, mesurée : la hauteur du visuel en pixels (17/11/2026, tailleConteneur.ts — sur iPhone avant iOS 16, le
+  // cqw ignoré effondrait la carte). Avant la mesure, l'expression d'origine.
+  const [rangee, tailleRangee] = useTailleConteneur<HTMLDivElement>();
+  const hauteurVisuel = tailleRangee ? `${Math.round(hauteurVisuelStyle(tailleRangee.w, looks.length > 0))}px` : `clamp(160px, ${looks.length > 0 ? 96 : 110}cqw, 460px)`;
   // Après un vote, le style suivant ; au bout, on repart du premier — revenir sur un style garde les choix déjà faits.
   const suivant = () => setIndex((i + 1) % ids.length);
   const voter = (vote: "aime" | "pasPourMoi") => {
@@ -90,10 +96,10 @@ export default function DecouverteStyles({
                 de l'écran, et la barre d'adresse du navigateur la réduisait de moitié. Elle suit désormais la largeur (cqw) ; sur un
                 écran court, la page défile jusqu'aux gestes, et glisser la carte vote sans défiler. Sans looks portés, le flat lay
                 seul, centré. */}
-            <div style={{ containerType: "inline-size" }}>
+            <div ref={rangee} style={{ containerType: "inline-size" }}>
               <div
                 className="flex justify-center gap-[8px]"
-                style={{ ["--h" as string]: `clamp(160px, ${looks.length > 0 ? 96 : 110}cqw, 460px)` }}
+                style={{ ["--h" as string]: hauteurVisuel }}
               >
                 <div className="relative flex-none">
                   <div
