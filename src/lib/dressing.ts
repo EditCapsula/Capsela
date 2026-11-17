@@ -689,6 +689,15 @@ export async function insertOutfitHistoryEntry(userId: string, entry: Omit<Histo
   return rowToHistoryEntry(data as OutfitHistoryRow);
 }
 
+/**
+ * Retire du Journal l'entrée portée à cet instant (17/11/2026, « Annuler » après « Porter cette tenue » sur l'accueil). Par l'instant
+ * et non par l'id : l'entrée locale garde son id provisoire tant que l'insertion n'a pas répondu. Policy de suppression : 0022.
+ */
+export async function deleteOutfitHistoryAt(userId: string, ts: number): Promise<void> {
+  const { error } = await getSupabase().from("outfit_history").delete().eq("user_id", userId).eq("occurred_at", new Date(ts).toISOString());
+  if (error) throw error;
+}
+
 interface SavedLookRow {
   id: number;
   user_id: string;

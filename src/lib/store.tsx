@@ -35,6 +35,7 @@ import {
   fetchSavedLooks,
   insertDressingItem,
   insertOutfitHistoryEntry,
+  deleteOutfitHistoryAt,
   insertSavedLook,
   upsertOutfitFeedback,
   updateDressingItem,
@@ -65,6 +66,10 @@ import { composeWardrobePool } from "./selectors";
 import { notifLookSauvegarde, notifPieceAjoutee, notifValiseEnregistree } from "./centreNotifications";
 import { noterNotifications } from "./notificationsStore";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
+import { cleSlideIds, porteeLe } from "./retourPiece";
+
+/** L'instant présent, lu au geste (porter, annuler : 17/11/2026) et jamais pendant un rendu. */
+const instantPresent = (): number => Date.now();
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
 import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSuggeree, type ResultatDemande } from "./avisStylisteClient";
 import { AVIS_A_RELIRE_APRES_MS, enregistrerAvis, enregistrerReconnaissanceAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
@@ -603,6 +608,13 @@ export interface Actions {
    * dans « Pour l'extérieur » (04/11/2026, coucheExterieure.ts), facultatif tant qu'on ne choisit pas de le porter.
    */
   wearOutfitToday: (sauf?: number[]) => void;
+  /**
+   * « Porter cette tenue » d'une slide de l'accueil (17/11/2026) : la tenue du jour suit wearOutfitToday ; une proposition entre au
+   * Journal telle quelle, sans devenir la tenue du jour. Une seule tenue portée par jour. `sauf` : comme pour wearOutfitToday.
+   */
+  porterCesPieces: (ids: number[], occasion: OccasionKey, sauf?: number[]) => void;
+  /** Défait la dernière tenue portée aujourd'hui (« Annuler » du message de confirmation, 17/11/2026). */
+  annulerPorteeDuJour: () => void;
   wearPieceToday: (id: number) => void;
   wearActiveToday: () => void;
   correctPiece: (id: number) => void;
@@ -3390,6 +3402,57 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         // un échec réseau ne doit jamais bloquer la validation de la tenue à l'écran.
         if (wornUpdates.length) updateDressingItemWorn(wornUpdates).catch((err) => reportDressingError("updateDressingItemWorn", err));
         insertOutfitHistoryEntry(userId, entry).catch((err) => reportDressingError("insertOutfitHistoryEntry", err));
+      }
+    },
+    porterCesPieces: (ids, occasion, sauf) => {
+      // LA TENUE DU JOUR elle-même : le chemin habituel (outfitValidated, garde anti double-clic).
+      const s = stateRef.current;
+      if (cleSlideIds(ids) === cleSlideIds(s.outfit)) return actions.wearOutfitToday(sauf);
+      // UNE PROPOSITION DU CARROUSEL (17/11/2026, « Porter cette tenue » sur chaque slide de l'accueil) : la tenue entre au Journal telle
+      // qu'elle est, sans devenir la tenue du jour (le carrousel et la tenue du jour ne bougent pas). Une seule tenue portée par jour.
+      if (s.jourDecalage > 0 || s.outfitValidated || porteeLe(s.history, instantPresent())) return;
+      const exclus = new Set(sauf ?? []);
+      const portees = ids.filter((id) => !exclus.has(id));
+      const pieces = portees.map((id) => findPiece(poolRef.current, id, vestiaireRef.current)).filter((it): it is Item => Boolean(it));
+      if (!pieces.length || violatesOuterwearRule(pieces)) return;
+      const wornUpdates = s.items.filter((it) => portees.includes(it.id)).map((it) => ({ id: it.id, worn: 0, wornPrev: it.worn }));
+      const entry: HistoryEntry = {
+        id: "h" + instantPresent(),
+        ts: instantPresent(),
+        pieceIds: portees,
+        occasion,
+        temp: weatherRef.current.temp,
+        weatherLabel: weatherRef.current.label,
+      };
+      setState((st) => ({
+        ...st,
+        items: st.items.map((it) => (portees.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
+        lookCount: st.lookCount + 1,
+        history: [entry, ...st.history],
+      }));
+      if (isSupabaseConfigured && userId) {
+        if (wornUpdates.length) updateDressingItemWorn(wornUpdates).catch((err) => reportDressingError("updateDressingItemWorn", err));
+        insertOutfitHistoryEntry(userId, entry).catch((err) => reportDressingError("insertOutfitHistoryEntry", err));
+      }
+    },
+    annulerPorteeDuJour: () => {
+      // « ANNULER » APRÈS « PORTER CETTE TENUE » (17/11/2026) : la dernière tenue portée aujourd'hui quitte le Journal, ses pièces
+      // reprennent leur date de port d'avant (wornPrev), la tenue du jour redevient à porter.
+      const s = stateRef.current;
+      const entree = porteeLe(s.history, instantPresent());
+      if (!entree) return;
+      const ids = new Set(entree.pieceIds);
+      const restaures = s.items.filter((it) => ids.has(it.id)).map((it) => ({ id: it.id, worn: it.wornPrev === undefined ? null : it.wornPrev }));
+      setState((st) => ({
+        ...st,
+        items: st.items.map((it) => (ids.has(it.id) ? { ...it, worn: it.wornPrev === undefined ? null : it.wornPrev } : it)),
+        outfitValidated: false,
+        lookCount: Math.max(0, st.lookCount - 1),
+        history: st.history.filter((h) => h !== entree && h.id !== entree.id),
+      }));
+      if (isSupabaseConfigured && userId) {
+        if (restaures.length) updateDressingItemWorn(restaures).catch((err) => reportDressingError("updateDressingItemWorn", err));
+        deleteOutfitHistoryAt(userId, entree.ts).catch((err) => reportDressingError("deleteOutfitHistoryAt", err));
       }
     },
     wearPieceToday: (id) => {
