@@ -5,7 +5,7 @@ import { resolveHeroImage, resolveItemImage } from "@/lib/catalogImages";
 import { margesDe, type Marges } from "@/lib/catalogMarges";
 import { composerPlanche, composerTenue, formesSilhouette } from "@/lib/compositionEditoriale";
 import type { CategoryKey, Item } from "@/lib/types";
-import { styleLargeurPlanche } from "@/lib/tailleConteneur";
+import { styleTaillePlanche } from "@/lib/tailleConteneur";
 import { useTailleConteneur } from "@/lib/useTailleConteneur";
 
 /**
@@ -616,8 +616,7 @@ function CompositionPlanche({
         className="transition-opacity duration-[420ms] ease-out motion-reduce:transition-none"
         style={{
           position: "relative",
-          width: styleLargeurPlanche(tailleZone, hauteur),
-          aspectRatio: `100 / ${hauteur}`,
+          ...styleTaillePlanche(tailleZone, hauteur),
           opacity: attendreCadrage && !cadrage ? 0 : 1,
           transformOrigin: cadrage ? `${cadrage.ox}px ${cadrage.oy}px` : undefined,
           transform: cadrage ? `translate(${cadrage.dx}px, ${cadrage.dy}px) scale(${cadrage.s})` : undefined,
@@ -815,7 +814,7 @@ export function SilhouettePlanche({ formes, accentHero = false }: { formes: { ca
   if (!pieces.length) return null;
   return (
     <div ref={zone} aria-hidden="true" className="w-full h-full flex items-center justify-center" style={{ containerType: "size" }}>
-      <div style={{ position: "relative", width: styleLargeurPlanche(tailleZone, hauteur), aspectRatio: `100 / ${hauteur}` }}>
+      <div style={{ position: "relative", ...styleTaillePlanche(tailleZone, hauteur) }}>
         {pieces.map(({ item, role, case: c, aligne }, i) => {
           const delais = {
             ["--delai-entree" as string]: `${300 + i * 140}ms`,

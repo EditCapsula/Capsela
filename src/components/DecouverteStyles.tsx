@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import Card from "@/components/Card";
 import { BoutonRond, CarteGlissante, FlecheParcours, IconeCoeur, IconeCroix } from "@/components/ParcoursVote";
-import { hauteurVisuelStyle } from "@/lib/tailleConteneur";
+import { taillesDecouverteStyle } from "@/lib/tailleConteneur";
 import { useTailleConteneur } from "@/lib/useTailleConteneur";
 import { MAX_STYLES, exposedStyleIds, looksPortesStyle, retirerStyle, styleConfigFor, visuelEtapeStyle, voterStyle, type Gender, type StyleId } from "@/lib/profile";
 
@@ -55,7 +55,11 @@ export default function DecouverteStyles({
   // La largeur de la rangée, mesurée : la hauteur du visuel en pixels (17/11/2026, tailleConteneur.ts — sur iPhone avant iOS 16, le
   // cqw ignoré effondrait la carte). Avant la mesure, l'expression d'origine.
   const [rangee, tailleRangee] = useTailleConteneur<HTMLDivElement>();
-  const hauteurVisuel = tailleRangee ? `${Math.round(hauteurVisuelStyle(tailleRangee.w, looks.length > 0))}px` : `clamp(160px, ${looks.length > 0 ? 96 : 110}cqw, 460px)`;
+  // Largeur ET hauteur en pixels une fois mesurée, sans aspect-ratio (17/11/2026 : toujours cassé sur iPhone avec la seule hauteur).
+  const tailles = tailleRangee ? taillesDecouverteStyle(tailleRangee.w, looks.length > 0) : null;
+  const hauteurVisuel = `clamp(160px, ${looks.length > 0 ? 96 : 110}cqw, 460px)`;
+  const styleVisuel = tailles ? { width: tailles.visuel.w, height: tailles.visuel.h } : { height: "var(--h)", aspectRatio: "3 / 4" };
+  const styleLook = tailles ? { width: tailles.look.w, height: tailles.look.h } : { height: "calc((var(--h) - 16px) / 3)", aspectRatio: "4 / 5" };
   // Après un vote, le style suivant ; au bout, on repart du premier — revenir sur un style garde les choix déjà faits.
   const suivant = () => setIndex((i + 1) % ids.length);
   const voter = (vote: "aime" | "pasPourMoi") => {
@@ -104,7 +108,7 @@ export default function DecouverteStyles({
                 <div className="relative flex-none">
                   <div
                     className="rounded-bloc overflow-hidden bg-border"
-                    style={{ height: "var(--h)", aspectRatio: "3 / 4" }}
+                    style={styleVisuel}
                     onDragStart={(e) => e.preventDefault()}
                   >
                     {visuel && (
@@ -118,7 +122,7 @@ export default function DecouverteStyles({
                 {looks.length > 0 && (
                   <div className="flex flex-col gap-[8px] flex-none">
                     {looks.slice(0, 3).map((src, k) => (
-                      <div key={src} className="rounded-tuile overflow-hidden bg-border" style={{ height: "calc((var(--h) - 16px) / 3)", aspectRatio: "4 / 5" }}>
+                      <div key={src} className="rounded-tuile overflow-hidden bg-border" style={styleLook}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={src} alt={`${cfg.label}, look ${k + 1}`} width={900} height={1200} loading="lazy" decoding="async" className="w-full h-full object-cover object-top block" draggable={false} />
                       </div>

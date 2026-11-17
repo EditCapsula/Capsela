@@ -10,7 +10,7 @@ import { composerFlatLay, hauteurDuContexte, type ContexteFlatLay } from "@/lib/
 import { choisirTemplate } from "@/lib/flatLayTemplates";
 import type { CategoryKey, Item } from "@/lib/types";
 import { fermetureMaille } from "@/lib/attributes";
-import { styleLargeurPlanche } from "@/lib/tailleConteneur";
+import { styleTaillePlanche } from "@/lib/tailleConteneur";
 
 /**
  * LE FLAT LAY ÉDITORIAL DE CAPSELA (08/10/2026) — les pièces d'un look posées comme sur une planche de stylisme : une pièce
@@ -228,7 +228,7 @@ export function FlatLayCapsela({
       // Une planche vide reste montée (le cadre se mesure) mais ne capte aucun geste destiné à ce qui est dessous.
       style={{ containerType: "size", opacity: attendre ? 0 : 1, isolation: "isolate", pointerEvents: composition.length ? undefined : "none" }}
     >
-      <div style={{ position: "relative", width: styleLargeurPlanche(tailleCadre, HAUTEUR), aspectRatio: `100 / ${HAUTEUR}` }}>
+      <div style={{ position: "relative", ...styleTaillePlanche(tailleCadre, HAUTEUR) }}>
         {composition.map((p) => {
           const entree = images.find(({ it }) => it.id === p.id)!;
           const { it, img, fantome, ajout } = entree;

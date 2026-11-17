@@ -21,6 +21,30 @@ export function styleLargeurPlanche(taille: { w: number; h: number } | null, hau
 }
 
 /**
+ * La largeur ET la hauteur de la planche, pour le style (17/11/2026, toujours cassé sur iPhone après le passage en pixels de la seule
+ * largeur) : la hauteur ne dépend plus de `aspect-ratio`, que Safari applique mal à certains éléments flexibles. Avant la mesure,
+ * l'expression d'origine et le format.
+ */
+export function styleTaillePlanche(taille: { w: number; h: number } | null, hauteur: number): { width: string; height?: string; aspectRatio: string } {
+  const aspectRatio = `100 / ${hauteur}`;
+  if (taille && taille.w > 0 && taille.h > 0) {
+    const l = largeurPlanche(taille.w, taille.h, hauteur);
+    return { width: `${Math.round(l * 100) / 100}px`, height: `${Math.round(((l * hauteur) / 100) * 100) / 100}px`, aspectRatio };
+  }
+  return { width: styleLargeurPlanche(null, hauteur), aspectRatio };
+}
+
+/**
+ * Les tailles de la découverte des styles, en pixels : le visuel (3:4) et chaque look porté (4:5), largeur ET hauteur — sans
+ * `aspect-ratio` (17/11/2026 : sur iPhone, les looks sortaient plus larges que hauts).
+ */
+export function taillesDecouverteStyle(largeur: number, avecLooks: boolean): { visuel: { w: number; h: number }; look: { w: number; h: number } } {
+  const h = hauteurVisuelStyle(largeur, avecLooks);
+  const lh = (h - 16) / 3;
+  return { visuel: { w: Math.round((h * 3) / 4), h: Math.round(h) }, look: { w: Math.round((lh * 4) / 5), h: Math.round(lh) } };
+}
+
+/**
  * La hauteur du visuel de la découverte des styles : `clamp(160px, f × largeur, 460px)` — f vaut 0,96 avec les looks portés à côté,
  * 1,10 sans (les valeurs d'origine, en cqw, du 15/11/2026).
  */
