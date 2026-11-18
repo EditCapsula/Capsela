@@ -2,6 +2,7 @@
 
 import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { t, tn } from "@/lib/langue";
+import { libelle } from "@/lib/traductions/libellesDonnees";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
 import { styleDuLook, texteEditorialLook, titreEnLigne } from "@/lib/editorialLook";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
@@ -302,6 +303,8 @@ export default function TenuesScreen({ disposition }: { disposition?: Dispositio
   const [dismissingEntries, setDismissingEntries] = useState<Record<string, { p: ProactiveEntry; suggested?: Item }>>({});
   /** Pièce dont la carte de composition ci-dessous garde un contour terracotta ~1,5s après un ajout, pour la faire remarquer sans rester un état permanent. */
   const [recentlyAddedId, setRecentlyAddedId] = useState<number | null>(null);
+  // L'onglet du bloc « détails » de l'écran d'essai B (18/11/2026) ; sans effet sur la page par défaut.
+  const [ongletDetails, setOngletDetails] = useState<"pieces" | "conseils">("pieces");
   const [toast, setToast] = useState<{ text: string; onUndo: () => void } | null>(null);
 
   function showToast(text: string, onUndo: () => void) {
@@ -911,21 +914,28 @@ export default function TenuesScreen({ disposition }: { disposition?: Dispositio
             )}
     </>
   );
-  const infosSousPlanche = (
+  // LA RECOMMANDATION MÉTÉO À PART (18/11/2026) : séparée des autres informations pour que l'écran d'essai puisse la présenter en ligne,
+  // en carte ou en bandeau (PourLExterieur, `forme`). La page par défaut la pose en ligne, au même endroit qu'avant.
+  const aRecoMeteo = Boolean((exterieur && tempReelle != null) || (!exterieur && conseilManteauPlusLong));
+  const recoMeteo = (forme: "ligne" | "carte" | "bandeau" = "ligne") => (
     <>
             {/* POUR L'EXTÉRIEUR (04/11/2026, « Séparer la tenue principale du manteau ») : sous le flat lay, entre deux filets, une ligne
                 secondaire — jamais une seconde grande carte, jamais dans les pièces du look. La même formulation que l'accueil et Planifier
                 (12/11/2026, demandé : « la formulation doit rester la même pour toute l'application »). */}
             {exterieur && tempReelle != null && (
-              <div className="mb-[6px]">
-                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} />
+              <div className={forme === "ligne" ? "mb-[6px]" : ""}>
+                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} forme={forme} />
               </div>
             )}
             {!exterieur && conseilManteauPlusLong && (
-              <div className="mb-[6px]">
+              <div className={forme === "ligne" ? "mb-[6px]" : ""}>
                 <ConseilManteauPlusLong />
               </div>
             )}
+    </>
+  );
+  const infosComplementaires = (
+    <>
             {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.
                 La maquette les pose en surimpression en bas à gauche du
                 flat-lay. Essayé, capturé : à 390 px, les ballerines
@@ -979,6 +989,12 @@ export default function TenuesScreen({ disposition }: { disposition?: Dispositio
             {provenance && (
               <div className="mt-[4px] px-[6px] text-[11.5px] text-muted leading-[1.4]">{provenance.map((p) => p.texte).join(" · ")}</div>
             )}
+    </>
+  );
+  const infosSousPlanche = (
+    <>
+      {recoMeteo()}
+      {infosComplementaires}
     </>
   );
   const lignesSousPlanche = (
@@ -1630,117 +1646,202 @@ export default function TenuesScreen({ disposition }: { disposition?: Dispositio
   );
 
   /*
-   * TROIS DISPOSITIONS À COMPARER (18/11/2026, même travail que pour l'accueil, demandé : « le même travail de proposition pour la page
-   * Tenues avec les éléments présents sur cette page »). Écran d'essai seulement (`?maquettes`, AccueilMaquettes.tsx) : les mêmes blocs,
-   * les mêmes données et les mêmes actions, posés autrement. Rien ne change pour la page par défaut (disposition absente).
-   *   A · éditoriale : le jour et la météo dans la carte, le titre au-dessus de la planche, tout ce qui décide de la tenue dans la carte ;
-   *   B · focus tenue : la planche la plus grande, « Pour l'extérieur » juste avant « Porter cette tenue », la carte sans hauteur fixe ;
-   *   C · compacte : texte et planche côte à côte, une barre de quatre actions, les pièces du look en rangée qui défile.
+   * TROIS ARCHITECTURES À COMPARER (18/11/2026, brief « Exploration UX de la page Ma tenue du jour »). Écran d'essai seulement
+   * (`?maquettes`, TenueMaquettes.tsx) : les mêmes blocs, les mêmes données, les mêmes actions, posés autrement. Rien ne change pour la
+   * page par défaut (disposition absente). Aucun texte réécrit. « Planifie tes looks » n'y est pas repris (brief, point 5 : aucun bloc de
+   * planification) ; le rappel du plan du jour (PlansDuJour) reste, il parle de la tenue de ce jour.
+   *   A · éditoriale immersive : occasions en pastilles ; une grande carte (zone éditoriale, planche dominante, actions en bas de carte) ;
+   *       la recommandation en carte indépendante ; les pièces en carrousel.
+   *   B · focus composition : occasions en segmented control ; la composition presque bord à bord, titre et nombre de pièces dedans ;
+   *       le CTA puis une barre de trois actions juste sous le visuel ; la recommandation ensuite ; les pièces et les conseils en onglets.
+   *   C · compacte : contexte et météo groupés ; occasions en onglets ; carte basse (titre à côté de la planche) ; recommandation en
+   *       bandeau ; pièces en grille de trois ; les quatre actions dans une barre semi-fixe en bas de l'écran.
+   * Les attributs data-maquette servent aux mesures de l'écran d'essai (mesurerTenueMaquette).
    */
   if (disposition && !meteoEnAttente && outfitPieces.length > 0) {
     const carte = { background: "var(--color-card)", border: "1px solid var(--color-border)" } as const;
-    // B : titre en t-titre-section (21 px) au lieu de 24 (18/11/2026, demandé : « réduis la taille de la typo »).
-    const titreGrand = signature ? (
-      <div className={`relative ${disposition === "B" ? "t-titre-section" : "t-titre-ecran"} text-ink`} style={{ textWrap: "balance" }}>
-        {signature.accroche}
-        <PourquoiCetteTenue texte={signature.phrase} />
-      </div>
-    ) : null;
+    const libelleOccasion = libelle(OCCASIONS.find(([k]) => k === state.occasion)?.[1] ?? "");
+    const titreSignature = (classe: string) =>
+      signature ? (
+        <div className={`relative ${classe} text-ink`} style={{ textWrap: "balance" }}>
+          {signature.accroche}
+          <PourquoiCetteTenue texte={signature.phrase} />
+        </div>
+      ) : null;
     const zonePlanche = (hauteur: number) => (
-      <div className="relative" style={{ height: hauteur }}>
+      <div data-maquette="planche" className="relative" style={{ height: hauteur }}>
         {planche}
       </div>
     );
-    const barreActions = (
-      <div className="grid grid-cols-4 border-t border-border -mx-4 mt-3">
-        {decalage > 0 ? (
-          <span className="flex items-center justify-center text-[11px] text-muted px-1 text-center">{t("Porter cette tenue")}</span>
-        ) : state.outfitValidated ? (
-          <span className="flex flex-col items-center justify-center gap-[4px] min-h-[60px] text-[11px] text-terracotta-deep font-semibold text-center px-1" role="status">
-            <span aria-hidden="true">✓</span>
-            {t("Portée aujourd'hui")}
-          </span>
-        ) : (
-          <button type="button" onClick={vesteWithoutBase ? undefined : () => actions.wearOutfitToday(sauf)} disabled={vesteWithoutBase} className="flex flex-col items-center justify-center gap-[4px] min-h-[60px] text-[11px] leading-[1.2] text-terracotta-deep font-semibold text-center px-1 cursor-pointer disabled:opacity-45">
-            <span aria-hidden="true" className="text-[15px]">✓</span>
-            {t("Porter cette tenue")}
-          </button>
-        )}
-        <button type="button" onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook(exterieur ? [exterieur.id] : undefined)} disabled={!canSaveOutfit} aria-pressed={isOutfitSaved} className="flex flex-col items-center justify-center gap-[4px] min-h-[60px] text-[11px] leading-[1.2] text-ink text-center px-1 cursor-pointer disabled:opacity-45" style={{ borderLeft: "1px solid var(--color-border)" }}>
-          <span aria-hidden="true" className="text-terracotta text-[15px]">{isOutfitSaved ? "♥" : "♡"}</span>
-          {isOutfitSaved ? t("Enregistrée") : t("Enregistrer")}
-        </button>
-        <button type="button" onClick={() => (decalage > 0 ? actions.openOpinionShare({ pieceIds: outfitIds, occasion: state.occasion || "all", temp: jourConsulte.meteoPrevue?.temp ?? null, label: jourConsulte.meteoPrevue?.label ?? null, moment: momentMessage(decalage, dateConsultee) ?? "" }) : actions.openOpinionShare())} className="flex flex-col items-center justify-center gap-[4px] min-h-[60px] text-[11px] leading-[1.2] text-ink text-center px-1 cursor-pointer" style={{ borderLeft: "1px solid var(--color-border)" }}>
-          <span aria-hidden="true" className="text-terracotta text-[15px]">✦</span>
-          {t("Avis d'un proche")}
-        </button>
-        <button type="button" onClick={planApplique ? actions.voirAutreProposition : autreTenue} disabled={!planApplique && (noCompleteOutfit || tirageEnCours)} className="flex flex-col items-center justify-center gap-[4px] min-h-[60px] text-[11px] leading-[1.2] text-ink text-center px-1 cursor-pointer disabled:opacity-45" style={{ borderLeft: "1px solid var(--color-border)" }}>
-          <IconeAutreTenue />
-          {t("Autre tenue")}
-        </button>
-      </div>
+    const cellule = "flex flex-col items-center justify-center gap-[4px] min-h-[56px] text-[11px] leading-[1.2] text-center px-1 cursor-pointer disabled:opacity-45";
+    const filet = { borderLeft: "1px solid var(--color-border)" } as const;
+    const celluleEnregistrer = (
+      <button type="button" onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook(exterieur ? [exterieur.id] : undefined)} disabled={!canSaveOutfit} aria-pressed={isOutfitSaved} className={cellule + " text-ink"} style={filet}>
+        <span aria-hidden="true" className="text-terracotta text-[15px]">{isOutfitSaved ? "♥" : "♡"}</span>
+        {isOutfitSaved ? t("Enregistrée") : t("Enregistrer")}
+      </button>
     );
-    const suite = (rail: boolean) => (
+    const celluleAvis = (
+      <button type="button" onClick={() => (decalage > 0 ? actions.openOpinionShare({ pieceIds: outfitIds, occasion: state.occasion || "all", temp: jourConsulte.meteoPrevue?.temp ?? null, label: jourConsulte.meteoPrevue?.label ?? null, moment: momentMessage(decalage, dateConsultee) ?? "" }) : actions.openOpinionShare())} className={cellule + " text-ink"} style={filet}>
+        <span aria-hidden="true" className="text-terracotta text-[15px]">✦</span>
+        {t("Avis d'un proche")}
+      </button>
+    );
+    const celluleAutre = (
+      <button type="button" onClick={planApplique ? actions.voirAutreProposition : autreTenue} disabled={!planApplique && (noCompleteOutfit || tirageEnCours)} aria-busy={tirageEnCours} className={cellule + " text-ink"} style={filet}>
+        <IconeAutreTenue />
+        {t("Autre tenue")}
+      </button>
+    );
+    const cellulePorter =
+      decalage > 0 ? (
+        <span className="flex items-center justify-center text-[11px] text-muted px-1 text-center">{t("Porter cette tenue")}</span>
+      ) : state.outfitValidated ? (
+        <span data-maquette="cta" className={cellule + " text-terracotta-deep font-semibold"} role="status">
+          <span aria-hidden="true">✓</span>
+          {t("Portée aujourd'hui")}
+        </span>
+      ) : (
+        <button data-maquette="cta" type="button" onClick={vesteWithoutBase ? undefined : () => actions.wearOutfitToday(sauf)} disabled={vesteWithoutBase} className={cellule + " bg-terracotta-deep text-cream font-semibold"}>
+          <span aria-hidden="true" className="text-[15px]">✓</span>
+          {t("Porter cette tenue")}
+        </button>
+      );
+    // Les mêmes conseils que la page (compléter la tenue, bandeaux) : leur présence décide de l'onglet « Conseils » de B.
+    const aConseils =
+      aCompleter ||
+      (!noCompleteOutfit && ((lookScore.badge === "ajuster" && Boolean(lookScore.adjustMessage)) || formalityDowngraded || autreTenueIndisponible || (occasionElargie && Boolean(occasionLabelCourant))));
+    const conseils = (
       <>
         {blocCompleter}
-        {rail ? (
-          <RailPiecesTenue pieces={piecesDuLook} chargement={meteoEnAttente} misEnAvant={recentlyAddedId} onRemplacer={(it) => remplacement.remplacer(it, configTenue)} onPiece={(it) => remplacement.ouvrir(it, configTenue)} />
-        ) : (
-          blocPieces
-        )}
         {bannieres}
-        {blocPlanifier}
       </>
+    );
+    const piecesProps = {
+      pieces: piecesDuLook,
+      chargement: meteoEnAttente,
+      misEnAvant: recentlyAddedId,
+      onRemplacer: (it: Item) => remplacement.remplacer(it, configTenue),
+      onPiece: (it: Item) => remplacement.ouvrir(it, configTenue),
+    };
+    const ongletB = aConseils ? ongletDetails : "pieces";
+    const ongletBouton = (cle: "pieces" | "conseils", texte: string) => (
+      <button
+        type="button"
+        role="tab"
+        aria-selected={ongletB === cle}
+        onClick={() => setOngletDetails(cle)}
+        className={"relative h-[44px] text-[13.5px] cursor-pointer " + (ongletB === cle ? "font-semibold text-ink" : "font-medium text-muted")}
+      >
+        {texte}
+        {ongletB === cle && <span aria-hidden="true" className="absolute left-0 right-0 bottom-0 h-[2px] bg-terracotta-deep" />}
+      </button>
     );
     return (
       <div ref={zoneTenue} onScroll={defilementTenue.onScroll} className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav" onTouchStart={surDebutGlissement} onTouchEnd={surFinGlissement}>
         <AppHeader onBack={actions.goHome} backLabel={t("Revenir à l'accueil")} titre={<>{t("Ma")} <span className="italic">{t("tenue")} {complementTenue(decalage, dateConsultee)}</span></>} />
         {disposition === "A" ? (
           <>
-            <SelecteurOccasion />
+            <BarreDuJour className="mt-1" meteoEnLigne />
+            <SelecteurOccasion forme="pastilles" />
             <PlansDuJour depuis="tenues" className="mt-3" />
-            <div className="-mx-2 mt-3 rounded-hero px-4 pt-2 pb-3" style={carte}>
-              <BarreDuJour meteoEnLigne />
-              <div aria-hidden="true" className="border-t border-border mt-1 mb-3" />
-              {enteteCarte}
-              {titreGrand && <div className="mt-1 mb-1 px-[2px]">{titreGrand}</div>}
-              {zonePlanche(300)}
-              <div className="mt-2">{infosSousPlanche}</div>
-              {actionPorter}
-              {actionsSecondaires}
+            <div data-maquette="carte" className="-mx-2 mt-3 rounded-hero overflow-hidden" style={carte}>
+              <div className="px-4 pt-4">
+                <div className="t-surtitre text-terracotta-deep">{libelleOccasion}</div>
+                <div className="mt-[6px] mb-2">{titreSignature("t-titre-ecran")}</div>
+                {enteteCarte}
+              </div>
+              <div className="px-4">{zonePlanche(360)}</div>
+              <div className="px-4">{infosComplementaires}</div>
+              <div className="mt-3 px-4 pt-1 pb-3 border-t border-border" style={{ background: "var(--color-warm-bg)" }}>
+                <div data-maquette="cta">{actionPorter}</div>
+                <div data-maquette="secondaires">{actionsSecondaires}</div>
+              </div>
             </div>
-            {suite(false)}
+            {aRecoMeteo && (
+              <div data-maquette="reco" className="mt-4">
+                {recoMeteo("carte")}
+              </div>
+            )}
+            <div data-maquette="details">
+              <RailPiecesTenue {...piecesProps} disposition="grille" />
+            </div>
+            {conseils}
           </>
         ) : disposition === "B" ? (
           <>
             <BarreDuJour className="mt-1" meteoEnLigne />
-            <SelecteurOccasion />
+            <SelecteurOccasion forme="segmente" />
             <PlansDuJour depuis="tenues" className="mt-3" />
-            <div className="-mx-2 mt-3 rounded-hero px-4 pt-3 pb-3" style={carte}>
-              {titreGrand && <div className="mb-1 px-[2px]">{titreGrand}</div>}
-              {enteteCarte}
-              {zonePlanche(400)}
-              <div className="mt-2">{infosSousPlanche}</div>
-              {actionPorter}
-              {actionsSecondaires}
+            <div data-maquette="carte" className="-mx-4 mt-3 rounded-hero overflow-hidden" style={carte}>
+              <div style={{ background: "var(--color-photo-bg)" }}>
+                <div className="px-4 pt-4">
+                  {titreSignature("t-titre-section")}
+                  <div className="mt-1">{enteteCarte}</div>
+                </div>
+                {zonePlanche(420)}
+                <div className="px-4 pb-2">{infosComplementaires}</div>
+              </div>
+              <div className="px-4">
+                <div data-maquette="cta">{actionPorter}</div>
+              </div>
+              <div data-maquette="secondaires" className="grid grid-cols-3 border-t border-border mt-3 [&>*:first-child]:!border-l-0">
+                {celluleEnregistrer}
+                {celluleAvis}
+                {celluleAutre}
+              </div>
             </div>
-            {suite(false)}
+            {aRecoMeteo && (
+              <div data-maquette="reco" className="mt-4">
+                {recoMeteo("ligne")}
+              </div>
+            )}
+            <section data-maquette="details" className="mt-6">
+              <div role="tablist" aria-label={t("Les pièces de ton look · {n}", { n: piecesDuLook.length })} className="flex gap-[22px] border-b border-border">
+                {ongletBouton("pieces", t("Les pièces de ton look · {n}", { n: piecesDuLook.length }))}
+                {aConseils && ongletBouton("conseils", t("Compléter la tenue"))}
+              </div>
+              {ongletB === "pieces" ? <RailPiecesTenue {...piecesProps} disposition="liste" sansTitre /> : <div className="-mt-[10px]">{conseils}</div>}
+            </section>
           </>
         ) : (
           <>
-            <BarreDuJour className="mt-1" meteoEnLigne />
-            <SelecteurOccasion />
+            <div data-maquette="contexte" className="-mx-2 mt-1 rounded-bloc px-2" style={{ background: "var(--color-warm-bg)" }}>
+              <BarreDuJour meteoEnLigne />
+            </div>
+            <SelecteurOccasion forme="onglets" />
             <PlansDuJour depuis="tenues" className="mt-3" />
-            <div className="-mx-2 mt-3 rounded-hero px-4 pt-3 overflow-hidden" style={carte}>
+            <div data-maquette="carte" className="-mx-2 mt-3 rounded-hero px-4 pt-3 pb-2" style={carte}>
               {enteteCarte}
               <div className="grid gap-2 items-center" style={{ gridTemplateColumns: "minmax(104px, 1fr) minmax(0, 60%)" }}>
-                <div className="min-w-0">{signatureBloc}</div>
+                <div className="min-w-0">
+                  {signatureBloc}
+                  <div className="px-[6px] t-surtitre text-muted">{libelleOccasion}</div>
+                </div>
                 {zonePlanche(230)}
               </div>
-              <div className="mt-1">{infosSousPlanche}</div>
-              {barreActions}
+              {infosComplementaires}
             </div>
-            {suite(true)}
+            {aRecoMeteo && (
+              <div data-maquette="reco" className="mt-3">
+                {recoMeteo("bandeau")}
+              </div>
+            )}
+            <div data-maquette="details">
+              <RailPiecesTenue {...piecesProps} disposition="grille3" />
+            </div>
+            {conseils}
+            {/* LA BARRE SEMI-FIXE : en fin de contenu, collée au bas de la zone qui défile (sticky). Le padding bas de la zone (pb-safe-nav)
+                la tient au-dessus de la barre de navigation ; 64 px de plus la posent au-dessus du bouton flottant « + » (MenuActions, 56 px
+                à 16 px de la barre), qui recouvrait « Autre tenue » à 320 et à 390 px (mesuré le 18/11/2026). */}
+            <div className="sticky z-20 -mx-2 mt-4" style={{ bottom: 64 }}>
+              <div data-maquette="secondaires" className="grid grid-cols-4 rounded-hero overflow-hidden [&>*:nth-child(2)]:!border-l-0" style={{ ...carte, boxShadow: "0 6px 20px rgba(29,26,22,.12)" }}>
+                {cellulePorter}
+                {celluleEnregistrer}
+                {celluleAvis}
+                {celluleAutre}
+              </div>
+            </div>
           </>
         )}
         {overlays}
@@ -1846,6 +1947,7 @@ export default function TenuesScreen({ disposition }: { disposition?: Dispositio
       {!meteoEnAttente && outfitPieces.length > 0 && (
         <div
           id="tenue-du-jour"
+          data-maquette="carte"
           className="-mx-2 mt-3 rounded-hero text-ink scroll-mt-4 flex flex-col"
           // 358 × 564 px sur 390 (calibrage du 08/10/2026) : 8 px de plus de chaque côté que la gouttière de 24 px, la marge de 16 px
           // du hero ; la zone du flat lay prend ce qui reste (350 px) — l'en-tête, la provenance, l'action et les deux
@@ -1885,7 +1987,7 @@ export default function TenuesScreen({ disposition }: { disposition?: Dispositio
               l'accueil et la tenue planifiée), plus la ligne de badges et la
               provenance. Les unités de conteneur (cqw) portent sur la card. */}
           <div className="flex flex-col flex-1 min-h-0">
-          <div className="relative flex-1 min-h-0">
+          <div data-maquette="planche" className="relative flex-1 min-h-0">
           {/* Plus de phrase d'ambiance manuscrite dans le hero (04/11/2026, demandé : « harmoniser les hero ») : aucun hero n'en a plus. */}
 
       {planche}

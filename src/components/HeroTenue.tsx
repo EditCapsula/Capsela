@@ -4,6 +4,7 @@ import { libelle } from "@/lib/traductions/libellesDonnees";
 import { nomAffiche, t, tn } from "@/lib/langue";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
+import PhotoPiece from "@/components/PhotoPiece";
 import { separerCoucheExterieure } from "@/lib/coucheExterieure";
 import { BoutonDiscret } from "@/components/Button";
 import { isCatalogId } from "@/lib/catalog";
@@ -203,6 +204,7 @@ export function RailPiecesTenue({
   chargement = false,
   disposition = "rail",
   onPiece,
+  sansTitre = false,
 }: {
   pieces: Item[];
   onRemplacer?: (piece: Item) => void;
@@ -217,10 +219,78 @@ export function RailPiecesTenue({
    * « grille » (12/11/2026, brief « Optimisation UX/UI – Ma tenue du jour », point 5) : deux colonnes, « Les pièces de ton look · N »,
    * des visuels grands, chaque carte entièrement cliquable. « rail » : la rangée d'avant, gardée dans Planifier et l'agenda.
    */
-  disposition?: "rail" | "grille";
+  /**
+   * « liste » et « grille3 » (18/11/2026, exploration « Ma tenue du jour », écran d'essai seulement) : une liste compacte (vignette, nom,
+   * catégorie, ⇄) et une grille de trois colonnes. Mêmes pièces, même toucher, même ⇄.
+   */
+  disposition?: "rail" | "grille" | "liste" | "grille3";
+  /** Sans l'intitulé « Les pièces de ton look · N » (liste et grille3), quand l'écran le pose lui-même (onglets). */
+  sansTitre?: boolean;
 }) {
   const ouvrirParDefaut = useOuvrirPiece();
   const ouvrir = onPiece ?? ouvrirParDefaut;
+  if ((disposition === "liste" || disposition === "grille3") && !chargement) {
+    if (!pieces.length) return null;
+    const echange = (it: Item, classe: string) =>
+      onRemplacer && (
+        <button
+          type="button"
+          onClick={() => onRemplacer(it)}
+          aria-label={`Remplacer ${it.name}`}
+          className={classe + " w-[30px] h-[30px] rounded-full flex items-center justify-center text-[14px] cursor-pointer"}
+          style={{ background: "rgba(251,248,243,.92)", color: "var(--color-muted)", boxShadow: "0 1px 4px rgba(29,26,22,.14)" }}
+        >
+          ⇄
+        </button>
+      );
+    return (
+      <>
+        {!sansTitre && <div className="t-surtitre text-muted mt-[26px] mb-[10px]">{t("Les pièces de ton look · {n}", { n: pieces.length })}</div>}
+        {disposition === "liste" ? (
+          <ul className="list-none m-0 p-0 divide-y divide-border">
+            {pieces.map((it) => {
+              const categorie = libelle(CATLABEL[isBag(it) ? "sac" : it.cat]);
+              const suggested = isCatalogId(it.id);
+              return (
+                <li key={it.id} data-maquette="piece" className="relative flex items-center gap-3 py-[8px]">
+                  <button type="button" onClick={() => ouvrir(it)} aria-label={`${it.name} — ${categorie}. Voir le détail`} className="flex-1 min-w-0 flex items-center gap-3 text-left cursor-pointer active:opacity-80">
+                    <span className="flex-shrink-0 w-[52px]">
+                      <PhotoPiece piece={it} ratio={1} rayon={10} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block t-titre-vignette text-ink truncate">{nomAffiche(it)}</span>
+                      <span className="block text-[11px] text-muted mt-[2px]">
+                        {categorie} · <span style={{ color: suggested ? "var(--color-sand-text)" : undefined }}>{suggested ? t("Suggestion") : t("Ton dressing")}</span>
+                      </span>
+                    </span>
+                  </button>
+                  {echange(it, "relative flex-shrink-0")}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <ul className="list-none m-0 p-0 grid grid-cols-3 gap-[8px]">
+            {pieces.map((it) => {
+              const categorie = libelle(CATLABEL[isBag(it) ? "sac" : it.cat]);
+              return (
+                <li key={it.id} data-maquette="piece" className="relative">
+                  <button type="button" onClick={() => ouvrir(it)} aria-label={`${it.name} — ${categorie}. Voir le détail`} className="w-full text-left bg-card border border-border rounded-bloc overflow-hidden cursor-pointer active:opacity-80">
+                    <PhotoPiece piece={it} ratio={1} rayon={0} />
+                    <span className="block px-[8px] pt-[6px] pb-[8px]">
+                      <span className="block text-[11.5px] font-semibold text-ink leading-[1.25] line-clamp-2 break-words" style={{ minHeight: "2.5em" }}>{nomAffiche(it)}</span>
+                      <span className="block text-[10.5px] text-muted mt-[2px] truncate">{categorie}</span>
+                    </span>
+                  </button>
+                  {echange(it, "absolute top-[5px] right-[5px]")}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </>
+    );
+  }
   if (disposition === "grille" && !chargement) {
     if (!pieces.length) return null;
     return (
