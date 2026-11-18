@@ -314,8 +314,8 @@ function OptionA({ tenue, voyage }: { tenue: Tenue; voyage: EtatVoyage }) {
   );
 }
 
-/* ═════ OPTION B — FOCUS TENUE : date et météo sur une ligne, la tenue occupe l'écran (composition dominante, actions aussitôt dessous,
-   recommandation sous la tenue), puis le voyage, puis les accès en une rangée. */
+/* ═════ OPTION B — FOCUS TENUE : date et météo sur une ligne, la tenue occupe l'écran (composition dominante, recommandation puis actions
+   aussitôt dessous), puis le voyage, puis les accès en une rangée. */
 function OptionB({ tenue, voyage }: { tenue: Tenue; voyage: EtatVoyage }) {
   return (
     <>
@@ -334,7 +334,9 @@ function OptionB({ tenue, voyage }: { tenue: Tenue; voyage: EtatVoyage }) {
         <div className="mt-1 -mx-2">
           <Composition tenue={tenue} ratio="100 / 96" />
         </div>
-        <div className="mt-1">
+        {/* « Pour l'extérieur » avant « Voir le look » (18/11/2026, demandé sur l'option B). */}
+        {tenue.exterieur && <div className="mt-1">{tenue.exterieur}</div>}
+        <div className="mt-2">
           <Button variante="principal" onClick={tenue.voir} className="!normal-case !tracking-[0.02em] !text-[15px]">
             {t("Voir le look")}
           </Button>
@@ -343,7 +345,6 @@ function OptionB({ tenue, voyage }: { tenue: Tenue; voyage: EtatVoyage }) {
           <ActionsTexte tenue={tenue} />
         </div>
       </div>
-      {tenue.exterieur && <div className="mx-4 mt-3">{tenue.exterieur}</div>}
       <div className="px-6">
         <CarteVoyage etat={voyage} className="mt-3" />
       </div>
