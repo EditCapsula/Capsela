@@ -32,7 +32,7 @@ import WelcomeScreen from "./screens/WelcomeScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import AuthScreen from "./screens/AuthScreen";
 import HomeScreen from "./screens/HomeScreen";
-import AccueilMaquettes, { maquettesAccueilActives } from "./maquettes/AccueilMaquettes";
+import AccueilMaquettes, { dispositionTenueMaquette, maquettesAccueilActives } from "./maquettes/AccueilMaquettes";
 import WardrobeScreen from "./screens/WardrobeScreen";
 import DernieresPiecesScreen from "@/components/screens/DernieresPiecesScreen";
 import PieceScreen from "./screens/PieceScreen";
@@ -340,7 +340,7 @@ function Screens() {
         {state.screen === "add" && <AddScreen />}
         {state.screen === "importerTenue" && <ImporterTenueScreen />}
         {state.screen === "capsule" && <CapsuleScreen />}
-        {state.screen === "tenues" && <TenuesScreen />}
+        {state.screen === "tenues" && <TenuesScreen disposition={dispositionTenueMaquette()} />}
         {state.screen === "calendrier" && <CalendrierScreen />}
         {state.screen === "history" && <HistoryScreen />}
         {state.screen === "planifier" && <PlanifierScreen />}
