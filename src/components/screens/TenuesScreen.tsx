@@ -1639,8 +1639,9 @@ export default function TenuesScreen({ disposition }: { disposition?: Dispositio
    */
   if (disposition && !meteoEnAttente && outfitPieces.length > 0) {
     const carte = { background: "var(--color-card)", border: "1px solid var(--color-border)" } as const;
+    // B : titre en t-titre-section (21 px) au lieu de 24 (18/11/2026, demandé : « réduis la taille de la typo »).
     const titreGrand = signature ? (
-      <div className="relative t-titre-ecran text-ink" style={{ textWrap: "balance" }}>
+      <div className={`relative ${disposition === "B" ? "t-titre-section" : "t-titre-ecran"} text-ink`} style={{ textWrap: "balance" }}>
         {signature.accroche}
         <PourquoiCetteTenue texte={signature.phrase} />
       </div>
