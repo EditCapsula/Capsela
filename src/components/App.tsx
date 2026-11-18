@@ -32,6 +32,7 @@ import WelcomeScreen from "./screens/WelcomeScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import AuthScreen from "./screens/AuthScreen";
 import HomeScreen from "./screens/HomeScreen";
+import AccueilMaquettes, { maquettesAccueilActives } from "./maquettes/AccueilMaquettes";
 import WardrobeScreen from "./screens/WardrobeScreen";
 import DernieresPiecesScreen from "@/components/screens/DernieresPiecesScreen";
 import PieceScreen from "./screens/PieceScreen";
@@ -329,7 +330,8 @@ function Screens() {
         {state.screen === "welcome" && <WelcomeScreen />}
         {state.screen === "onboarding" && <OnboardingScreen />}
         {state.screen === "auth" && <AuthScreen />}
-        {state.screen === "home" && <HomeScreen />}
+        {/* L'écran d'essai des trois architectures de l'accueil (18/11/2026) : `?maquettes`, hors production réelle (AccueilMaquettes). */}
+        {state.screen === "home" && (maquettesAccueilActives() ? <AccueilMaquettes /> : <HomeScreen />)}
         {/* Le Dressing et ses deux onglets, Mon dressing et Mes looks (15/11/2026) : UN SEUL composant monté pour les deux écrans, à la
             même place — passer d'un onglet à l'autre ne démonte rien, chaque onglet garde sa recherche, ses filtres et son défilement. */}
         {(state.screen === "wardrobe" || state.screen === "looks") && <WardrobeScreen />}
