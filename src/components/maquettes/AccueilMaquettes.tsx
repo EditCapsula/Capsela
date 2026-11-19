@@ -54,11 +54,11 @@ export function maquettesAccueilActives(): boolean {
   return ok && new URLSearchParams(window.location.search).has("maquettes");
 }
 
-/** La disposition de la page Tenue à essayer (`?maquettes&tenue=A|B|C`), hors production réelle ; sinon la page d'aujourd'hui. */
-export function dispositionTenueMaquette(): "A" | "B" | "C" | undefined {
+/** L'architecture de la page Tenue à essayer (`?maquettes&tenue=A…E`), hors production réelle ; sinon la page d'aujourd'hui. */
+export function dispositionTenueMaquette(): "A" | "B" | "C" | "D" | "E" | undefined {
   if (!maquettesAccueilActives()) return undefined;
   const v = new URLSearchParams(window.location.search).get("tenue");
-  return v === "A" || v === "B" || v === "C" ? v : undefined;
+  return v === "A" || v === "B" || v === "C" || v === "D" || v === "E" ? v : undefined;
 }
 
 const lireParam = <T extends string>(cle: string, valides: readonly T[], defaut: T): T => {
