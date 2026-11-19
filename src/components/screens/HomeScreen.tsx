@@ -37,6 +37,7 @@ import { CarrouselHero, CarteHero } from "@/components/CarrouselHero";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { manteauxPourLaCouche, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import AccesAccueil from "@/components/AccesAccueil";
+import { momentDeLaCouche, phraseManteauTropLeger } from "@/lib/plafondManteau";
 import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
 
 // Les glyphes des accès vivent avec la rangée des accès (AccesAccueil.tsx, 19/11/2026) ; réexportés pour l'écran d'essai.
@@ -238,7 +239,14 @@ export default function HomeScreen() {
   const blocExterieur =
     exterieur && tempReelle != null ? (
       <div className="mt-[6px]">
-        <PourLExterieur piece={exterieur} temperature={tempReelle} quand={jourConsulte.decalage === 0 ? "aujourd'hui" : "prévus"} onClick={actions.goTenues} compact />
+        <PourLExterieur
+          piece={exterieur}
+          temperature={tempReelle}
+          quand={jourConsulte.decalage === 0 ? "aujourd'hui" : "prévus"}
+          onClick={actions.goTenues}
+          compact
+          note={phraseManteauTropLeger(state.items, tempReelle, momentDeLaCouche({ decalage: jourConsulte.decalage, occasion: occasionKey }))}
+        />
       </div>
     ) : tenueSeparee.conseilManteauPlusLong ? (
       <div className="mt-[6px]">
@@ -449,6 +457,7 @@ export default function HomeScreen() {
             quand={jourConsulte.decalage === 0 ? "aujourd'hui" : "prévus"}
             onClick={() => (duJour ? actions.goTenues() : actions.consulterTenue(slide.ids, slide.occasion, null))}
             compact
+            note={phraseManteauTropLeger(state.items, tempReelle, momentDeLaCouche({ decalage: jourConsulte.decalage, occasion: slide.occasion }))}
           />
         </div>
       ) : sepSlide.conseilManteauPlusLong ? (

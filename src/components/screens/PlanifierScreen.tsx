@@ -2045,6 +2045,7 @@ export default function PlanifierScreen() {
                   pieces={pieces}
                   temperature={tempResultat}
                   quand="prévus"
+                  momentCouche={moment === "Soirée" ? "cette soirée" : "cette journée"}
                   candidatsExterieur={candidatsResultat}
                   chezSoi={chezSoiResultat}
                   indicateurs={<IndicateursTenue items={indicateursResultat} />}
@@ -2331,6 +2332,7 @@ export default function PlanifierScreen() {
                 pieces={pieces}
                 temperature={tempCouchePlan}
                 quand={passee ? "ce jour-là" : "prévus"}
+                momentCouche={passee ? undefined : t.moment === "Soirée" ? "cette soirée" : "cette journée"}
                 candidatsExterieur={passee ? [] : candidatsPlan}
                 chezSoi={chezSoiPlan}
                 indicateurs={<IndicateursTenue items={indicateursPlan} />}

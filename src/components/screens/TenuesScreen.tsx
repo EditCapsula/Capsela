@@ -29,6 +29,7 @@ import { autresManteaux, manteauxPourLaCouche, separerCoucheExterieure, temperat
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { RailPiecesTenue } from "@/components/HeroTenue";
 import { alternativesClassees, poolDeRemplacement } from "@/lib/remplacementPiece";
+import { momentDeLaCouche, phraseManteauTropLeger } from "@/lib/plafondManteau";
 import VariantesTenue, { type ArchitectureTenue, type BlocsTenue, type TraitementComposition, type VarianteTenue } from "@/components/maquettes/VariantesTenue";
 import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, estContexteMaison, fraicheurDuSoir, isCompleteOutfit, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
@@ -924,7 +925,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
                 (12/11/2026, demandé : « la formulation doit rester la même pour toute l'application »). */}
             {exterieur && tempReelle != null && (
               <div className={forme === "ligne" ? "mb-[6px]" : ""}>
-                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} forme={forme} />
+                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} forme={forme} note={phraseManteauTropLeger(state.items, tempReelle, momentDeLaCouche({ decalage, occasion: state.occasion }))} />
               </div>
             )}
             {!exterieur && conseilManteauPlusLong && (

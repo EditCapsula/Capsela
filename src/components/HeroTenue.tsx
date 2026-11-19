@@ -13,6 +13,8 @@ import { CATLABEL, isBag } from "@/lib/data";
 import { clePieces } from "@/lib/outfitFeedback";
 import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import type { Item } from "@/lib/types";
+import { useCapsela } from "@/lib/store";
+import { phraseManteauTropLeger } from "@/lib/plafondManteau";
 
 /**
  * LE HERO DE LA PAGE TENUE, repris pour le détail d'un look planifié (14/10/2026, demandé : « reprends le hero de la page Tenues »).
@@ -33,6 +35,7 @@ export function HeroTenue({
   quand,
   candidatsExterieur,
   chezSoi = false,
+  momentCouche,
   indicateurs,
   badge,
   onPiece,
@@ -55,6 +58,11 @@ export function HeroTenue({
   candidatsExterieur?: Item[];
   /** À la maison (Cocooning, Télétravail) : rien n'est séparé ni proposé (17/11/2026, coucheExterieure.ts). */
   chezSoi?: boolean;
+  /**
+   * Le moment que dit « Il te faut un manteau plus chaud pour … » quand les manteaux du dressing sont trop légers (19/11/2026,
+   * phraseManteauTropLeger). Absent (une tenue passée) : la phrase ne s'affiche pas.
+   */
+  momentCouche?: "aujourd'hui" | "cette journée" | "cette soirée";
   /** La ligne d'indicateurs sous le visuel (IndicateursTenue), quand l'écran en a. */
   indicateurs?: React.ReactNode;
   /** Une pastille à droite du surtitre (« Ton dressing + ta capsule »…). */
@@ -66,6 +74,7 @@ export function HeroTenue({
   onPiece?: (it: Item, look: Item[]) => void;
 }) {
   const ouvrirFiche = useOuvrirPiece();
+  const { state } = useCapsela();
   const { principal, exterieur, conseilManteauPlusLong } = separerCoucheExterieure(piecesRecues, temperature, candidatsExterieur, [], chezSoi);
   const pieces = principal;
   const ouvrirPiece = onPiece ? (it: Item) => onPiece(it, pieces) : ouvrirFiche;
@@ -117,7 +126,7 @@ export function HeroTenue({
 
       {exterieur && temperature != null && (
         <div className="mt-[6px] flex-shrink-0">
-          <PourLExterieur piece={exterieur} temperature={temperature} quand={quand ?? "prévus"} onClick={() => ouvrirFiche(exterieur)} />
+          <PourLExterieur piece={exterieur} temperature={temperature} quand={quand ?? "prévus"} onClick={() => ouvrirFiche(exterieur)} note={momentCouche ? phraseManteauTropLeger(state.items, temperature, momentCouche) : null} />
         </div>
       )}
       {/* Le manteau de la tenue est plus court que sa veste, et aucun manteau connu assez long (R-B25, 12/11/2026). */}

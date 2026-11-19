@@ -16,6 +16,7 @@ export default function PourLExterieur({
   onClick,
   compact = false,
   forme = "ligne",
+  note = null,
 }: {
   piece: Item;
   temperature: number;
@@ -28,6 +29,8 @@ export default function PourLExterieur({
    * carte indépendante à grande vignette ; « bandeau », une seule ligne sur fond chaud. Mêmes textes, même action.
    */
   forme?: "ligne" | "carte" | "bandeau";
+  /** Une phrase de plus sous le texte (19/11/2026, phraseManteauTropLeger : les manteaux du dressing sont trop légers). */
+  note?: string | null;
 }) {
   const t = Math.round(temperature);
   if (forme === "bandeau") {
@@ -60,6 +63,11 @@ export default function PourLExterieur({
           <span className="block text-[12px] text-muted-3 leading-[1.4] mt-[4px]" style={{ textWrap: "pretty" }}>
             {piece.name}, à ajouter selon la météo ({degres(t)} {quand}).
           </span>
+          {note && (
+            <span className="block text-[12px] text-ink-soft leading-[1.4] mt-[4px]" style={{ textWrap: "pretty" }}>
+              {note}
+            </span>
+          )}
         </span>
       </button>
     );
@@ -86,6 +94,11 @@ export default function PourLExterieur({
         <span className={"block text-muted-3 leading-[1.4] mt-[2px] " + (compact ? "text-[11px]" : "text-[12px]")} style={{ textWrap: "pretty" }}>
           {piece.name}, à ajouter selon la météo ({degres(t)} {quand}).
         </span>
+        {note && (
+          <span className={"block text-ink-soft leading-[1.4] mt-[4px] " + (compact ? "text-[11px]" : "text-[12px]")} style={{ textWrap: "pretty" }}>
+            {note}
+          </span>
+        )}
       </span>
       <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
     </button>

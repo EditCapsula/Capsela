@@ -1,4 +1,4 @@
-import type { CategoryKey } from "./types";
+import type { CategoryKey, Item } from "./types";
 
 /**
  * LE PLAFOND D'UN MANTEAU DU DRESSING, PAR SON SOUS-TYPE (19/11/2026, demandé : « si un utilisateur ajoute un manteau lui-même, le
@@ -26,4 +26,55 @@ export const PLAFOND_PAR_SOUS_TYPE: Record<string, number> = {
 export function plafondDuSousType(cat: CategoryKey, subtype: string | null | undefined): number | undefined {
   if (cat !== "manteau" || !subtype) return undefined;
   return PLAFOND_PAR_SOUS_TYPE[subtype.trim()];
+}
+
+/**
+ * LE PLANCHER D'UN MANTEAU LÉGER (19/11/2026, demandé : « si le dressing ne contient qu'un trench il faudrait le dire : dans ton dressing,
+ * il n'y a qu'un trench. Il te faut un manteau plus chaud »). Un manteau n'a qu'un PLAFOND au catalogue ; pour dire qu'il est trop léger, il
+ * lui faut une température en dessous de laquelle il ne suffit plus. Seuls les deux sous-types légers en ont une : trench et imperméable,
+ * 8° — ARBITRAGE ÉDITORIAL à valider par la propriétaire (signalé : un trench par 2° de minimale est trop léger). Les autres sous-types et un
+ * manteau sans sous-type n'en ont pas : rien ne dit qu'ils sont légers.
+ *
+ * Il ne sert qu'à « Pour l'extérieur » (coucheExterieure.ts) : jamais écrit sur la pièce, il ne touche ni le moteur ni la capsule.
+ */
+export const PLANCHER_PAR_SOUS_TYPE: Record<string, number> = {
+  Trench: 8,
+  Imperméable: 8,
+};
+
+/** La température en dessous de laquelle un manteau est trop léger : sa borne déclarée, sinon celle de son sous-type, sinon undefined. */
+export function plancherManteau(m: Pick<Item, "cat" | "subtype" | "meteoMinTemp">): number | undefined {
+  if (m.cat !== "manteau") return undefined;
+  if (m.meteoMinTemp != null) return m.meteoMinTemp;
+  return m.subtype ? PLANCHER_PAR_SOUS_TYPE[m.subtype.trim()] : undefined;
+}
+
+/** Vrai quand ce manteau est trop léger pour `temperature` (plancher connu et non atteint). */
+export function manteauTropLeger(m: Pick<Item, "cat" | "subtype" | "meteoMinTemp">, temperature: number): boolean {
+  const p = plancherManteau(m);
+  return p != null && temperature < p;
+}
+
+const ARTICLE: Record<string, string> = { Trench: "un trench", Imperméable: "un imperméable" };
+
+/**
+ * « Dans ton dressing, il n'y a qu'un trench. Il te faut un manteau plus chaud pour aujourd'hui. » — quand le dressing a des manteaux et
+ * qu'ils sont TOUS trop légers pour la température de la couche ; sinon null (pas de manteau du tout : rien à dire de plus qu'avant).
+ */
+export function phraseManteauTropLeger(dressing: readonly Item[], temperature: number | null | undefined, moment: "aujourd'hui" | "cette journée" | "cette soirée"): string | null {
+  if (typeof temperature !== "number" || !Number.isFinite(temperature)) return null;
+  const manteaux = dressing.filter((i) => i.cat === "manteau");
+  if (!manteaux.length || !manteaux.every((m) => manteauTropLeger(m, temperature))) return null;
+  const types = new Set(manteaux.map((m) => (m.subtype ?? "").trim()));
+  const debut =
+    manteaux.length === 1 && ARTICLE[[...types][0]]
+      ? `Dans ton dressing, il n'y a qu'${ARTICLE[[...types][0]]}.`
+      : "Dans ton dressing, il n'y a que des manteaux légers.";
+  return `${debut} Il te faut un manteau plus chaud pour ${moment}.`;
+}
+
+/** Le moment que dit la phrase : la soirée (occasion Soirée ou créneau du soir), sinon aujourd'hui, sinon « cette journée » (un autre jour). */
+export function momentDeLaCouche(a: { decalage: number; occasion?: string | null; moment?: string | null }): "aujourd'hui" | "cette journée" | "cette soirée" {
+  if (a.moment === "Soirée" || a.occasion === "soiree") return "cette soirée";
+  return a.decalage === 0 ? "aujourd'hui" : "cette journée";
 }

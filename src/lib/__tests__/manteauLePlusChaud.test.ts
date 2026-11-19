@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { manteauxParChaleur, manteauxPourLaCouche, separerCoucheExterieure } from "../coucheExterieure";
-import { plafondDuSousType } from "../plafondManteau";
+import { momentDeLaCouche, phraseManteauTropLeger, plafondDuSousType } from "../plafondManteau";
 import { rowToItem } from "../dressing";
 import { at, item } from "./fixtures";
 import type { Item } from "../types";
@@ -20,8 +20,11 @@ const pantalon = item({ id: 11, category: "pantalon", name: "Pantalon droit", so
 const ids = (l: Item[]) => l.map((m) => m.id);
 
 describe("manteauxParChaleur", () => {
-  it("par 2° : le shearling, puis la laine, puis le trench ; sans plafond connu en dernier", () => {
-    expect(ids(manteauxParChaleur([trench, sansBorne, laine, shearling], 2))).toEqual(ids([shearling, laine, trench, sansBorne]));
+  it("par 2° : le shearling, puis la laine, puis sans plafond connu ; le trench, trop léger (plancher 8°), en dernier", () => {
+    expect(ids(manteauxParChaleur([trench, sansBorne, laine, shearling], 2))).toEqual(ids([shearling, laine, sansBorne, trench]));
+  });
+  it("par 10° : le trench n'est plus trop léger, l'ordre suit les plafonds", () => {
+    expect(ids(manteauxParChaleur([trench, sansBorne, laine], 10))).toEqual(ids([laine, trench, sansBorne]));
   });
   it("par 15° : seuls les manteaux dont le plafond admet 15° restent, le trench devant", () => {
     expect(ids(manteauxParChaleur([sansBorne, laine, trench, shearling], 15))).toEqual(ids([trench, sansBorne]));
@@ -77,5 +80,45 @@ describe("le plafond d'un manteau du dressing, par son sous-type", () => {
     const ligne = { id: 99, user_id: "u", name: "Mon trench", brand: null, cat: "manteau", color: "Beige", hex: "#CDBBA2", size: null, season: "Toutes saisons", saisons: null, manches: null, motif: null, longueur: null, couche: null, occasion: null, shoe_type: null, matiere: null, coupe: null, sac_type: null, bijou_type: null, accessoire_type: null, subtype: "Trench", photo_url: null, worn: null, worn_prev: null, created_at: "2026-11-19T00:00:00Z" };
     expect(rowToItem(ligne as never).meteoMaxTemp).toBe(20);
     expect(rowToItem({ ...ligne, subtype: null } as never).meteoMaxTemp).toBeUndefined();
+  });
+});
+
+describe("un dressing qui n'a qu'un trench, par le froid (19/11/2026)", () => {
+  const monTrench = { ...trench, id: 50, meteoMaxTemp: 20, subtype: "Trench" } as Item;
+  const monImper = { ...trench, id: 51, meteoMaxTemp: 20, subtype: "Imperméable" } as Item;
+  const maDoudoune = { ...trench, id: 52, meteoMaxTemp: 5, subtype: "Doudoune" } as Item;
+
+  it("la phrase : un seul trench, plusieurs manteaux légers, et le moment", () => {
+    expect(phraseManteauTropLeger([chemise, monTrench], 2, "aujourd'hui")).toBe("Dans ton dressing, il n'y a qu'un trench. Il te faut un manteau plus chaud pour aujourd'hui.");
+    expect(phraseManteauTropLeger([monTrench, monImper], 2, "cette soirée")).toBe("Dans ton dressing, il n'y a que des manteaux légers. Il te faut un manteau plus chaud pour cette soirée.");
+  });
+  it("aucune phrase : assez doux, un manteau chaud au dressing, aucun manteau, ou un manteau sans sous-type", () => {
+    expect(phraseManteauTropLeger([monTrench], 12, "aujourd'hui")).toBeNull();
+    expect(phraseManteauTropLeger([monTrench, maDoudoune], 2, "aujourd'hui")).toBeNull();
+    expect(phraseManteauTropLeger([chemise], 2, "aujourd'hui")).toBeNull();
+    expect(phraseManteauTropLeger([{ ...monTrench, subtype: undefined } as Item], 2, "aujourd'hui")).toBeNull();
+  });
+  it("le moment : la soirée, sinon aujourd'hui, sinon cette journée", () => {
+    expect(momentDeLaCouche({ decalage: 0, occasion: "travail_formel" })).toBe("aujourd'hui");
+    expect(momentDeLaCouche({ decalage: 2, occasion: "quotidien" })).toBe("cette journée");
+    expect(momentDeLaCouche({ decalage: 0, occasion: "soiree" })).toBe("cette soirée");
+    expect(momentDeLaCouche({ decalage: 3, moment: "Soirée" })).toBe("cette soirée");
+  });
+  it("par 2°, le trench du dressing cède la place à un manteau de la capsule qui n'est pas trop léger", () => {
+    const r = separerCoucheExterieure([chemise, pantalon], 2, manteauxParChaleur([monTrench], 2), manteauxParChaleur([laine], 2));
+    expect(r.exterieur?.id).toBe(laine.id);
+  });
+  it("sans manteau plus chaud nulle part, le trench reste proposé (la phrase dit qu'il faut plus chaud)", () => {
+    const r = separerCoucheExterieure([chemise, pantalon], 2, manteauxParChaleur([monTrench], 2), []);
+    expect(r.exterieur?.id).toBe(monTrench.id);
+  });
+  it("le trench de la tenue, trop léger, est remplacé même par un manteau sans plafond connu", () => {
+    const r = separerCoucheExterieure([chemise, pantalon, monTrench], 2, manteauxParChaleur([monTrench, sansBorne], 2));
+    expect(r.exterieur?.id).toBe(sansBorne.id);
+    expect(r.remplace?.id).toBe(monTrench.id);
+  });
+  it("par 10°, le trench n'est pas trop léger : il reste", () => {
+    const r = separerCoucheExterieure([chemise, pantalon], 10, manteauxParChaleur([monTrench], 10), manteauxParChaleur([laine], 10));
+    expect(r.exterieur?.id).toBe(monTrench.id);
   });
 });
