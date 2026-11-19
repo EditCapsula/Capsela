@@ -31,14 +31,18 @@ export function plafondDuSousType(cat: CategoryKey, subtype: string | null | und
 /**
  * LE PLANCHER D'UN MANTEAU LÉGER (19/11/2026, demandé : « si le dressing ne contient qu'un trench il faudrait le dire : dans ton dressing,
  * il n'y a qu'un trench. Il te faut un manteau plus chaud »). Un manteau n'a qu'un PLAFOND au catalogue ; pour dire qu'il est trop léger, il
- * lui faut une température en dessous de laquelle il ne suffit plus. Seuls les deux sous-types légers en ont une : trench et imperméable,
- * 8° — ARBITRAGE ÉDITORIAL à valider par la propriétaire (signalé : un trench par 2° de minimale est trop léger). Les autres sous-types et un
- * manteau sans sous-type n'en ont pas : rien ne dit qu'ils sont légers.
+ * lui faut une température en dessous de laquelle il ne suffit plus. Seuls les deux sous-types légers en ont une :
+ *   · Trench, 10° (19/11/2026, aligné sur le guide fourni par la propriétaire : « trench classique en coton : 10 à 20 °C », « 5 à 9 °C :
+ *     limite », « moins de 5 °C : trop froid, privilégier un manteau chaud ») — 8° le même jour avant ce guide ; le plafond de 20° y est déjà.
+ *     Le guide distingue trench doublé (7-16 °C) et trench léger (15-23 °C) : aucune donnée ne les distingue ici, la valeur est celle du
+ *     trench classique ;
+ *   · Imperméable, 8° — ARBITRAGE ÉDITORIAL à valider (le guide ne porte que sur le trench).
+ * Les autres sous-types et un manteau sans sous-type n'en ont pas : rien ne dit qu'ils sont légers.
  *
  * Il ne sert qu'à « Pour l'extérieur » (coucheExterieure.ts) : jamais écrit sur la pièce, il ne touche ni le moteur ni la capsule.
  */
 export const PLANCHER_PAR_SOUS_TYPE: Record<string, number> = {
-  Trench: 8,
+  Trench: 10,
   Imperméable: 8,
 };
 
