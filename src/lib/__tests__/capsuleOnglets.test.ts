@@ -270,3 +270,73 @@ describe("Composer : les flèches enchaînent les catégories (05/11/2026)", () 
   });
 });
 
+
+describe("Composer : un haut n'est jamais posé sans bas (19/11/2026)", () => {
+  // Signalé : la tenue du moteur avait une robe ; la robe passée à « Sans » aux flèches, la planche montrait un haut sans bas.
+  const prune = piece(20, { cat: "haut", color: "Prune", hex: "#5B3A4A" });
+  const jupeRouge = piece(21, { cat: "jupe", color: "Rouge cerise", hex: "#A32B33" });
+  const pantalonNoir = piece(22, { cat: "pantalon", color: "Noir", hex: "#2A2724" });
+  const robe = piece(23, { cat: "robe" });
+  const chaussures = piece(24, { cat: "chaussures" });
+  const groupes = piecesParEmplacement([sugg(prune), sugg(jupeRouge), sugg(pantalonNoir), sugg(robe), sugg(chaussures)]);
+  const ids = (sel: ReturnType<typeof choisir>) => piecesComposees(groupes, sel).map((e) => e.item.id);
+
+  it("la robe de la tenue du moteur passe à « Sans » : un bas revient avec le haut", () => {
+    const depart = selectionDepuisTenue(groupes, [23, 24])!;
+    expect(ids(depart)).toEqual([23, 24]);
+    const sansRobe = avancer(depart, "robe", groupes, -1);
+    expect(ids(sansRobe)).toContain(20);
+    expect(ids(sansRobe).some((id) => id === 21 || id === 22)).toBe(true);
+  });
+
+  it("le bas qui revient s'accorde au haut : le neutre d'abord", () => {
+    const sansRobe = avancer(selectionDepuisTenue(groupes, [23, 24])!, "robe", groupes, -1);
+    expect(ids(sansRobe)).toContain(22);
+  });
+
+  it("aucune composition sans robe ne laisse un haut seul, quel que soit le chemin des flèches", () => {
+    let sel = selectionDepuisTenue(groupes, [23, 24])!;
+    const presents = (["haut", "bas", "robe", "chaussures"] as const).filter((c) => groupes[c].length > 0);
+    let actif: (typeof presents)[number] = "robe";
+    for (let i = 0; i < 20; i++) {
+      const r = avancerOuChanger(sel, actif, presents, groupes, i % 3 === 0 ? -1 : 1);
+      sel = r.sel;
+      actif = r.actif as typeof actif;
+      const poses = ids(sel);
+      if (!poses.includes(23) && poses.includes(20)) expect(poses.some((id) => id === 21 || id === 22)).toBe(true);
+    }
+  });
+});
+
+describe("Composer : avec les collants de la robe, le bas qui revient est une jupe (19/11/2026)", () => {
+  const haut = piece(30, { cat: "haut", color: "Prune", hex: "#5B3A4A" });
+  const pantalon = piece(31, { cat: "pantalon", color: "Noir", hex: "#2A2724" });
+  const jupe = piece(32, { cat: "jupe", color: "Bordeaux", hex: "#6E3B3A" });
+  const robe = piece(33, { cat: "robe" });
+  const collants = piece(34, { cat: "accessoire", accessoireType: "Collants" } as Partial<Item>);
+  const groupes = piecesParEmplacement([sugg(haut), sugg(pantalon), sugg(jupe), sugg(robe), sugg(collants)]);
+  it("la robe et ses collants, puis la robe à « Sans » : la jupe, pas le pantalon", () => {
+    const sel = avancer(selectionDepuisTenue(groupes, [33, 34])!, "robe", groupes, -1);
+    const poses = piecesComposees(groupes, sel).map((e) => e.item.id);
+    expect(poses).toContain(32);
+    expect(poses).not.toContain(31);
+  });
+});
+
+describe("Composer : les collants ne sont pas un bas (19/11/2026)", () => {
+  const haut = piece(40, { cat: "haut" });
+  const pantalon = piece(41, { cat: "pantalon", color: "Noir", hex: "#2A2724" });
+  const robe = piece(42, { cat: "robe" });
+  const collants = piece(43, { cat: "accessoire", accessoireType: "Collants" } as Partial<Item>);
+  const groupes = piecesParEmplacement([sugg(haut), sugg(pantalon), sugg(robe), sugg(collants)]);
+  it("sans jupe ni short : le pantalon revient et les collants sont retirés", () => {
+    const sel = avancer(selectionDepuisTenue(groupes, [42, 43])!, "robe", groupes, -1);
+    const poses = piecesComposees(groupes, sel).map((e) => e.item.id);
+    expect(poses).toEqual(expect.arrayContaining([40, 41]));
+    expect(poses).not.toContain(43);
+  });
+  it("avec la robe, les collants restent", () => {
+    const poses = piecesComposees(groupes, selectionDepuisTenue(groupes, [42, 43])!).map((e) => e.item.id);
+    expect(poses).toEqual(expect.arrayContaining([42, 43]));
+  });
+});
