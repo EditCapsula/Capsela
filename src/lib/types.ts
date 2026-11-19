@@ -550,8 +550,9 @@ export interface AppState {
     moment: string;
     /** Le plan à rouvrir au retour ; absent pour la tenue d'un jour consulté depuis Tenue (retour à Tenue). */
     plan?: TenuePlanifiee;
-    /** « planifier » : une tenue proposée par Planifier, pas encore gardée (04/11/2026) — le retour y ramène, sur le même résultat. */
-    retour?: "planifier";
+    /** « planifier » : une tenue proposée par Planifier, pas encore gardée (04/11/2026) — le retour y ramène, sur le même résultat.
+     *  « home » : une tenue de l'accueil (19/11/2026, option B : « Avis d'un proche » sur chaque slide) — le retour ramène à l'accueil. */
+    retour?: "planifier" | "home";
   } | null;
   /** Plan à rouvrir en revenant sur Planifier après le partage ; consommé à l'ouverture. */
   planARouvrir: TenuePlanifiee | null;

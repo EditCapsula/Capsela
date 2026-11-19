@@ -48,3 +48,24 @@ HAUTEUR_COTES_RECETTE, CHAUSSURES_SOUS_VESTE, PROPORTION_COLLANTS_RECETTE), dema
 `HomeScreen.tsx` ont repris leur version du commit `7411a00`. La maquette reste disponible : commit `5121616` pour ces deux fichiers ;
 `ChoisirMaTenue.tsx`, `retourPiece.ts` et les actions `porterCesPieces` / `annulerPorteeDuJour` du store sont restés dans le code, sans
 appelant sur l'accueil. La planche agrandie et les réglages de la recette sont gardés.
+
+## L'option B de l'accueil (19/11/2026, arbitrée)
+
+Issue de l'exploration du 18/11/2026 (trois architectures, `AccueilMaquettes.tsx`, `?maquettes`) : « J'ai une préférence pour le B »,
+« Mets la strate extérieur avant le CTA voir le look », avec la salutation (« montre-moi la version B avec salutation ») et le carrousel
+des occasions (« On garde le carrousel »). De haut en bas :
+
+1. **La salutation** « Bonjour, <prénom> », puis **le jour et sa météo sur leur ligne** (`BarreDuJour`, jours passés compris) — ils
+   sortent de la carte, où ils étaient depuis le 17/11/2026 (`EnTeteJour`).
+2. **La carte de la tenue**, verticale (`CarteHero`) : le surtitre de l'occasion, le titre en titre d'écran (second temps en italique
+   terracotta sur la même ligne), la composition sur toute la largeur (100 / 96), « Pour l'extérieur », « Voir le look » en pleine
+   largeur, puis trois actions en colonnes : **Sauvegarder · Avis d'un proche · Autre tenue**. « Avis d'un proche » est nouveau sur
+   l'accueil : le partage de la page Tenue pour la tenue de la slide, retour à l'accueil (`avisSource.retour = "home"`).
+   La tenue seule (un autre jour) passe par la même carte ; les autres états (jour passé, aucune tenue, composition en cours) gardent
+   leur contenu, posé de la même façon (texte au-dessus, composition dessous).
+3. **Le voyage** — séjour en cours ou prochain départ — après la tenue (avant : sous la salutation).
+4. **Les quatre accès en rangée** (`AccesAccueil.tsx`) à la place des quatre cartes « Explorer Capsela · Tout pour ton style »
+   (`CarteUnivers`, gardé pour l'écran d'essai) : mêmes destinations, la valise garde sa règle d'accès.
+
+**La version d'avant** (texte à gauche, composition à droite, deux actions, jour et météo dans la carte, cartes « Tout pour ton style »)
+est le commit `ddf372b` pour `CarrouselHero.tsx` et `HomeScreen.tsx`.

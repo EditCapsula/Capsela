@@ -3549,7 +3549,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           ? { ...s, planARouvrir: s.avisSource.plan, avisSource: null, screen: "planifier" }
           : s.avisSource?.retour === "planifier"
             ? { ...s, avisSource: null, screen: "planifier" }
-            : { ...s, avisSource: null, screen: "tenues" }
+            : s.avisSource?.retour === "home"
+              ? { ...s, avisSource: null, screen: "home" }
+              : { ...s, avisSource: null, screen: "tenues" }
       ),
     oublierPlanARouvrir: () => setState((s) => (s.planARouvrir ? { ...s, planARouvrir: null } : s)),
     adapterPlan: (plan, ids, notes, depuis) => setState((s) => ({ ...s, planAAdapter: { plan, ids, notes }, planRetour: depuis, planJour: null, screen: "planifier" })),

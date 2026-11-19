@@ -5,7 +5,6 @@ import { SejourEnCours } from "@/components/SejourEnCours";
 import { sejourEnCours } from "@/lib/valiseDuJour";
 import TitrePage from "@/components/TitrePage";
 import { t } from "@/lib/langue";
-import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
 import { styleDuLook, texteEditorialLook } from "@/lib/editorialLook";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
 import { useMemo, useRef, useState } from "react";
@@ -21,34 +20,27 @@ import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
 import { clePrincipale, computeLookScore, SEUIL_MANTEAU, estContexteMaison, tenueAUnSocle } from "@/lib/logic";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
-import { applyGenderChange, libelleStyles, paletteHexes, type Gender } from "@/lib/profile";
+import { applyGenderChange, paletteHexes, type Gender } from "@/lib/profile";
 import { GenderModal } from "@/components/ProfilUI";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { EnTeteJour } from "@/components/BarreDuJour";
+import BarreDuJour from "@/components/BarreDuJour";
 import { CarteProchainDepart, useRappelValise } from "@/components/RappelValise";
 import BadgePremium from "@/components/BadgePremium";
 import { retourPrecedent, retourSuivant, retoursAvecTenue, tenuePassee } from "@/lib/retro";
-import { dateDuJour } from "@/lib/jourConsulte";
+import { dateDuJour, momentMessage } from "@/lib/jourConsulte";
 import { AlerteMeteoLook, PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
-import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/components/CarrouselHero";
+import { CarrouselHero, CarteHero } from "@/components/CarrouselHero";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { manteauxPourLaCouche, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
+import AccesAccueil from "@/components/AccesAccueil";
 import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
 
-/** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
-export const glypheUnivers = (d: string) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-    <path d={d} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-export const D_DRESSING = "M10 6a2 2 0 1 1 2 2v1.5M12 9.5L3.4 16a1 1 0 0 0 .6 1.8h16a1 1 0 0 0 .6-1.8z";
-export const D_CAPSULE = "M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3";
-export const D_AGENDA = "M4.5 6h15v14h-15zM4.5 10h15M8.5 3.5v4M15.5 3.5v4";
-export const D_VALISE = "M3 10a2.5 2.5 0 0 1 2.5-2.5h13A2.5 2.5 0 0 1 21 10v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18zM9 7.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2.5M9.5 11.5v5M14.5 11.5v5";
+// Les glyphes des accès vivent avec la rangée des accès (AccesAccueil.tsx, 19/11/2026) ; réexportés pour l'écran d'essai.
+export { glypheUnivers, D_DRESSING, D_CAPSULE, D_AGENDA, D_VALISE } from "@/components/AccesAccueil";
 
 /**
  * Une carte de la grille « Tout pour ton style » : un glyphe, un titre en deux lignes, une phrase, un visuel éditorial en
@@ -368,8 +360,6 @@ export default function HomeScreen() {
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
 
-  /** Les styles de la personne, dits en une fois dans la carte capsule : jamais un style écrit en dur. */
-  const stylesDits = libelleStyles(profile.styles, profile.gender);
   // LE BLOC ÉDITORIAL D'UNE TENUE RECOMMANDÉE (12/11/2026, editorialLook.ts) : un titre qui dit le style réel du look et une phrase
   // qui dit sa pertinence pour l'occasion. Une tenue planifiée garde son titre et son texte (texteHero) : ce n'est pas une recommandation.
   const texteDuLook = (pieces: Item[], occ: OccasionKey | null) =>
@@ -420,6 +410,18 @@ export default function HomeScreen() {
   const piecesDe = (ids: number[]) => ids.map((id) => resolvePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
   const dejaSauvegardee = (ids: number[]) => state.savedLooks.some((l) => cleSlide(l.pieceIds) === cleSlide(ids));
 
+
+  // « AVIS D'UN PROCHE » SUR CHAQUE TENUE DE L'ACCUEIL (19/11/2026, option B arbitrée) : le partage de la page Tenue, pour la tenue de la
+  // slide ; le retour ramène à l'accueil. La couche extérieure est séparée par l'écran de partage lui-même (OpinionShareScreen).
+  const avisPour = (ids: number[], occasion: OccasionKey) => () =>
+    actions.openOpinionShare({
+      pieceIds: ids,
+      occasion,
+      temp: meteoDuJour.temp ?? null,
+      label: meteoDuJour.label ?? null,
+      moment: momentMessage(jourConsulte.decalage, jourConsulte.date) ?? "",
+      retour: "home",
+    });
 
   const carteSlide = (slide: SlideCarrousel) => {
     const duJour = slide.source !== "proposition";
@@ -492,6 +494,7 @@ export default function HomeScreen() {
           if (!enSejour) quota.demander(() => actions.autreIdeeSlide(slide.id as SlideId));
         }}
         autreDesactive={quota.tirageEnCours || (enSejour && !duJour)}
+        onAvis={avisPour(slide.ids, slide.occasion)}
         // « Pour l'extérieur » au-dessus des deux actions (17/11/2026, demandé), comme sur la carte sans carrousel ; l'alerte météo reste dessous.
         avantActions={blocSlide ?? undefined}
         pied={duJour && planApplique?.alerte ? <AlerteMeteoLook planApplique={planApplique} /> : undefined}
@@ -520,11 +523,12 @@ export default function HomeScreen() {
     label: passee?.weatherLabel ?? null,
     onChange: setRetro,
   };
-  /** La carte qui porte le jour, sa météo et la tenue (17/11/2026). */
+  /**
+   * La carte de la tenue. Le jour et sa météo en sont sortis le 19/11/2026 (option B arbitrée) : ils sont sur leur ligne, sous la
+   * salutation (BarreDuJour, mêmes données et mêmes gestes, jours passés compris) ; du 17/11 au 19/11, ils étaient en tête de la carte.
+   */
   const carteDuJour = (contenu: React.ReactNode) => (
     <div className="mx-4 rounded-hero overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
-      <EnTeteJour retro={retroJour} className="px-2 pt-[6px]" />
-      <div aria-hidden="true" className="mx-4 mt-[4px] border-t border-border" />
       {contenu}
     </div>
   );
@@ -545,12 +549,11 @@ export default function HomeScreen() {
         <TitrePage>
           {t("Bonjour,")} <span className="italic">{firstNameOrYou}</span>
         </TitrePage>
+        {/* LE JOUR ET SA MÉTÉO SUR LEUR LIGNE, sous la salutation (19/11/2026, option B arbitrée) — les mêmes données et les mêmes gestes que
+            l'en-tête de carte d'avant, jours passés compris (retro). */}
+        <BarreDuJour retro={retroJour} meteoEnLigne className="mt-1" />
         {/* Ce qui est planifié ce jour-là (Planifier) : un rappel qui mène à la fiche du plan. Rien sans plan. */}
-        {retroActif === 0 && sejour && <SejourEnCours sejour={sejour} className="mt-3" />}
         {retroActif === 0 && <PlansDuJour depuis="home" className="mt-3" sansJourneeValise={!!sejour} />}
-        {/* LE PROCHAIN DÉPART (06/11/2026, rappelsValise.ts) : de J-7 à J-1, sous le jour et sa météo, avant la tenue — compacte, elle ne
-            lui dispute pas la place. Seulement pour aujourd'hui : un autre jour consulté n'est pas « maintenant ». */}
-        {rappelValise && retroActif === 0 && state.jourDecalage === 0 && <CarteProchainDepart rappel={rappelValise} className="mt-3" />}
       </div>
 
       {/* LE JOUR, LA MÉTÉO ET LA TENUE DANS UNE SEULE CARTE (17/11/2026, arbitré sur une maquette : « intègre-les dans la card », les points
@@ -570,19 +573,59 @@ export default function HomeScreen() {
             onAvantDerniere={actions.etendreCarrousel}
           />
         </div>
+      ) : hasOutfit && !passee && !sansTenue ? (
+        // LA TENUE SEULE (un autre jour, ou une seule proposition) : la même carte que les slides du carrousel (CarteHero, option B du
+        // 19/11/2026), pour qu'un jour à venir se lise comme aujourd'hui. Un jour à venir sauvegarde la tenue seule et tire une autre
+        // tenue sans avis (l'avis du jour ne porte que sur aujourd'hui), comme avant.
+        // data-tour : la tenue du jour sans carrousel est aussi la cible de la visite (lib/visites.ts).
+        <div className="mt-3" data-tour="accueil-tenue">
+          {carteDuJour(
+            <CarteHero
+              sansCadre
+              surtitre={texteHero ? sansLeJour(texteHero.surtitre) : "Ton look du jour"}
+              titre={titreHero}
+              sousTitre={sousTitreHero}
+              pourquoi={!texteHero}
+              portee={porteeAujourdhui}
+              pieces={outfitPieces}
+              graine={cleTenue}
+              categoriesAttendues={categoriesAttendues}
+              fantomes={sansChaussures(outfitPieces)}
+              onFantome={(cat) => cat === "chaussures" && (demanderChoixChaussures(), actions.goTenues())}
+              ajouts={conseilVeste}
+              onPiece={toucherPiece(outfitPieces, remplacerTenueDuJour)}
+              onVoir={actions.goTenues}
+              sauvegardee={sauvegardee}
+              onSauvegarder={() => (jourAVenir ? actions.toggleSaveOutfitLook(sansExterieur) : actions.setOutfitFeedback("adore", sansExterieur))}
+              onAvis={avisPour(state.outfit, occasionKey ?? "quotidien")}
+              onAutre={jourAVenir ? () => quota.demander(actions.regenOutfit) : pasPourMoi}
+              autreDesactive={quota.tirageEnCours}
+              avantActions={blocExterieur ?? undefined}
+              pied={
+                <>
+                  {/* « Autre tenue » sans tenue au socle différent (01/11/2026) : la tenue est gardée, et on le dit. */}
+                  {state.autreTenueIndisponible !== null && state.autreTenueIndisponible === clePrincipale(state.outfit, [...state.items, ...vestiairePool]) && (
+                    <p className="mt-3 text-center text-[12px] text-muted leading-[1.45]">
+                      {t("Pas d'autre tenue vraiment différente avec les pièces disponibles pour cette occasion.")}
+                    </p>
+                  )}
+                  {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu. */}
+                  {planApplique?.alerte && <AlerteMeteoLook planApplique={planApplique} />}
+                </>
+              }
+            />
+          )}
+        </div>
       ) : (
       <div className="mt-3">
       {carteDuJour(
-      // LE LOOK DU JOUR : fond blanc cassé des cartes (--color-card) et leur filet (--color-border), comme les slides du carrousel (option 3h,
-      // 14/10/2026 : l'accueil, puis Tenue le même jour ; les autres hero gardent --color-hero-background). Texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
-      // jour passé, aucune tenue possible, la tenue qui se compose, la tenue. Seul, quand le carrousel n'a pas lieu d'être.
+      // LES AUTRES ÉTATS DE LA CARTE : la tenue d'un jour passé, aucune tenue possible, la tenue qui se compose. Depuis le 19/11/2026
+      // (option B), le texte au-dessus et la composition dessous, sur toute la largeur, comme les slides ; avant, côte à côte. La tenue
+      // elle-même passe par CarteHero (ci-dessus).
       <div
         // data-tour : la tenue du jour sans carrousel (une seule proposition) est aussi la cible de la visite (lib/visites.ts).
         data-tour="accueil-tenue"
-        className="grid gap-2 grille-hero"
-        // 358 × 307 px sur 390 (calibrage du 08/10/2026) : la marge du hero est de 16 px, 8 px de moins que la gouttière du reste de
-        // l'écran. La colonne de la composition fait 181 px (zone 181 × 203), moins sur un écran étroit : le texte garde sa place.
-        // Depuis le 17/11/2026, dans la carte qui porte aussi le jour et la météo : ni fond ni filet à elle.
+        className="flex flex-col gap-2 px-4 pt-4 pb-3"
         style={{ minHeight: 280 }}
       >
         {/* Sans tenue possible (15/11/2026, capture : le texte tenait dans la moitié gauche, la droite restait vide), le texte prend toute
@@ -641,39 +684,6 @@ export default function HomeScreen() {
                 </Button>
               </div>
             </>
-          ) : hasOutfit ? (
-            <>
-              <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
-                {/* La pertinence de la tenue attend derrière le « i » du titre (12/11/2026, PourquoiCetteTenue) ; le texte d'un plan ou d'une
-                    valise reste affiché sous le titre. */}
-                <div className="relative t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
-                  {titreHero.a}
-                  {titreHero.b && (
-                    <>
-                      <br />
-                      <span className="italic text-terracotta">{titreHero.b}</span>
-                    </>
-                  )}
-                  {!texteHero && <PourquoiCetteTenue texte={sousTitreHero} />}
-                </div>
-                {texteHero && (
-                  <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
-                    {sousTitreHero}
-                  </div>
-                )}
-                {porteeAujourdhui && <MentionPortee />}
-              </div>
-              <div className="mt-auto pt-4">
-                <Button
-                  variante="principal"
-                  pleine={false}
-                  onClick={actions.goTenues}
-                  className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap"
-                >
-                  {t("Voir le look")}
-                </Button>
-              </div>
-            </>
           ) : (
             <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
               <div className="t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
@@ -691,7 +701,7 @@ export default function HomeScreen() {
         {/* La zone déborde de 10 px dans le remplissage de droite et de 6 px sur la gouttière : la composition est plus grande (08/10/2026,
             « c'est encore vraiment petit »). Le texte garde sa colonne ; les pièces restent à 10 px au moins du bord de la card. */}
         {(passee || !sansTenue) && (
-        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "4px -10px 0 -6px" }}>
+        <div className="relative min-w-0" style={{ aspectRatio: "100 / 96", margin: "4px -8px 0" }}>
           {passee ? (
             <FlatLayCapsela items={piecesPassee} context="hero-home" layoutSeed={clePieces(piecesPassee.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
           ) : (
@@ -700,107 +710,26 @@ export default function HomeScreen() {
         </div>
         )}
 
-        {!passee && !sansTenue && blocExterieur && <div style={{ gridColumn: "1 / -1" }}>{blocExterieur}</div>}
-        {/* LES DEUX ACTIONS : « Sauvegarder » range la tenue dans Mes looks (l'ancien « J'adore », même enregistrement) ; « Autre tenue »
-            propose une autre tenue (l'ancien « Pas pour moi » : le refus est enregistré, la suivante l'évite, même quota). */}
-        {hasOutfit && !passee && !sansGenre && (
-          <div className="flex items-center mt-0" style={{ gridColumn: "1 / -1" }} aria-live="polite">
-            <ActionRonde
-              icone={
-                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                  <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill={sauvegardee ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              }
-              libelle={sauvegardee ? t("Sauvegardée") : t("Sauvegarder")}
-              actif={sauvegardee}
-              // Aujourd'hui : l'avis « J'adore » (enregistré, et la tenue rejoint Mes looks). Un autre jour : la tenue seule
-              // rejoint Mes looks — l'avis du jour ne porte que sur la tenue d'aujourd'hui.
-              onClick={() => (jourAVenir ? actions.toggleSaveOutfitLook(sansExterieur) : actions.setOutfitFeedback("adore", sansExterieur))}
-            />
-            <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(29,26,22,.2)" }} />
-            <span data-tour="accueil-autre-tenue" className="inline-flex">
-              <ActionRonde
-                icone={
-                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                }
-                libelle={t("Autre tenue")}
-                label={t("Propose-moi une autre tenue")}
-                disabled={quota.tirageEnCours}
-                onClick={jourAVenir ? () => quota.demander(actions.regenOutfit) : pasPourMoi}
-              />
-            </span>
-          </div>
-        )}
-        {/* « Autre tenue » sans tenue au socle différent (01/11/2026) : la tenue est gardée, et on le dit. */}
-        {hasOutfit &&
-          state.autreTenueIndisponible !== null &&
-          state.autreTenueIndisponible === clePrincipale(state.outfit, [...state.items, ...vestiairePool]) && (
-            <p className="mt-3 text-center text-[12px] text-muted leading-[1.45]">
-              {t("Pas d'autre tenue vraiment différente avec les pièces disponibles pour cette occasion.")}
-            </p>
-          )}
-
-        {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu. Le lien « Voir une autre proposition » n'est plus là
-            (08/10/2026, demandé : « on a déjà "Sauvegarder" et "Autre tenue" ») ; la page Tenue garde « Autre tenue ». */}
-        {planApplique?.alerte && hasOutfit && <AlerteMeteoLook planApplique={planApplique} />}
       </div>
       )}
       </div>
       )}
 
-      {/* ══ EXPLORER CAPSELA — « Tout pour ton style » : les quatre univers de l'app. Sous le carrousel, 8 px au lieu de 28 (15/10/2026,
-          demandé) : les repères de pagination ajoutent déjà 32 px sous la slide ; le repère se trouve ainsi à égale distance de la slide et du surtitre. */}
-      <div className={`px-6 ${carrouselActif ? "mt-2" : "mt-7"}`}>
-        <span className="t-surtitre text-muted-3 !text-[9.5px]">{t("Explorer Capsela")}</span>
-        <h2 className="t-titre-ecran text-ink mt-1">
-          {t("Tout pour ton")} <span className="italic text-terracotta">{t("style")}</span>
-        </h2>
-        {/* Les quatre cartes ont la MÊME hauteur (08/10/2026) : « Ma capsule » cite les styles du profil et pouvait être plus haute que les
-            deux cartes du dessous — `1fr` cale chaque rangée sur la plus haute de toutes. */}
-        <div className="grid grid-cols-2 gap-[10px] mt-[14px]" style={{ gridAutoRows: "1fr" }}>
-          <CarteUnivers
-            onClick={actions.goWardrobe}
-            glyphe={glypheUnivers(D_DRESSING)}
-            ligne1={t("Mon")}
-            ligne2={t("dressing")}
-            surtitre={t("Mes pièces")}
-            texte={t("Ajoute et gère tes pièces")}
-            visuel="/editorial/capsela_editorial_dressing.webp"
-            label={t("Mon dressing")}
-          />
-          <CarteUnivers
-            onClick={actions.goCapsule}
-            glyphe={glypheUnivers(D_CAPSULE)}
-            ligne1={t("Ma")}
-            ligne2={t("capsule")}
-            surtitre={t("Par Capsela")}
-            texte={profile.styles.length > 1 ? t("Une sélection adaptée à tes styles") : t("Une sélection adaptée à ton style")}
-            accent={stylesDits || undefined}
-            visuel="/editorial/capsela_editorial_capsule.webp"
-            label={t("Ma capsule")}
-          />
-          <CarteUnivers
-            onClick={() => actions.planifierDirect()}
-            glyphe={glypheUnivers(D_AGENDA)}
-            ligne1={t("Planifier")}
-            ligne2={t("mes looks")}
-            texte={t("Organise tes tenues à l’avance")}
-            visuel="/editorial/capsela_editorial_planning.webp"
-            position="34% center"
-            label={t("Planifier mes looks")}
-          />
-          <CarteUnivers
-            onClick={ouvrirValise}
-            glyphe={glypheUnivers(D_VALISE)}
-            ligne1={t("Préparer")}
-            ligne2={t("une valise")}
-            texte={t("Une sélection pensée pour ton voyage")}
-            visuel="/editorial/capsela_editorial_valise.webp"
-            label={t("Préparer une valise")}
-          />
+      {/* LE VOYAGE APRÈS LA TENUE (19/11/2026, option B arbitrée ; avant : sous la salutation) : le séjour en cours, ou le prochain départ
+          de J-7 à J-1 (06/11/2026, rappelsValise.ts). Seulement pour aujourd'hui : un autre jour consulté n'est pas « maintenant ». */}
+      {retroActif === 0 && (sejour || (rappelValise && state.jourDecalage === 0)) && (
+        <div className={`px-6 ${carrouselActif ? "mt-2" : "mt-3"}`}>
+          {sejour ? <SejourEnCours sejour={sejour} /> : rappelValise && <CarteProchainDepart rappel={rappelValise} />}
         </div>
+      )}
+
+      {/* ══ LES QUATRE ACCÈS EN RANGÉE (19/11/2026, option B arbitrée) : Mon dressing, Ma capsule, Planifier mes looks, Préparer une valise —
+          les mêmes destinations que les quatre cartes « Explorer Capsela · Tout pour ton style » qu'ils remplacent (CarteUnivers, gardé pour
+          l'écran d'essai). La valise garde sa règle d'accès (ouvrirValise). */}
+      <div className="px-6 mt-5">
+        <AccesAccueil
+          ouvrir={{ dressing: actions.goWardrobe, capsule: actions.goCapsule, planifier: () => actions.planifierDirect(), valise: ouvrirValise }}
+        />
       </div>
 
       {/* Quota « Autre tenue » : la même feuille de quota partout. */}
