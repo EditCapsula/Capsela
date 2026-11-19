@@ -1,4 +1,4 @@
-import { huesHarmonious, isStatement, rolePieceOf } from "./attributes";
+import { huesHarmonious, isNeutralColor, isStatement, rolePieceOf } from "./attributes";
 import { silhouetteOrienteLaCapsule, styleFit, temperatureDeSaison } from "./capsule";
 import { CATS } from "./data";
 import { colorimetrieUtilisable } from "./colorimetrie";
@@ -198,7 +198,29 @@ function exclusivite(sel: SelectionComposer, touche: CleEmplacement, groupes: Re
   if (touche === "maille" && pull && isColRoule(pull) && hautPose) out = { ...out, haut: -1 };
   if (touche === "haut" && hautPose && pull && isColRoule(pull)) out = { ...out, maille: -1 };
   if ((out.haut ?? -1) < 0 && groupes.haut.length > 0 && !emplacementFacultatif("haut", groupes, out)) out = { ...out, haut: 0 };
+  // UN HAUT N'EST JAMAIS POSÉ SANS BAS (19/11/2026, signalé sur Capsule › Composer : « si un haut est poussé on voit forcément un bas qui
+  // correspond »). Une tenue du moteur avec une robe laisse le bas à « Sans » ; quand la robe repasse à « Sans », le haut revenait (ligne
+  // ci-dessus) mais pas le bas. Sans robe, le bas revient donc aussi : celui qui s'accorde au haut posé (basAccorde).
+  if (position(out, "robe", groupes.robe.length) < 0 && position(out, "bas", groupes.bas.length) < 0 && groupes.bas.length > 0) out = { ...out, bas: basAccorde(groupes, out) };
   return out;
+}
+
+/**
+ * Le bas qui va avec le haut posé : une couleur neutre, sinon une teinte voisine ou complémentaire (huesHarmonious, la règle d'harmonie
+ * du moteur), sinon le premier bas — l'ordre de l'emplacement (le dressing d'abord) départage.
+ */
+function basAccorde(groupes: Record<CleEmplacement, EntreeCapsule[]>, sel: SelectionComposer): number {
+  const p = position(sel, "haut", groupes.haut.length);
+  const haut = p >= 0 ? groupes.haut[p].item : null;
+  // Des collants posés (ceux de la robe) : une jupe ou un short, jamais un pantalon par-dessus (la règle du moteur, R-B19).
+  const pa = position(sel, "accessoire", groupes.accessoire.length);
+  const collants = pa >= 0 && groupes.accessoire[pa].item.accessoireType === "Collants";
+  const indices = groupes.bas.map((_, i) => i).filter((i) => !collants || ["jupe", "short"].includes(groupes.bas[i].item.cat));
+  const parmi = indices.length ? indices : groupes.bas.map((_, i) => i);
+  const neutre = parmi.find((i) => isNeutralColor(groupes.bas[i].item.color));
+  if (neutre !== undefined) return neutre;
+  const accorde = haut ? parmi.find((i) => huesHarmonious(haut.hex, groupes.bas[i].item.hex)) : undefined;
+  return accorde ?? parmi[0];
 }
 
 /** Les pièces posées sur la planche, dans l'ordre des emplacements. Une robe choisie remplace le haut et le bas. */
