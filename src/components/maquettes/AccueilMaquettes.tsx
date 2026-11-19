@@ -326,7 +326,10 @@ function OptionA({ tenue, voyage }: { tenue: Tenue; voyage: EtatVoyage }) {
 function OptionB({ tenue, voyage }: { tenue: Tenue; voyage: EtatVoyage }) {
   return (
     <>
+      {/* AVEC LA SALUTATION (19/11/2026, demandé : « montre-moi la version B avec salutation ») : la même que l'option A et l'accueil
+          actuel, au-dessus de la ligne du jour. */}
       <div className="px-6">
+        <Salutation />
         <BarreDuJour meteoEnLigne className="mt-1" />
       </div>
       <div className="mx-4 mt-2 rounded-hero overflow-hidden px-[16px] pt-4 pb-3" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
