@@ -27,7 +27,14 @@ const FONDU = 36;
  * survivent (travail, date, voyage — arbitré le 22/09 pour le voyage : sans lui, « Longue distance » et son conseil deviennent
  * inatteignables). Les actions du store (setOccasion, setWorkMode…) recalculent la tenue, comme avant : aucune logique parallèle.
  */
-export default function SelecteurOccasion() {
+/**
+ * La forme de la ligne des occasions (18/11/2026, exploration « Ma tenue du jour », écran d'essai seulement) : « onglets » est celle de
+ * la page ; « segmente » un segmented control (piste et segment actif plein) ; « pastilles » des catégories en pastilles qui défilent.
+ * Mêmes occasions, mêmes actions, même clavier : seule la forme change.
+ */
+export type FormeOccasions = "onglets" | "segmente" | "pastilles";
+
+export default function SelecteurOccasion({ forme = "onglets" }: { forme?: FormeOccasions } = {}) {
   const { state, actions } = useCapsela();
   const [feuilleOuverte, setFeuilleOuverte] = useState(false);
   const ligne = useRef<HTMLDivElement>(null);
@@ -94,14 +101,15 @@ export default function SelecteurOccasion() {
       <div className="mt-[14px]" />
 
       {/* La ligne déborde jusqu'aux bords de l'écran (marges négatives = padding de page) ; le filet bas court sur toute sa largeur. */}
-      <div className="relative -mx-6 mt-[4px] border-b border-border">
+      <div className={"relative -mx-6 mt-[4px] " + (forme === "onglets" ? "border-b border-border" : "")}>
         <div
           ref={ligne}
           role="tablist"
           aria-label="Occasion"
-          className="scrollarea flex overflow-x-auto whitespace-nowrap gap-[22px]"
+          className={"scrollarea flex overflow-x-auto whitespace-nowrap " + (forme === "onglets" ? "gap-[22px]" : forme === "pastilles" ? "gap-[8px] py-[2px]" : "")}
           style={{ paddingLeft: PAD_GAUCHE, paddingRight: FONDU, overscrollBehaviorX: "contain" }}
         >
+          <div className={forme === "segmente" ? "flex flex-shrink-0 rounded-full p-[3px] gap-[2px]" : "contents"} style={forme === "segmente" ? { background: "var(--color-warm-bg)", border: "1px solid var(--color-border)" } : undefined}>
           {OCCASIONS.map(([key, label], i) => {
             const actif = state.occasion === key;
             return (
@@ -114,15 +122,30 @@ export default function SelecteurOccasion() {
                 onClick={() => actions.setOccasion(key as OccasionKey)}
                 onKeyDown={(e) => auClavier(e, i)}
                 className={
-                  "relative flex-shrink-0 h-[44px] text-[13.5px] cursor-pointer " +
-                  (actif ? "font-semibold text-ink" : "font-medium text-muted")
+                  forme === "onglets"
+                    ? "relative flex-shrink-0 h-[44px] text-[13.5px] cursor-pointer " + (actif ? "font-semibold text-ink" : "font-medium text-muted")
+                    : forme === "segmente"
+                      ? "relative flex-shrink-0 h-[38px] px-[14px] rounded-full text-[13px] cursor-pointer " + (actif ? "font-semibold" : "font-medium text-muted")
+                      : "relative flex-shrink-0 h-[38px] px-[14px] rounded-full text-[13px] cursor-pointer " + (actif ? "font-semibold" : "font-medium text-ink")
+                }
+                style={
+                  forme === "segmente"
+                    ? actif
+                      ? { background: "var(--color-card)", color: "var(--color-ink)", boxShadow: "0 1px 3px rgba(29,26,22,.12)" }
+                      : undefined
+                    : forme === "pastilles"
+                      ? actif
+                        ? { background: "var(--color-terracotta-deep)", color: "var(--color-cream)" }
+                        : { background: "var(--color-card)", border: "1px solid var(--color-border)" }
+                      : undefined
                 }
               >
                 {libelle(label)}
-                {actif && <span aria-hidden="true" className="absolute left-0 right-0 bottom-0 h-[2px] bg-terracotta-deep" />}
+                {actif && forme === "onglets" && <span aria-hidden="true" className="absolute left-0 right-0 bottom-0 h-[2px] bg-terracotta-deep" />}
               </button>
             );
           })}
+          </div>
         </div>
         {/* Fondu discret à droite, sans flèche : il dit qu'il reste des onglets. */}
         <div

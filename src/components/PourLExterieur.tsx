@@ -15,6 +15,8 @@ export default function PourLExterieur({
   quand,
   onClick,
   compact = false,
+  forme = "ligne",
+  note = null,
 }: {
   piece: Item;
   temperature: number;
@@ -22,8 +24,54 @@ export default function PourLExterieur({
   onClick: () => void;
   /** Sur l'accueil, la carte est plus étroite : vignette et texte un cran plus petits. */
   compact?: boolean;
+  /**
+   * La présentation (18/11/2026, exploration « Ma tenue du jour », écran d'essai seulement) : « ligne », celle de partout ; « carte », une
+   * carte indépendante à grande vignette ; « bandeau », une seule ligne sur fond chaud. Mêmes textes, même action.
+   */
+  forme?: "ligne" | "carte" | "bandeau";
+  /** Une phrase de plus sous le texte (19/11/2026, phraseManteauTropLeger : les manteaux du dressing sont trop légers). */
+  note?: string | null;
 }) {
   const t = Math.round(temperature);
+  if (forme === "bandeau") {
+    return (
+      <button type="button" onClick={onClick} className="w-full flex items-center gap-[10px] text-left rounded-bloc px-[10px] py-[6px] cursor-pointer" style={{ background: "var(--color-warm-bg)" }}>
+        <span className="flex-shrink-0 w-[36px]">
+          <PhotoPiece piece={piece} ratio={1} rayon={8} />
+        </span>
+        <span className="flex-1 min-w-0 truncate text-[12.5px] text-ink">
+          <span className="font-semibold">Pour l&apos;extérieur</span>
+          <span className="text-muted-3"> · {degres(t)} · {piece.name}</span>
+        </span>
+        <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
+      </button>
+    );
+  }
+  if (forme === "carte") {
+    return (
+      <button type="button" onClick={onClick} className="w-full flex items-stretch text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer">
+        <span className="flex-shrink-0 w-[108px]" style={{ background: "var(--color-photo-bg)" }}>
+          <PhotoPiece piece={piece} ratio={1} rayon={0} />
+        </span>
+        <span className="flex-1 min-w-0 px-4 py-[12px] flex flex-col justify-center">
+          <span className="flex items-center justify-between gap-2">
+            <span className="t-titre-carte text-ink">Pour l&apos;extérieur</span>
+            <span className="inline-flex items-center gap-[4px] flex-shrink-0 rounded-full px-[8px] py-[3px] text-[11px] text-ink" style={{ background: "var(--color-warm-bg)" }}>
+              {degres(t)}
+            </span>
+          </span>
+          <span className="block text-[12px] text-muted-3 leading-[1.4] mt-[4px]" style={{ textWrap: "pretty" }}>
+            {piece.name}, à ajouter selon la météo ({degres(t)} {quand}).
+          </span>
+          {note && (
+            <span className="block text-[12px] text-ink-soft leading-[1.4] mt-[4px]" style={{ textWrap: "pretty" }}>
+              {note}
+            </span>
+          )}
+        </span>
+      </button>
+    );
+  }
   return (
     <button
       type="button"
@@ -46,6 +94,11 @@ export default function PourLExterieur({
         <span className={"block text-muted-3 leading-[1.4] mt-[2px] " + (compact ? "text-[11px]" : "text-[12px]")} style={{ textWrap: "pretty" }}>
           {piece.name}, à ajouter selon la météo ({degres(t)} {quand}).
         </span>
+        {note && (
+          <span className={"block text-ink-soft leading-[1.4] mt-[4px] " + (compact ? "text-[11px]" : "text-[12px]")} style={{ textWrap: "pretty" }}>
+            {note}
+          </span>
+        )}
       </span>
       <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
     </button>

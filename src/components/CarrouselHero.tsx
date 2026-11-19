@@ -39,6 +39,44 @@ export const IconeAutre = () => (
   </svg>
 );
 
+export const IconeAvis = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+    <path d="M4.5 6.5A2.5 2.5 0 0 1 7 4h10a2.5 2.5 0 0 1 2.5 2.5v7A2.5 2.5 0 0 1 17 16h-6l-4 3.5V16a2.5 2.5 0 0 1-2.5-2.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+  </svg>
+);
+
+/**
+ * LES TROIS ACTIONS SOUS « VOIR LE LOOK » (19/11/2026, option B de l'accueil, arbitrée) : Sauvegarder · Avis d'un proche · Autre tenue,
+ * trois colonnes égales, l'icône au-dessus du libellé — sur une ligne, les trois libellés ne tiennent pas à 390 px.
+ */
+export function ActionsSousLeLook({ sauvegardee, onSauvegarder, onAvis, onAutre, autreDesactive }: { sauvegardee: boolean; onSauvegarder: () => void; onAvis: () => void; onAutre: () => void; autreDesactive?: boolean }) {
+  // Calées par le haut : à 320 px, « Avis d'un proche » passe sur deux lignes ; les icônes restent alignées (mesuré le 19/11/2026).
+  const cellule = "flex flex-col items-center justify-start gap-[4px] min-h-[52px] pt-[6px] text-[12px] leading-[1.25] text-center text-ink-soft cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]";
+  return (
+    <div className="grid grid-cols-3" aria-live="polite">
+      <button type="button" onClick={onSauvegarder} aria-pressed={sauvegardee} className={cellule}>
+        <span className="text-ink">
+          <IconeCoeur plein={sauvegardee} />
+        </span>
+        {sauvegardee ? t("Sauvegardée") : t("Sauvegarder")}
+      </button>
+      <button type="button" onClick={onAvis} className={cellule}>
+        <span className="text-ink">
+          <IconeAvis />
+        </span>
+        {t("Avis d'un proche")}
+      </button>
+      {/* data-tour : la visite guidée de l'accueil (lib/visites.ts) met en évidence celle de la première slide, affichée à l'arrivée. */}
+      <button type="button" data-tour="accueil-autre-tenue" onClick={onAutre} disabled={autreDesactive} aria-label={t("Propose-moi une autre tenue")} className={cellule}>
+        <span className="text-ink">
+          <IconeAutre />
+        </span>
+        {t("Autre tenue")}
+      </button>
+    </div>
+  );
+}
+
 export interface CarteHeroProps {
   surtitre: string;
   titre: { a: string; b: string };
@@ -52,6 +90,8 @@ export interface CarteHeroProps {
   onSauvegarder: () => void;
   onAutre: () => void;
   autreDesactive?: boolean;
+  /** « Avis d'un proche » (19/11/2026, option B) : partager cette tenue pour avoir un avis. */
+  onAvis: () => void;
   /** Pièces manquantes posées en silhouette (les chaussures, 14/10/2026), comme sur la page Tenue. */
   fantomes?: CategoryKey[];
   /** Le « + » d'une silhouette (13/11/2026) : la chaussure manquante invite à choisir une paire (Ma tenue du jour). */
@@ -73,71 +113,79 @@ export interface CarteHeroProps {
 }
 
 /**
- * UNE SLIDE DU HERO (14/10/2026) : fond blanc cassé des cartes (--color-card) cerné de leur filet (--color-border) — le hero de l'accueil
- * seul, arbitré le 14/10/2026 (option 3h), puis Tenue le même jour ; les autres hero gardent --color-hero-background. Le texte réduit à gauche, la composition — point focal — à droite, deux actions
- * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
+ * UNE SLIDE DU HERO. Depuis le 19/11/2026, l'OPTION B DE L'ACCUEIL (exploration du 18/11, arbitrée : « J'ai une préférence pour le B »,
+ * « Mets la strate extérieur avant le CTA voir le look », avec la salutation et le carrousel gardés) : une disposition VERTICALE — le
+ * surtitre de l'occasion, le titre en grand (titre d'écran), la composition sur toute la largeur de la carte, « Pour l'extérieur », puis
+ * « Voir le look » en pleine largeur et les trois actions dessous. Avant : le texte à gauche, la composition à droite (358 × 307 sur 390),
+ * deux actions (docs/carrousel-accueil.md). Fond blanc cassé des cartes et leur filet (option 3h du 14/10/2026), sauf posée dans une carte.
  */
-export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, onFantome, ajouts, portee, onPiece, pourquoi = false, sansCadre = false, avantActions }: CarteHeroProps) {
+export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, onAvis, pied, fantomes, onFantome, ajouts, portee, onPiece, pourquoi = false, sansCadre = false, avantActions }: CarteHeroProps) {
   const ouvrirFiche = useOuvrirPiece();
   const ouvrirPiece = onPiece ?? ouvrirFiche;
   return (
     <div
       // flex-1 : toutes les slides prennent la hauteur de la plus haute (la piste les étire) — pas de saut de hauteur au glissé (18/10/2026).
-      className="rounded-hero grid gap-2 flex-1 grille-hero"
-      style={sansCadre ? { minHeight: 280 } : { background: "var(--color-card)", border: "1px solid var(--color-border)", minHeight: 307 }}
+      className="rounded-hero flex flex-col flex-1 px-4 pt-4 pb-3"
+      style={sansCadre ? undefined : { background: "var(--color-card)", border: "1px solid var(--color-border)" }}
     >
-      <div className="flex flex-col min-w-0">
-        <div className="flex items-center gap-[7px]">
-          <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
-            <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span className="t-surtitre text-ink whitespace-nowrap">{t(surtitre)}</span>
-        </div>
-        {/* Un cran plus petit depuis que le titre nomme les pièces de la tenue (17/10/2026, titreDeLaTenue) : à 27 px, « La robe
-            portefeuille et les baskets blanches » prenait cinq lignes. */}
-        <div className="relative t-titre-section text-ink mt-3" style={{ textWrap: "balance" }}>
-          {titre.a}
-          {titre.b && (
-            <>
-              <br />
-              <span className="italic text-terracotta">{titre.b}</span>
-            </>
-          )}
-          {/* La pertinence derrière le « i » du titre (12/11/2026, PourquoiCetteTenue). */}
-          {pourquoi && <PourquoiCetteTenue texte={sousTitre} />}
-        </div>
-        {!pourquoi && (
-          <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
-            {sousTitre}
-          </div>
-        )}
-        {portee && <MentionPortee />}
-        <div className="mt-auto pt-4">
-          <Button variante="principal" pleine={false} onClick={onVoir} className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap">
-            {t("Voir le look")}
-          </Button>
-        </div>
-      </div>
-
-      <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "4px -10px 0 -6px" }}>
+      <EnTeteTenue surtitre={surtitre} titre={titre} sousTitre={sousTitre} pourquoi={pourquoi} portee={portee} />
+      <div className="relative w-full mt-1 -mx-2" style={{ aspectRatio: "100 / 96", width: "calc(100% + 16px)" }}>
         {categoriesAttendues ? (
           <ZoneLookDuJour pieces={pieces} categoriesAttendues={categoriesAttendues} graine={graine} onPiece={ouvrirPiece} fantomes={fantomes} onFantome={onFantome} ajouts={ajouts} />
         ) : (
           <FlatLayCapsela items={pieces} context="hero-home" layoutSeed={graine} onPiece={ouvrirPiece} fantomes={fantomes} onFantome={onFantome} ajouts={ajouts} />
         )}
       </div>
-
-      {avantActions && <div style={{ gridColumn: "1 / -1" }}>{avantActions}</div>}
-      <div className="flex items-center" style={{ gridColumn: "1 / -1" }} aria-live="polite">
-        <ActionRonde icone={<IconeCoeur plein={sauvegardee} />} libelle={sauvegardee ? t("Sauvegardée") : t("Sauvegarder")} actif={sauvegardee} onClick={onSauvegarder} />
-        <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(29,26,22,.2)" }} />
-        {/* data-tour : la visite guidée de l'accueil (lib/visites.ts) met en évidence celle de la première slide, affichée à l'arrivée. */}
-        <span data-tour="accueil-autre-tenue" className="inline-flex">
-          <ActionRonde icone={<IconeAutre />} libelle={t("Autre tenue")} label={t("Propose-moi une autre tenue")} disabled={autreDesactive} onClick={onAutre} />
-        </span>
+      {/* « Pour l'extérieur » AVANT « Voir le look » (18/11/2026, demandé sur l'option B). mt-auto : le CTA de chaque slide tombe au même
+          niveau, quelle que soit la hauteur de son titre. */}
+      <div className="mt-auto">
+        {avantActions && <div className="mt-1">{avantActions}</div>}
+        <div className="mt-2">
+          <Button variante="principal" onClick={onVoir} className="!normal-case !tracking-[0.02em] !text-[15px]">
+            {t("Voir le look")}
+          </Button>
+        </div>
+        <div className="mt-1">
+          <ActionsSousLeLook sauvegardee={sauvegardee} onSauvegarder={onSauvegarder} onAvis={onAvis} onAutre={onAutre} autreDesactive={autreDesactive} />
+        </div>
+        {pied}
       </div>
-      {pied}
     </div>
+  );
+}
+
+/**
+ * L'en-tête d'une tenue de l'accueil (19/11/2026, option B) : le surtitre de l'occasion, le titre en grand, son second temps en italique
+ * terracotta sur la même ligne, le « i » de la pertinence ; le texte d'un plan ou d'une valise sous le titre ; « Portée aujourd'hui ».
+ * Partagé par les slides et par la carte seule (un autre jour), pour qu'elles se lisent pareil.
+ */
+export function EnTeteTenue({ surtitre, titre, sousTitre, pourquoi, portee }: { surtitre: string; titre: { a: string; b: string }; sousTitre: string; pourquoi: boolean; portee?: boolean }) {
+  return (
+    <>
+      <div className="flex items-center gap-[7px]">
+        <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
+          <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="t-surtitre text-ink whitespace-nowrap">{t(surtitre)}</span>
+      </div>
+      <div className="relative t-titre-ecran text-ink mt-2" style={{ textWrap: "balance" }}>
+        {titre.a}
+        {titre.b && (
+          <>
+            {" "}
+            <span className="italic text-terracotta">{titre.b}</span>
+          </>
+        )}
+        {/* La pertinence derrière le « i » du titre (12/11/2026, PourquoiCetteTenue). */}
+        {pourquoi && <PourquoiCetteTenue texte={sousTitre} />}
+      </div>
+      {!pourquoi && (
+        <div className="text-[13px] text-ink-soft leading-[1.45] mt-[8px]" style={{ textWrap: "pretty" }}>
+          {sousTitre}
+        </div>
+      )}
+      {portee && <MentionPortee />}
+    </>
   );
 }
 

@@ -5,6 +5,7 @@ import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
 import type { PeriodeConges } from "./conges";
 export { PAL_COULEURS } from "./palCouleurs";
 import { PAL_COULEURS } from "./palCouleurs";
+import { PALETTE } from "./data";
 /** Genre — 2 valeurs (Tâche 3, arbitrages du 20/08/2026 : "Neutre / non-binaire" et "Préfère ne pas dire" retirés). */
 export type Gender = "femme" | "homme";
 
@@ -179,9 +180,21 @@ export function paletteColorName(hex: string): string | null {
   return PAL_COULEURS.find(([, h]) => h === hex)?.[0] ?? null;
 }
 
-/** Toutes les teintes de la palette personnelle — alimente R-S10 et la préférence de sélection à la génération. */
+/**
+ * Toutes les teintes de la palette personnelle — alimente R-S10 et la préférence de sélection à la génération.
+ *
+ * LA MÊME COULEUR SOUS SES DEUX CODES (19/11/2026, signalé : « pourquoi tu me pousses cette chemise à chaque fois alors qu'elle n'est même
+ * pas dans mes couleurs préférées ? »). Le moteur compare des hex EXACTS, et la palette du profil (PAL_COULEURS) ne donne pas toujours le
+ * même hex que la couleur d'une pièce (PALETTE, data.ts) pour un même nom : mesuré, 9 couleurs sur 46 (Gris, Sable, Chocolat, Terracotta,
+ * Corail, Rose poudré, Moutarde, Kaki, Vert bouteille) n'étaient JAMAIS reconnues sur une pièce — une préférée « Chocolat » laissait passer
+ * une chemise prune comme une chemise chocolat. Les hex de pièce du même nom sont ajoutés à la suite : la préférence reconnaît la couleur
+ * choisie quel que soit son code, sans rien ajouter que la personne n'ait choisi (paletteColorName ne les nomme pas : l'affichage ne change pas).
+ */
 export function paletteHexes(profile: Profile): string[] {
-  return profile.paletteCouleurs.filter((x): x is string => Boolean(x));
+  const choisies = profile.paletteCouleurs.filter((x): x is string => Boolean(x));
+  const noms = new Set(choisies.map(paletteColorName).filter((n): n is string => Boolean(n)));
+  const equivalents = PALETTE.filter(([n, h]) => noms.has(n) && !choisies.includes(h)).map(([, h]) => h);
+  return [...choisies, ...equivalents];
 }
 
 /** Résumé affichable de la palette personnelle : "Couleurs : X, Y, Z". */

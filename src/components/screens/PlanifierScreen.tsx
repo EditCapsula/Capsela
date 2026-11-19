@@ -18,7 +18,7 @@ import { CalendrierMois, IconeTuile, LigneIcone, ProgressionLibelles, TuileIcone
 import { OCCASIONS_EDITORIALES } from "@/lib/occasionEditoriale";
 import { GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { HeroTenue, ICONES_INDICATEUR, IndicateursTenue, RailPiecesTenue } from "@/components/HeroTenue";
-import { separerCoucheExterieure } from "@/lib/coucheExterieure";
+import { manteauxPourLaCouche, separerCoucheExterieure } from "@/lib/coucheExterieure";
 import { basculerOccasion, occasionPrincipale, occasionsSecondaires, OCCASIONS_SEULES, tirerPolyvalente } from "@/lib/tenuePolyvalente";
 import { BarreDuPlan } from "@/components/BarreDuJour";
 import SegmentedControl from "@/components/SegmentedControl";
@@ -28,7 +28,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { CATS, DATE_CONTEXTS, OCCASIONS, WORK_MODES, occasionShortLabel, type Weather } from "@/lib/data";
 import { sansTenueCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
-import { candidatsDeRemplacement, estContexteMaison } from "@/lib/logic";
+import { estContexteMaison } from "@/lib/logic";
 import { humeursProposees, libelleHumeur, genererTenueHumeur, type Humeur } from "@/lib/humeur";
 import { soireeHabillee } from "@/lib/occasions";
 import { clePieces, jourLocal } from "@/lib/outfitFeedback";
@@ -974,7 +974,7 @@ export default function PlanifierScreen() {
   // garde la moyenne du créneau pour composer.
   const candidatsResultat =
     !composition && meteoMoment && !chezSoiResultat && pieces.length
-      ? candidatsDeRemplacement(pieces, dressingSeul ? state.items : [...state.items, ...capsuleDeLaDate], -1, "manteau", occ ?? "all", workMode, dateContext, meteoUtilisee)
+      ? manteauxPourLaCouche(pieces, dressingSeul ? state.items : [...state.items, ...capsuleDeLaDate], -1, occ ?? "all", workMode, dateContext, meteoUtilisee, meteoMoment.tempMin ?? null)
       : [];
   const tempResultat = composition ? null : (meteoMoment?.tempMin ?? null);
   const coloResultat = colorimetrieMoteur(profile.colorimetrie);
@@ -2045,6 +2045,7 @@ export default function PlanifierScreen() {
                   pieces={pieces}
                   temperature={tempResultat}
                   quand="prévus"
+                  momentCouche={moment === "Soirée" ? "cette soirée" : "cette journée"}
                   candidatsExterieur={candidatsResultat}
                   chezSoi={chezSoiResultat}
                   indicateurs={<IndicateursTenue items={indicateursResultat} />}
@@ -2213,7 +2214,7 @@ export default function PlanifierScreen() {
           const chezSoiPlan = estContexteMaison(t.occasion, (t.sousChoix ?? "Présentiel") as WorkMode);
           const candidatsPlan =
             meteoMoteurPlan && tempCouchePlan != null && !chezSoiPlan
-              ? candidatsDeRemplacement(pieces, wardrobePool, -1, "manteau", t.occasion, (t.sousChoix ?? "Présentiel") as WorkMode, (t.sousChoix ?? DATE_CONTEXTS[0][0]) as DateContext, meteoMoteurPlan)
+              ? manteauxPourLaCouche(pieces, wardrobePool, -1, t.occasion, (t.sousChoix ?? "Présentiel") as WorkMode, (t.sousChoix ?? DATE_CONTEXTS[0][0]) as DateContext, meteoMoteurPlan, tempCouchePlan)
               : [];
           const sepPlan = separerCoucheExterieure(pieces, tempCouchePlan, candidatsPlan, [], chezSoiPlan);
           // Une tenue planifiée : la même configuration pour son flat lay et la liste de ses pièces (13/11/2026).
@@ -2331,6 +2332,7 @@ export default function PlanifierScreen() {
                 pieces={pieces}
                 temperature={tempCouchePlan}
                 quand={passee ? "ce jour-là" : "prévus"}
+                momentCouche={passee ? undefined : t.moment === "Soirée" ? "cette soirée" : "cette journée"}
                 candidatsExterieur={passee ? [] : candidatsPlan}
                 chezSoi={chezSoiPlan}
                 indicateurs={<IndicateursTenue items={indicateursPlan} />}

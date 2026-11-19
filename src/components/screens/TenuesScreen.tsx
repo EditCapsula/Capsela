@@ -2,6 +2,7 @@
 
 import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { t, tn } from "@/lib/langue";
+import { libelle } from "@/lib/traductions/libellesDonnees";
 import PourquoiCetteTenue from "@/components/PourquoiCetteTenue";
 import { styleDuLook, texteEditorialLook, titreEnLigne } from "@/lib/editorialLook";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
@@ -24,9 +25,12 @@ import { ecrireRetourDuCompte, envoyerRetoursAuCompte, lireRetoursDuCompte } fro
 import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
+import { autresManteaux, manteauxPourLaCouche, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { RailPiecesTenue } from "@/components/HeroTenue";
+import { alternativesClassees, poolDeRemplacement } from "@/lib/remplacementPiece";
+import { momentDeLaCouche, phraseManteauTropLeger } from "@/lib/plafondManteau";
+import VariantesTenue, { type ArchitectureTenue, type BlocsTenue, type TraitementComposition, type VarianteTenue } from "@/components/maquettes/VariantesTenue";
 import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, computeLookScore, estContexteMaison, fraicheurDuSoir, isCompleteOutfit, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { chaussureHabillee, isMetallicFinish, isNeutralColor } from "@/lib/attributes";
 
@@ -211,7 +215,10 @@ function ExploreStyleCard({
   );
 }
 
-export default function TenuesScreen() {
+/** Les architectures d'essai de la page (19/11/2026, VariantesTenue.tsx) : cinq organisations des mêmes blocs ; absente, la page d'aujourd'hui. */
+export type DispositionTenue = ArchitectureTenue;
+
+export default function TenuesScreen({ disposition, traitement = "flatlay" }: { disposition?: DispositionTenue; traitement?: TraitementComposition } = {}) {
   const { state, weather, meteoDuJour, jourConsulte, geoLoading, wardrobePool, vestiairePool, defaultCapsule, actions, sourceMeteo } = useCapsela();
   // En attente tant que la météo du jour consulté n'est pas connue : position,
   // ou prévision d'un jour à venir (navigation par date, 27/09/2026).
@@ -385,7 +392,7 @@ export default function TenuesScreen() {
   const chezSoi = estContexteMaison(state.occasion || "all", state.workMode);
   const candidatsManteau = useMemo(() => {
     if (tempReelle == null || chezSoi) return [];
-    const c = candidatsDeRemplacement(outfitPieces, displayPool, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour);
+    const c = manteauxPourLaCouche(outfitPieces, displayPool, -1, state.occasion || "all", state.workMode, state.dateContext, meteoDuJour, tempReelle);
     const choisi = c.find((i) => i.id === manteauChoisi);
     return choisi ? [choisi, ...c.filter((i) => i.id !== choisi.id)] : c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -395,7 +402,7 @@ export default function TenuesScreen() {
   // « Voir une autre proposition » fait passer le manteau choisi devant, de la capsule comme du dressing.
   const candidatsCapsule = useMemo(() => {
     if (tempReelle == null || chezSoi) return [];
-    const c = candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour);
+    const c = manteauxPourLaCouche(outfitPieces, defaultCapsule, -1, state.occasion || "all", state.workMode, state.dateContext, meteoDuJour, tempReelle);
     const choisi = c.find((i) => i.id === manteauChoisi);
     return choisi ? [choisi, ...c.filter((i) => i.id !== choisi.id)] : c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -420,7 +427,7 @@ export default function TenuesScreen() {
     ? autresManteaux(
         exterieurSuggere
           ? [...candidatsManteau, ...candidatsCapsule]
-          : candidatsDeRemplacement(outfitPieces, displayPool, exterieur.id, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour),
+          : manteauxPourLaCouche(outfitPieces, displayPool, exterieur.id, state.occasion || "all", state.workMode, state.dateContext, meteoDuJour, tempReelle),
         outfitPieces,
         exterieur
       )
@@ -764,7 +771,7 @@ export default function TenuesScreen() {
   // Par le froid du soir, sans manteau adapté dans le dressing : un manteau de la CAPSULE (12/11/2026, demandé), jamais une veste.
   const manteauxCapsuleSoir =
     tempCouche < SEUIL_MANTEAU && outfitPieces.length
-      ? candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour)
+      ? manteauxPourLaCouche(outfitPieces, defaultCapsule, -1, state.occasion || "all", state.workMode, state.dateContext, meteoDuJour, tempCouche)
       : [];
   const conseilVeste = (() => {
     const p = liveProactiveByKey.get("veste_soir");
@@ -822,137 +829,10 @@ export default function TenuesScreen() {
     },
   };
 
-  return (
-    <div
-      ref={zoneTenue}
-      onScroll={defilementTenue.onScroll}
-      className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav"
-      onTouchStart={surDebutGlissement}
-      onTouchEnd={surFinGlissement}
-    >
-      {/* Le titre dans le bandeau, après le retour (13/11/2026, demandé : le logo ne reste que sur l'accueil). */}
-      <AppHeader
-        onBack={actions.goHome}
-        backLabel={t("Revenir à l'accueil")}
-        titre={
-          <>
-            {t("Ma")} <span className="italic">{t("tenue")} {complementTenue(decalage, dateConsultee)}</span>
-          </>
-        }
-      />
-
-      {/* LA MISE EN PAGE DE L'ACCUEIL (13/11/2026, demandé : « aligne la place de ma tenue du jour et l'accueil », option a, en
-          gardant le bouton retour) : le titre par TitrePage, 18 px sous le bandeau comme sur les pages majeures, puis la ligne du jour
-          et de la météo à la même distance que sur l'accueil. « Bonjour, <prénom> » reste à l'accueil seul (23/09/2026) : le titre
-          annonce ce qu'on vient chercher ici, « Ma tenue du jour ». */}
-      <div className="mt-[8px]" />
-
-      {/* LE JOUR ET SA MÉTÉO, SUR UNE LIGNE (27/09/2026) — le composant partagé avec l'Accueil, aux mêmes marges. */}
-      <BarreDuJour className="mt-1" meteoEnLigne />
-      {/* Ce qui est planifié ce jour-là (Planifier) — le même rappel que
-          l'Accueil. Un plan de journée est devenu la tenue ci-dessous (option C,
-          30/09/2026) ; restent ici la soirée et les plans écartés ou incomplets. */}
-      <PlansDuJour depuis="tenues" className="mt-3" />
-
-      <SelecteurOccasion />
-
-      {state.occasion === "voyage" && state.travelMode === "Longue distance" && !state.travelTipDismissed && (
-        <Card rayon="bloc" className="mt-[14px] flex items-start gap-[11px] px-4 py-[14px]">
-          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
-          <div className="flex-1 min-w-0">
-            <div className="text-[12px] text-ink-soft leading-[1.45]">
-              {t("En voyage longue distance ? Pense aux bas de contention pour limiter les jambes lourdes.")}
-            </div>
-          </div>
-          <button
-            onClick={actions.dismissTravelTip}
-            className="flex-shrink-0 text-[14px] text-placeholder cursor-pointer px-[2px]"
-          >
-            ×
-          </button>
-        </Card>
-      )}
-
-
-      {/* Retour d'exploration (recette 24/08/2026) : la tenue affichée vient
-          de la capsule du style exploré, pas de wardrobePool/profil — info
-          secondaire discrète, jamais confondue avec le badge de mode
-          ci-dessus (qui décrit dressing vs capsule DU style du profil). */}
-      {state.exploredStyleId && (
-        <div className="flex items-center justify-between gap-3 mt-[14px]">
-          <div className="text-[12px] text-muted leading-[1.4]">
-            {t("Tenue issue du style {style}.", { style: styleConfigFor(profile.gender)[state.exploredStyleId].label })}
-            <br />
-            {t("Ton style personnel reste inchangé.")}
-          </div>
-          <button
-            onClick={actions.clearExploredStyle}
-            className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer whitespace-nowrap"
-          >
-            {t("Revenir à mon style")}
-          </button>
-        </div>
-      )}
-
-      {/* ══ LE LOOK DU JOUR — LE HÉROS DE L'ÉCRAN ════════════════════════
-          « La combinaison » renommé (brief 22/09/2026) : le mot collidait
-          avec la catégorie vêtement « combinaison », qui peut précisément
-          figurer dans la tenue affichée juste en dessous.
-
-          Tout ce qui décide de la tenue vit maintenant DANS la card, dans
-          l'ordre où on le lit : ce que c'est, pourquoi, à quoi ça ressemble,
-          et l'action. « Porter cette tenue » et « Demander un avis » vivaient
-          quatre cents lignes plus bas, APRÈS sept bannières conditionnelles —
-          leur position à l'écran dépendait donc du nombre d'avertissements du
-          jour, ce qui est exactement ce qu'un bouton principal ne doit pas
-          faire.
-
-          LE PANNEAU CRÈME EST RETIRÉ (23/09/2026, demandé : « le flat lay de
-          tenue doit ressembler à celui de la home, enlève l'aplat de beige
-          sous les articles »). Il datait de la veille, où la consigne était
-          l'inverse — ne pas toucher au fond de la composition. Ce qui a été
-          vu depuis : sur l'accueil les pièces flottent sur le terracotta, ici
-          elles étaient posées sur un panneau crème rempli de tuiles beiges,
-          soit deux traitements pour le même objet à un onglet d'écart. Les
-          deux couches partent ensemble — le panneau ici, les tuiles dans
-          OutfitComposition — sinon le fond beige des tuiles resterait visible
-          en damier sur le terracotta. */}
-      {!meteoEnAttente && outfitPieces.length > 0 && (
-        <div
-          id="tenue-du-jour"
-          className="-mx-2 mt-3 rounded-hero text-ink scroll-mt-4 flex flex-col"
-          // 358 × 564 px sur 390 (calibrage du 08/10/2026) : 8 px de plus de chaque côté que la gouttière de 24 px, la marge de 16 px
-          // du hero ; la zone du flat lay prend ce qui reste (350 px) — l'en-tête, la provenance, l'action et les deux
-          // secondaires ont une hauteur fixe. Un constat météo sur un plan l'allonge, jamais le flat lay.
-          // Blanc cassé des cartes cerné d'un filet (14/10/2026, demandé : « le hero de Tenue n'a pas le même fond que la homepage ») : le
-          // fond de l'accueil depuis l'option 3h, pour que la tenue d'une slide garde son fond en arrivant ici par « Voir le look ».
-          style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : HAUTEUR_CARTE, minHeight: HAUTEUR_CARTE }}
-        >
-          {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
-              le 23/09). Conditionnelle depuis que le titre est parti : sans
-              elle, une tenue sans badge NI phrase ouvrirait la card sur une
-              rangée vide.
-
-              flex-wrap, et c'est ce qui rend la ligne sûre : à 320 px, deux
-              badges suivis d'une phrase manuscrite ne tiennent pas côte à
-              côte, et la phrase passe alors proprement dessous au lieu d'être
-              tronquée ou de pousser la card. La gouttière verticale (gap-y)
-              existe pour ce cas-là seulement. */}
-          {/* ZONE HERO À HAUTEUR FIXE (brief du 25/09, point 5). Elle
-              contient la ligne de badges, la composition et la provenance :
-              les trois variaient d'une tenue à l'autre (nombre de rangées,
-              badges qui passent à la ligne à 320 px, une ou deux pastilles
-              de provenance), et poussaient d'autant « Porter cette tenue »,
-              les deux secondaires et « Autre tenue ». La composition prend
-              ce qui reste (flex-1) et s'y ajuste (cf. `ajustee`) : la card
-              ne dépend plus du vêtement affiché.
-
-              Hauteur calée sur 13 unités de rangée — entre une tenue sans
-              veste (10) et avec veste (16), les deux cas courants — plus
-              l'en-tête et la provenance sur une ligne. Mesuré à 14 : une
-              tenue de 4 pièces flottait dans ~90 px de vide en haut et en
-              bas. À 13, une tenue courte est centrée avec un peu d'air, une
-              tenue avec veste est ramenée à ~80 % — réduite, jamais rognée. */}
+  // LES BLOCS DE LA PAGE (18/11/2026), nommés pour être disposés autrement par les maquettes (disposition) : la page par défaut les
+  // pose exactement comme avant, dans le même ordre.
+  const enteteCarte = (
+    <>
           {/* STATUT ET CHANGEMENT (27/09/2026). En tête de la card : où en
               est la tenue, puis « Autre tenue », remonté du pied de card —
               une action de changement, pas un CTA de même rang que
@@ -1008,21 +888,19 @@ export default function TenuesScreen() {
               {planApplique.alerte.message}
             </div>
           )}
-          {/* Hauteur FIXE à largeur donnée depuis le 30/09/2026 : 82 % de la
-              largeur de la card pour la planche (la même proportion que
-              l'accueil et la tenue planifiée), plus la ligne de badges et la
-              provenance. Les unités de conteneur (cqw) portent sur la card. */}
-          <div className="flex flex-col flex-1 min-h-0">
-          <div className="relative flex-1 min-h-0">
-          {/* Plus de phrase d'ambiance manuscrite dans le hero (04/11/2026, demandé : « harmoniser les hero ») : aucun hero n'en a plus. */}
-
+    </>
+  );
+  const planche = (
+    <>
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
             <div className="absolute inset-y-0 left-2 right-2">
               <FlatLayCapsela items={piecesDuLook} context="look-detail" layoutSeed={clePieces(piecesDuLook.map((p) => p.id)).join(",")} fantomes={fantomesHero} onFantome={(cat) => (cat === "chaussures" ? completerChaussures() : actions.openAddForCategory(cat))} onPiece={(it) => remplacement.ouvrir(it, configTenue)} ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
             </div>
-          </div>
-          <div className="flex-shrink-0">
+    </>
+  );
+  const signatureBloc = (
+    <>
             {/* LA SIGNATURE STYLISTIQUE (12/11/2026, brief, 3C) : une accroche et une phrase, sous le flat lay. Rien d'inventé : l'accroche est
                 le titre éditorial de l'occasion (titreEditorialOccasion, celui des idées de tenues), la phrase dit pour quoi la tenue est
                 pensée (sousTitreLookDuJour) et ce que la météo du jour en dit (qualificatifLook, seulement quand la température est réelle). */}
@@ -1035,19 +913,30 @@ export default function TenuesScreen() {
                 </div>
               </div>
             )}
+    </>
+  );
+  // LA RECOMMANDATION MÉTÉO À PART (18/11/2026) : séparée des autres informations pour que l'écran d'essai puisse la présenter en ligne,
+  // en carte ou en bandeau (PourLExterieur, `forme`). La page par défaut la pose en ligne, au même endroit qu'avant.
+  const aRecoMeteo = Boolean((exterieur && tempReelle != null) || (!exterieur && conseilManteauPlusLong));
+  const recoMeteo = (forme: "ligne" | "carte" | "bandeau" = "ligne") => (
+    <>
             {/* POUR L'EXTÉRIEUR (04/11/2026, « Séparer la tenue principale du manteau ») : sous le flat lay, entre deux filets, une ligne
                 secondaire — jamais une seconde grande carte, jamais dans les pièces du look. La même formulation que l'accueil et Planifier
                 (12/11/2026, demandé : « la formulation doit rester la même pour toute l'application »). */}
             {exterieur && tempReelle != null && (
-              <div className="mb-[6px]">
-                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} />
+              <div className={forme === "ligne" ? "mb-[6px]" : ""}>
+                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} forme={forme} note={phraseManteauTropLeger(state.items, tempReelle, momentDeLaCouche({ decalage, occasion: state.occasion }))} />
               </div>
             )}
             {!exterieur && conseilManteauPlusLong && (
-              <div className="mb-[6px]">
+              <div className={forme === "ligne" ? "mb-[6px]" : ""}>
                 <ConseilManteauPlusLong />
               </div>
             )}
+    </>
+  );
+  const infosComplementaires = (
+    <>
             {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.
                 La maquette les pose en surimpression en bas à gauche du
                 flat-lay. Essayé, capturé : à 390 px, les ballerines
@@ -1101,9 +990,22 @@ export default function TenuesScreen() {
             {provenance && (
               <div className="mt-[4px] px-[6px] text-[11.5px] text-muted leading-[1.4]">{provenance.map((p) => p.texte).join(" · ")}</div>
             )}
-          </div>
-          </div>
-
+    </>
+  );
+  const infosSousPlanche = (
+    <>
+      {recoMeteo()}
+      {infosComplementaires}
+    </>
+  );
+  const lignesSousPlanche = (
+    <>
+      {signatureBloc}
+      {infosSousPlanche}
+    </>
+  );
+  const actionPorter = (
+    <>
           {/* ACTION PRINCIPALE. Elle reste dans la card, au-dessus de tout
               avertissement — un bouton dont la position dépend du nombre de
               bannières n'est pas un bouton principal. 52 px : cible tactile
@@ -1150,6 +1052,10 @@ export default function TenuesScreen() {
             </Button>
           )}
 
+    </>
+  );
+  const actionsSecondaires = (
+    <>
           {/* Deux actions secondaires côte à côte, translucides : elles ne
               peuvent pas être confondues avec le CTA, qui est le seul élément
               plein de la card. « Enregistrer » reste inerte sous deux pièces
@@ -1204,11 +1110,10 @@ export default function TenuesScreen() {
             )}
           </div>
 
-          {/* « Autre tenue » est remonté en tête de card le 27/09/2026 (cf.
-              la ligne de statut) : comportement et garde inchangés. */}
-        </div>
-      )}
-
+    </>
+  );
+  const blocCompleter = (
+    <>
       {/* ══ COMPLÉTER LA TENUE (27/09/2026) ══════════════════════════════
           Ce que Capsela sait déjà de la tenue — un manque (outfitMissingCats
           ou la structure minimale du moteur), une veste sans rien dessous,
@@ -1409,6 +1314,10 @@ export default function TenuesScreen() {
         </section>
       )}
 
+    </>
+  );
+  const etatVide = (
+    <>
       {/* État vide (section 5/6/7/9) : microcopy neutre et orientée
           solution, correspondant à la source réellement interrogée
           (dressing/capsule) et à la raison structurée déjà connue du
@@ -1462,6 +1371,10 @@ export default function TenuesScreen() {
         </Card>
       )}
 
+    </>
+  );
+  const blocPieces = (
+    <>
       {/* Signalé le 22/09 : l'intitulé collait au bas de la card terracotta.
           Il n'avait aucune marge haute — invisible tant que la card se
           terminait par un bouton crème détaché de son bord, criant depuis
@@ -1483,6 +1396,10 @@ export default function TenuesScreen() {
         disposition="grille"
       />
 
+    </>
+  );
+  const bannieres = (
+    <>
       {!noCompleteOutfit && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
         <div className="mt-4 bg-warm-bg border border-warm-border rounded-bloc px-4 py-[13px]">
           <div className="text-[12px] text-ink-soft leading-[1.45]">{lookScore.adjustMessage}</div>
@@ -1549,6 +1466,10 @@ export default function TenuesScreen() {
         </Card>
       )}
 
+    </>
+  );
+  const blocPlanifier = (
+    <>
       {/* ENTRÉE VERS PLANIFIER (recette 24/09/2026, demandé).
           Mêmes classes que la card « Et si on préparait la suite ? » de
           l'accueil — bg-warm-bg, border-sand-border, rayon 22, serif 18 px,
@@ -1617,6 +1538,10 @@ export default function TenuesScreen() {
         </span>
       </button>
 
+    </>
+  );
+  const overlays = (
+    <>
       {quota.feuille}
 
       {/* LE MANTEAU À PART, EN DÉTAIL (04/11/2026) : la pièce, sa fiche, une autre proposition s'il y en a (candidatsDeRemplacement :
@@ -1718,6 +1643,231 @@ export default function TenuesScreen() {
           </div>
         </div>
       )}
+    </>
+  );
+
+  /*
+   * CINQ ARCHITECTURES À COMPARER (19/11/2026, brief « Exploration avancée UX », VariantesTenue.tsx). Écran d'essai seulement
+   * (`?maquettes`, TenueMaquettes.tsx) : la page leur passe ses blocs, ses données et ses actions, sans rien recalculer ; la page par
+   * défaut (disposition absente) ne change pas. « Planifie tes looks » n'y est pas repris (brief : aucun bloc de planification).
+   */
+  if (disposition && !meteoEnAttente && outfitPieces.length > 0) {
+    // Les variantes : la tenue avec UNE pièce changée (haut, bas, robe, chaussures, sac), le « Meilleur choix » de la grille
+    // « Remplacer » (alternativesClassees, même pool, même contexte). Trois au plus, catégories distinctes.
+    const variantes: VarianteTenue[] = [];
+    const vues = new Set<string>();
+    for (const p of piecesDuLook) {
+      if (variantes.length >= 3) break;
+      const groupe = isBag(p) ? "sac" : ["pantalon", "jean", "jupe", "short"].includes(p.cat) ? "bas" : p.cat;
+      if (vues.has(groupe) || !["haut", "pull", "bas", "robe", "chaussures", "sac"].includes(groupe)) continue;
+      const par = alternativesClassees(configTenue.look, p, poolDeRemplacement(p, configTenue.dressing, configTenue.suggestions), configTenue.contexte, 1)[0];
+      if (!par) continue;
+      vues.add(groupe);
+      variantes.push({ remplacee: p, par, pieces: piecesDuLook.map((it) => (it.id === p.id ? par : it)) });
+    }
+    const aConseils =
+      aCompleter ||
+      (!noCompleteOutfit && ((lookScore.badge === "ajuster" && Boolean(lookScore.adjustMessage)) || formalityDowngraded || autreTenueIndisponible || (occasionElargie && Boolean(occasionLabelCourant))));
+    const blocs: BlocsTenue = {
+      entete: <AppHeader onBack={actions.goHome} backLabel={t("Revenir à l'accueil")} titre={<>{t("Ma")} <span className="italic">{t("tenue")} {complementTenue(decalage, dateConsultee)}</span></>} />,
+      enteteCarte,
+      signature,
+      libelleOccasion: libelle(OCCASIONS.find(([k]) => k === state.occasion)?.[1] ?? ""),
+      pieces: piecesDuLook,
+      outfit: state.outfit,
+      planche,
+      infos: infosComplementaires,
+      reco: recoMeteo,
+      aReco: aRecoMeteo,
+      actionPorter,
+      actionsSecondaires,
+      porter: { etat: decalage > 0 ? "a_venir" : state.outfitValidated ? "portee" : "a_porter", desactive: vesteWithoutBase, faire: () => actions.wearOutfitToday(sauf) },
+      enregistrer: { possible: canSaveOutfit, fait: isOutfitSaved, basculer: () => actions.toggleSaveOutfitLook(exterieur ? [exterieur.id] : undefined) },
+      avis: () =>
+        decalage > 0
+          ? actions.openOpinionShare({ pieceIds: outfitIds, occasion: state.occasion || "all", temp: jourConsulte.meteoPrevue?.temp ?? null, label: jourConsulte.meteoPrevue?.label ?? null, moment: momentMessage(decalage, dateConsultee) ?? "" })
+          : actions.openOpinionShare(),
+      autre: planApplique ? { faire: actions.voirAutreProposition, desactive: false, enCours: false } : { faire: autreTenue, desactive: noCompleteOutfit || tirageEnCours, enCours: tirageEnCours },
+      conseils: (
+        <>
+          {blocCompleter}
+          {bannieres}
+        </>
+      ),
+      aConseils,
+      ouvrirPiece: (it) => remplacement.ouvrir(it, configTenue),
+      remplacerPiece: (it) => remplacement.remplacer(it, configTenue),
+      misEnAvant: recentlyAddedId,
+      variantes,
+      appliquerVariante: (a, n) => actions.remplacerDansTenue(a, n),
+      revoir: (ids) => actions.viewItemOutfit(ids, (state.occasion || "all") as OccasionKey),
+      overlays,
+      zone: { ref: zoneTenue, onScroll: defilementTenue.onScroll, onTouchStart: surDebutGlissement, onTouchEnd: surFinGlissement },
+    };
+    return <VariantesTenue b={blocs} architecture={disposition} traitement={traitement} />;
+  }
+
+  return (
+    <div
+      ref={zoneTenue}
+      onScroll={defilementTenue.onScroll}
+      className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav"
+      onTouchStart={surDebutGlissement}
+      onTouchEnd={surFinGlissement}
+    >
+      {/* Le titre dans le bandeau, après le retour (13/11/2026, demandé : le logo ne reste que sur l'accueil). */}
+      <AppHeader
+        onBack={actions.goHome}
+        backLabel={t("Revenir à l'accueil")}
+        titre={
+          <>
+            {t("Ma")} <span className="italic">{t("tenue")} {complementTenue(decalage, dateConsultee)}</span>
+          </>
+        }
+      />
+
+      {/* LA MISE EN PAGE DE L'ACCUEIL (13/11/2026, demandé : « aligne la place de ma tenue du jour et l'accueil », option a, en
+          gardant le bouton retour) : le titre par TitrePage, 18 px sous le bandeau comme sur les pages majeures, puis la ligne du jour
+          et de la météo à la même distance que sur l'accueil. « Bonjour, <prénom> » reste à l'accueil seul (23/09/2026) : le titre
+          annonce ce qu'on vient chercher ici, « Ma tenue du jour ». */}
+      <div className="mt-[8px]" />
+
+      {/* LE JOUR ET SA MÉTÉO, SUR UNE LIGNE (27/09/2026) — le composant partagé avec l'Accueil, aux mêmes marges. */}
+      <BarreDuJour className="mt-1" meteoEnLigne />
+      {/* Ce qui est planifié ce jour-là (Planifier) — le même rappel que
+          l'Accueil. Un plan de journée est devenu la tenue ci-dessous (option C,
+          30/09/2026) ; restent ici la soirée et les plans écartés ou incomplets. */}
+      <PlansDuJour depuis="tenues" className="mt-3" />
+
+      <SelecteurOccasion />
+
+      {state.occasion === "voyage" && state.travelMode === "Longue distance" && !state.travelTipDismissed && (
+        <Card rayon="bloc" className="mt-[14px] flex items-start gap-[11px] px-4 py-[14px]">
+          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] text-ink-soft leading-[1.45]">
+              {t("En voyage longue distance ? Pense aux bas de contention pour limiter les jambes lourdes.")}
+            </div>
+          </div>
+          <button
+            onClick={actions.dismissTravelTip}
+            className="flex-shrink-0 text-[14px] text-placeholder cursor-pointer px-[2px]"
+          >
+            ×
+          </button>
+        </Card>
+      )}
+
+
+      {/* Retour d'exploration (recette 24/08/2026) : la tenue affichée vient
+          de la capsule du style exploré, pas de wardrobePool/profil — info
+          secondaire discrète, jamais confondue avec le badge de mode
+          ci-dessus (qui décrit dressing vs capsule DU style du profil). */}
+      {state.exploredStyleId && (
+        <div className="flex items-center justify-between gap-3 mt-[14px]">
+          <div className="text-[12px] text-muted leading-[1.4]">
+            {t("Tenue issue du style {style}.", { style: styleConfigFor(profile.gender)[state.exploredStyleId].label })}
+            <br />
+            {t("Ton style personnel reste inchangé.")}
+          </div>
+          <button
+            onClick={actions.clearExploredStyle}
+            className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer whitespace-nowrap"
+          >
+            {t("Revenir à mon style")}
+          </button>
+        </div>
+      )}
+
+      {/* ══ LE LOOK DU JOUR — LE HÉROS DE L'ÉCRAN ════════════════════════
+          « La combinaison » renommé (brief 22/09/2026) : le mot collidait
+          avec la catégorie vêtement « combinaison », qui peut précisément
+          figurer dans la tenue affichée juste en dessous.
+
+          Tout ce qui décide de la tenue vit maintenant DANS la card, dans
+          l'ordre où on le lit : ce que c'est, pourquoi, à quoi ça ressemble,
+          et l'action. « Porter cette tenue » et « Demander un avis » vivaient
+          quatre cents lignes plus bas, APRÈS sept bannières conditionnelles —
+          leur position à l'écran dépendait donc du nombre d'avertissements du
+          jour, ce qui est exactement ce qu'un bouton principal ne doit pas
+          faire.
+
+          LE PANNEAU CRÈME EST RETIRÉ (23/09/2026, demandé : « le flat lay de
+          tenue doit ressembler à celui de la home, enlève l'aplat de beige
+          sous les articles »). Il datait de la veille, où la consigne était
+          l'inverse — ne pas toucher au fond de la composition. Ce qui a été
+          vu depuis : sur l'accueil les pièces flottent sur le terracotta, ici
+          elles étaient posées sur un panneau crème rempli de tuiles beiges,
+          soit deux traitements pour le même objet à un onglet d'écart. Les
+          deux couches partent ensemble — le panneau ici, les tuiles dans
+          OutfitComposition — sinon le fond beige des tuiles resterait visible
+          en damier sur le terracotta. */}
+      {!meteoEnAttente && outfitPieces.length > 0 && (
+        <div
+          id="tenue-du-jour"
+          data-maquette="carte"
+          className="-mx-2 mt-3 rounded-hero text-ink scroll-mt-4 flex flex-col"
+          // 358 × 564 px sur 390 (calibrage du 08/10/2026) : 8 px de plus de chaque côté que la gouttière de 24 px, la marge de 16 px
+          // du hero ; la zone du flat lay prend ce qui reste (350 px) — l'en-tête, la provenance, l'action et les deux
+          // secondaires ont une hauteur fixe. Un constat météo sur un plan l'allonge, jamais le flat lay.
+          // Blanc cassé des cartes cerné d'un filet (14/10/2026, demandé : « le hero de Tenue n'a pas le même fond que la homepage ») : le
+          // fond de l'accueil depuis l'option 3h, pour que la tenue d'une slide garde son fond en arrivant ici par « Voir le look ».
+          style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : HAUTEUR_CARTE, minHeight: HAUTEUR_CARTE }}
+        >
+          {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
+              le 23/09). Conditionnelle depuis que le titre est parti : sans
+              elle, une tenue sans badge NI phrase ouvrirait la card sur une
+              rangée vide.
+
+              flex-wrap, et c'est ce qui rend la ligne sûre : à 320 px, deux
+              badges suivis d'une phrase manuscrite ne tiennent pas côte à
+              côte, et la phrase passe alors proprement dessous au lieu d'être
+              tronquée ou de pousser la card. La gouttière verticale (gap-y)
+              existe pour ce cas-là seulement. */}
+          {/* ZONE HERO À HAUTEUR FIXE (brief du 25/09, point 5). Elle
+              contient la ligne de badges, la composition et la provenance :
+              les trois variaient d'une tenue à l'autre (nombre de rangées,
+              badges qui passent à la ligne à 320 px, une ou deux pastilles
+              de provenance), et poussaient d'autant « Porter cette tenue »,
+              les deux secondaires et « Autre tenue ». La composition prend
+              ce qui reste (flex-1) et s'y ajuste (cf. `ajustee`) : la card
+              ne dépend plus du vêtement affiché.
+
+              Hauteur calée sur 13 unités de rangée — entre une tenue sans
+              veste (10) et avec veste (16), les deux cas courants — plus
+              l'en-tête et la provenance sur une ligne. Mesuré à 14 : une
+              tenue de 4 pièces flottait dans ~90 px de vide en haut et en
+              bas. À 13, une tenue courte est centrée avec un peu d'air, une
+              tenue avec veste est ramenée à ~80 % — réduite, jamais rognée. */}
+      {enteteCarte}
+          {/* Hauteur FIXE à largeur donnée depuis le 30/09/2026 : 82 % de la
+              largeur de la card pour la planche (la même proportion que
+              l'accueil et la tenue planifiée), plus la ligne de badges et la
+              provenance. Les unités de conteneur (cqw) portent sur la card. */}
+          <div className="flex flex-col flex-1 min-h-0">
+          <div data-maquette="planche" className="relative flex-1 min-h-0">
+          {/* Plus de phrase d'ambiance manuscrite dans le hero (04/11/2026, demandé : « harmoniser les hero ») : aucun hero n'en a plus. */}
+
+      {planche}
+          </div>
+          <div className="flex-shrink-0">
+      {lignesSousPlanche}
+          </div>
+          </div>
+
+      {actionPorter}
+      {actionsSecondaires}
+          {/* « Autre tenue » est remonté en tête de card le 27/09/2026 (cf.
+              la ligne de statut) : comportement et garde inchangés. */}
+        </div>
+      )}
+
+      {blocCompleter}
+      {etatVide}
+      {blocPieces}
+      {bannieres}
+      {blocPlanifier}
+      {overlays}
     </div>
   );
 }
