@@ -322,3 +322,21 @@ describe("Composer : avec les collants de la robe, le bas qui revient est une ju
     expect(poses).not.toContain(31);
   });
 });
+
+describe("Composer : les collants ne sont pas un bas (19/11/2026)", () => {
+  const haut = piece(40, { cat: "haut" });
+  const pantalon = piece(41, { cat: "pantalon", color: "Noir", hex: "#2A2724" });
+  const robe = piece(42, { cat: "robe" });
+  const collants = piece(43, { cat: "accessoire", accessoireType: "Collants" } as Partial<Item>);
+  const groupes = piecesParEmplacement([sugg(haut), sugg(pantalon), sugg(robe), sugg(collants)]);
+  it("sans jupe ni short : le pantalon revient et les collants sont retirés", () => {
+    const sel = avancer(selectionDepuisTenue(groupes, [42, 43])!, "robe", groupes, -1);
+    const poses = piecesComposees(groupes, sel).map((e) => e.item.id);
+    expect(poses).toEqual(expect.arrayContaining([40, 41]));
+    expect(poses).not.toContain(43);
+  });
+  it("avec la robe, les collants restent", () => {
+    const poses = piecesComposees(groupes, selectionDepuisTenue(groupes, [42, 43])!).map((e) => e.item.id);
+    expect(poses).toEqual(expect.arrayContaining([42, 43]));
+  });
+});

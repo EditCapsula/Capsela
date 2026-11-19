@@ -202,6 +202,15 @@ function exclusivite(sel: SelectionComposer, touche: CleEmplacement, groupes: Re
   // correspond »). Une tenue du moteur avec une robe laisse le bas à « Sans » ; quand la robe repasse à « Sans », le haut revenait (ligne
   // ci-dessus) mais pas le bas. Sans robe, le bas revient donc aussi : celui qui s'accorde au haut posé (basAccorde).
   if (position(out, "robe", groupes.robe.length) < 0 && position(out, "bas", groupes.bas.length) < 0 && groupes.bas.length > 0) out = { ...out, bas: basAccorde(groupes, out) };
+  // LES COLLANTS NE SONT PAS UN BAS (19/11/2026, précisé : « les collants ne sont pas un bas ») : ils se portent sous une robe, une jupe ou
+  // un short (R-B19 du moteur). Sous un pantalon ou un jean, ils sont retirés ; sans bas ni robe, ils ne tiennent jamais lieu de bas
+  // (ci-dessus, un vrai bas revient).
+  const pa = position(out, "accessoire", groupes.accessoire.length);
+  const pb = position(out, "bas", groupes.bas.length);
+  const robePosee = position(out, "robe", groupes.robe.length) >= 0;
+  if (pa >= 0 && groupes.accessoire[pa].item.accessoireType === "Collants" && !robePosee && pb >= 0 && !["jupe", "short"].includes(groupes.bas[pb].item.cat)) {
+    out = { ...out, accessoire: -1 };
+  }
   return out;
 }
 
