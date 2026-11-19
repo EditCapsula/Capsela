@@ -25,7 +25,7 @@ import { ecrireRetourDuCompte, envoyerRetoursAuCompte, lireRetoursDuCompte } fro
 import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { autresManteaux, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
+import { autresManteaux, manteauxPourLaCouche, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { RailPiecesTenue } from "@/components/HeroTenue";
 import { alternativesClassees, poolDeRemplacement } from "@/lib/remplacementPiece";
@@ -391,7 +391,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
   const chezSoi = estContexteMaison(state.occasion || "all", state.workMode);
   const candidatsManteau = useMemo(() => {
     if (tempReelle == null || chezSoi) return [];
-    const c = candidatsDeRemplacement(outfitPieces, displayPool, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour);
+    const c = manteauxPourLaCouche(outfitPieces, displayPool, -1, state.occasion || "all", state.workMode, state.dateContext, meteoDuJour, tempReelle);
     const choisi = c.find((i) => i.id === manteauChoisi);
     return choisi ? [choisi, ...c.filter((i) => i.id !== choisi.id)] : c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -401,7 +401,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
   // « Voir une autre proposition » fait passer le manteau choisi devant, de la capsule comme du dressing.
   const candidatsCapsule = useMemo(() => {
     if (tempReelle == null || chezSoi) return [];
-    const c = candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour);
+    const c = manteauxPourLaCouche(outfitPieces, defaultCapsule, -1, state.occasion || "all", state.workMode, state.dateContext, meteoDuJour, tempReelle);
     const choisi = c.find((i) => i.id === manteauChoisi);
     return choisi ? [choisi, ...c.filter((i) => i.id !== choisi.id)] : c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -426,7 +426,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
     ? autresManteaux(
         exterieurSuggere
           ? [...candidatsManteau, ...candidatsCapsule]
-          : candidatsDeRemplacement(outfitPieces, displayPool, exterieur.id, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour),
+          : manteauxPourLaCouche(outfitPieces, displayPool, exterieur.id, state.occasion || "all", state.workMode, state.dateContext, meteoDuJour, tempReelle),
         outfitPieces,
         exterieur
       )
@@ -770,7 +770,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
   // Par le froid du soir, sans manteau adapté dans le dressing : un manteau de la CAPSULE (12/11/2026, demandé), jamais une veste.
   const manteauxCapsuleSoir =
     tempCouche < SEUIL_MANTEAU && outfitPieces.length
-      ? candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour)
+      ? manteauxPourLaCouche(outfitPieces, defaultCapsule, -1, state.occasion || "all", state.workMode, state.dateContext, meteoDuJour, tempCouche)
       : [];
   const conseilVeste = (() => {
     const p = liveProactiveByKey.get("veste_soir");

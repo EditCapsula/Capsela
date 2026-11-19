@@ -14,8 +14,55 @@
  */
 
 import { vestePlusLongueQueLeManteau } from "./forme";
-import { SEUIL_SANS_EXTERIEUR } from "./logic";
-import type { Item } from "./types";
+import { candidatsDeRemplacement, SEUIL_SANS_EXTERIEUR } from "./logic";
+import type { Weather } from "./data";
+import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
+
+/*
+ * LE MANTEAU LE PLUS ADAPTÉ À LA MINIMALE (19/11/2026, arbitré par la propriétaire, signalé : « le trench coat est trop léger pour des
+ * températures min de 2 degrés »). Deux causes, mesurées dans le code :
+ *   1. les manteaux candidats étaient admis avec la température DU MOMENT (meteoDuJour, 10° sur la capture), alors que la couche
+ *      extérieure se décide sur la MINIMALE du jour depuis le 16/11/2026 (temperatureReelle) ;
+ *   2. un manteau n'a qu'un PLAFOND (meteo_max_temp : trench 20°, manteau en laine 12°, façon shearling 7°) : par 2°, tous sont admis, et
+ *      le premier venu était retenu, trench compris.
+ * Désormais : les manteaux sont admis à la minimale, puis classés du plafond le plus BAS au plus haut — le plus chaud qui reste admis passe
+ * devant (par 2° : shearling, puis laine, puis trench). Un manteau sans plafond connu (dressing sans sous-type) passe après, dans son ordre :
+ * aucune chaleur n'est supposée. Aucune donnée de production modifiée : seules les bornes existantes servent.
+ */
+
+/** Le plafond de température d'un manteau, ou +∞ s'il n'en a pas. */
+const plafond = (m: Item): number => m.meteoMaxTemp ?? Number.POSITIVE_INFINITY;
+
+/** Les manteaux admis à `temperature`, du plus chaud (plafond le plus bas) au plus léger ; ordre d'origine à plafond égal. */
+export function manteauxParChaleur(candidats: Item[], temperature: number): Item[] {
+  return candidats
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => (c.meteoMaxTemp == null || temperature <= c.meteoMaxTemp) && (c.meteoMinTemp == null || temperature >= c.meteoMinTemp))
+    .sort((a, b) => plafond(a.c) - plafond(b.c) || a.i - b.i)
+    .map(({ c }) => c);
+}
+
+/**
+ * Les manteaux que le moteur admet pour la tenue À LA TEMPÉRATURE DE LA COUCHE (la minimale du jour, temperatureReelle), classés par
+ * chaleur. La seule entrée des écrans pour « Pour l'extérieur » : candidatsDeRemplacement (toutes ses règles — saison, occasion, bornes),
+ * avec la météo du jour ramenée à cette température.
+ */
+export function manteauxPourLaCouche(
+  tenue: Item[],
+  pool: Item[],
+  exclu: number,
+  occasion: OccasionKey,
+  workMode: WorkMode,
+  dateContext: DateContext,
+  weather: Weather,
+  temperature: number | null | undefined
+): Item[] {
+  if (typeof temperature !== "number" || !Number.isFinite(temperature)) {
+    return candidatsDeRemplacement(tenue, pool, exclu, "manteau" as CategoryKey, occasion, workMode, dateContext, weather);
+  }
+  const c = candidatsDeRemplacement(tenue, pool, exclu, "manteau" as CategoryKey, occasion, workMode, dateContext, { ...weather, temp: temperature });
+  return manteauxParChaleur(c, temperature);
+}
 
 export interface TenueSeparee {
   /** Les pièces du look : celles du flat lay, celles que l'on compte. */
@@ -72,7 +119,19 @@ export function separerCoucheExterieure(
   if (exterieur) {
     const principal = pieces.filter((p) => p.id !== exterieur.id);
     const vestes = principal.filter((p) => p.cat === "veste");
-    if (!vestes.some((v) => vestePlusLongueQueLeManteau(v, exterieur))) return { principal, exterieur, suggere: false, ...rien };
+    if (!vestes.some((v) => vestePlusLongueQueLeManteau(v, exterieur))) {
+      // TROP LÉGER POUR LA MINIMALE (19/11/2026, arbitré) : le moteur a pu retenir un manteau à la température du moment. Quand un
+      // candidat admis à la minimale est plus chaud (plafond plus bas) que celui de la tenue, il le remplace dans « Pour l'extérieur »,
+      // comme R-B25 : le manteau remplacé ne se montre pas et ne se compte pas comme porté. Un manteau de la tenue sans plafond connu
+      // reste : rien ne dit qu'il est léger. Les candidats doivent venir de manteauxPourLaCouche (admis et classés à cette température).
+      const plusChaud = autresManteaux([...candidats, ...candidatsCapsule], pieces, null).find(
+        (m) => m.meteoMaxTemp != null && exterieur.meteoMaxTemp != null && m.meteoMaxTemp < exterieur.meteoMaxTemp && temperature <= m.meteoMaxTemp
+      );
+      // Un manteau qui DÉCLARE tenir à cette température (meteo_min_temp atteint) n'est pas remplacé.
+      const declareAssezChaud = exterieur.meteoMinTemp != null && temperature >= exterieur.meteoMinTemp;
+      if (plusChaud && !declareAssezChaud) return { principal, exterieur: plusChaud, suggere: true, remplace: exterieur, conseilManteauPlusLong: false };
+      return { principal, exterieur, suggere: false, ...rien };
+    }
     // Un manteau qui COUVRE la veste : sa longueur connue, et aucune veste plus longue — le dressing d'abord, puis la capsule. Une
     // longueur inconnue ne se suppose pas (« aucune donnée inventée ») : elle ne suffit pas à dire qu'il est assez long.
     const couvre = (m: Item) => m.cat === "manteau" && m.longueur != null && !vestes.some((v) => vestePlusLongueQueLeManteau(v, m));

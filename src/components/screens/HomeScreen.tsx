@@ -19,7 +19,7 @@ import { estPlanValise } from "@/lib/valiseDuJour";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
-import { candidatsDeRemplacement, clePrincipale, computeLookScore, SEUIL_MANTEAU, estContexteMaison, tenueAUnSocle } from "@/lib/logic";
+import { clePrincipale, computeLookScore, SEUIL_MANTEAU, estContexteMaison, tenueAUnSocle } from "@/lib/logic";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { applyGenderChange, libelleStyles, paletteHexes, type Gender } from "@/lib/profile";
 import { GenderModal } from "@/components/ProfilUI";
@@ -36,7 +36,7 @@ import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
 import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/components/CarrouselHero";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
-import { separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
+import { manteauxPourLaCouche, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
 import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
 
 /** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
@@ -223,13 +223,13 @@ export default function HomeScreen() {
   // par le froid) : une tenue sans manteau en reçoit un, à part. Leurs bornes choisissent un trench à 16°, rien à partir de 22°.
   const manteauxPour = (pieces: Item[], occasion: OccasionKey) =>
     tempReelle != null && !estContexteMaison(occasion, state.workMode) && pieces.length
-      ? candidatsDeRemplacement(pieces, wardrobePool, -1, "manteau", occasion, state.workMode, state.dateContext, meteoDuJour)
+      ? manteauxPourLaCouche(pieces, wardrobePool, -1, occasion, state.workMode, state.dateContext, meteoDuJour, tempReelle)
       : [];
   // Les manteaux de la CAPSULE admis pour la tenue (12/11/2026, R-B25 arbitré) : proposés quand le manteau de la tenue est plus court que
   // sa veste et que le dressing n'en a pas d'assez long (separerCoucheExterieure).
   const manteauxCapsulePour = (pieces: Item[], occasion: OccasionKey) =>
     tempReelle != null && !estContexteMaison(occasion, state.workMode) && pieces.length
-      ? candidatsDeRemplacement(pieces, defaultCapsule, -1, "manteau", occasion, state.workMode, state.dateContext, meteoDuJour)
+      ? manteauxPourLaCouche(pieces, defaultCapsule, -1, occasion, state.workMode, state.dateContext, meteoDuJour, tempReelle)
       : [];
   const tenueSeparee = separerCoucheExterieure(
     hasOutfit ? piecesResolues : [],
@@ -277,7 +277,7 @@ export default function HomeScreen() {
     const tempCouche = meteoDuJour.tempSoir ?? meteoDuJour.temp;
     const manteauCapsule =
       p && p.suggestedId == null && tempCouche < SEUIL_MANTEAU
-        ? candidatsDeRemplacement(outfitPieces, defaultCapsule, -1, "manteau", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour)[0]
+        ? manteauxPourLaCouche(outfitPieces, defaultCapsule, -1, state.occasion || "all", state.workMode, state.dateContext, meteoDuJour, tempCouche)[0]
         : undefined;
     const piece = p?.suggestedId != null ? wardrobePool.find((i) => i.id === p.suggestedId) : manteauCapsule;
     return piece ? [{ item: piece, onAjouter: () => actions.addPieceToOutfit(piece.id) }] : undefined;

@@ -89,6 +89,7 @@ import {
 } from "./logic";
 import type { FamilleLook } from "./ideesLooks";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
+import { plafondDuSousType } from "./plafondManteau";
 import { colorimetrieMoteur } from "./colorimetrieMoteur";
 import { NB_SLIDES_INITIALES, SLIDES, cleTenue, slideDeLOccasion, slidesDuJour, typeDeJour, type SlideId } from "./carrousel";
 import {
@@ -3067,6 +3068,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         // un rechargement.
         accessoireType: accessoireTypeFor(s.addCat, s.addAccessoireType, (s.addName || "").trim() || "Nouvelle pièce"),
         subtype: s.addSubtype || undefined,
+        // Le plafond d'un manteau d'après son sous-type, comme à la relecture (rowToItem, plafondManteau.ts).
+        meteoMaxTemp: plafondDuSousType(s.addCat, s.addSubtype),
         photoUrl: s.addPhotoUrl || undefined,
         worn: original ? original.worn : null,
         wornPrev: original?.wornPrev,

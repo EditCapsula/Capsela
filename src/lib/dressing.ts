@@ -1,4 +1,5 @@
 import { sansBarre } from "./barre";
+import { plafondDuSousType } from "./plafondManteau";
 import { accessoireTypeFor } from "./attributes";
 import { type Verdict, clePieces, jourLocal, litteralTableau } from "./outfitFeedback";
 import { manchesDepuis } from "./manches";
@@ -98,6 +99,8 @@ export function rowToItem(row: DressingItemRow): Item {
     bijouType: (row.bijou_type as BijouType | null) ?? undefined,
     accessoireType: accessoireTypeFor(row.cat as CategoryKey, row.accessoire_type as AccessoireType | null, row.name),
     subtype: row.subtype ?? undefined,
+    // Le plafond de température d'un manteau, d'après son sous-type (plafondManteau.ts) : la même règle que les manteaux du catalogue.
+    meteoMaxTemp: plafondDuSousType(row.cat as CategoryKey, row.subtype),
     photoUrl: row.photo_url ?? undefined,
     worn: row.worn,
     wornPrev: row.worn_prev ?? undefined,
