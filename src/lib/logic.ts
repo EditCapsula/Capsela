@@ -20,6 +20,9 @@ import {
   chaussureHabillee,
   vetementDeSport,
   chaussureAvecSport,
+  tenueDeSport,
+  estVetement,
+  vaAvecLeSport,
   estDenim,
   fermetureMaille,
   matiereDeVoyage,
@@ -452,6 +455,8 @@ export interface LeviersMesure {
   sansChaussuresHabilleesEnSoiree?: boolean;
   /** Reproduit le comportement d'AVANT le 20/11/2026 : un vêtement de sport pouvait partir avec des chaussures autres que des baskets (R-S29). */
   chaussuresLibresAvecSport?: boolean;
+  /** Reproduit le comportement d'AVANT le 20/11/2026 : une tenue de sport (brassière, legging…) pouvait recevoir des pièces non sport (R-S30). */
+  sportAvecNonSport?: boolean;
   /** Reproduit le comportement d'AVANT le 01/11/2026 : une veste ou un manteau de sport peut se poser sur une robe (R-B24). */
   vesteDeSportSurRobe?: boolean;
   /** Reproduit le comportement d'AVANT le 01/11/2026 : en Voyage, sans haut ni bas de voyage, pas de relais par une tenue de sport (R-S26). */
@@ -1345,6 +1350,14 @@ export function generateOutfit(
   const pick = (cats: CategoryKey[], essential = true, extra?: (i: Item) => boolean) => {
     let base = poolFor(cats, essential).filter((i) => cats.includes(i.cat));
     if (socleRobe && !leviers?.vesteDeSportSurRobe) base = base.filter((i) => !OUTERWEAR_CATS.includes(i.cat) || !vetementDeSport(i));
+    // R-S30 (20/11/2026, demandé : « pas de brassière ou tenue de sport avec des pièces non sport ») — une tenue de sport au sens strict
+    // (tenueDeSport : brassière, legging, jogging…) ne reçoit que des vêtements de sport (vetementDeSport : un sweat, un coupe-vent y
+    // vont) ; une tenue commencée en pièces de ville ne reçoit pas de pièce de sport stricte. Dure : sans pièce compatible, l'emplacement
+    // reste vide (le manque est signalé), jamais une jupe sous une brassière.
+    if (!leviers?.sportAvecNonSport) {
+      if (chosen.some((c) => estVetement(c) && tenueDeSport(c))) base = base.filter((i) => !estVetement(i) || vaAvecLeSport(i));
+      else if (chosen.some((c) => estVetement(c) && !vaAvecLeSport(c))) base = base.filter((i) => !estVetement(i) || !tenueDeSport(i));
+    }
     // Priorité au réel sur un groupe de catégories fusionnées pour un même
     // tirage (correctif 22/08/2026, signalé : un jean réel ajouté au
     // dressing n'apparaissait presque jamais, noyé parmi les 20+ pantalons/
@@ -1617,6 +1630,12 @@ export function generateOutfit(
       const decontractes = hautPool.filter((i) => formalityOf(i) <= 1);
       if (decontractes.length) hautPool = decontractes;
     }
+    // R-S30 pour le haut, tiré hors de pick() et AVANT le bas : un haut de sport strict (une brassière) n'est tiré que si un bas de sport
+    // existe pour l'accompagner (règle dure ci-dessus : sans lui, la tenue resterait sans bas).
+    if (!leviers?.sportAvecNonSport && pinnedId == null && !hardBase.some((i) => BOTTOMS.includes(i.cat) && vetementDeSport(i))) {
+      const sansSportStrict = hautPool.filter((i) => !tenueDeSport(i));
+      if (sansSportStrict.length) hautPool = sansSportStrict;
+    }
     // Même règle que dans pick() ci-dessus (exemption FALLBACK_HEX comprise).
     const h = rand(harmoniser(candidatsCouleur(hautPool, preferredHexes, colo), chosen, true));
     if (h) chosen.push(h);
@@ -1876,6 +1895,17 @@ export function generateOutfit(
       const compensation = rand(harmoniser(compensationCandidates, chosen, false));
       if (compensation) { chosen.push(compensation); ids.push(compensation.id); }
       else missingWarmth = true;
+    }
+  }
+  // R-S30, en fin de composition : les couches ajoutées hors de pick() (maille, gilet, veste, manteau, collants) suivent la même règle.
+  // Une tenue de sport stricte garde ses vêtements de sport et perd les autres couches ; les collants (qui vont sous une jupe, une robe,
+  // un short) n'y ont pas de place.
+  if (!leviers?.sportAvecNonSport && chosen.some((c) => estVetement(c) && tenueDeSport(c))) {
+    const horsSport = chosen.filter((c) => (estVetement(c) && !vaAvecLeSport(c)) || c.accessoireType === "Collants");
+    for (const c of horsSport) {
+      chosen.splice(chosen.indexOf(c), 1);
+      const k = ids.indexOf(c.id);
+      if (k >= 0) ids.splice(k, 1);
     }
   }
   // R-S25 : aucune paire habillée pour une soirée, alors que le pool a des chaussures — signalé comme un manque, plus bas.
@@ -2327,6 +2357,10 @@ export function candidatsDeRemplacement(
   if (cat === "chaussures" && sansPiece.some(pieceDeSport)) {
     candidates = candidates.filter((i) => i.cat !== "chaussures" || estBasket(i));
   }
+  // R-S30 (20/11/2026) — symétrique : la tenue garde une pièce de sport stricte, un vêtement proposé à sa place est de sport ; elle garde
+  // des vêtements de ville, aucune pièce de sport stricte n'est proposée.
+  if (sansPiece.some((i) => estVetement(i) && tenueDeSport(i))) candidates = candidates.filter((i) => !estVetement(i) || vaAvecLeSport(i));
+  else if (sansPiece.some((i) => estVetement(i) && !vaAvecLeSport(i))) candidates = candidates.filter((i) => !estVetement(i) || !tenueDeSport(i));
   const chaussuresGardees = sansPiece.filter((i) => i.cat === "chaussures");
   if (chaussuresGardees.length && !chaussuresGardees.some(estBasket)) {
     candidates = candidates.filter((i) => !pieceDeSport(i));

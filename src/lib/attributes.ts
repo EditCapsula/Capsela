@@ -427,6 +427,31 @@ export function chaussureAvecSport(it: Item): boolean {
   return it.shoeType === "Baskets" || it.shoeType === "Chaussures d'intérieur" || formalityOf(it) === 0;
 }
 
+/**
+ * UNE TENUE DE SPORT, AU SENS STRICT (20/11/2026, demandé en capture d'une brassière sur une jupe et un trench : « pas de brassière ou
+ * tenue de sport avec des pièces non sport ») : déclarée au niveau sport (0), ou nommée comme une pièce qui ne se porte que pour le
+ * sport (brassière, legging, jogging, survêtement, running, fitness, yoga, training, cycliste). Plus étroit que vetementDeSport : un
+ * sweat, un molleton ou un coupe-vent se portent aussi en ville, avec un jean — ils ne déclenchent pas la règle (R-S30), mais ils
+ * comptent comme pièces de sport pour accompagner une tenue de sport.
+ */
+const MOTS_TENUE_SPORT = /brassière|legging|jogging|survêt|running|fitness|yoga|training|cycliste/;
+export function tenueDeSport(it: Item): boolean {
+  return it.niveauFormalite === 0 || MOTS_TENUE_SPORT.test(n(it));
+}
+
+/**
+ * Ce qui accompagne une tenue de sport (R-S30) : un vêtement de sport (vetementDeSport : sweat, coupe-vent…), ou une base qui se porte
+ * aussi pour le sport — le t-shirt et le débardeur (20/11/2026 : un jogging et un t-shirt restent une tenue juste).
+ */
+const MOTS_BASE_SPORT = /t-shirt|tee-shirt|débardeur/;
+export function vaAvecLeSport(it: Item): boolean {
+  return vetementDeSport(it) || (it.cat === "haut" && (MOTS_BASE_SPORT.test(n(it)) || ["T-shirt", "Débardeur"].includes(it.subtype ?? "")));
+}
+
+/** Les catégories de vêtements (hors chaussures, sacs, bijoux, accessoires) : celles que R-S30 accorde entre elles. */
+export const CATS_VETEMENTS = ["haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison", "veste", "manteau"] as const;
+export const estVetement = (it: Item): boolean => (CATS_VETEMENTS as readonly string[]).includes(it.cat);
+
 export function formalityOf(it: Item): number {
   if (it.niveauFormalite != null) return it.niveauFormalite;
   const text = n(it);

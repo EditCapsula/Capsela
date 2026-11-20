@@ -5,7 +5,8 @@ import { candidatsDeRemplacement, generateOutfitWithFallback } from "../logic";
 import type { CategoryKey, Item, ShoeType } from "../types";
 
 // R-B24 (01/11/2026, signalé en capture : « la veste de training n'est pas à associer avec une robe »). Mesuré avec et sans le levier
-// `vesteDeSportSurRobe`, sur le même pool, dans la même exécution.
+// `vesteDeSportSurRobe`, sur le même pool, dans la même exécution. Depuis le 20/11/2026, R-S30 (une tenue de sport stricte — ici la veste
+// de training — ne va pas avec une pièce de ville) écarte aussi ce cas : le bras « sans la règle » lève les deux (sportAvecNonSport).
 
 const p = (id: number, cat: CategoryKey, name: string, over: Partial<Item> = {}): Item =>
   ({ id, name, cat, color: "Prune", hex: "#5B2A4A", season: "Toutes saisons", worn: null, matiere: "Coton", ...over }) as Item;
@@ -16,7 +17,7 @@ const frais = weatherForDay(14, "Nuageux", "Automne");
 const avecTraining = (sansRegle: boolean) => {
   let n = 0;
   for (let i = 0; i < 300; i++) {
-    const r = generateOutfitWithFallback([ROBE, TRAINING, BASKETS], frais, "voyage", "Présentiel", "Verre", [], "femme", null, sansRegle ? { vesteDeSportSurRobe: true } : undefined);
+    const r = generateOutfitWithFallback([ROBE, TRAINING, BASKETS], frais, "voyage", "Présentiel", "Verre", [], "femme", null, sansRegle ? { vesteDeSportSurRobe: true, sportAvecNonSport: true } : undefined);
     if (r.ids.includes(ROBE.id) && r.ids.includes(TRAINING.id)) n++;
   }
   return n;

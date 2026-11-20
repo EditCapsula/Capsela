@@ -1,23 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { CATLABEL, OCC_LABELS, isBag } from "@/lib/data";
+import { OCC_LABELS } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
-import { resolveItemImage } from "@/lib/catalogImages";
-import { styleDuLook, texteEditorialLook } from "@/lib/editorialLook";
-import { clePieces, jourLocal } from "@/lib/outfitFeedback";
+import { jourLocal } from "@/lib/outfitFeedback";
 import { useCapsela } from "@/lib/store";
-import { useAuth } from "@/lib/auth";
 import AppHeader from "@/components/AppHeader";
 import Badge from "@/components/Badge";
 import BottomSheet from "@/components/BottomSheet";
 import Button from "@/components/Button";
-import Card from "@/components/Card";
 import Input from "@/components/Input";
 import { afficherToast } from "@/components/ToastCapsela";
 import { ajouterLookAValise, valisesAVenir } from "@/lib/lookEnValise";
 import { periodeCourte } from "@/lib/rappelsValise";
-import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import { CarteDuLook, LignePieceLook } from "@/components/DetailLook";
 import { LIBELLE_SOURCE } from "@/components/CarteLook";
 import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 
@@ -39,7 +35,6 @@ import { useOuvrirPiece } from "@/components/useOuvrirPiece";
  */
 export default function LookDetailScreen() {
   const { state, actions, vestiairePool } = useCapsela();
-  const { profile } = useAuth();
   const ouvrirPiece = useOuvrirPiece();
   // UNE SEULE FEUILLE À LA FOIS (BottomSheet, arbitré le 22/10/2026) : le menu « ••• », puis l'action choisie.
   const [feuille, setFeuille] = useState<null | "menu" | "renommer" | "valise" | "supprimer">(null);
@@ -57,9 +52,6 @@ export default function LookDetailScreen() {
     .map((id) => resolvePool.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
   const occasion = look.occasion && look.occasion !== "all" ? look.occasion : null;
-  const texte = pieces.length ? texteEditorialLook(pieces, occasion ?? "all", state.workMode, state.dateContext, styleDuLook(pieces, profile.styles, profile.gender)) : null;
-  // Les couleurs du look : celles de ses pièces, chacune une fois (jamais une palette inventée).
-  const couleurs = pieces.filter((p, i) => pieces.findIndex((q) => q.hex.toLowerCase() === p.hex.toLowerCase()) === i).slice(0, 6);
 
   const menu = (
     <button
@@ -122,81 +114,14 @@ export default function LookDetailScreen() {
         </span>
       </div>
 
-      {pieces.length > 0 && (
-        <Card rayon="bloc" className="mt-4 overflow-hidden">
-          <div className="relative bg-warm-bg" style={{ height: "clamp(260px, 78vw, 340px)" }}>
-            <div className="absolute inset-y-0 left-2 right-2">
-              <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
-            </div>
-          </div>
-          {texte && (
-            <div className="px-[16px] pt-[14px] pb-[16px]">
-              <h2 className="font-serif text-[22px] leading-[1.15] text-ink">
-                {texte.titre.a} {texte.titre.b && <em className="italic text-terracotta">{texte.titre.b}</em>}
-              </h2>
-              <p className="text-[13px] leading-[1.5] text-ink-soft mt-[6px]">{texte.phrase}</p>
-              {couleurs.length > 1 && (
-                <div className="flex items-center gap-[8px] mt-[12px]" aria-label={`Couleurs du look : ${couleurs.map((c) => c.color).join(", ")}`}>
-                  {couleurs.map((c) => (
-                    <span key={c.id} className="w-[22px] h-[22px] rounded-full" style={{ background: c.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.08)" }} aria-hidden="true" />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-      )}
+      <CarteDuLook pieces={pieces} occasion={occasion} onPiece={ouvrirPiece} className="mt-4" />
 
       <h2 className="t-titre-carte text-ink mt-6 mb-3">Les pièces du look</h2>
       <div className="flex flex-col gap-[10px]">
-        {pieces.map((it) => {
-          const img = resolveItemImage(it);
-          // Une pièce suggérée (une tenue enregistrée peut en contenir, 23/08/2026) reste distincte d'une pièce possédée : photo atténuée
-          // et pastille « Suggérée », comme partout ailleurs.
-          const suggested = isCatalogId(it.id);
-          return (
-            <button
-              type="button"
-              key={it.id}
-              onClick={() => ouvrirPiece(it)}
-              className="text-left cursor-pointer active:opacity-80"
-              aria-label={`${it.name}, ${CATLABEL[isBag(it) ? "sac" : it.cat]}, ${it.color}${suggested ? ", suggérée" : ""}`}
-            >
-              <Card rayon="bloc" className="flex items-center gap-[13px] p-[10px]">
-                <div className="flex-shrink-0">
-                  <div
-                    className="w-[58px] h-[66px] rounded-mini overflow-hidden"
-                    style={{
-                      background: img.url ? "var(--color-photo-bg)" : it.hex,
-                      boxShadow: img.url ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
-                      filter: suggested ? "grayscale(55%) opacity(.8)" : undefined,
-                    }}
-                  >
-                    {img.url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img loading="lazy" src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }} />
-                    )}
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="t-titre-ligne text-ink truncate">{it.name}</div>
-                  <div className="text-[12px] text-muted mt-[3px] truncate">
-                    {CATLABEL[isBag(it) ? "sac" : it.cat]} · {it.color}
-                  </div>
-                  {/* Sous le nom, plus sur la vignette : posée dessus, la pastille débordait sur le nom (rendu du 20/11/2026). */}
-                  {suggested && (
-                    <Badge tone="plein" taille="s" className="mt-[6px]">
-                      Suggérée
-                    </Badge>
-                  )}
-                </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-muted">
-                  <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </Card>
-            </button>
-          );
-        })}
+        {pieces.map((it) => (
+          // Une pièce suggérée (une tenue enregistrée peut en contenir, 23/08/2026) reste distincte d'une pièce possédée.
+          <LignePieceLook key={it.id} piece={it} suggeree={isCatalogId(it.id)} onClick={() => ouvrirPiece(it)} />
+        ))}
       </div>
 
       <Button variante="principal" className="mt-7 !normal-case !tracking-[0.02em] !text-[15px]" onClick={() => actions.wearLookToday(look.id)}>

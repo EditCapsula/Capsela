@@ -57,3 +57,21 @@ describe("le style du profil, seulement quand le look le porte", () => {
     expect(t.phrase.split(/\s+/).length).toBeLessThanOrEqual(12);
   });
 });
+
+describe("un manteau n'est « structuré » que s'il l'est vraiment (20/11/2026, arbitré)", () => {
+  const blouse = item({ id: 20, category: "hauts", name: "Blouse en soie écrue", sous_type: "Blouse", couleur_dominante: "Écru", saison_capsule: T });
+  const pinces = item({ id: 21, category: "pantalons", name: "Pantalon large à pinces", couleur_dominante: "Beige", saison_capsule: T });
+  const bottines = item({ id: 22, category: "chaussures", name: "Bottines", sous_type: "Bottines", couleur_dominante: "Chocolat", saison_capsule: T });
+  const manteau = item({ id: 23, category: "manteau", name: "Manteau chocolat", sous_type: "Manteau", couleur_dominante: "Chocolat", saison_capsule: T });
+  const caban = item({ id: 24, category: "manteau", name: "Caban marine", sous_type: "Caban", couleur_dominante: "Marine", saison_capsule: T });
+  it("un manteau quelconque ne fait plus dire « Des lignes nettes » : la soie du look parle", () => {
+    expect(manteau.cat).toBe("manteau");
+    const t = texteEditorialLook([blouse, pinces, bottines, manteau], "quotidien", "Présentiel", "Verre");
+    expect(t.phrase.startsWith("Des lignes nettes")).toBe(false);
+  });
+  it("un caban, un manteau déclaré structuré : toujours « structuré »", () => {
+    expect(texteEditorialLook([blouse, pinces, bottines, caban], "quotidien", "Présentiel", "Verre").phrase.startsWith("Des lignes nettes")).toBe(true);
+    const declare = { ...manteau, couche: "structuree" } as Item;
+    expect(texteEditorialLook([blouse, pinces, bottines, declare], "quotidien", "Présentiel", "Verre").phrase.startsWith("Des lignes nettes")).toBe(true);
+  });
+});

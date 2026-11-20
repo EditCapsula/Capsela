@@ -135,6 +135,7 @@ import LigneInterrupteur from "@/components/LigneInterrupteur";
 import EmptyState from "@/components/EmptyState";
 import Card from "@/components/Card";
 import Badge from "@/components/Badge";
+import { CarteDuLook, LignePieceLook } from "@/components/DetailLook";
 import { degres } from "@/lib/unites";
 import { estPieceDeValise, piecesPourLaSituation, piecesReserveesDuProfil } from "@/lib/piecesDeValise";
 import { libelleQuantite, nombreDePieces, quantiteDe, quantitesValides, reglerQuantite, volumeAvecQuantites } from "@/lib/quantitesValise";
@@ -2000,6 +2001,8 @@ function Resultat({
   const suggestions = new Set(valise.suggestionIds ?? []);
   /** Les pièces de la capsule notées « achat à prévoir » (07/11/2026). */
   const [indexLook, setIndexLook] = useState(0);
+  /** La feuille « À compléter » (20/11/2026) : la liste détaillée, ouverte depuis sa ligne. */
+  const [voirACompleter, setVoirACompleter] = useState(false);
   const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "retirer"; id: number } | { type: "alleger" } | { type: "tenue" } | null>(null);
   const [enregistres, setEnregistres] = useState<string[]>([]);
   /** Les filtres des onglets (07/11/2026) : la famille de pièces d'« À emporter », la sous-occasion des « Tenues ». */
@@ -2767,25 +2770,22 @@ function Resultat({
     const enregistre = enregistres.includes(cle);
     return (
       <>
+        {/* LES MÊMES BLOCS QUE LE DÉTAIL D'UN LOOK (20/11/2026, demandé : « reprends les mêmes éléments que la page détaillée du look ») :
+            le nombre de pièces et les occasions, la carte du look (planche, texte éditorial, couleurs), puis les lignes des pièces
+            (DetailLook.tsx). Le titre qui énumérait les pièces est retiré : la liste dessous les nomme déjà. */}
         <Surtitre>
           Look {numero(vue.index)} · {looks.length} dans ta valise
         </Surtitre>
-        <div className="t-titre-section text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-          {resumeLook(items)}
+        <div className="mt-[10px] flex flex-wrap items-center gap-x-3 gap-y-2">
+          {occ.map((o) => (
+            <PuceOccasion key={o} occasion={o} />
+          ))}
+          <span className="text-[12px] text-muted-3">
+            {items.length} {items.length === 1 ? "pièce" : "pièces"}
+          </span>
         </div>
-        {occ.length > 0 && (
-          <div className="flex flex-wrap gap-[6px] mt-3">
-            {occ.map((o) => (
-              <PuceOccasion key={o} occasion={o} />
-            ))}
-          </div>
-        )}
         {l.elargie && <div className="text-[11px] text-muted mt-2">Occasion élargie : ton dressing n&apos;a pas de pièce déclarée pour cette occasion.</div>}
-        <div className="rounded-feuille px-[16px] py-[20px] mt-4" style={{ background: "var(--color-hero-background)" }}>
-          <div style={{ aspectRatio: "100 / 112" }}>
-            <PlancheLook pieces={items} label={"Composition du look : " + items.map((p) => p.name).join(", ")} />
-          </div>
-        </div>
+        <CarteDuLook pieces={items} occasion={occ[0] ?? null} onPiece={(it) => ouvrirPiece(it.id)} className="mt-4" />
         {sep.exterieur && sep.temperature != null && (
           <div className="mt-3">
             <PourLExterieur piece={sep.exterieur} temperature={sep.temperature} quand={sep.quand} onClick={() => ouvrirPiece(sep.exterieur!.id)} />
@@ -2813,28 +2813,18 @@ function Resultat({
           </button>
         </div>
 
-        <div className="text-[13px] text-ink mt-4">Les pièces du look</div>
-        <div className="flex flex-col gap-2 mt-2">
+        <h2 className="t-titre-carte text-ink mt-6 mb-3">Les pièces du look</h2>
+        <div className="flex flex-col gap-[10px]">
           {items.map((p) => {
             const n = parPiece.get(p.id) ?? 0;
-            return (
-              <button key={p.id} onClick={() => ouvrirPiece(p.id)} className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer">
-                <Vignette it={p} />
-                <span className="flex-1 min-w-0">
-                  <span className="block text-[13px] text-ink truncate">{p.name}</span>
-                  <span className="block text-[11px] text-terracotta mt-[2px]">
-                    {suggestions.has(p.id) ? "À ajouter à ton dressing · " : ""}Dans {n} {n > 1 ? "tenues" : "tenue"}
-                  </span>
-                </span>
-                <span className="text-placeholder pr-1">{chevron("d")}</span>
-              </button>
-            );
+            // « Suggestion » : une pièce de la capsule, à ajouter au dressing ; la ligne dit dans combien de tenues de la valise elle sert.
+            return <LignePieceLook key={p.id} piece={p} suggeree={suggestions.has(p.id)} detail={`Dans ${n} ${n > 1 ? "tenues" : "tenue"} de la valise`} onClick={() => ouvrirPiece(p.id)} />;
           })}
         </div>
         {/* L'action réelle derrière le cœur de la maquette : enregistrer le look dans « Mes looks ». */}
         <Button
           variante={enregistre ? "secondaire" : "contour"}
-          className="mt-5"
+          className="mt-7 !normal-case !tracking-[0.02em] !text-[15px]"
           onClick={() => {
             if (enregistre) return;
             enregistrerLook(l.ids, occ[0] ?? "quotidien");
@@ -2961,13 +2951,14 @@ function Resultat({
     seulDressing || (valise.suggestionIds?.length ?? 0) > 0 ? (
       <LigneInterrupteur titre="Uniquement mon dressing" texte="Sans compléter avec des pièces de ta capsule." actif={seulDressing} onClick={() => recomposer(!seulDressing)} className="mt-5" />
     ) : null;
-  const blocACompleter =
-    aAjouter.length > 0 || aOptimiser ? (
-      <section className="mt-7" aria-labelledby="titre-a-completer">
-        <h2 id="titre-a-completer" className="t-titre-section text-ink">
-          À compléter
-        </h2>
-        <div className="t-chapeau text-muted-3 mt-[4px]">Quelques pièces pourraient encore améliorer tes tenues.</div>
+  /*
+   * « À COMPLÉTER » TIENT SUR UNE LIGNE (20/11/2026, demandé : « quelle est la pertinence de la strate à compléter ? Elle ne fait
+   * qu'alourdir le parcours » ; arbitré : une ligne « Voir »). Les pièces à ajouter au dressing sont déjà marquées « Suggestion » dans
+   * « À emporter » : la page n'en garde qu'un résumé, et « Voir » ouvre la même liste (avec « À mon dressing » et l'alerte
+   * « Nécessaire » d'une occasion sans look) dans une feuille.
+   */
+  const contenuACompleter = (
+    <>
         {aAjouter.length > 0 && (
           <div className="flex flex-col gap-2 mt-3">
             {aAjouter.map(({ item: p, tenues }) => {
@@ -3080,7 +3071,29 @@ function Resultat({
                 )}
               </div>
         )}
-      </section>
+    </>
+  );
+  const nbAAjouter = aAjouter.length;
+  const resumeACompleter =
+    nbAAjouter > 0
+      ? `${nbAAjouter} ${nbAAjouter > 1 ? "pièces de tes tenues ne sont" : "pièce de tes tenues n'est"} pas encore dans ton dressing.`
+      : occasionsAManque.length > 0
+        ? `${occasionsAManque.length > 1 ? "Des occasions" : "Une occasion"} de ton séjour ${occasionsAManque.length > 1 ? "attendent" : "attend"} encore un look.`
+        : `${looks.length} ${looks.length > 1 ? "looks" : "look"} pour ${nbJours} jours : quelques pièces ajouteraient de la variété.`;
+  const blocACompleter =
+    aAjouter.length > 0 || aOptimiser ? (
+      <button
+        type="button"
+        onClick={() => setVoirACompleter(true)}
+        aria-haspopup="dialog"
+        className="mt-7 w-full flex items-center gap-3 text-left bg-card border border-border rounded-bloc px-[14px] py-[12px] cursor-pointer"
+      >
+        <span className="flex-1 min-w-0">
+          <span className="block t-titre-ligne text-ink">À compléter</span>
+          <span className="block text-[12px] text-muted-3 mt-[2px]">{resumeACompleter}</span>
+        </span>
+        <span className="flex-shrink-0 text-[13px] font-semibold text-terracotta">Voir</span>
+      </button>
     ) : null;
   /** Une journée du planning : ses créneaux, chacun avec le look de la valise qui lui répond. */
   const carteJour = (j: (typeof planningParJour)[number]) => (
@@ -3723,7 +3736,9 @@ function Resultat({
                     // La provenance (brief : « Dressing, Capsule, Vacances ») : une pièce de vacances du catalogue, une suggestion de la
                     // capsule, ou une pièce possédée. Une pièce qui n'est pas au dressing n'est jamais dite « Dressing ». Les libellés
                     // « À toi » / « Suggestion », essayés le 11/11/2026, ont été retirés le même jour (demandé : « remets les anciens libellés »).
-                    const provenance = estPieceDeValise(p) ? "Vacances" : suggestions.has(p.id) ? "Capsule" : "Dressing";
+                    // Depuis le 20/11/2026 (arbitré : un seul libellé dans toute l'app, « Suggestion »), la pièce de la capsule se dit
+                    // « Suggestion » ici comme ailleurs ; « Dressing » et « Vacances » ne changent pas.
+                    const provenance = estPieceDeValise(p) ? "Vacances" : suggestions.has(p.id) ? "Suggestion" : "Dressing";
                     return (
                       <li key={p.id} className="min-w-0">
                         <Card rayon="tuile" className="relative p-[6px] flex flex-col h-full">
@@ -3751,7 +3766,7 @@ function Resultat({
                             <span className="w-[22px] h-[22px] rounded-full bg-card/90 text-muted flex items-center justify-center">{G_CROIX}</span>
                           </button>
                           <div className="mt-[6px] px-[2px]">
-                            <Badge tone={provenance === "Dressing" ? "possede" : provenance === "Capsule" ? "doux" : "plein"} taille="s">
+                            <Badge tone={provenance === "Dressing" ? "possede" : provenance === "Suggestion" ? "doux" : "plein"} taille="s">
                               {provenance}
                             </Badge>
                           </div>
@@ -3785,6 +3800,10 @@ function Resultat({
             </button>
           </div>
           {blocACompleter}
+          <BottomSheet title="À compléter" open={voirACompleter} onClose={() => setVoirACompleter(false)}>
+            <div className="t-chapeau text-muted-3">Quelques pièces pourraient encore améliorer tes tenues.</div>
+            {contenuACompleter}
+          </BottomSheet>
           {reglageDressingSeul}
         </>
       )}
@@ -3903,8 +3922,9 @@ function Resultat({
                               {p ? <Vignette it={p} taille={40} /> : null}
                               <span className="flex-1 min-w-0">
                                 <span className={"block text-[13px] leading-[1.3] line-clamp-2 break-words " + (art.prete ? "text-muted line-through" : "text-ink")}>{art.libelle}</span>
-                                {/* Une suggestion de la capsule se dit « Capsule » (19/10/2026, demandé ; reconduit le 11/11/2026) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
-                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">Capsule</span>}
+                                {/* Une suggestion de la capsule se dit « Suggestion » (20/11/2026, arbitré : un seul libellé dans l'app ; « Capsule »
+                                    avant) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
+                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">Suggestion</span>}
                                 {raisonPropre && <span className="block text-[11px] text-terracotta truncate">{raisonPropre}</span>}
                               </span>
                             </div>
