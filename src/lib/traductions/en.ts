@@ -58,6 +58,16 @@ export const EN: Record<string, string> = {
   "Tes tenues": "Your outfits",
   "Chaque matin,": "Every morning,",
   "tu sais quoi porter.": "you know what to wear.",
+  "Ta semaine,": "Your week,",
+  "prête d'avance.": "ready in advance.",
+  "Choisis un jour et une occasion : Capsela compose ta tenue avec la météo prévue, et te la rappelle le jour venu.":
+    "Pick a day and an occasion: Capsela puts your outfit together with the forecast, and reminds you on the day.",
+  "Lun.": "Mon",
+  "Mer.": "Wed",
+  "Sam.": "Sat",
+  "Bureau": "Office",
+  "Exemple de semaine planifiée : une tenue de bureau le lundi, une tenue du quotidien le mercredi, une tenue de soirée le samedi":
+    "Sample planned week: an office outfit on Monday, an everyday outfit on Wednesday, an evening outfit on Saturday",
   "Capsela compose des tenues adaptées à ton style, à la météo et à tes occasions, avec tes pièces et celles qui peuvent compléter ton dressing.":
     "Capsela puts together outfits suited to your style, the weather and your plans, with your pieces and the ones that can complete your wardrobe.",
   "Tes valises": "Your suitcases",

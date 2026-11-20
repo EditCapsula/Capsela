@@ -12,8 +12,8 @@ import Card from "@/components/Card";
 /*
  * L'ONBOARDING AVANT LE COMPTE (refonte du 05/10/2026, brief « Onboarding premium de Capsela »).
  *
- * Cinq écrans, une histoire : Capsela comprend ton style → ton dressing → t'aide à t'habiller → t'accompagne quand tu
- * pars → et le compte. Les quatre premiers ont la même forme (logo, « Passer », visuel, sur-titre, titre, phrase, points de
+ * Six écrans, une histoire : Capsela comprend ton style → ton dressing → t'aide à t'habiller → prépare ta semaine (Planifier,
+ * ajouté le 20/11/2026) → t'accompagne quand tu pars → et le compte. Les quatre premiers ont la même forme (logo, « Passer », visuel, sur-titre, titre, phrase, points de
  * progression, « Continuer ») ; le cinquième n'explique plus rien et ne garde que le compte.
  *
  * LES VISUELS : le premier garde les visuels de style du projet ; les suivants sont recadrés depuis les visuels éditoriaux
@@ -194,7 +194,45 @@ function VisuelTenue() {
   );
 }
 
-// ── 4 · Tes valises : destination → pièces → tenues du séjour ───────────
+// ── 4 · Planifier : la semaine prête d'avance ──────────────────────────
+
+/*
+ * PLANIFIER (20/11/2026, arbitré : un 6ᵉ écran). Le visuel fourni le même jour (généré d'après le brief Capsela) : trois tenues à plat,
+ * bureau, quotidien, soirée. Les étiquettes du jour et de l'occasion sont du HTML posé sur la photo (jamais du texte dans l'image), petites
+ * et sans fond plein : on lit une semaine, rien qui ressemble à un bouton. Cadre au format de la photo (3:2) : aucune tenue n'est coupée.
+ */
+const JOURS_PLANIFIES: { jour: string; occasion: string; x: string }[] = [
+  { jour: aTraduire("Lun."), occasion: aTraduire("Bureau"), x: "19%" },
+  { jour: aTraduire("Mer."), occasion: aTraduire("Quotidien"), x: "50%" },
+  { jour: aTraduire("Sam."), occasion: aTraduire("Soirée"), x: "80%" },
+];
+
+function VisuelPlanifier() {
+  return (
+    <div
+      role="img"
+      aria-label={t("Exemple de semaine planifiée : une tenue de bureau le lundi, une tenue du quotidien le mercredi, une tenue de soirée le samedi")}
+      className="relative rounded-carte overflow-hidden bg-border w-full"
+      style={{ aspectRatio: "3 / 2", maxHeight: "calc(var(--h-visuel) + 20px)" }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/onboarding/planifier-semaine.webp" alt="" width={1200} height={800} decoding="async" className="absolute inset-0 w-full h-full object-cover" />
+      {JOURS_PLANIFIES.map((j) => (
+        <span
+          key={j.jour}
+          aria-hidden="true"
+          className="absolute top-[8px] -translate-x-1/2 flex flex-col items-center rounded-[10px] px-[8px] py-[4px] whitespace-nowrap"
+          style={{ left: j.x, background: "rgba(251,248,243,.9)" }}
+        >
+          <span className="text-[10.5px] font-semibold text-ink leading-[1.15]">{t(j.jour)}</span>
+          <span className="text-[9.5px] text-terracotta leading-[1.15]">{t(j.occasion)}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ── 5 · Tes valises : destination → pièces → tenues du séjour ───────────
 
 /** La répartition d'une valise exemple de 24 pièces : le total est la somme des lignes. */
 const REPARTITION_VALISE: { libelle: string; n: number; couleur: string }[] = [
@@ -268,7 +306,7 @@ function VisuelValise() {
   );
 }
 
-// ── 5 · Le compte : une composition éditoriale ──────────────────────────
+// ── 6 · Le compte : une composition éditoriale ──────────────────────────
 
 function VisuelCompte() {
   return (
@@ -286,7 +324,7 @@ function VisuelCompte() {
  * La hauteur que le texte, l'en-tête et le pied retirent à l'écran, par écran : le titre « Tout ce que tu peux porter. » tient
  * sur trois lignes sur un téléphone étroit, il laisse moins de place à son visuel. Mesuré en rendu à 320, 360, 375 et 390 px.
  */
-const RESERVE_VISUEL = [470, 545, 560, 470, 500];
+const RESERVE_VISUEL = [470, 545, 560, 470, 470, 500];
 
 export default function OnboardingScreen() {
   const { state, actions } = useCapsela();
@@ -295,7 +333,7 @@ export default function OnboardingScreen() {
   const dernier = indice === ONBOARDING_SLIDES.length - 1;
   const nbEcrans = ONBOARDING_SLIDES.length;
 
-  const visuels = [<VisuelStyle key="s" />, <VisuelDressing key="d" />, <VisuelTenue key="t" />, <VisuelValise key="v" />, <VisuelCompte key="c" />];
+  const visuels = [<VisuelStyle key="s" />, <VisuelDressing key="d" />, <VisuelTenue key="t" />, <VisuelPlanifier key="p" />, <VisuelValise key="v" />, <VisuelCompte key="c" />];
 
   /*
    * NAVIGUER COMME DANS UN CARROUSEL (retours du test fermé, 04/11/2026 : « visuels non cliquables », « revenir en arrière pas

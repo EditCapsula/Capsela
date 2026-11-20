@@ -52,7 +52,7 @@ import {
 } from "./dressing";
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { choisirMeteo, fetchPrevisionByCity, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosition, type SourceMeteo } from "./weather";
-import { CATS, CITIES, DATE_CONTEXTS, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, WORK_MODES, type Weather } from "./data";
+import { CATS, CITIES, DATE_CONTEXTS, ONBOARDING_SLIDES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, WORK_MODES, type Weather } from "./data";
 import { aDesManches } from "./manches";
 import { aUnMotif } from "./motifs";
 import { aUneCouche, aUneLongueur } from "./forme";
@@ -2455,10 +2455,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => (s.onbStep === 0 ? { ...s, screen: "welcome" } : { ...s, onbStep: s.onbStep - 1 })),
     // Cinq écrans (05/10/2026) : le dernier (index 4) est celui du compte ; son bouton mène au formulaire d'inscription.
     onbNext: () =>
-      setState((s) => (s.onbStep >= 4 ? { ...s, screen: "auth" } : { ...s, onbStep: s.onbStep + 1 })),
+      setState((s) => (s.onbStep >= ONBOARDING_SLIDES.length - 1 ? { ...s, screen: "auth" } : { ...s, onbStep: s.onbStep + 1 })),
     // « Passer » va à l'écran du compte (le dernier), sans repasser par les explications.
-    onbPasser: () => setState((s) => ({ ...s, onbStep: 4 })),
-    onbAller: (etape) => setState((s) => ({ ...s, onbStep: Math.max(0, Math.min(4, Math.round(etape))) })),
+    // Le dernier écran (le compte), quel que soit le nombre d'écrans (6 depuis le 20/11/2026, Planifier ajouté).
+    onbPasser: () => setState((s) => ({ ...s, onbStep: ONBOARDING_SLIDES.length - 1 })),
+    onbAller: (etape) => setState((s) => ({ ...s, onbStep: Math.max(0, Math.min(ONBOARDING_SLIDES.length - 1, Math.round(etape))) })),
 
     // Historique : la fiche en feuille depuis toutes les pages (04/11/2026, demandé : « elle s'ouvre dans une bottom sheet sans logo »),
     // remplacée le 13/11/2026 par une page (arbitré dans la mission « Harmonisation du système de fiches » : une feuille courte, puis
