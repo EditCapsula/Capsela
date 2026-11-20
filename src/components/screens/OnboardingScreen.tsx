@@ -110,7 +110,9 @@ function VisuelDressing() {
     <div role="img" aria-label={t("Exemple de capsule : une penderie de pièces qui vont ensemble")}>
       <div className="relative rounded-carte overflow-hidden bg-border" style={{ height: "var(--h-visuel)" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/onboarding/dressing-penderie.webp" alt="" width={368} height={410} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 40%" }} />
+        {/* Visuel fourni le 20/11/2026 (généré d'après le brief Capsela : penderie capsule, pièces femme et homme mêlées, sans texte),
+            900 × 1125 : nette à 2× sur un téléphone, contrairement à la penderie d'avant (368 px de large). */}
+        <img src="/onboarding/dressing-capsule.webp" alt="" width={900} height={1125} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 42%" }} />
         <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 flex items-center gap-[6px] bg-card border border-border rounded-full py-[7px] px-[13px] whitespace-nowrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/capsela-c.png" alt="" style={{ width: 13, height: "auto" }} />
