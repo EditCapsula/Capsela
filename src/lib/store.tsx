@@ -37,6 +37,7 @@ import {
   insertOutfitHistoryEntry,
   deleteOutfitHistoryAt,
   insertSavedLook,
+  renommerSavedLook,
   upsertOutfitFeedback,
   updateDressingItem,
   updateDressingItemRevente,
@@ -678,6 +679,11 @@ export interface Actions {
   saveLook: () => Promise<"ok" | "erreur" | "refuse">;
   /** Enregistre (ou retire) la tenue du jour dans Mes looks ; `sauf` comme pour wearOutfitToday : le manteau à part n'y entre pas. */
   toggleSaveOutfitLook: (sauf?: number[]) => void;
+  /**
+   * Renomme un look (20/11/2026, détail d'un look). Le nom change à l'écran aussitôt ; si le compte refuse, il revient à l'ancien et la
+   * promesse rend false (l'écran le dit).
+   */
+  renommerLook: (id: string, nom: string) => Promise<boolean>;
   openLook: (id: string) => void;
   closeLookDetail: () => void;
   deleteActiveLook: () => void;
@@ -3738,6 +3744,22 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // telle quelle qu'on enregistre, pas une sélection filtrée (décision
     // 23/08/2026). Toggle : un second clic sur une tenue déjà enregistrée
     // retire le look correspondant plutôt que d'en créer un doublon.
+    renommerLook: async (id, nom) => {
+      const propre = nom.trim().slice(0, 60);
+      const avant = stateRef.current.savedLooks.find((l) => l.id === id);
+      if (!avant || !propre || propre === avant.name) return Boolean(avant && propre);
+      const poser = (name: string) => setState((st) => ({ ...st, savedLooks: st.savedLooks.map((l) => (l.id === id ? { ...l, name } : l)) }));
+      poser(propre);
+      if (!isSupabaseConfigured || !userId) return true;
+      try {
+        await renommerSavedLook(id, propre);
+        return true;
+      } catch (err) {
+        console.error("[looks] échec renommerSavedLook", err);
+        poser(avant.name);
+        return false;
+      }
+    },
     toggleSaveOutfitLook: (sauf) => {
       const s = stateRef.current;
       const exclus = new Set(Array.isArray(sauf) ? sauf : []);
