@@ -22,7 +22,8 @@ import { langue, t } from "./langue";
  *   · le REGISTRE, par la formalité moyenne des vêtements et des chaussures (formalityOf, 0 à 4) — ou l'occasion quand elle le dit
  *     d'elle-même (sport, maison) ;
  *   · le CARACTÈRE, par la première marque nette du look, dans cet ordre : une pièce forte (isStatement), un accord de plusieurs
- *     couleurs (accordsCouleurs.ts), une structure (blazer, veste structurée, manteau), une matière fluide (robe, jupe, soie, lin,
+ *     couleurs (accordsCouleurs.ts), une structure (blazer, veste ou manteau structuré — un manteau quelconque ne compte plus depuis
+ *     le 20/11/2026), une matière fluide (robe, jupe, soie, lin,
  *     veste fluide), une allure urbaine (baskets avec un jean ou un sweat), des couleurs toutes neutres ; sinon « intemporel ».
  * Sans pièce, le repli dit l'occasion seule : jamais un caractère inventé.
  */
@@ -83,6 +84,8 @@ function contexteEn(occasion: OccasionKey, workMode: WorkMode, dateContext: Date
 
 const VETEMENTS: Item["cat"][] = ["haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison", "veste", "manteau"];
 const MATIERES_FLUIDES = new Set(["Soie", "Lin", "Viscose", "Satin", "Mousseline"]);
+/** Les manteaux structurés par leur coupe (20/11/2026) : un manteau quelconque ne dit pas « structuré ». */
+const MANTEAU_STRUCTURE = /caban|pardessus|croisé|tailleur|redingote/i;
 
 function registre(pieces: readonly Item[], occasion: OccasionKey): string {
   if (occasion === "sport") return "Sportif";
@@ -101,8 +104,14 @@ function caractere(pieces: readonly Item[]): Caractere {
   const sansBijou = pieces.filter((p) => p.cat !== "bijou");
   if (pieces.some(isStatement)) return "affirme";
   if (accordAPlusieursCouleurs(sansBijou)) return "nuance";
+  // UN MANTEAU N'EST « STRUCTURÉ » QUE S'IL L'EST VRAIMENT (20/11/2026, arbitré ; signalé : « Des lignes nettes » sur une blouse fluide et
+  // un pantalon à pinces, à cause d'un manteau chocolat quelconque). Avant, tout manteau suffisait. Désormais : déclaré structuré (couche,
+  // pièces du dressing), ou une coupe structurée par nature (caban, pardessus, croisé, tailleur, redingote). La veste, inchangée.
   const structure = pieces.some(
-    (p) => p.cat === "manteau" || (p.cat === "veste" && (p.couche === "structuree" || /blazer|tailleur/i.test(`${p.subtype ?? ""} ${p.name}`)))
+    (p) =>
+      ((p.cat === "manteau" || p.cat === "veste") && p.couche === "structuree") ||
+      (p.cat === "manteau" && MANTEAU_STRUCTURE.test(`${p.subtype ?? ""} ${p.name}`)) ||
+      (p.cat === "veste" && /blazer|tailleur/i.test(`${p.subtype ?? ""} ${p.name}`))
   );
   if (structure) return "structure";
   const fluide = pieces.some(
