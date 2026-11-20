@@ -140,8 +140,9 @@ function VisuelDressing() {
 /*
  * LA CARTE DE L'ACCUEIL, TELLE QU'ELLE EST (20/11/2026, signalé : « je ne suis pas fan de ce visuel », l'écran montrait une ancienne
  * version de l'accueil — carte terracotta, « Ton look du jour », « Voir le détail », jean et baskets pour le bureau). La carte de l'accueil
- * d'aujourd'hui (CarteHero, option B) : le surtitre de l'occasion, le titre en deux temps, la tenue, « Voir la tenue », puis Sauvegarder ·
- * Avis d'un proche · Autre tenue. Reproduite à l'identique mais inerte : c'est une image d'exemple (role="img"), pas un écran.
+ * d'aujourd'hui (CarteHero, option B) : le surtitre de l'occasion, le titre en deux temps, la tenue, puis Sauvegarder · Avis d'un
+ * proche · Autre tenue, en ligne discrète. Inerte : c'est une image d'exemple (role="img"), pas un écran — sans « Voir la tenue »,
+ * qui avait l'air cliquable (20/11/2026).
  * La photo (fournie le 20/11/2026, générée d'après le brief Capsela) est une tenue de QUOTIDIEN — chemise, pull sans manches, pantalon à
  * pinces, baskets, sac seau — : l'occasion annoncée est la sienne. Le titre et la phrase sont ceux que le texte éditorial donnerait à
  * ces pièces (editorialLook.ts : une couleur forte accordée aux neutres, « nuancé »).
@@ -156,8 +157,8 @@ function VisuelTenue() {
   return (
     <div
       role="img"
-      aria-label={t("Exemple de tenue du jour : une tenue du quotidien, chemise, pull sans manches, pantalon à pinces, baskets et sac, avec les actions Voir la tenue, Sauvegarder, Avis d'un proche et Autre tenue")}
-      className="rounded-hero px-[14px] pt-[12px] pb-[6px] [@media(max-height:700px)]:pb-[12px]"
+      aria-label={t("Exemple de tenue du jour : une tenue du quotidien, chemise, pull sans manches, pantalon à pinces, baskets et sac, avec les actions Sauvegarder, Avis d'un proche et Autre tenue")}
+      className="rounded-hero px-[14px] pt-[12px] pb-[8px] [@media(max-height:700px)]:pb-[14px]"
       style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -176,14 +177,13 @@ function VisuelTenue() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/onboarding/tenue-quotidien.webp" alt="" width={900} height={1200} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 45%" }} />
       </div>
-      <div aria-hidden="true" className="mt-[10px] rounded-full bg-terracotta-deep text-cream text-center text-[14px] tracking-[0.02em] py-[10px]">
-        {t("Voir la tenue")}
-      </div>
-      {/* Sur un écran bas (moins de 700 px), les trois actions laissent leur place au texte de l'écran, comme les détails du visuel d'avant. */}
-      <div aria-hidden="true" className="grid grid-cols-3 mt-[2px] [@media(max-height:700px)]:hidden">
+      {/* PAS DE BOUTON DANS UNE IMAGE D'EXEMPLE (20/11/2026, signalé : « le CTA est tellement présent que l'on a l'impression qu'on peut
+          cliquer dessus ») : « Voir la tenue » est retiré ; les trois actions restent, en ligne discrète, pour dire ce que l'on peut faire
+          d'une tenue — sans fond ni filet, rien qui ressemble à un bouton. Sur un écran bas (moins de 700 px), elles laissent la place au texte. */}
+      <div aria-hidden="true" className="grid grid-cols-3 mt-[6px] [@media(max-height:700px)]:hidden">
         {ICONES_ACTIONS.map((a) => (
-          <div key={a.libelle} className="flex flex-col items-center gap-[3px] pt-[6px] pb-[4px] text-[11px] leading-[1.2] text-center text-ink-soft">
-            <svg width="15" height="15" viewBox="0 0 24 24" className="text-ink" style={{ display: "block" }}>
+          <div key={a.libelle} className="flex flex-col items-center gap-[3px] pt-[6px] pb-[4px] text-[11px] leading-[1.2] text-center text-muted">
+            <svg width="14" height="14" viewBox="0 0 24 24" className="text-terracotta" style={{ display: "block" }}>
               {a.d}
             </svg>
             {t(a.libelle)}
@@ -286,7 +286,7 @@ function VisuelCompte() {
  * La hauteur que le texte, l'en-tête et le pied retirent à l'écran, par écran : le titre « Tout ce que tu peux porter. » tient
  * sur trois lignes sur un téléphone étroit, il laisse moins de place à son visuel. Mesuré en rendu à 320, 360, 375 et 390 px.
  */
-const RESERVE_VISUEL = [470, 545, 610, 470, 500];
+const RESERVE_VISUEL = [470, 545, 560, 470, 500];
 
 export default function OnboardingScreen() {
   const { state, actions } = useCapsela();
