@@ -113,10 +113,13 @@ function VisuelDressing() {
             900 × 1125 : nette à 2× sur un téléphone, contrairement à la penderie d'avant (368 px de large). */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/onboarding/dressing-capsule.webp" alt="" width={900} height={1125} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 42%" }} />
-        <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 flex items-center gap-[6px] bg-card border border-border rounded-full py-[7px] px-[13px] whitespace-nowrap">
+        {/* La pastille centrée (20/11/2026, signalé : « le texte dans la pastille n'est pas bien centré ») : posée à left 50 %, elle ne
+            disposait que de la moitié de la largeur et son texte débordait à droite (320 px) ; w-max lui rend sa largeur, et le texte est
+            centré en hauteur sur la marque (leading-none). */}
+        <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 w-max inline-flex items-center justify-center gap-[6px] bg-card border border-border rounded-full py-[7px] px-[13px] whitespace-nowrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/capsela-c.png" alt="" style={{ width: 13, height: "auto" }} />
-          <span className="text-[11px] text-ink font-medium">{t("36 pièces · exemple")}</span>
+          <img src="/brand/capsela-c.png" alt="" className="block flex-shrink-0" style={{ width: 13, height: "auto" }} />
+          <span className="text-[11px] leading-none text-ink font-medium">{t("36 pièces · exemple")}</span>
         </div>
       </div>
       <div className="flex justify-between mt-[12px]">
