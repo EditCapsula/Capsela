@@ -1,4 +1,4 @@
-import { chaussureAvecSport, huesHarmonious, isNeutralColor, isStatement, rolePieceOf, vetementDeSport } from "./attributes";
+import { chaussureAvecSport, tenueDeSport, vaAvecLeSport, huesHarmonious, isNeutralColor, isStatement, rolePieceOf, vetementDeSport } from "./attributes";
 import { silhouetteOrienteLaCapsule, styleFit, temperatureDeSaison } from "./capsule";
 import { CATS } from "./data";
 import { colorimetrieUtilisable } from "./colorimetrie";
@@ -117,7 +117,8 @@ export function selectionDeDepart(groupes: Record<CleEmplacement, EntreeCapsule[
   }
   const pull = maillePosee(groupes, sel);
   if (pull && isColRoule(pull) && (sel.haut ?? -1) >= 0) sel.haut = -1;
-  return sel;
+  // La première pièce de chaque emplacement peut être une brassière : la composition de départ reste en pièces de ville (R-S30).
+  return coherenceSport(sel, null, groupes);
 }
 
 /**
@@ -215,7 +216,63 @@ function exclusivite(sel: SelectionComposer, touche: CleEmplacement, groupes: Re
   // que des baskets », R-S29 du moteur). Ce que l'on vient de toucher est gardé : poser une pièce de sport passe les chaussures en baskets ;
   // choisir des chaussures de ville remplace la pièce de sport de son emplacement par une qui ne l'est pas. Sans baskets ni autre pièce,
   // la composition reste telle quelle : la personne compose, rien n'est inventé.
+  out = coherenceSport(out, touche, groupes);
   out = sportEtBaskets(out, touche, groupes);
+  return out;
+}
+
+const EMPLACEMENTS_VETEMENTS: CleEmplacement[] = ["haut", "bas", "robe", "maille", "dessus"];
+
+/**
+ * PAS DE TENUE DE SPORT AVEC DES PIÈCES NON SPORT (20/11/2026, demandé en capture d'une brassière sur une jupe, un trench et des collants :
+ * « pas de brassière ou tenue de sport avec des pièces non sport », R-S30 du moteur). Une pièce de sport au sens strict (tenueDeSport :
+ * brassière, legging, jogging…) ne se pose qu'avec des vêtements de sport (vetementDeSport : un sweat, un coupe-vent y vont).
+ * Ce que l'on vient de toucher est gardé : poser la brassière fait passer les autres vêtements en pièces de sport (une couche facultative
+ * sans équivalent de sport est retirée) ; poser une pièce de ville, ou la composition de départ (`touche` null), remplace les pièces de
+ * sport strictes. Les collants n'accompagnent pas une tenue de sport. Sans pièce compatible pour un emplacement obligatoire, il reste tel
+ * quel : rien n'est inventé.
+ */
+export function coherenceSport(sel: SelectionComposer, touche: CleEmplacement | null, groupes: Record<CleEmplacement, EntreeCapsule[]>): SelectionComposer {
+  const robe = position(sel, "robe", groupes.robe.length) >= 0;
+  const actifs = EMPLACEMENTS_VETEMENTS.filter((cle) => (robe ? cle !== "haut" && cle !== "bas" : cle !== "robe"));
+  const pose = (cle: CleEmplacement) => {
+    const p = position(sel, cle, groupes[cle].length);
+    return p >= 0 ? groupes[cle][p].item : null;
+  };
+  const stricts = actifs.filter((cle) => {
+    const it = pose(cle);
+    return it !== null && tenueDeSport(it);
+  });
+  if (!stricts.length) return sel;
+  // Rien à accorder : la tenue de sport n'a que des pièces qui vont avec le sport.
+  if (
+    actifs.every((cle) => {
+      const it = pose(cle);
+      return it === null || vaAvecLeSport(it);
+    })
+  )
+    return sel;
+  const facultatif = (cle: CleEmplacement) => EMPLACEMENTS.find((e) => e.cle === cle)?.facultatif ?? false;
+  let out: SelectionComposer = { ...sel };
+  const garderLeSport = touche !== null && stricts.includes(touche);
+  const aRemplacer = garderLeSport
+    ? actifs.filter((cle) => {
+        const it = pose(cle);
+        return it !== null && !vaAvecLeSport(it);
+      })
+    : stricts;
+  for (const cle of aRemplacer) {
+    const i = groupes[cle].findIndex((e) => (garderLeSport ? vaAvecLeSport(e.item) : !tenueDeSport(e.item)));
+    if (i >= 0) out = { ...out, [cle]: i };
+    else if (facultatif(cle)) out = { ...out, [cle]: -1 };
+  }
+  // Les collants sous une tenue qui reste de sport : retirés.
+  const resteSport = actifs.some((cle) => {
+    const p = position(out, cle, groupes[cle].length);
+    return p >= 0 && tenueDeSport(groupes[cle][p].item);
+  });
+  const pa = position(out, "accessoire", groupes.accessoire.length);
+  if (resteSport && pa >= 0 && groupes.accessoire[pa].item.accessoireType === "Collants") out = { ...out, accessoire: -1 };
   return out;
 }
 
