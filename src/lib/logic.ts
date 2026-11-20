@@ -1963,10 +1963,14 @@ export function generateOutfit(
     // couvre désormais aussi la combinaison (jambes déjà couvertes, cf.
     // plus haut), qui ne doit pas en déclencher.
     const hasRobeJupeOuShort = primaryTop?.cat === "robe" || chosen.some((c) => c.cat === "jupe" || c.cat === "short");
+    // UNE SEULE PAIRE DE COLLANTS (19/11/2026, signalé sur l'accueil : « pourquoi on a deux collants ici ? ») : R-B19 en a déjà posé une
+    // par le froid (needsCollant, plus haut) ; le tirage facultatif n'en ajoute pas une seconde.
+    const collantsDejaLa = chosen.some((c) => c.cat === "accessoire" && c.accessoireType === "Collants");
     const accessoireBase = poolFor(["accessoire"]).filter(
       (i) =>
         i.cat === "accessoire" &&
         (hasRobeJupeOuShort || i.accessoireType !== "Collants") &&
+        (!collantsDejaLa || i.accessoireType !== "Collants") &&
         // En Sport, la gourde est déjà ajoutée systématiquement ci-dessus.
         (occasion !== "sport" || i.accessoireType !== "Gourde") &&
         // R-S22 (30/10/2026, demandé : « pour les tenues cocooning pas besoin de pousser une écharpe en accessoire ») — l'occasion

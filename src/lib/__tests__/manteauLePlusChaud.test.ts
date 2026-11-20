@@ -20,7 +20,7 @@ const pantalon = item({ id: 11, category: "pantalon", name: "Pantalon droit", so
 const ids = (l: Item[]) => l.map((m) => m.id);
 
 describe("manteauxParChaleur", () => {
-  it("par 2° : le shearling, puis la laine, puis sans plafond connu ; le trench, trop léger (plancher 8°), en dernier", () => {
+  it("par 2° : le shearling, puis la laine, puis sans plafond connu ; le trench, trop léger (plancher 10°), en dernier", () => {
     expect(ids(manteauxParChaleur([trench, sansBorne, laine, shearling], 2))).toEqual(ids([shearling, laine, sansBorne, trench]));
   });
   it("par 10° : le trench n'est plus trop léger, l'ordre suit les plafonds", () => {
@@ -120,5 +120,15 @@ describe("un dressing qui n'a qu'un trench, par le froid (19/11/2026)", () => {
   it("par 10°, le trench n'est pas trop léger : il reste", () => {
     const r = separerCoucheExterieure([chemise, pantalon], 10, manteauxParChaleur([monTrench], 10), manteauxParChaleur([laine], 10));
     expect(r.exterieur?.id).toBe(monTrench.id);
+  });
+});
+
+describe("le trench suit le guide de la propriétaire (19/11/2026) : idéal de 10 à 20 °C", () => {
+  const leTrench = { ...trench, subtype: "Trench" } as Item;
+  it("trop léger sous 10°, pas à partir de 10°", () => {
+    expect(manteauxParChaleur([leTrench, laine], 9).map((m) => m.id)).toEqual([laine.id, leTrench.id]);
+    expect(manteauxParChaleur([leTrench, laine], 10).map((m) => m.id)).toEqual([laine.id, leTrench.id]);
+    expect(phraseManteauTropLeger([leTrench], 9, "aujourd'hui")).not.toBeNull();
+    expect(phraseManteauTropLeger([leTrench], 10, "aujourd'hui")).toBeNull();
   });
 });
