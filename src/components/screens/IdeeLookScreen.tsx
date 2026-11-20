@@ -192,7 +192,7 @@ export default function IdeeLookScreen() {
         onClick={() => {
           if (enregistre || demande) return;
           setDemandeCle(cle);
-          actions.enregistrerIdeeLook(actif.ids, actif.occasion, "idee_look");
+          actions.enregistrerIdeeLook(actif.ids, actif.occasion);
         }}
         disabled={enregistre || demande}
         aria-pressed={enregistre}

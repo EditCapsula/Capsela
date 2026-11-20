@@ -1884,7 +1884,7 @@ export default function ValiseScreen() {
             majPlacements={majPlacements}
             majChoix={majChoix}
             majValise={majValise}
-            enregistrerLook={(ids, occasion) => actions.enregistrerIdeeLook(ids, occasion, "valise")}
+            enregistrerLook={actions.enregistrerIdeeLook}
             ajouterAuDressing={actions.openAddEtRevenir}
             ajouterCategorie={actions.openAddForCategory}
             capsule={capsuleDuSejourAffiche}

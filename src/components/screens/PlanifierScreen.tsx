@@ -2059,7 +2059,7 @@ export default function PlanifierScreen() {
                             cle: "enregistrer",
                             glyphe: lookEnregistre ? "♥" : "♡",
                             libelle: lookEnregistre ? "Enregistrée" : "Enregistrer",
-                            onClick: () => actions.basculerIdeeLook(idsAffiches, occ, "planifier"),
+                            onClick: () => actions.basculerIdeeLook(idsAffiches, occ),
                           },
                           // « Avis d'un proche » : le partage existant ; au retour, ce même résultat (ResultatGarde).
                           {

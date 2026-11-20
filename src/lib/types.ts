@@ -277,12 +277,7 @@ export interface SavedLook {
   createdAt: number;
   occasion?: OccasionKey;
   source: "saved" | "created";
-  /** D'où la tenue a été enregistrée (20/11/2026, origineLook.ts) ; absente pour un look plus ancien ou créé. */
-  origine?: OrigineLook;
 }
-
-/** L'endroit d'où une tenue a été enregistrée dans Mes looks (20/11/2026, colonne saved_looks.origine, migration 0066). */
-export type OrigineLook = "tenue_du_jour" | "accueil" | "planifier" | "composer" | "idee_look" | "valise";
 
 /**
  * Suggestion extraite d'une photo de pièce réelle (recette 22/08/2026,

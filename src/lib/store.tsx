@@ -37,7 +37,6 @@ import {
   insertOutfitHistoryEntry,
   deleteOutfitHistoryAt,
   insertSavedLook,
-  ecrireOrigineLook,
   upsertOutfitFeedback,
   updateDressingItem,
   updateDressingItemRevente,
@@ -50,7 +49,6 @@ import {
   PhotoNonPreparee,
   uploadDressingPhoto,
 } from "./dressing";
-import { avecOriginesLocales, garderOrigineLocale, lireOriginesLocales } from "./origineLook";
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { choisirMeteo, fetchPrevisionByCity, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosition, type SourceMeteo } from "./weather";
 import { CATS, CITIES, DATE_CONTEXTS, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, WORK_MODES, type Weather } from "./data";
@@ -125,7 +123,6 @@ import type {
   OccasionKey,
   SacType,
   SavedLook,
-  OrigineLook,
   Screen,
   ShoeType,
   TravelMode,
@@ -476,9 +473,9 @@ export interface Actions {
   viewItemOutfit: (ids: number[], occasion: OccasionKey) => void;
   openIdeeLook: (pivotId: number, variations: ItemOutfitVariation[], famille: FamilleLook | null, look: { ids: number[]; occasion: OccasionKey; numero: number }) => void;
   closeIdeeLook: () => void;
-  enregistrerIdeeLook: (ids: number[], occasion: OccasionKey, origine: OrigineLook) => void;
+  enregistrerIdeeLook: (ids: number[], occasion: OccasionKey) => void;
   /** Le cœur d'une idée de look (01/11/2026) : l'enregistre dans « Mes looks », ou retire le look qui rassemble déjà exactement ces pièces. */
-  basculerIdeeLook: (ids: number[], occasion: OccasionKey, origine: OrigineLook) => void;
+  basculerIdeeLook: (ids: number[], occasion: OccasionKey) => void;
   /**
    * Vote sur une suggestion de la capsule (02/11/2026, votesSuggestions.ts), ou le retire (`etat` null). Gardé sur l'appareil tout de
    * suite, puis envoyé au compte ; « rejetee », « possedee » et « remplacee » écartent aussi la pièce de la capsule. Résout à false si
@@ -680,8 +677,7 @@ export interface Actions {
    */
   saveLook: () => Promise<"ok" | "erreur" | "refuse">;
   /** Enregistre (ou retire) la tenue du jour dans Mes looks ; `sauf` comme pour wearOutfitToday : le manteau à part n'y entre pas. */
-  /** `origine` : d'où la tenue est enregistrée (Mes looks la dit, origineLook.ts) ; Ma tenue du jour par défaut. */
-  toggleSaveOutfitLook: (sauf?: number[], origine?: OrigineLook) => void;
+  toggleSaveOutfitLook: (sauf?: number[]) => void;
   openLook: (id: string) => void;
   closeLookDetail: () => void;
   deleteActiveLook: () => void;
@@ -981,8 +977,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         ...s,
         items,
         history,
-        // L'origine des looks gardée sur l'appareil complète celle de la base (avant la migration 0066, la seule connue).
-        savedLooks: avecOriginesLocales(savedLooks, lireOriginesLocales()),
+        savedLooks,
         tenuesPlanifiees,
         outfitFeedbackDuJour: avis.map((a) => ({ jour: a.jour, pieceIds: a.piece_ids, verdict: a.verdict })),
       }));
@@ -1428,12 +1423,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
    * lignes : la clé est tenue « en cours » jusqu'au retour de l'insertion.
    */
   const looksEnCours = useRef(new Set<string>());
-  /** L'origine d'un look qui vient d'être inséré : sur l'appareil d'abord, puis en base (écriture isolée, ecrireOrigineLook). */
-  const noterOrigine = (look: SavedLook, origine: OrigineLook) => {
-    garderOrigineLocale(look.id, origine);
-    if (isSupabaseConfigured && userId) void ecrireOrigineLook(look.id, origine);
-  };
-  const enregistrerTenueSiAbsente = (outfit: number[], occasion: AppState["occasion"], origine: OrigineLook) => {
+  const enregistrerTenueSiAbsente = (outfit: number[], occasion: AppState["occasion"]) => {
     const ids = clePieces(outfit);
     if (ids.length < 2) return;
     const cle = ids.join(",");
@@ -1452,16 +1442,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured && userId) {
       looksEnCours.current.add(cle);
       insertSavedLook(userId, base)
-        .then((look) => {
-          noterOrigine(look, origine);
-          setState((st) => ({ ...st, savedLooks: [{ ...look, origine }, ...st.savedLooks] }));
-        })
+        .then((look) => setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] })))
         .catch((err) => reportDressingError("insertSavedLook", err))
         .finally(() => looksEnCours.current.delete(cle));
       return;
     }
-    const look: SavedLook = { id: "look" + Date.now(), ...base, origine };
-    garderOrigineLocale(look.id, origine);
+    const look: SavedLook = { id: "look" + Date.now(), ...base };
     setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
   };
 
@@ -2516,7 +2502,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       ),
     // « Enregistrer dans mes looks » : la même écriture que « J'adore cette
     // tenue », sans doublon ni suppression (enregistrerTenueSiAbsente).
-    enregistrerIdeeLook: (ids, occasion, origine) => enregistrerTenueSiAbsente(ids, occasion, origine),
+    enregistrerIdeeLook: (ids, occasion) => enregistrerTenueSiAbsente(ids, occasion),
     voterSuggestion: (pieceId, etat) => enregistrerVote(pieceId, etat),
     pasPourMoi: (pieceId, retirer = false) => {
       const t = retirer ? retirerPasPourMoi(pasPourMoiRef.current, pieceId) : ajouterPasPourMoi(pasPourMoiRef.current, pieceId, new Date());
@@ -2529,10 +2515,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           : st.suggestedExcluded.includes(pieceId) ? st : { ...st, suggestedExcluded: [...st.suggestedExcluded, pieceId] }
       );
     },
-    basculerIdeeLook: (ids, occasion, origine) => {
+    basculerIdeeLook: (ids, occasion) => {
       const cle = clePieces(ids).join(",");
       const existant = stateRef.current.savedLooks.find((l) => clePieces(l.pieceIds).join(",") === cle);
-      if (!existant) return enregistrerTenueSiAbsente(ids, occasion, origine);
+      if (!existant) return enregistrerTenueSiAbsente(ids, occasion);
       setState((st) => ({ ...st, savedLooks: st.savedLooks.filter((l) => l.id !== existant.id) }));
       if (isSupabaseConfigured && userId) deleteSavedLook(existant.id).catch((err) => reportDressingError("deleteSavedLook", err));
     },
@@ -3689,8 +3675,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // looks », où elle peut le retirer elle-même.
       if (verdict === "adore" && !retire) {
         const exclus = new Set(Array.isArray(sauf) ? sauf : []);
-        // « J'adore » n'est posé que par la carte de l'accueil (son « Sauvegarder » du jour).
-        enregistrerTenueSiAbsente(s.outfit.filter((id) => !exclus.has(id)), s.occasion, "accueil");
+        enregistrerTenueSiAbsente(s.outfit.filter((id) => !exclus.has(id)), s.occasion);
       }
       if (!isSupabaseConfigured || !userId) return;
       const occasion = s.occasion && s.occasion !== "all" ? s.occasion : null;
@@ -3753,7 +3738,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // telle quelle qu'on enregistre, pas une sélection filtrée (décision
     // 23/08/2026). Toggle : un second clic sur une tenue déjà enregistrée
     // retire le look correspondant plutôt que d'en créer un doublon.
-    toggleSaveOutfitLook: (sauf, origine = "tenue_du_jour") => {
+    toggleSaveOutfitLook: (sauf) => {
       const s = stateRef.current;
       const exclus = new Set(Array.isArray(sauf) ? sauf : []);
       const ids = s.outfit.filter((id) => !exclus.has(id));
@@ -3784,15 +3769,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       if (isSupabaseConfigured && userId) {
         insertSavedLook(userId, base)
           .then((look) => {
-            noterOrigine(look, origine);
-            setState((st) => ({ ...st, savedLooks: [{ ...look, origine }, ...st.savedLooks] }));
+            setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
             noterNotifications(notifLookSauvegarde(look.id, look.name));
           })
           .catch((err) => reportDressingError("insertSavedLook", err));
         return;
       }
-      const look: SavedLook = { id: "look" + Date.now(), ...base, origine };
-      garderOrigineLocale(look.id, origine);
+      const look: SavedLook = { id: "look" + Date.now(), ...base };
       setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
       noterNotifications(notifLookSauvegarde(look.id, look.name));
     },
