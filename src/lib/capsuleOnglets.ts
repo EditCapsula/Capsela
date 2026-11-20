@@ -1,4 +1,4 @@
-import { huesHarmonious, isNeutralColor, isStatement, rolePieceOf } from "./attributes";
+import { formalityOf, huesHarmonious, isNeutralColor, isStatement, rolePieceOf, vetementDeSport } from "./attributes";
 import { silhouetteOrienteLaCapsule, styleFit, temperatureDeSaison } from "./capsule";
 import { CATS } from "./data";
 import { colorimetrieUtilisable } from "./colorimetrie";
@@ -211,7 +211,39 @@ function exclusivite(sel: SelectionComposer, touche: CleEmplacement, groupes: Re
   if (pa >= 0 && groupes.accessoire[pa].item.accessoireType === "Collants" && !robePosee && pb >= 0 && !["jupe", "short"].includes(groupes.bas[pb].item.cat)) {
     out = { ...out, accessoire: -1 };
   }
+  // PAS DE VÊTEMENT DE SPORT SANS BASKETS (20/11/2026, demandé : « pas de pantalon de sport ou de haut de sport avec des chaussures autres
+  // que des baskets », R-S29 du moteur). Ce que l'on vient de toucher est gardé : poser une pièce de sport passe les chaussures en baskets ;
+  // choisir des chaussures de ville remplace la pièce de sport de son emplacement par une qui ne l'est pas. Sans baskets ni autre pièce,
+  // la composition reste telle quelle : la personne compose, rien n'est inventé.
+  out = sportEtBaskets(out, touche, groupes);
   return out;
+}
+
+const estBasket = (it: Item) => it.cat === "chaussures" && (it.shoeType === "Baskets" || formalityOf(it) === 0);
+const EMPLACEMENTS_SPORT: CleEmplacement[] = ["haut", "maille", "bas"];
+
+function sportEtBaskets(sel: SelectionComposer, touche: CleEmplacement, groupes: Record<CleEmplacement, EntreeCapsule[]>): SelectionComposer {
+  const robe = position(sel, "robe", groupes.robe.length) >= 0;
+  const pose = (cle: CleEmplacement) => {
+    const p = position(sel, cle, groupes[cle].length);
+    return p >= 0 ? groupes[cle][p].item : null;
+  };
+  const deSport = EMPLACEMENTS_SPORT.filter((cle) => !(robe && cle !== "maille")).filter((cle) => {
+    const it = pose(cle);
+    return it !== null && vetementDeSport(it);
+  });
+  const chaussures = pose("chaussures");
+  if (!deSport.length || !chaussures || estBasket(chaussures)) return sel;
+  if (touche === "chaussures") {
+    let out = sel;
+    for (const cle of deSport) {
+      const autre = groupes[cle].findIndex((e) => !vetementDeSport(e.item));
+      if (autre >= 0) out = { ...out, [cle]: autre };
+    }
+    return out;
+  }
+  const baskets = groupes.chaussures.findIndex((e) => estBasket(e.item));
+  return baskets >= 0 ? { ...sel, chaussures: baskets } : sel;
 }
 
 /**
