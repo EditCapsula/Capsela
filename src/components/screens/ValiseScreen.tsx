@@ -135,6 +135,7 @@ import LigneInterrupteur from "@/components/LigneInterrupteur";
 import EmptyState from "@/components/EmptyState";
 import Card from "@/components/Card";
 import Badge from "@/components/Badge";
+import { CarteDuLook, LignePieceLook } from "@/components/DetailLook";
 import { degres } from "@/lib/unites";
 import { estPieceDeValise, piecesPourLaSituation, piecesReserveesDuProfil } from "@/lib/piecesDeValise";
 import { libelleQuantite, nombreDePieces, quantiteDe, quantitesValides, reglerQuantite, volumeAvecQuantites } from "@/lib/quantitesValise";
@@ -2767,25 +2768,22 @@ function Resultat({
     const enregistre = enregistres.includes(cle);
     return (
       <>
+        {/* LES MÊMES BLOCS QUE LE DÉTAIL D'UN LOOK (20/11/2026, demandé : « reprends les mêmes éléments que la page détaillée du look ») :
+            le nombre de pièces et les occasions, la carte du look (planche, texte éditorial, couleurs), puis les lignes des pièces
+            (DetailLook.tsx). Le titre qui énumérait les pièces est retiré : la liste dessous les nomme déjà. */}
         <Surtitre>
           Look {numero(vue.index)} · {looks.length} dans ta valise
         </Surtitre>
-        <div className="t-titre-section text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-          {resumeLook(items)}
+        <div className="mt-[10px] flex flex-wrap items-center gap-x-3 gap-y-2">
+          {occ.map((o) => (
+            <PuceOccasion key={o} occasion={o} />
+          ))}
+          <span className="text-[12px] text-muted-3">
+            {items.length} {items.length === 1 ? "pièce" : "pièces"}
+          </span>
         </div>
-        {occ.length > 0 && (
-          <div className="flex flex-wrap gap-[6px] mt-3">
-            {occ.map((o) => (
-              <PuceOccasion key={o} occasion={o} />
-            ))}
-          </div>
-        )}
         {l.elargie && <div className="text-[11px] text-muted mt-2">Occasion élargie : ton dressing n&apos;a pas de pièce déclarée pour cette occasion.</div>}
-        <div className="rounded-feuille px-[16px] py-[20px] mt-4" style={{ background: "var(--color-hero-background)" }}>
-          <div style={{ aspectRatio: "100 / 112" }}>
-            <PlancheLook pieces={items} label={"Composition du look : " + items.map((p) => p.name).join(", ")} />
-          </div>
-        </div>
+        <CarteDuLook pieces={items} occasion={occ[0] ?? null} onPiece={(it) => ouvrirPiece(it.id)} className="mt-4" />
         {sep.exterieur && sep.temperature != null && (
           <div className="mt-3">
             <PourLExterieur piece={sep.exterieur} temperature={sep.temperature} quand={sep.quand} onClick={() => ouvrirPiece(sep.exterieur!.id)} />
@@ -2813,28 +2811,18 @@ function Resultat({
           </button>
         </div>
 
-        <div className="text-[13px] text-ink mt-4">Les pièces du look</div>
-        <div className="flex flex-col gap-2 mt-2">
+        <h2 className="t-titre-carte text-ink mt-6 mb-3">Les pièces du look</h2>
+        <div className="flex flex-col gap-[10px]">
           {items.map((p) => {
             const n = parPiece.get(p.id) ?? 0;
-            return (
-              <button key={p.id} onClick={() => ouvrirPiece(p.id)} className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer">
-                <Vignette it={p} />
-                <span className="flex-1 min-w-0">
-                  <span className="block text-[13px] text-ink truncate">{p.name}</span>
-                  <span className="block text-[11px] text-terracotta mt-[2px]">
-                    {suggestions.has(p.id) ? "À ajouter à ton dressing · " : ""}Dans {n} {n > 1 ? "tenues" : "tenue"}
-                  </span>
-                </span>
-                <span className="text-placeholder pr-1">{chevron("d")}</span>
-              </button>
-            );
+            // « Suggérée » : une pièce de la capsule, à ajouter au dressing ; la ligne dit dans combien de tenues de la valise elle sert.
+            return <LignePieceLook key={p.id} piece={p} suggeree={suggestions.has(p.id)} detail={`Dans ${n} ${n > 1 ? "tenues" : "tenue"} de la valise`} onClick={() => ouvrirPiece(p.id)} />;
           })}
         </div>
         {/* L'action réelle derrière le cœur de la maquette : enregistrer le look dans « Mes looks ». */}
         <Button
           variante={enregistre ? "secondaire" : "contour"}
-          className="mt-5"
+          className="mt-7 !normal-case !tracking-[0.02em] !text-[15px]"
           onClick={() => {
             if (enregistre) return;
             enregistrerLook(l.ids, occ[0] ?? "quotidien");
