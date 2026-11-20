@@ -141,8 +141,11 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
       <div className="mt-auto">
         {avantActions && <div className="mt-1">{avantActions}</div>}
         <div className="mt-2">
+          {/* « TENUE » POUR CE QUE CAPSELA PROPOSE, « LOOK » POUR CE QUE L'ON GARDE (20/11/2026, arbitré : « on parle de tenue et de look…
+              il faudrait harmoniser ») : la carte propose une tenue — « Voir la tenue », « Sauvegardée », « Autre tenue » — ; sauvegardée,
+              elle devient un look (« Retrouve-la dans tes looks »). Arbitré pour la carte de l'accueil. */}
           <Button variante="principal" onClick={onVoir} className="!normal-case !tracking-[0.02em] !text-[15px]">
-            {t("Voir le look")}
+            {t("Voir la tenue")}
           </Button>
         </div>
         <div className="mt-1">
