@@ -2001,6 +2001,8 @@ function Resultat({
   const suggestions = new Set(valise.suggestionIds ?? []);
   /** Les pièces de la capsule notées « achat à prévoir » (07/11/2026). */
   const [indexLook, setIndexLook] = useState(0);
+  /** La feuille « À compléter » (20/11/2026) : la liste détaillée, ouverte depuis sa ligne. */
+  const [voirACompleter, setVoirACompleter] = useState(false);
   const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "retirer"; id: number } | { type: "alleger" } | { type: "tenue" } | null>(null);
   const [enregistres, setEnregistres] = useState<string[]>([]);
   /** Les filtres des onglets (07/11/2026) : la famille de pièces d'« À emporter », la sous-occasion des « Tenues ». */
@@ -2949,13 +2951,14 @@ function Resultat({
     seulDressing || (valise.suggestionIds?.length ?? 0) > 0 ? (
       <LigneInterrupteur titre="Uniquement mon dressing" texte="Sans compléter avec des pièces de ta capsule." actif={seulDressing} onClick={() => recomposer(!seulDressing)} className="mt-5" />
     ) : null;
-  const blocACompleter =
-    aAjouter.length > 0 || aOptimiser ? (
-      <section className="mt-7" aria-labelledby="titre-a-completer">
-        <h2 id="titre-a-completer" className="t-titre-section text-ink">
-          À compléter
-        </h2>
-        <div className="t-chapeau text-muted-3 mt-[4px]">Quelques pièces pourraient encore améliorer tes tenues.</div>
+  /*
+   * « À COMPLÉTER » TIENT SUR UNE LIGNE (20/11/2026, demandé : « quelle est la pertinence de la strate à compléter ? Elle ne fait
+   * qu'alourdir le parcours » ; arbitré : une ligne « Voir »). Les pièces à ajouter au dressing sont déjà marquées « Suggestion » dans
+   * « À emporter » : la page n'en garde qu'un résumé, et « Voir » ouvre la même liste (avec « À mon dressing » et l'alerte
+   * « Nécessaire » d'une occasion sans look) dans une feuille.
+   */
+  const contenuACompleter = (
+    <>
         {aAjouter.length > 0 && (
           <div className="flex flex-col gap-2 mt-3">
             {aAjouter.map(({ item: p, tenues }) => {
@@ -3068,7 +3071,29 @@ function Resultat({
                 )}
               </div>
         )}
-      </section>
+    </>
+  );
+  const nbAAjouter = aAjouter.length;
+  const resumeACompleter =
+    nbAAjouter > 0
+      ? `${nbAAjouter} ${nbAAjouter > 1 ? "pièces de tes tenues ne sont" : "pièce de tes tenues n'est"} pas encore dans ton dressing.`
+      : occasionsAManque.length > 0
+        ? `${occasionsAManque.length > 1 ? "Des occasions" : "Une occasion"} de ton séjour ${occasionsAManque.length > 1 ? "attendent" : "attend"} encore un look.`
+        : `${looks.length} ${looks.length > 1 ? "looks" : "look"} pour ${nbJours} jours : quelques pièces ajouteraient de la variété.`;
+  const blocACompleter =
+    aAjouter.length > 0 || aOptimiser ? (
+      <button
+        type="button"
+        onClick={() => setVoirACompleter(true)}
+        aria-haspopup="dialog"
+        className="mt-7 w-full flex items-center gap-3 text-left bg-card border border-border rounded-bloc px-[14px] py-[12px] cursor-pointer"
+      >
+        <span className="flex-1 min-w-0">
+          <span className="block t-titre-ligne text-ink">À compléter</span>
+          <span className="block text-[12px] text-muted-3 mt-[2px]">{resumeACompleter}</span>
+        </span>
+        <span className="flex-shrink-0 text-[13px] font-semibold text-terracotta">Voir</span>
+      </button>
     ) : null;
   /** Une journée du planning : ses créneaux, chacun avec le look de la valise qui lui répond. */
   const carteJour = (j: (typeof planningParJour)[number]) => (
@@ -3775,6 +3800,10 @@ function Resultat({
             </button>
           </div>
           {blocACompleter}
+          <BottomSheet title="À compléter" open={voirACompleter} onClose={() => setVoirACompleter(false)}>
+            <div className="t-chapeau text-muted-3">Quelques pièces pourraient encore améliorer tes tenues.</div>
+            {contenuACompleter}
+          </BottomSheet>
           {reglageDressingSeul}
         </>
       )}
