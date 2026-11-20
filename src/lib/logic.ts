@@ -19,6 +19,7 @@ import {
   huesHarmonious,
   chaussureHabillee,
   vetementDeSport,
+  chaussureAvecSport,
   estDenim,
   fermetureMaille,
   matiereDeVoyage,
@@ -1917,8 +1918,9 @@ export function generateOutfit(
     // une maille ou un bas de sport (vetementDeSport : formalité 0, ou nommé jogging, sweat, legging, running…) part avec des baskets
     // (baskets ou chaussure de sport, formalité 0). Dure, comme R-S25 : sans baskets, aucune paire, et la tenue le signale (missingCats
     // « chaussures ») — jamais des derbies sous un jogging. Toutes occasions ; la veste et le manteau ne déclenchent pas la règle.
+    // À la maison (Télétravail, Cocooning), les chaussons conviennent aussi (chaussureAvecSport, précisé le 20/11/2026).
     if (!leviers?.chaussuresLibresAvecSport && chosen.some((c) => (TOP_LAYER_CATS.includes(c.cat) || BOTTOMS.includes(c.cat)) && vetementDeSport(c))) {
-      shoePool = shoePool.filter((i) => i.shoeType === "Baskets" || formalityOf(i) === 0);
+      shoePool = shoePool.filter(chaussureAvecSport);
       if (!shoePool.length) basketsManquantes = true;
     }
     // R-S28 — en Rendez-vous · Activité, des chaussures décontractées d'abord (baskets, ballerines, mocassins…, jamais l'escarpin). Molle.
@@ -2320,7 +2322,7 @@ export function candidatsDeRemplacement(
   // R-S29 (20/11/2026) — symétrique du tirage : une tenue qui garde un haut, une maille ou un bas de sport ne reçoit que des baskets ; et
   // une pièce de sport proposée à la place d'un haut ou d'un bas ne l'est que si les chaussures de la tenue sont des baskets.
   const sansPiece = outfitItems.filter((i) => i.id !== pieceId);
-  const estBasket = (i: Item) => i.shoeType === "Baskets" || formalityOf(i) === 0;
+  const estBasket = chaussureAvecSport;
   const pieceDeSport = (i: Item) => (TOP_LAYER_CATS.includes(i.cat) || BOTTOMS.includes(i.cat)) && vetementDeSport(i);
   if (cat === "chaussures" && sansPiece.some(pieceDeSport)) {
     candidates = candidates.filter((i) => i.cat !== "chaussures" || estBasket(i));

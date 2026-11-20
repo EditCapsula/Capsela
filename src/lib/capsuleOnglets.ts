@@ -1,4 +1,4 @@
-import { formalityOf, huesHarmonious, isNeutralColor, isStatement, rolePieceOf, vetementDeSport } from "./attributes";
+import { chaussureAvecSport, huesHarmonious, isNeutralColor, isStatement, rolePieceOf, vetementDeSport } from "./attributes";
 import { silhouetteOrienteLaCapsule, styleFit, temperatureDeSaison } from "./capsule";
 import { CATS } from "./data";
 import { colorimetrieUtilisable } from "./colorimetrie";
@@ -219,7 +219,8 @@ function exclusivite(sel: SelectionComposer, touche: CleEmplacement, groupes: Re
   return out;
 }
 
-const estBasket = (it: Item) => it.cat === "chaussures" && (it.shoeType === "Baskets" || formalityOf(it) === 0);
+// Baskets, ou chaussons (précisé le 20/11/2026 : télétravail et cocooning) — chaussureAvecSport.
+const estBasket = (it: Item) => it.cat === "chaussures" && chaussureAvecSport(it);
 const EMPLACEMENTS_SPORT: CleEmplacement[] = ["haut", "maille", "bas"];
 
 function sportEtBaskets(sel: SelectionComposer, touche: CleEmplacement, groupes: Record<CleEmplacement, EntreeCapsule[]>): SelectionComposer {

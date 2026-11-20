@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { candidatsDeRemplacement, generateOutfit } from "../logic";
 import { avancer, choisir, piecesComposees, piecesParEmplacement, type EntreeCapsule } from "../capsuleOnglets";
 import { at, item } from "./fixtures";
+import { chaussureAvecSport } from "../attributes";
 import type { Item } from "../types";
 
 /**
@@ -68,5 +69,28 @@ describe("Composer : pas de jogging avec des derbies", () => {
       const p = ids(sel);
       expect(p.includes(jogging.id) && p.includes(derbies.id)).toBe(false);
     }
+  });
+});
+
+describe("à la maison, les chaussons conviennent aussi (précisé le 20/11/2026 : « ou des chaussons pour les occasions télétravail et cocooning »)", () => {
+  const chaussons = item({ id: 7, category: "chaussures", name: "Sabots fourrés en daim", sous_type: "Chaussures d'intérieur", couleur_dominante: "Gris", saison_capsule: T });
+  const maison = [jogging, pullFin, chaussons];
+  it("les chaussons conviennent à un vêtement de sport, comme les baskets ; les derbies non", () => {
+    expect(chaussureAvecSport(chaussons as Item)).toBe(true);
+    expect(chaussureAvecSport(baskets as Item)).toBe(true);
+    expect(chaussureAvecSport(derbies as Item)).toBe(false);
+  });
+  it("Remplacer, à la maison : les chaussons restent proposés sous un jogging", () => {
+    const c = candidatsDeRemplacement([jogging, pullFin, chaussons] as Item[], maison as Item[], chaussons.id, "chaussures", "cocooning");
+    expect(c.map((i) => i.id)).not.toContain(derbies.id);
+  });
+  it("Composer : des chaussons avec un jogging restent tels quels", () => {
+    // Un pantalon droit est disponible : sans la règle des chaussons, choisir les chaussons aurait remplacé le jogging par lui.
+    const droit = item({ id: 8, category: "pantalon", name: "Pantalon droit noir", sous_type: "Pantalon", couleur_dominante: "Noir", saison_capsule: T });
+    const g = piecesParEmplacement([pullFin, jogging, droit, derbies, chaussons].map((i) => ({ item: i as Item, possedee: false })));
+    const iCh = (id: number) => g.chaussures.findIndex((e) => e.item.id === id);
+    const iBas = (id: number) => g.bas.findIndex((e) => e.item.id === id);
+    const sel = choisir({ haut: 0, bas: iBas(jogging.id), chaussures: iCh(derbies.id) }, "chaussures", iCh(chaussons.id), g);
+    expect(piecesComposees(g, sel).map((e) => e.item.id)).toEqual(expect.arrayContaining([jogging.id, chaussons.id]));
   });
 });
