@@ -85,6 +85,12 @@ export function MosaiquePieces({ pieces }: { pieces: Item[] }) {
   );
 }
 
+/** La source d'un look : sauvegardé (une tenue proposée par Capsela, gardée telle quelle) ou créé par la personne (Créer un look). */
+export const LIBELLE_SOURCE: Record<SavedLook["source"], string> = {
+  saved: "Look sauvegardé",
+  created: "Look créé par toi",
+};
+
 export default function CarteLook({
   look,
   pieces,
@@ -111,7 +117,7 @@ export default function CarteLook({
     <button
       type="button"
       onClick={onOuvrir}
-      aria-label={`Look ${look.name}, ${pieces.length} ${pieces.length <= 1 ? "pièce" : "pièces"}, ${porte > 0 ? `porté ${porte} fois` : "non porté"}${suggere ? ", suggéré par Capsela" : ""}`}
+      aria-label={`Look ${look.name}, ${pieces.length} ${pieces.length <= 1 ? "pièce" : "pièces"}, ${porte > 0 ? `porté ${porte} fois` : "non porté"}${compacte ? (suggere ? ", suggéré par Capsela" : "") : ", " + LIBELLE_SOURCE[look.source].toLowerCase()}`}
       className="text-left cursor-pointer active:opacity-80 min-w-0"
     >
       <MosaiquePieces pieces={pieces} />
@@ -124,7 +130,9 @@ export default function CarteLook({
           {porte > 0 && ` · Porté ${porte} fois`}
           {compacte && suggere && <span className="text-terracotta"> · ✦ Suggéré par Capsela</span>}
         </div>
-        {!compacte && suggere && <div className="text-[10.5px] text-terracotta mt-[4px]">✦ Look suggéré par Capsela</div>}
+        {/* LA SOURCE À LA PLACE DE « LOOK SUGGÉRÉ PAR CAPSELA » (20/11/2026, demandé : « à la place de Look suggéré par Capsela indique la
+            source… savoir si le look est créé par l'utilisateur ou si c'est un look sauvegardé »). Le filtre « Suggérés » reste. */}
+        {!compacte && <div className="text-[10.5px] text-terracotta mt-[4px]">{look.source === "saved" ? "✦ " : ""}{LIBELLE_SOURCE[look.source]}</div>}
       </div>
     </button>
   );
