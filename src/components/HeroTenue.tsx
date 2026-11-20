@@ -449,7 +449,8 @@ export function RailPiecesTenue({
               <div className="text-[10px] text-muted mt-[2px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
               {/* Provenance à la pièce — la même séparation que les pastilles du hero, jamais un second calcul. */}
               <div className="text-[10px] mt-[1px]" style={{ color: suggested ? "var(--color-sand-text)" : "var(--color-muted)" }}>
-                {suggested ? "Capsule" : "Ton dressing"}
+                {/* « Suggestion », le libellé de l'app pour une pièce de la capsule (20/11/2026, arbitré ; « Capsule » avant). */}
+                {suggested ? t("Suggestion") : t("Ton dressing")}
               </div>
             </div>
           );

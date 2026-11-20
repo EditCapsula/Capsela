@@ -2815,7 +2815,7 @@ function Resultat({
         <div className="flex flex-col gap-[10px]">
           {items.map((p) => {
             const n = parPiece.get(p.id) ?? 0;
-            // « Suggérée » : une pièce de la capsule, à ajouter au dressing ; la ligne dit dans combien de tenues de la valise elle sert.
+            // « Suggestion » : une pièce de la capsule, à ajouter au dressing ; la ligne dit dans combien de tenues de la valise elle sert.
             return <LignePieceLook key={p.id} piece={p} suggeree={suggestions.has(p.id)} detail={`Dans ${n} ${n > 1 ? "tenues" : "tenue"} de la valise`} onClick={() => ouvrirPiece(p.id)} />;
           })}
         </div>
@@ -3711,7 +3711,9 @@ function Resultat({
                     // La provenance (brief : « Dressing, Capsule, Vacances ») : une pièce de vacances du catalogue, une suggestion de la
                     // capsule, ou une pièce possédée. Une pièce qui n'est pas au dressing n'est jamais dite « Dressing ». Les libellés
                     // « À toi » / « Suggestion », essayés le 11/11/2026, ont été retirés le même jour (demandé : « remets les anciens libellés »).
-                    const provenance = estPieceDeValise(p) ? "Vacances" : suggestions.has(p.id) ? "Capsule" : "Dressing";
+                    // Depuis le 20/11/2026 (arbitré : un seul libellé dans toute l'app, « Suggestion »), la pièce de la capsule se dit
+                    // « Suggestion » ici comme ailleurs ; « Dressing » et « Vacances » ne changent pas.
+                    const provenance = estPieceDeValise(p) ? "Vacances" : suggestions.has(p.id) ? "Suggestion" : "Dressing";
                     return (
                       <li key={p.id} className="min-w-0">
                         <Card rayon="tuile" className="relative p-[6px] flex flex-col h-full">
@@ -3739,7 +3741,7 @@ function Resultat({
                             <span className="w-[22px] h-[22px] rounded-full bg-card/90 text-muted flex items-center justify-center">{G_CROIX}</span>
                           </button>
                           <div className="mt-[6px] px-[2px]">
-                            <Badge tone={provenance === "Dressing" ? "possede" : provenance === "Capsule" ? "doux" : "plein"} taille="s">
+                            <Badge tone={provenance === "Dressing" ? "possede" : provenance === "Suggestion" ? "doux" : "plein"} taille="s">
                               {provenance}
                             </Badge>
                           </div>
@@ -3891,8 +3893,9 @@ function Resultat({
                               {p ? <Vignette it={p} taille={40} /> : null}
                               <span className="flex-1 min-w-0">
                                 <span className={"block text-[13px] leading-[1.3] line-clamp-2 break-words " + (art.prete ? "text-muted line-through" : "text-ink")}>{art.libelle}</span>
-                                {/* Une suggestion de la capsule se dit « Capsule » (19/10/2026, demandé ; reconduit le 11/11/2026) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
-                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">Capsule</span>}
+                                {/* Une suggestion de la capsule se dit « Suggestion » (20/11/2026, arbitré : un seul libellé dans l'app ; « Capsule »
+                                    avant) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
+                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">Suggestion</span>}
                                 {raisonPropre && <span className="block text-[11px] text-terracotta truncate">{raisonPropre}</span>}
                               </span>
                             </div>

@@ -16,7 +16,7 @@ import type { Item, OccasionKey } from "@/lib/types";
  * valise (ValiseScreen, demandé : « pour cette page, reprends les mêmes éléments que la page détaillée du look »).
  *
  * CarteDuLook : la planche (FlatLayCapsela, la seule règle de composition), le texte éditorial (texteEditorialLook, celui de l'accueil)
- * et les couleurs réelles des pièces. LignePieceLook : une pièce du look, qui ouvre sa feuille ; « Suggérée » sous le nom.
+ * et les couleurs réelles des pièces. LignePieceLook : une pièce du look, qui ouvre sa feuille ; « Suggestion » sous le nom.
  */
 export function CarteDuLook({ pieces, occasion, onPiece, className = "" }: { pieces: Item[]; occasion: OccasionKey | null; onPiece: (it: Item) => void; className?: string }) {
   const { state } = useCapsela();
@@ -57,7 +57,7 @@ export function LignePieceLook({ piece, suggeree, detail, onClick }: { piece: It
       type="button"
       onClick={onClick}
       className="text-left cursor-pointer active:opacity-80 w-full"
-      aria-label={`${piece.name}, ${categorie}, ${piece.color}${suggeree ? ", suggérée" : ""}${detail ? ", " + detail : ""}`}
+      aria-label={`${piece.name}, ${categorie}, ${piece.color}${suggeree ? ", suggestion" : ""}${detail ? ", " + detail : ""}`}
     >
       <Card rayon="bloc" className="flex items-center gap-[13px] p-[10px]">
         <div className="flex-shrink-0">
@@ -81,10 +81,11 @@ export function LignePieceLook({ piece, suggeree, detail, onClick }: { piece: It
             {categorie} · {piece.color}
           </div>
           {detail && <div className="text-[12px] text-terracotta mt-[3px] truncate">{detail}</div>}
-          {/* Sous le nom, plus sur la vignette : posée dessus, la pastille débordait sur le nom (rendu du 20/11/2026). */}
+          {/* « Suggestion », le seul libellé d'une pièce de la capsule pas encore possédée (20/11/2026, arbitré : « soit suggéré soit
+              capsule, il faut être raccord » → « Suggestion », partout). Sous le nom : posée sur la vignette, elle débordait. */}
           {suggeree && (
             <Badge tone="plein" taille="s" className="mt-[6px]">
-              Suggérée
+              Suggestion
             </Badge>
           )}
         </div>
