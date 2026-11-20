@@ -1027,7 +1027,7 @@ function DestinationsDuVoyage({
 }
 
 export default function ValiseScreen() {
-  const { state, weather, defaultCapsule, vestiairePool, actions } = useCapsela();
+  const { state, weather, defaultCapsule, vestiairePool, catalogueDisponible, actions } = useCapsela();
   const { profile } = useAuth();
   /** La capsule du séjour : bâtie sur la météo du séjour, pas sur celle d'aujourd'hui à la maison (capsuleDuSejour, 22/10/2026). */
   // Les pièces de baignade du profil, réservées à la valise (06/11/2026, piecesDeValise.ts) : jamais dans une capsule, ajoutées à
@@ -1039,6 +1039,16 @@ export default function ValiseScreen() {
     const utiles = piecesValise.filter((p) => situations.some((st) => piecesPourLaSituation([p], st).length > 0) && !capsule.some((c) => c.id === p.id));
     return [...capsule, ...utiles];
   };
+  // LA VALISE ATTEND LE VRAI CATALOGUE (20/11/2026, signalé : une valise pour Bali enregistrée, puis vide, « Ton dressing est vide »).
+  // Composée pendant que le catalogue chargeait (ou ne chargeait pas), elle prenait les pièces du catalogue de secours, dont les ids
+  // n'existent pas dans le compte : rouverte avec le vrai catalogue, elle ne retrouvait aucune de ses pièces. La composition attend donc
+  // le catalogue (lancer, plus bas) et lit la capsule du moment par ces refs, jamais celle du rendu où elle a commencé.
+  const catalogueRef = useRef(catalogueDisponible);
+  const capsuleDeRef = useRef(capsuleDe);
+  useEffect(() => {
+    catalogueRef.current = catalogueDisponible;
+    capsuleDeRef.current = capsuleDe;
+  });
   const dressing = state.items;
   const generer = useMemo(
     () => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie), piecesValise, profile.morphology, profile.preferencesSilhouette?.coupes ?? null),
@@ -1287,7 +1297,13 @@ export default function ValiseScreen() {
     // Tenues complètes seulement (12/11/2026, levier `complets`, mesuré par scripts/valise-complets.audit.ts : trajets d'un séjour avec
     // randonnée couverts 0 → 100 % en S et M, sans recul ailleurs).
     const seulDressing = rep.uniquementDressing ?? (idCible ? state.valises.find((v) => v.id === idCible)?.uniquementDressing === true : false);
-    const r = composerValiseVariee(dressing, seulDressing ? [] : capsuleDe(situations), situations, capaciteDe(rep.bagage), generer, { variete: true, adaptation: !seulDressing, complets: true, trajetHorsCapacite: true }, undefined, cibleDeVolume(rep.bagage));
+    // Le vrai catalogue, 15 s au plus ; sans lui, la capsule n'entre pas (jamais des pièces du catalogue de secours dans une valise gardée).
+    for (let i = 0; i < 60 && !seulDressing && !catalogueRef.current; i++) {
+      await pause(250);
+      if (!actif.current) return;
+    }
+    const capsuleDuMoment = !seulDressing && catalogueRef.current ? capsuleDeRef.current(situations) : [];
+    const r = composerValiseVariee(dressing, capsuleDuMoment, situations, capaciteDe(rep.bagage), generer, { variete: true, adaptation: !seulDressing, complets: true, trajetHorsCapacite: true }, undefined, cibleDeVolume(rep.bagage));
     setFaites(2);
     await pause(300);
     if (!actif.current) return;
@@ -2844,9 +2860,19 @@ function Resultat({
         <Surtitre>
           {valise.destination} · {libellePeriode(valise.depart, valise.retour)}
         </Surtitre>
-        <EmptyState forme="carte" className="mt-4" titre="Ton dressing est vide" action={{ libelle: "Ajouter une pièce →", onClick: ajouterAuDressing }}>
-          La valise se prépare avec les pièces que tu possèdes. Ajoute-les à ton dressing, et Capsela choisira celles à emporter.
-        </EmptyState>
+        {/* Le bon message (20/11/2026, signalé : « Ton dressing est vide » sur une valise enregistrée dont les pièces venaient d'un catalogue
+            pas encore chargé) : « Uniquement mon dressing » avec un dressing vide, c'est bien le dressing ; sinon, la valise a perdu ses
+            pièces — on propose de la recomposer, avec le dressing et la capsule. */}
+        {valise.uniquementDressing ? (
+          <EmptyState forme="carte" className="mt-4" titre="Ton dressing est vide" action={{ libelle: "Ajouter une pièce →", onClick: ajouterAuDressing }}>
+            La valise se prépare avec les pièces que tu possèdes. Ajoute-les à ton dressing, et Capsela choisira celles à emporter.
+          </EmptyState>
+        ) : (
+          <EmptyState forme="carte" className="mt-4" titre="Ta valise est vide" action={{ libelle: "Recomposer ma valise →", onClick: () => recomposer() }}>
+            Ses pièces ne sont plus disponibles. Recompose-la : Capsela choisira de nouveau les pièces à emporter, dans ton dressing et ta
+            capsule.
+          </EmptyState>
+        )}
         <Pied gardeeOu={gardeeOu} ajuster={modifier} recommencer={recommencer} />
       </>
     );

@@ -724,6 +724,12 @@ interface CapselaContextValue {
   /** Source des suggestions — vestiaire universel (Supabase) si disponible, sinon le catalogue statique de secours. Utilisé par l'écran Capsule pour recalculer une capsule sur une saison différente de la saison courante. */
   vestiairePool: CatalogItem[];
   /**
+   * Le vrai catalogue (vestiaire_universel) est chargé (20/11/2026) — toujours vrai en mode démo. Faux tant qu'il charge, ou s'il n'a pas
+   * pu l'être : vestiairePool est alors le catalogue statique de secours, dont les ids n'existent pas dans le compte. Ce qui s'ENREGISTRE
+   * avec des pièces du catalogue (une valise) l'attend, comme la première tenue du jour (recette du 26/09/2026).
+   */
+  catalogueDisponible: boolean;
+  /**
    * true une fois les pièces, l'historique et les looks chargés.
    *
    * Exposé le 23/09/2026 pour l'état de chargement du Dressing : le drapeau
@@ -1272,11 +1278,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
    * parfois un sac seul.
    */
   const [vestiaireResolu, setVestiaireResolu] = useState(!isSupabaseConfigured);
+  const [catalogueDisponible, setCatalogueDisponible] = useState(!isSupabaseConfigured);
   useEffect(() => {
     let cancelled = false;
     fetchVestiaireUniversel().then((rows) => {
       if (cancelled) return;
-      if (rows.length) setVestiairePool(rows);
+      if (rows.length) {
+        setVestiairePool(rows);
+        setCatalogueDisponible(true);
+      }
       setVestiaireResolu(true);
     });
     return () => {
@@ -3841,6 +3851,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     defaultCapsule,
     wardrobePool,
     vestiairePool,
+    catalogueDisponible,
     valiseConsultee,
     dressingLoaded,
     etatPremium,
