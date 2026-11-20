@@ -375,6 +375,7 @@ export const EN: Record<string, string> = {
   "Voir la pièce": "See the piece",
   "Voir la valise": "See the suitcase",
   "Voir le look": "See the look",
+  "Voir la tenue": "See the outfit",
   "Voir le plan": "See the plan",
   "Voir mon dressing": "See my wardrobe",
   "Voir plus": "See more",

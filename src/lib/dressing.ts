@@ -759,6 +759,12 @@ export async function insertSavedLook(userId: string, look: Omit<SavedLook, "id"
   return rowToSavedLook(data as SavedLookRow);
 }
 
+/** Renomme un look (20/11/2026, détail d'un look). La politique de mise à jour existe depuis 0026 : aucune migration. */
+export async function renommerSavedLook(id: string, name: string): Promise<void> {
+  const { error } = await getSupabase().from("saved_looks").update({ name }).eq("id", id);
+  if (error) throw error;
+}
+
 export async function deleteSavedLook(id: string): Promise<void> {
   const { error } = await getSupabase().from("saved_looks").delete().eq("id", id);
   if (error) throw error;

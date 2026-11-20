@@ -19,6 +19,7 @@ import {
   huesHarmonious,
   chaussureHabillee,
   vetementDeSport,
+  chaussureAvecSport,
   estDenim,
   fermetureMaille,
   matiereDeVoyage,
@@ -449,6 +450,8 @@ export interface LeviersMesure {
   sansTalonsEnSoiree?: boolean;
   /** Reproduit le comportement d'AVANT le 01/11/2026 : en soirée, une femme peut recevoir des chaussures non habillées (R-S25). */
   sansChaussuresHabilleesEnSoiree?: boolean;
+  /** Reproduit le comportement d'AVANT le 20/11/2026 : un vêtement de sport pouvait partir avec des chaussures autres que des baskets (R-S29). */
+  chaussuresLibresAvecSport?: boolean;
   /** Reproduit le comportement d'AVANT le 01/11/2026 : une veste ou un manteau de sport peut se poser sur une robe (R-B24). */
   vesteDeSportSurRobe?: boolean;
   /** Reproduit le comportement d'AVANT le 01/11/2026 : en Voyage, sans haut ni bas de voyage, pas de relais par une tenue de sport (R-S26). */
@@ -1877,6 +1880,8 @@ export function generateOutfit(
   }
   // R-S25 : aucune paire habillée pour une soirée, alors que le pool a des chaussures — signalé comme un manque, plus bas.
   let paireHabilleeManquante = false;
+  // R-S29 : un vêtement de sport sans aucune paire de baskets dans le pool — signalé comme un manque, plus bas.
+  let basketsManquantes = false;
   const sh = (() => {
     // Les baskets sont déjà exclues en amont si l'occasion est habillée (R-B6, hardCategoryFilter).
     let shoePool = poolFor(["chaussures"], true).filter((i) => i.cat === "chaussures");
@@ -1908,6 +1913,15 @@ export function generateOutfit(
     if (occasion === "voyage" && !leviers?.sansConfortVoyage) {
       const baskets = shoePool.filter((i) => i.shoeType === "Baskets" || formalityOf(i) === 0);
       if (baskets.length) shoePool = baskets;
+    }
+    // R-S29 (20/11/2026, demandé : « pas de pantalon de sport ou de haut de sport avec des chaussures autres que des baskets ») — un haut,
+    // une maille ou un bas de sport (vetementDeSport : formalité 0, ou nommé jogging, sweat, legging, running…) part avec des baskets
+    // (baskets ou chaussure de sport, formalité 0). Dure, comme R-S25 : sans baskets, aucune paire, et la tenue le signale (missingCats
+    // « chaussures ») — jamais des derbies sous un jogging. Toutes occasions ; la veste et le manteau ne déclenchent pas la règle.
+    // À la maison (Télétravail, Cocooning), les chaussons conviennent aussi (chaussureAvecSport, précisé le 20/11/2026).
+    if (!leviers?.chaussuresLibresAvecSport && chosen.some((c) => (TOP_LAYER_CATS.includes(c.cat) || BOTTOMS.includes(c.cat)) && vetementDeSport(c))) {
+      shoePool = shoePool.filter(chaussureAvecSport);
+      if (!shoePool.length) basketsManquantes = true;
     }
     // R-S28 — en Rendez-vous · Activité, des chaussures décontractées d'abord (baskets, ballerines, mocassins…, jamais l'escarpin). Molle.
     if (decontracteEnActivite) {
@@ -1991,7 +2005,7 @@ export function generateOutfit(
     if (!hasCat(["haut"])) missingCats.push("haut");
     if (!hasCat(BOTTOMS)) missingCats.push("bas");
   }
-  if (!hasCat(["chaussures"]) || paireHabilleeManquante) missingCats.push("chaussures");
+  if (!hasCat(["chaussures"]) || paireHabilleeManquante || basketsManquantes) missingCats.push("chaussures");
   if (missingWarmth) missingCats.push("chaud");
 
   return { ids: Array.from(new Set(ids)), missingCats, occasionRelachee };
@@ -2304,6 +2318,18 @@ export function candidatsDeRemplacement(
   // R-B22 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (weather && weather.temp < SEUIL_CHAUSSURES_D_ETE) {
     candidates = candidates.filter((i) => !estChaussureDEte(i));
+  }
+  // R-S29 (20/11/2026) — symétrique du tirage : une tenue qui garde un haut, une maille ou un bas de sport ne reçoit que des baskets ; et
+  // une pièce de sport proposée à la place d'un haut ou d'un bas ne l'est que si les chaussures de la tenue sont des baskets.
+  const sansPiece = outfitItems.filter((i) => i.id !== pieceId);
+  const estBasket = chaussureAvecSport;
+  const pieceDeSport = (i: Item) => (TOP_LAYER_CATS.includes(i.cat) || BOTTOMS.includes(i.cat)) && vetementDeSport(i);
+  if (cat === "chaussures" && sansPiece.some(pieceDeSport)) {
+    candidates = candidates.filter((i) => i.cat !== "chaussures" || estBasket(i));
+  }
+  const chaussuresGardees = sansPiece.filter((i) => i.cat === "chaussures");
+  if (chaussuresGardees.length && !chaussuresGardees.some(estBasket)) {
+    candidates = candidates.filter((i) => !pieceDeSport(i));
   }
   // R-B23 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (OCCASIONS_SANS_SAC_A_DOS.includes(occasion)) {

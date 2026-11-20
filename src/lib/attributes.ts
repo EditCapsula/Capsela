@@ -418,6 +418,15 @@ export function vetementDeSport(it: Item): boolean {
   return it.niveauFormalite === 0 || MOTS_SPORT.test(n(it));
 }
 
+/**
+ * LES CHAUSSURES D'UN VÊTEMENT DE SPORT (R-S29, 20/11/2026) : des baskets (baskets ou chaussure de sport, formalité 0) — ou des
+ * chaussures d'intérieur (précisé le 20/11/2026 : « ou des chaussons pour les occasions télétravail et cocooning »). Les chaussons
+ * n'apparaissent qu'à la maison (R-B13 du moteur) : admis ici partout, ils ne sortent de fait qu'en Télétravail et en Cocooning.
+ */
+export function chaussureAvecSport(it: Item): boolean {
+  return it.shoeType === "Baskets" || it.shoeType === "Chaussures d'intérieur" || formalityOf(it) === 0;
+}
+
 export function formalityOf(it: Item): number {
   if (it.niveauFormalite != null) return it.niveauFormalite;
   const text = n(it);
