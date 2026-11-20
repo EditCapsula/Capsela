@@ -679,7 +679,7 @@ export default function CapsuleScreen() {
   };
 
   const enregistrerTenue = () => {
-    actions.basculerIdeeLook(piecesTenue.map((it) => it.id), "all");
+    actions.basculerIdeeLook(piecesTenue.map((it) => it.id), "all", "composer");
     setToast(tenueEnregistree ? "Tenue retirée de tes looks" : "Tenue enregistrée dans tes looks");
   };
 

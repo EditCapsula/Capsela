@@ -353,7 +353,7 @@ export default function ItemOutfitsScreen() {
               marquerSuggestions
               enregistre={enregistre(look.variation.ids)}
               onOpen={() => ouvrir(look, i + 1)}
-              onCoeur={() => actions.basculerIdeeLook(look.variation.ids, look.variation.occasion)}
+              onCoeur={() => actions.basculerIdeeLook(look.variation.ids, look.variation.occasion, "idee_look")}
               colonnes={colonnesCarrousel}
               avecOuSansVeste={fusion.vesteFacultative.has(cleLook(look.variation.ids))}
             />

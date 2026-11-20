@@ -500,7 +500,7 @@ export default function HomeScreen() {
             return actions.setOutfitFeedback("adore", sansExterieur);
           }
           if (!dejaSauvegardee(idsDuLook)) {
-            actions.enregistrerIdeeLook(idsDuLook, slide.occasion);
+            actions.enregistrerIdeeLook(idsDuLook, slide.occasion, "accueil");
             annoncerTenueSauvegardee(actions.goLooks);
           }
         }}
@@ -614,7 +614,7 @@ export default function HomeScreen() {
               sauvegardee={sauvegardee}
               onSauvegarder={() => {
                 if (!sauvegardee) annoncerTenueSauvegardee(actions.goLooks);
-                return jourAVenir ? actions.toggleSaveOutfitLook(sansExterieur) : actions.setOutfitFeedback("adore", sansExterieur);
+                return jourAVenir ? actions.toggleSaveOutfitLook(sansExterieur, "accueil") : actions.setOutfitFeedback("adore", sansExterieur);
               }}
               onAvis={avisPour(state.outfit, occasionKey ?? "quotidien")}
               onAutre={jourAVenir ? () => quota.demander(actions.regenOutfit) : pasPourMoi}

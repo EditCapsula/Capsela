@@ -8,6 +8,7 @@ import { coucheDepuis, longueurDepuis } from "./forme";
 import type { ObjetRepere } from "./importTenue";
 import { normaliserOccasion, normaliserOccasions } from "./occasions";
 import { ordonnerSaisons } from "./saisons";
+import { estOrigineLook } from "./origineLook";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type {
   AccessoireType,
@@ -24,6 +25,7 @@ import type {
   Motif,
   Matiere,
   OccasionKey,
+  OrigineLook,
   PhotoAnalysis,
   SacType,
   SavedLook,
@@ -708,6 +710,8 @@ interface SavedLookRow {
   piece_ids: number[];
   occasion: string | null;
   source: string;
+  /** Migration 0066 : absente avant elle. */
+  origine?: string | null;
   created_at: string;
 }
 
@@ -718,6 +722,7 @@ function rowToSavedLook(row: SavedLookRow): SavedLook {
     pieceIds: row.piece_ids ?? [],
     occasion: normaliserOccasion(row.occasion),
     source: row.source as SavedLook["source"],
+    origine: estOrigineLook(row.origine) ? row.origine : undefined,
     createdAt: new Date(row.created_at).getTime(),
   };
 }
@@ -757,6 +762,24 @@ export async function insertSavedLook(userId: string, look: Omit<SavedLook, "id"
     .single();
   if (error || !data) throw error ?? new Error("Échec de l'insertion dans saved_looks");
   return rowToSavedLook(data as SavedLookRow);
+}
+
+/**
+ * L'origine d'un look (migration 0066), écrite À PART de l'insertion : avant la migration, la colonne manquante fait échouer cette seule
+ * écriture, jamais la sauvegarde du look. Rend false en cas d'échec (l'appelant garde l'origine sur l'appareil).
+ */
+export async function ecrireOrigineLook(id: string, origine: OrigineLook): Promise<boolean> {
+  try {
+    const { error } = await getSupabase().from("saved_looks").update({ origine }).eq("id", id);
+    if (error) {
+      console.warn("[dressing] origine du look non écrite (migration 0066 appliquée ?)", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("[dressing] origine du look non écrite", err);
+    return false;
+  }
 }
 
 export async function deleteSavedLook(id: string): Promise<void> {
