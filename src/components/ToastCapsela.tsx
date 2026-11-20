@@ -15,6 +15,8 @@ export const DUREE_TOAST_MS = 6000;
 /** Un lien vers l'endroit où retrouver ce qui vient d'être fait (20/11/2026 : « Sauvegarder » → « Voir mes looks »). */
 export interface LienToast {
   libelle: string;
+  /** Le libellé complet lu par les lecteurs d'écran quand le libellé visible est court (« Voir » → « Voir mes looks »). */
+  libelleComplet?: string;
   ouvrir: () => void;
 }
 
@@ -43,7 +45,8 @@ export function afficherToast(texte: string, annuler?: () => void, lien?: LienTo
  * Le message de confirmation de l'app, avec un lien vers Dressing › Mes looks.
  */
 export function annoncerTenueSauvegardee(ouvrirLooks: () => void): void {
-  afficherToast("Retrouve cette tenue dans tes looks", undefined, { libelle: "Voir mes looks", ouvrir: ouvrirLooks });
+  // Sur une ligne, même à 320 px (20/11/2026, demandé : « revoir le texte pour ne pas le couper ») : un texte court et un lien court.
+  afficherToast("Retrouve-la dans tes looks", undefined, { libelle: "Voir", libelleComplet: "Voir mes looks", ouvrir: ouvrirLooks });
 }
 
 const abonner = (f: () => void) => {
@@ -91,6 +94,7 @@ export default function ToastCapsela() {
                 publier(null);
                 l?.ouvrir();
               }}
+              aria-label={toast.lien.libelleComplet}
               className="flex-shrink-0 rounded-full px-[12px] text-[12.5px] font-semibold text-cream underline underline-offset-[3px] cursor-pointer whitespace-nowrap"
               style={{ minHeight: 44 }}
             >
