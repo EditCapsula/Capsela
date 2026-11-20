@@ -57,6 +57,7 @@ import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import { degres } from "@/lib/unites";
+import { annoncerTenueSauvegardee } from "@/components/ToastCapsela";
 
 /** Icônes des CTA de pièce suggérée (recette 23/08/2026) — trait fin, même style que TabBar, jamais d'emoji. */
 function PlusIcon() {
@@ -1068,7 +1069,11 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
             <button
               type="button"
               className={ACTION_SECONDAIRE}
-              onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook(exterieur ? [exterieur.id] : undefined)}
+              onClick={() => {
+                if (!canSaveOutfit) return;
+                if (!isOutfitSaved) annoncerTenueSauvegardee(actions.goLooks);
+                actions.toggleSaveOutfitLook(exterieur ? [exterieur.id] : undefined);
+              }}
               disabled={!canSaveOutfit}
               title={canSaveOutfit ? undefined : t("Ajoute au moins 2 pièces à cette tenue pour l'enregistrer.")}
               aria-pressed={isOutfitSaved}
@@ -1682,7 +1687,10 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
       actionPorter,
       actionsSecondaires,
       porter: { etat: decalage > 0 ? "a_venir" : state.outfitValidated ? "portee" : "a_porter", desactive: vesteWithoutBase, faire: () => actions.wearOutfitToday(sauf) },
-      enregistrer: { possible: canSaveOutfit, fait: isOutfitSaved, basculer: () => actions.toggleSaveOutfitLook(exterieur ? [exterieur.id] : undefined) },
+      enregistrer: { possible: canSaveOutfit, fait: isOutfitSaved, basculer: () => {
+          if (!isOutfitSaved) annoncerTenueSauvegardee(actions.goLooks);
+          actions.toggleSaveOutfitLook(exterieur ? [exterieur.id] : undefined);
+        } },
       avis: () =>
         decalage > 0
           ? actions.openOpinionShare({ pieceIds: outfitIds, occasion: state.occasion || "all", temp: jourConsulte.meteoPrevue?.temp ?? null, label: jourConsulte.meteoPrevue?.label ?? null, moment: momentMessage(decalage, dateConsultee) ?? "" })

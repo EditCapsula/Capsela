@@ -12,9 +12,16 @@ import { masquerMenuActions } from "@/lib/menuActions";
  */
 export const DUREE_TOAST_MS = 6000;
 
+/** Un lien vers l'endroit où retrouver ce qui vient d'être fait (20/11/2026 : « Sauvegarder » → « Voir mes looks »). */
+export interface LienToast {
+  libelle: string;
+  ouvrir: () => void;
+}
+
 interface Toast {
   texte: string;
   annuler?: () => void;
+  lien?: LienToast;
   jeton: number;
 }
 
@@ -25,9 +32,18 @@ const publier = (t: Toast | null) => {
   abonnes.forEach((f) => f());
 };
 
-/** Affiche un message ; `annuler` pose le bouton « Annuler » pendant la durée du message. */
-export function afficherToast(texte: string, annuler?: () => void): void {
-  publier({ texte, annuler, jeton: Date.now() });
+/** Affiche un message ; `annuler` pose le bouton « Annuler » pendant la durée du message, `lien` un lien qui ouvre l'écran concerné. */
+export function afficherToast(texte: string, annuler?: () => void, lien?: LienToast): void {
+  publier({ texte, annuler, lien, jeton: Date.now() });
+}
+
+/**
+ * UNE TENUE SAUVEGARDÉE SE RETROUVE DANS MES LOOKS (20/11/2026, demandé : « si je clique sur Sauvegarder je dois avoir une petite popin
+ * d'informations déjà dispo dans le design system qui informe que l'on peut retrouver cette tenue dans les looks. Avec un lien »).
+ * Le message de confirmation de l'app, avec un lien vers Dressing › Mes looks.
+ */
+export function annoncerTenueSauvegardee(ouvrirLooks: () => void): void {
+  afficherToast("Retrouve cette tenue dans tes looks", undefined, { libelle: "Voir mes looks", ouvrir: ouvrirLooks });
 }
 
 const abonner = (f: () => void) => {
@@ -65,7 +81,22 @@ export default function ToastCapsela() {
       <div key={toast.jeton} className="pointer-events-auto rounded-[16px] bg-ink overflow-hidden shadow-lg motion-safe:animate-[capsule-apparition_180ms_ease-out_both]">
         <div className="flex items-center gap-3 py-[10px] pl-4 pr-[6px]">
           <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-cream"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M8 12.3l2.6 2.6L16 9.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          <span className="flex-1 min-w-0 text-[12.5px] text-cream truncate">{toast.texte}</span>
+          {/* Avec un lien, le message se lit en entier (deux lignes à 320 px) : c'est une information, pas un simple accusé. */}
+          <span className={`flex-1 min-w-0 text-[12.5px] text-cream ${toast.lien ? "leading-[1.35]" : "truncate"}`}>{toast.texte}</span>
+          {toast.lien && !toast.annuler && (
+            <button
+              type="button"
+              onClick={() => {
+                const l = toast.lien;
+                publier(null);
+                l?.ouvrir();
+              }}
+              className="flex-shrink-0 rounded-full px-[12px] text-[12.5px] font-semibold text-cream underline underline-offset-[3px] cursor-pointer whitespace-nowrap"
+              style={{ minHeight: 44 }}
+            >
+              {toast.lien.libelle}
+            </button>
+          )}
           {toast.annuler && (
             <button
               type="button"

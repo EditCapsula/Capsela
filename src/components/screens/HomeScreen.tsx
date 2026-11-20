@@ -39,6 +39,7 @@ import { manteauxPourLaCouche, separerCoucheExterieure, temperatureReelle } from
 import AccesAccueil from "@/components/AccesAccueil";
 import { momentDeLaCouche, phraseManteauTropLeger } from "@/lib/plafondManteau";
 import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
+import { annoncerTenueSauvegardee } from "@/components/ToastCapsela";
 
 // Les glyphes des accès vivent avec la rangée des accès (AccesAccueil.tsx, 19/11/2026) ; réexportés pour l'écran d'essai.
 export { glypheUnivers, D_DRESSING, D_CAPSULE, D_AGENDA, D_VALISE } from "@/components/AccesAccueil";
@@ -494,8 +495,14 @@ export default function HomeScreen() {
         onVoir={() => actions.consulterTenue(slide.ids, slide.occasion, slide.source === "plan" ? (planHero?.id ?? null) : null)}
         sauvegardee={duJour ? sauvegardee : dejaSauvegardee(idsDuLook)}
         onSauvegarder={() => {
-          if (duJour) return actions.setOutfitFeedback("adore", sansExterieur);
-          if (!dejaSauvegardee(idsDuLook)) actions.enregistrerIdeeLook(idsDuLook, slide.occasion);
+          if (duJour) {
+            if (!sauvegardee) annoncerTenueSauvegardee(actions.goLooks);
+            return actions.setOutfitFeedback("adore", sansExterieur);
+          }
+          if (!dejaSauvegardee(idsDuLook)) {
+            actions.enregistrerIdeeLook(idsDuLook, slide.occasion);
+            annoncerTenueSauvegardee(actions.goLooks);
+          }
         }}
         // Pendant un séjour, une slide est un look de la valise : pas d'autre tirage (il sortirait de la valise) — on fait défiler.
         onAutre={() => {
@@ -605,7 +612,10 @@ export default function HomeScreen() {
               onPiece={toucherPiece(outfitPieces, remplacerTenueDuJour)}
               onVoir={actions.goTenues}
               sauvegardee={sauvegardee}
-              onSauvegarder={() => (jourAVenir ? actions.toggleSaveOutfitLook(sansExterieur) : actions.setOutfitFeedback("adore", sansExterieur))}
+              onSauvegarder={() => {
+                if (!sauvegardee) annoncerTenueSauvegardee(actions.goLooks);
+                return jourAVenir ? actions.toggleSaveOutfitLook(sansExterieur) : actions.setOutfitFeedback("adore", sansExterieur);
+              }}
               onAvis={avisPour(state.outfit, occasionKey ?? "quotidien")}
               onAutre={jourAVenir ? () => quota.demander(actions.regenOutfit) : pasPourMoi}
               autreDesactive={quota.tirageEnCours}
