@@ -135,50 +135,60 @@ function VisuelDressing() {
   );
 }
 
-// ── 3 · Tes tenues : la « Tenue du jour » ───────────────────────────────
+// ── 3 · Tes tenues : la carte de l'accueil ─────────────────────────────
 
-const PIECES_EXEMPLE = [aTraduire("Blazer"), aTraduire("Top rayé"), aTraduire("Jean"), aTraduire("Baskets"), aTraduire("Sac")];
+/*
+ * LA CARTE DE L'ACCUEIL, TELLE QU'ELLE EST (20/11/2026, signalé : « je ne suis pas fan de ce visuel », l'écran montrait une ancienne
+ * version de l'accueil — carte terracotta, « Ton look du jour », « Voir le détail », jean et baskets pour le bureau). La carte de l'accueil
+ * d'aujourd'hui (CarteHero, option B) : le surtitre de l'occasion, le titre en deux temps, la tenue, « Voir la tenue », puis Sauvegarder ·
+ * Avis d'un proche · Autre tenue. Reproduite à l'identique mais inerte : c'est une image d'exemple (role="img"), pas un écran.
+ * La photo (fournie le 20/11/2026, générée d'après le brief Capsela) est une tenue de QUOTIDIEN — chemise, pull sans manches, pantalon à
+ * pinces, baskets, sac seau — : l'occasion annoncée est la sienne. Le titre et la phrase sont ceux que le texte éditorial donnerait à
+ * ces pièces (editorialLook.ts : une couleur forte accordée aux neutres, « nuancé »).
+ */
+const ICONES_ACTIONS: { libelle: string; d: React.ReactNode }[] = [
+  { libelle: aTraduire("Sauvegarder"), d: <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /> },
+  { libelle: aTraduire("Avis d'un proche"), d: <path d="M4.5 6.5A2.5 2.5 0 0 1 7 4h10a2.5 2.5 0 0 1 2.5 2.5v7A2.5 2.5 0 0 1 17 16h-6l-4 3.5V16a2.5 2.5 0 0 1-2.5-2.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /> },
+  { libelle: aTraduire("Autre tenue"), d: <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /> },
+];
 
 function VisuelTenue() {
   return (
-    <div role="img" aria-label={t("Exemple de tenue du jour : 22 degrés à Paris, occasion travail, une tenue complète de cinq pièces")} className="bg-terracotta rounded-hero p-[12px]">
+    <div
+      role="img"
+      aria-label={t("Exemple de tenue du jour : une tenue du quotidien, chemise, pull sans manches, pantalon à pinces, baskets et sac, avec les actions Voir la tenue, Sauvegarder, Avis d'un proche et Autre tenue")}
+      className="rounded-hero px-[14px] pt-[12px] pb-[6px] [@media(max-height:700px)]:pb-[12px]"
+      style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
+    >
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-[6px] t-label" style={{ color: "rgba(243,238,229,.86)" }}>
-          <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">
-            ✦
-          </span>
-          {t("Ton look du jour")}
+        <div className="flex items-center gap-[7px]">
+          <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
+            <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="t-surtitre text-ink whitespace-nowrap">{t("Pour le quotidien")}</span>
         </div>
-        <span className="text-[10px]" style={{ color: "rgba(243,238,229,.7)" }}>
-          {t("exemple")}
-        </span>
+        <span className="text-[10.5px] text-muted">{t("exemple")}</span>
       </div>
-      <div className="grid grid-cols-[1fr_1.05fr] gap-[12px] mt-[10px]" style={{ minHeight: "var(--h-visuel)" }}>
-        <Photo src="/onboarding/tenue-exemple.webp" className="h-full min-h-[150px]" />
-        <div className="flex flex-col min-w-0">
-          <div className="flex flex-col items-start gap-[6px]">
-            <span className="inline-flex rounded-full text-[11px] px-[10px] py-[6px] whitespace-nowrap" style={{ background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)" }}>
-              ☀️ 22° · Paris
-            </span>
-            <span className="inline-flex rounded-full text-[11px] px-[10px] py-[6px] whitespace-nowrap" style={{ background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)" }}>
-              {t("Travail · Bureau")}
-            </span>
+      <div className="font-serif text-[21px] leading-[1.15] text-ink mt-[6px]">
+        Casual <em className="italic text-terracotta">{t("et nuancé")}</em>
+      </div>
+      <div className="relative rounded-bloc overflow-hidden bg-warm-bg mt-[10px]" style={{ height: "var(--h-visuel)" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/onboarding/tenue-quotidien.webp" alt="" width={900} height={1200} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 45%" }} />
+      </div>
+      <div aria-hidden="true" className="mt-[10px] rounded-full bg-terracotta-deep text-cream text-center text-[14px] tracking-[0.02em] py-[10px]">
+        {t("Voir la tenue")}
+      </div>
+      {/* Sur un écran bas (moins de 700 px), les trois actions laissent leur place au texte de l'écran, comme les détails du visuel d'avant. */}
+      <div aria-hidden="true" className="grid grid-cols-3 mt-[2px] [@media(max-height:700px)]:hidden">
+        {ICONES_ACTIONS.map((a) => (
+          <div key={a.libelle} className="flex flex-col items-center gap-[3px] pt-[6px] pb-[4px] text-[11px] leading-[1.2] text-center text-ink-soft">
+            <svg width="15" height="15" viewBox="0 0 24 24" className="text-ink" style={{ display: "block" }}>
+              {a.d}
+            </svg>
+            {t(a.libelle)}
           </div>
-          <div className="mt-[10px] text-[10px] uppercase tracking-[.08em] [@media(max-height:700px)]:hidden" style={{ color: "rgba(243,238,229,.7)" }}>
-            {t("Pièces de la tenue")}
-          </div>
-          <ul className="mt-[4px] flex flex-col gap-[2px] text-[12px] list-none p-0" style={{ color: "var(--color-on-terracotta)" }}>
-            {PIECES_EXEMPLE.map((p) => (
-              <li key={p} className="leading-[1.3]">
-                {t(p)}
-              </li>
-            ))}
-          </ul>
-          <div className="flex-1 min-h-[8px]" />
-          <div className="bg-cream text-ink text-center rounded-full py-[8px] text-[11px] tracking-[.06em] uppercase" aria-hidden="true">
-            {t("Voir le détail")} →
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
@@ -276,7 +286,7 @@ function VisuelCompte() {
  * La hauteur que le texte, l'en-tête et le pied retirent à l'écran, par écran : le titre « Tout ce que tu peux porter. » tient
  * sur trois lignes sur un téléphone étroit, il laisse moins de place à son visuel. Mesuré en rendu à 320, 360, 375 et 390 px.
  */
-const RESERVE_VISUEL = [470, 545, 495, 470, 500];
+const RESERVE_VISUEL = [470, 545, 610, 470, 500];
 
 export default function OnboardingScreen() {
   const { state, actions } = useCapsela();

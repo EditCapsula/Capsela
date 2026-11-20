@@ -93,6 +93,10 @@ export const EN: Record<string, string> = {
   "Travail · Bureau": "Work · Office",
   "Pièces de la tenue": "Pieces in the outfit",
   "Voir le détail": "See details",
+  "Pour le quotidien": "For everyday",
+  "et nuancé": "and nuanced",
+  "Exemple de tenue du jour : une tenue du quotidien, chemise, pull sans manches, pantalon à pinces, baskets et sac, avec les actions Voir la tenue, Sauvegarder, Avis d'un proche et Autre tenue":
+    "Sample outfit of the day: an everyday outfit, shirt, sweater vest, pleated trousers, sneakers and bag, with the actions See the outfit, Save, Ask a friend and Another outfit",
   robes: "dresses",
   hauts: "tops",
   bas: "bottoms",
