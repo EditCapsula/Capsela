@@ -53,7 +53,8 @@ export function ActionsSousLeLook({ sauvegardee, onSauvegarder, onAvis, onAutre,
   // Calées par le haut : à 320 px, « Avis d'un proche » passe sur deux lignes ; les icônes restent alignées (mesuré le 19/11/2026).
   const cellule = "flex flex-col items-center justify-start gap-[4px] min-h-[52px] pt-[6px] text-[12px] leading-[1.25] text-center text-ink-soft cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]";
   return (
-    <div className="grid grid-cols-3" aria-live="polite">
+    // data-actions-tenue : l'accueil masque le bouton flottant « + » tant qu'il recouvre cette ligne (21/11/2026).
+    <div className="grid grid-cols-3" aria-live="polite" data-actions-tenue="">
       <button type="button" onClick={onSauvegarder} aria-pressed={sauvegardee} className={cellule}>
         <span className="text-ink">
           <IconeCoeur plein={sauvegardee} />

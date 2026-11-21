@@ -92,8 +92,11 @@ describe("formalityOf · les noms de sport", () => {
       .flatMap(([cat, liste]) => (liste ?? []).map((t) => `${t} (${cat})`))
       .filter((libelle) => formalityOf(piece(libelle.split(" (")[0])) === 0);
     // Ces trois-là en font partie depuis l'origine et sont légitimes : ce
-    // sont des vêtements de sport. Aucun ne s'est ajouté le 22/09.
-    expect(fautifs).toEqual(["Sweat (haut)", "Legging (pantalon)", "Jogging (pantalon)"]);
+    // sont des vêtements de sport. Aucun ne s'est ajouté le 22/09. Le
+    // coupe-vent (sous-type ajouté le 21/11/2026) l'est aussi, et l'était
+    // déjà par son nom (MOTS_SPORT) : un coupe-vent du dressing nommé ainsi
+    // valait 0 avant comme après.
+    expect(fautifs).toEqual(["Sweat (haut)", "Legging (pantalon)", "Jogging (pantalon)", "Coupe-vent (manteau)"]);
   });
 
   it("ne déplace aucune pièce du catalogue statique", () => {

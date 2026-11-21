@@ -16,16 +16,28 @@ import type { CategoryKey, Item } from "./types";
 export const PLAFOND_PAR_SOUS_TYPE: Record<string, number> = {
   Trench: 20,
   Imperméable: 20,
+  // Coupe-vent, 20° (21/11/2026, arbitré par la propriétaire : plafond 20, plancher 12) — comme le trench.
+  "Coupe-vent": 20,
   Manteau: 12,
   Caban: 12,
   Parka: 8,
   Doudoune: 5,
 };
 
-/** Le plafond de température d'un manteau d'après son sous-type, ou undefined (autre catégorie, sous-type absent ou inconnu). */
-export function plafondDuSousType(cat: CategoryKey, subtype: string | null | undefined): number | undefined {
-  if (cat !== "manteau" || !subtype) return undefined;
-  return PLAFOND_PAR_SOUS_TYPE[subtype.trim()];
+/**
+ * Le sous-type d'un manteau pour ses bornes : celui déclaré ; sans lui, « Coupe-vent » quand le NOM le dit (coupe-vent, k-way —
+ * 21/11/2026 : le sous-type n'existait pas au formulaire, les coupe-vent déjà ajoutés n'en ont pas). Rien d'autre n'est déduit du nom.
+ */
+export function sousTypeManteau(subtype: string | null | undefined, name?: string | null): string | undefined {
+  if (subtype?.trim()) return subtype.trim();
+  return name && /coupe[- ]?vent|k-?way/i.test(name) ? "Coupe-vent" : undefined;
+}
+
+/** Le plafond de température d'un manteau d'après son sous-type (ou son nom, sousTypeManteau), ou undefined (autre catégorie, inconnu). */
+export function plafondDuSousType(cat: CategoryKey, subtype: string | null | undefined, name?: string | null): number | undefined {
+  if (cat !== "manteau") return undefined;
+  const st = sousTypeManteau(subtype, name);
+  return st ? PLAFOND_PAR_SOUS_TYPE[st] : undefined;
 }
 
 /**
@@ -36,30 +48,34 @@ export function plafondDuSousType(cat: CategoryKey, subtype: string | null | und
  *     limite », « moins de 5 °C : trop froid, privilégier un manteau chaud ») — 8° le même jour avant ce guide ; le plafond de 20° y est déjà.
  *     Le guide distingue trench doublé (7-16 °C) et trench léger (15-23 °C) : aucune donnée ne les distingue ici, la valeur est celle du
  *     trench classique ;
- *   · Imperméable, 8° — ARBITRAGE ÉDITORIAL à valider (le guide ne porte que sur le trench).
+ *   · Imperméable, 8° — ARBITRAGE ÉDITORIAL à valider (le guide ne porte que sur le trench) ;
+ *   · Coupe-vent, 12° (21/11/2026, arbitré par la propriétaire).
  * Les autres sous-types et un manteau sans sous-type n'en ont pas : rien ne dit qu'ils sont légers.
  *
- * Il ne sert qu'à « Pour l'extérieur » (coucheExterieure.ts) : jamais écrit sur la pièce, il ne touche ni le moteur ni la capsule.
+ * Jamais écrit sur la pièce. Il sert à « Pour l'extérieur » (coucheExterieure.ts) et, depuis le 21/11/2026, au choix du manteau par
+ * le froid dans le moteur (manteauxParChaleur, logic.ts) : un manteau trop léger n'y est retenu que faute d'autre.
  */
 export const PLANCHER_PAR_SOUS_TYPE: Record<string, number> = {
   Trench: 10,
   Imperméable: 8,
+  "Coupe-vent": 12,
 };
 
 /** La température en dessous de laquelle un manteau est trop léger : sa borne déclarée, sinon celle de son sous-type, sinon undefined. */
-export function plancherManteau(m: Pick<Item, "cat" | "subtype" | "meteoMinTemp">): number | undefined {
+export function plancherManteau(m: Pick<Item, "cat" | "subtype" | "meteoMinTemp"> & { name?: string }): number | undefined {
   if (m.cat !== "manteau") return undefined;
   if (m.meteoMinTemp != null) return m.meteoMinTemp;
-  return m.subtype ? PLANCHER_PAR_SOUS_TYPE[m.subtype.trim()] : undefined;
+  const st = sousTypeManteau(m.subtype, m.name);
+  return st ? PLANCHER_PAR_SOUS_TYPE[st] : undefined;
 }
 
 /** Vrai quand ce manteau est trop léger pour `temperature` (plancher connu et non atteint). */
-export function manteauTropLeger(m: Pick<Item, "cat" | "subtype" | "meteoMinTemp">, temperature: number): boolean {
+export function manteauTropLeger(m: Pick<Item, "cat" | "subtype" | "meteoMinTemp"> & { name?: string }, temperature: number): boolean {
   const p = plancherManteau(m);
   return p != null && temperature < p;
 }
 
-const ARTICLE: Record<string, string> = { Trench: "un trench", Imperméable: "un imperméable" };
+const ARTICLE: Record<string, string> = { Trench: "un trench", Imperméable: "un imperméable", "Coupe-vent": "un coupe-vent" };
 
 /**
  * « Dans ton dressing, il n'y a qu'un trench. Il te faut un manteau plus chaud pour aujourd'hui. » — quand le dressing a des manteaux et
@@ -69,7 +85,7 @@ export function phraseManteauTropLeger(dressing: readonly Item[], temperature: n
   if (typeof temperature !== "number" || !Number.isFinite(temperature)) return null;
   const manteaux = dressing.filter((i) => i.cat === "manteau");
   if (!manteaux.length || !manteaux.every((m) => manteauTropLeger(m, temperature))) return null;
-  const types = new Set(manteaux.map((m) => (m.subtype ?? "").trim()));
+  const types = new Set(manteaux.map((m) => sousTypeManteau(m.subtype, m.name) ?? ""));
   const debut =
     manteaux.length === 1 && ARTICLE[[...types][0]]
       ? `Dans ton dressing, il n'y a qu'${ARTICLE[[...types][0]]}.`
@@ -81,4 +97,21 @@ export function phraseManteauTropLeger(dressing: readonly Item[], temperature: n
 export function momentDeLaCouche(a: { decalage: number; occasion?: string | null; moment?: string | null }): "aujourd'hui" | "cette journée" | "cette soirée" {
   if (a.moment === "Soirée" || a.occasion === "soiree") return "cette soirée";
   return a.decalage === 0 ? "aujourd'hui" : "cette journée";
+}
+
+/** Le plafond de température d'un manteau, ou +∞ s'il n'en a pas. */
+const plafond = (m: Item): number => m.meteoMaxTemp ?? Number.POSITIVE_INFINITY;
+
+/**
+ * Les manteaux admis à `temperature`, du plus chaud (plafond le plus bas) au plus léger ; ordre d'origine à plafond égal. Un manteau TROP
+ * LÉGER pour cette température (plancher, ci-dessus — 19/11/2026) passe en dernier : il n'est retenu que faute d'autre. Partagé par
+ * « Pour l'extérieur » (coucheExterieure.ts) et le moteur (logic.ts, LE MANTEAU PAR LE FROID) depuis le 21/11/2026 : la tenue et la
+ * couche extérieure choisissent le même manteau.
+ */
+export function manteauxParChaleur(candidats: Item[], temperature: number): Item[] {
+  return candidats
+    .map((c, i) => ({ c, i, leger: manteauTropLeger(c, temperature) ? 1 : 0 }))
+    .filter(({ c }) => (c.meteoMaxTemp == null || temperature <= c.meteoMaxTemp) && (c.meteoMinTemp == null || temperature >= c.meteoMinTemp))
+    .sort((a, b) => a.leger - b.leger || plafond(a.c) - plafond(b.c) || a.i - b.i)
+    .map(({ c }) => c);
 }

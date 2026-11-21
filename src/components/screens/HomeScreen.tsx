@@ -7,7 +7,7 @@ import TitrePage from "@/components/TitrePage";
 import { t } from "@/lib/langue";
 import { styleDuLook, texteEditorialLook } from "@/lib/editorialLook";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { demanderChoixChaussures } from "@/lib/intentionTenue";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
@@ -40,6 +40,7 @@ import AccesAccueil from "@/components/AccesAccueil";
 import { momentDeLaCouche, phraseManteauTropLeger } from "@/lib/plafondManteau";
 import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
 import { annoncerTenueSauvegardee } from "@/components/ToastCapsela";
+import { masquerMenuActions } from "@/lib/menuActions";
 
 // Les glyphes des accès vivent avec la rangée des accès (AccesAccueil.tsx, 19/11/2026) ; réexportés pour l'écran d'essai.
 export { glypheUnivers, D_DRESSING, D_CAPSULE, D_AGENDA, D_VALISE } from "@/components/AccesAccueil";
@@ -549,6 +550,42 @@ export default function HomeScreen() {
     </div>
   );
 
+  /*
+   * LE BOUTON « + » NE RECOUVRE PLUS « AUTRE TENUE » (21/11/2026, signalé : le bouton flottant chevauchait la ligne Sauvegarder ·
+   * Avis d'un proche · Autre tenue). Il est fixé à l'écran : sur un téléphone peu haut, la ligne d'actions passe dessous. Tant qu'une
+   * ligne d'actions (data-actions-tenue) occupe sa place, il s'efface (masquerMenuActions, comme pendant un message) ; il revient dès
+   * qu'elle s'en éloigne. Vérifié au défilement, au redimensionnement et quand le contenu change de taille (la tenue qui se charge).
+   */
+  useEffect(() => {
+    const zone = zoneAccueil.current;
+    if (!zone) return;
+    const verifier = () => {
+      const z = zone.getBoundingClientRect();
+      const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--bottom-nav-height")) || 0;
+      // La place du bouton (56 px, à 16 px du bord droit et au-dessus de la barre du bas), avec 8 px de marge.
+      const bas = window.innerHeight - nav - 16 + 8;
+      const haut = bas - 56 - 16;
+      const droite = z.right - 16 + 8;
+      const gauche = z.right - 16 - 56 - 8;
+      const chevauche = [...zone.querySelectorAll("[data-actions-tenue]")].some((el) => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > haut && r.top < bas && r.right > gauche && r.left < droite;
+      });
+      masquerMenuActions("accueil-actions-tenue", chevauche);
+    };
+    verifier();
+    zone.addEventListener("scroll", verifier, { passive: true });
+    window.addEventListener("resize", verifier);
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(verifier) : null;
+    if (ro && zone.firstElementChild) ro.observe(zone.firstElementChild);
+    return () => {
+      zone.removeEventListener("scroll", verifier);
+      window.removeEventListener("resize", verifier);
+      ro?.disconnect();
+      masquerMenuActions("accueil-actions-tenue", false);
+    };
+  }, []);
+
   return (
     <div ref={zoneAccueil} onScroll={defilementAccueil.onScroll} className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-safe-nav">
       <div className="px-6">
@@ -598,7 +635,7 @@ export default function HomeScreen() {
           {carteDuJour(
             <CarteHero
               sansCadre
-              surtitre={texteHero ? sansLeJour(texteHero.surtitre) : "Ton look du jour"}
+              surtitre={texteHero ? sansLeJour(texteHero.surtitre) : "Ta tenue du jour"}
               titre={titreHero}
               sousTitre={sousTitreHero}
               pourquoi={!texteHero}
@@ -655,7 +692,7 @@ export default function HomeScreen() {
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="t-surtitre text-ink whitespace-nowrap">
-              {passee ? (retroActif === 1 ? t("Ton look d’hier") : t("Ton look passé")) : texteHero ? sansLeJour(texteHero.surtitre) : t("Ton look du jour")}
+              {passee ? (retroActif === 1 ? t("Ta tenue d’hier") : t("Ta tenue passée")) : texteHero ? sansLeJour(texteHero.surtitre) : t("Ta tenue du jour")}
             </span>
           </div>
 

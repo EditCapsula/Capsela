@@ -20,14 +20,14 @@ describe("evaluerAlerteMeteo — niveaux et sources", () => {
   });
   it("légèrement frais : alerte discrète, avec la ville et le moment", () => {
     const a = evaluerAlerteMeteo(look, { temp: 13, label: "Nuageux" }, { ville: "Berlin", moment: "Soirée" });
-    expect(a).toMatchObject({ niveau: "legere", cause: "froid", titre: "Un peu plus frais que prévu", cta: "Adapter mon look" });
+    expect(a).toMatchObject({ niveau: "legere", cause: "froid", titre: "Un peu plus frais que prévu", cta: "Adapter ma tenue" });
     expect(a?.message).toBe("13 °C prévus à Berlin : prévois une couche chaude pour profiter de ta soirée.");
     // Le t-shirt est sous un blazer dont la borne est respectée : il n'est pas jugé ; seule la jupe est hors borne.
     expect(a?.pieceIds).toEqual([3]);
   });
   it("très frais ou plusieurs pièces hors borne : avertissement explicite", () => {
     const a = evaluerAlerteMeteo(look, { temp: 8, label: "Nuageux" }, { ville: "Berlin" });
-    expect(a).toMatchObject({ niveau: "forte", titre: "Ton look mérite un ajustement", cta: "Trouver une alternative" });
+    expect(a).toMatchObject({ niveau: "forte", titre: "Ta tenue mérite un ajustement", cta: "Trouver une alternative" });
     expect(a?.message).toContain("8 °C à Berlin");
   });
   it("le seuil fort est ECART_FORT", () => {

@@ -31,10 +31,14 @@ describe("t-shirts et débardeurs", () => {
 });
 
 describe("pièces de bain, robe de plage, short léger", () => {
-  it("1, puis 2 au-delà de 5 jours — de baignade, de plage, d'utilisation", () => {
+  it("maillot : 1 pour 3 jours de baignade, 1 pour une seule journée, lavage ou non (21/11/2026)", () => {
     const maillot = piece(2, "haut", "Maillot", "Maillot de bain");
-    expect(quantiteProposee(maillot, usage({ jours: jours(5), baignade: jours(5) }), null)).toBe(1);
-    expect(quantiteProposee(maillot, usage({ jours: jours(6), baignade: jours(6) }), null)).toBe(2);
+    const q = (n: number, lavage: boolean | null = null) => quantiteProposee(maillot, usage({ jours: jours(n), baignade: jours(n) }), lavage);
+    expect([1, 2, 3, 4, 5, 6, 7, 10].map((n) => q(n))).toEqual([1, 1, 1, 2, 2, 2, 3, 4]);
+    expect(q(6, true)).toBe(2);
+    expect(quantiteProposee(maillot, usage({ jours: jours(6) }), null)).toBe(1);
+  });
+  it("robe de plage, short léger : 1, puis 2 au-delà de 5 jours — de plage, d'utilisation", () => {
     const robe = piece(3, "robe", "Robe de plage", "Robe de plage");
     expect(quantiteProposee(robe, usage({ jours: jours(6), plage: jours(6) }), null)).toBe(2);
     const short = piece(4, "short", "Short en lin");
@@ -44,7 +48,7 @@ describe("pièces de bain, robe de plage, short léger", () => {
   it("les jours de baignade ne s'additionnent pas entre plage, piscine et spa", () => {
     const maillot = piece(2, "haut", "Maillot", "Maillot de bain");
     // Plage et piscine le même jour : ce jour compte une fois (usageDesPieces le range dans un Set).
-    expect(quantiteProposee(maillot, usage({ jours: jours(5), baignade: jours(5) }), null)).toBe(1);
+    expect(quantiteProposee(maillot, usage({ jours: jours(3), baignade: jours(3) }), null)).toBe(1);
   });
   it("toute autre pièce : 1", () => {
     expect(quantiteProposee(piece(5, "pantalon", "Pantalon"), usage({ jours: jours(7) }), false)).toBe(1);

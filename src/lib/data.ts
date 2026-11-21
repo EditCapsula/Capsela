@@ -42,7 +42,7 @@ export const SUBTYPES: Partial<Record<CategoryKey, string[]>> = {
   robe: ["Courte", "Midi", "Longue", "Chemise", "Portefeuille", "Pull"],
   combinaison: ["Combinaison", "Combishort", "Salopette"],
   veste: ["Blazer", "Veste légère", "Perfecto", "Veste en jean", "Surchemise"],
-  manteau: ["Manteau", "Trench", "Caban", "Doudoune", "Parka", "Imperméable"],
+  manteau: ["Manteau", "Trench", "Caban", "Doudoune", "Parka", "Imperméable", "Coupe-vent"],
 };
 
 /** Catégories du sous-type générique pour lesquelles il est obligatoire — aucune : seul le type de chaussure bloque (mécanisme séparé, cf. addShoeType/R-B6). */

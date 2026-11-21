@@ -93,7 +93,7 @@ describe("garde-fou — le vocabulaire du manque ne revient pas", () => {
     // Seule exception, décidée par la propriétaire le 14/10/2026 : la phrase du hero de Tenue quand il n'y a AUCUNE chaussure dans la tenue
     // — un constat sur une tenue réellement incomplète, pas sur une tenue valide. Devenue « … pour compléter ce look. » le même jour (brief
     // « Tenue incomplète » de la propriétaire, qui en donne le texte) : la phrase est désormais une ligne cliquable.
-    const PHRASE_AUTORISEE = "Il te manque une paire de chaussures pour compléter ce look.";
+    const PHRASE_AUTORISEE = "Il te manque une paire de chaussures pour compléter cette tenue.";
     const coupables = fichiersSource(SRC).filter((f) => codeSansCommentaires(f).split(PHRASE_AUTORISEE).join("").includes("Il te manque"));
     expect(coupables.map((f) => f.slice(SRC.length + 1))).toEqual([]);
   });

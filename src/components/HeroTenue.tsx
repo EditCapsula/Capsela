@@ -254,7 +254,7 @@ export function RailPiecesTenue({
       );
     return (
       <>
-        {!sansTitre && <div className="t-surtitre text-muted mt-[26px] mb-[10px]">{t("Les pièces de ton look · {n}", { n: pieces.length })}</div>}
+        {!sansTitre && <div className="t-surtitre text-muted mt-[26px] mb-[10px]">{t("Les pièces de ta tenue · {n}", { n: pieces.length })}</div>}
         {disposition === "liste" ? (
           <ul className="list-none m-0 p-0 divide-y divide-border">
             {pieces.map((it) => {
@@ -304,7 +304,7 @@ export function RailPiecesTenue({
     if (!pieces.length) return null;
     return (
       <>
-        <div className="t-surtitre text-muted mt-[26px] mb-[10px]">{t("Les pièces de ton look · {n}", { n: pieces.length })}</div>
+        <div className="t-surtitre text-muted mt-[26px] mb-[10px]">{t("Les pièces de ta tenue · {n}", { n: pieces.length })}</div>
         {/* EN RANGÉE QUI DÉFILE (14/11/2026, demandé : « remets-les en card scrollable à l'horizontal et fais en sorte que ce soit les
             mêmes hauteurs ») : la grille à deux colonnes donnait des cartes de hauteurs différentes selon la longueur du nom. Les cartes
             gardent leur taille (un peu moins de la moitié de la largeur : la suivante dépasse et dit qu'on peut faire défiler) ; le nom tient

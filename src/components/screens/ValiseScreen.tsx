@@ -498,7 +498,7 @@ const DERNIERE_ETAPE = 3;
  */
 const ETAPES_CALCUL: [React.ReactNode, string][] = [
   [svg(<path d="M7 18.5h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 18.5z" {...trait} />, 18), "La météo et ton programme"],
-  [G_CINTRE, "Tes pièces et tes looks, dans la place de ta valise"],
+  [G_CINTRE, "Tes pièces et tes tenues, dans la place de ta valise"],
   [G_PLUS, "Ta capsule, si ton dressing ne couvre pas tout"],
 ];
 
@@ -1530,7 +1530,7 @@ export default function ValiseScreen() {
         ? "Revenir à ta valise"
         : vue.nom === "piece"
           ? vue.depuis.nom === "look"
-            ? "Revenir au look"
+            ? "Revenir à la tenue"
             : "Revenir à ta valise"
           : state.valiseRetour === "planifier"
             ? "Revenir à Planifier"
@@ -1680,7 +1680,7 @@ export default function ValiseScreen() {
                   <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">{conseilMeteo(meteosEtape1)}</div>
                   {couvertureMeteo(meteosEtape1).sansPrevision.length > 0 && (
                     <div className="text-[12px] text-muted-3 leading-[1.45] mt-[6px]">
-                      {couvertureMeteo(meteosEtape1).sansPrevision.join(", ")} : prévisions météo non disponibles. Capsela adapte les looks selon la saison et le type de séjour.
+                      {couvertureMeteo(meteosEtape1).sansPrevision.join(", ")} : prévisions météo non disponibles. Capsela adapte les tenues selon la saison et le type de séjour.
                     </div>
                   )}
                 </div>
@@ -1689,7 +1689,7 @@ export default function ValiseScreen() {
             {/* Aucune prévision pour ces dates : on le dit, sans température (la prévision ne va pas au-delà de quelques jours). */}
             {jours.length > 0 && dureeOk && !(meteosEtape1 && amplitudeEtape1) && clePrevision == null && (
               <div className="text-[12px] text-muted-3 leading-[1.5] mt-4">
-                Prévisions météo non disponibles pour ces dates. Capsela adapte les looks selon la saison et le type de séjour.
+                Prévisions météo non disponibles pour ces dates. Capsela adapte les tenues selon la saison et le type de séjour.
               </div>
             )}
           </>
@@ -1796,8 +1796,8 @@ export default function ValiseScreen() {
               {lavage != null && (
                 <div className="text-[12px] text-muted leading-[1.5] mt-2">
                   {lavage
-                    ? "Les quantités sont comptées sur quelques jours : tu laves, puis tu reportes tes pièces. Tes looks restent aussi nombreux."
-                    : "Les quantités couvrent toute la durée de ton séjour. Tes looks restent aussi nombreux."}
+                    ? "Les quantités sont comptées sur quelques jours : tu laves, puis tu reportes tes pièces. Tes tenues restent aussi nombreuses."
+                    : "Les quantités couvrent toute la durée de ton séjour. Tes tenues restent aussi nombreuses."}
                 </div>
               )}
             </div>
@@ -2210,7 +2210,7 @@ function Resultat({
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setRetrait(null);
     setRetraitDit(
-      `${nb > 1 ? `${nb} pièces retirées` : "Pièce retirée"} · ${looksAvant === nbLooks ? `${nbLooks} ${nbLooks > 1 ? "looks" : "look"}, inchangés` : `looks recomposés : ${looksAvant} → ${nbLooks}`}.`
+      `${nb > 1 ? `${nb} pièces retirées` : "Pièce retirée"} · ${looksAvant === nbLooks ? `${nbLooks} ${nbLooks > 1 ? "tenues" : "tenue"}, inchangées` : `tenues recomposées : ${looksAvant} → ${nbLooks}`}.`
     );
     // Seul le changement de la valise déclenche le message (le nombre de looks recalculé après le retrait).
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2288,7 +2288,7 @@ function Resultat({
               "Ma sélection",
               [
                 [G_ETINCELLE, "Optimiser ma valise", "Voir les pièces qu'on peut retirer, avant de le faire.", () => setFeuille({ type: "alleger" })],
-                [G_PLUS, "Ajouter une pièce", "Depuis ton dressing ; les looks sont recomposés avec elle.", () => setFeuille({ type: "ajouter" })],
+                [G_PLUS, "Ajouter une pièce", "Depuis ton dressing ; les tenues sont recomposées avec elle.", () => setFeuille({ type: "ajouter" })],
                 [G_ECHANGE, "Gérer les pièces", "Retirer ou remplacer une pièce de la sélection.", () => (setOnglet("pieces"), setVue({ nom: "resultat" }))],
               ],
             ],
@@ -2482,7 +2482,7 @@ function Resultat({
           <EmptyState>Aucune autre pièce de cette famille dans ton dressing.</EmptyState>
         ) : (
           <div className="flex flex-col gap-2">
-            <div className="text-[12px] text-muted leading-[1.45] mb-1">Avec chacune, la valise compterait ce nombre de looks (aujourd&apos;hui : {looks.length}).</div>
+            <div className="text-[12px] text-muted leading-[1.45] mb-1">Avec chacune, la valise compterait ce nombre de tenues (aujourd&apos;hui : {looks.length}).</div>
             {alts.map(({ item, looks: n, tient }) => (
               <button
                 key={item.id}
@@ -2498,7 +2498,7 @@ function Resultat({
                 <span className="flex-1 min-w-0">
                   <span className="block text-[13px] text-ink truncate">{item.name}</span>
                   <span className={"block text-[11px] " + (n ? "text-terracotta" : "text-muted")}>
-                    {n} {n > 1 ? "looks" : "look"}
+                    {n} {n > 1 ? "tenues" : "tenue"}
                   </span>
                   {!tient && <span className="block text-[11px] text-muted">Prendrait trop de place dans ton {nomBagage(valise.bagage)}</span>}
                 </span>
@@ -2536,7 +2536,7 @@ function Resultat({
                         <span className="block text-[13px] text-ink truncate">{p.name}</span>
                         <span className="block text-[11px] text-muted">
                           {LIBELLE_RAISON[c.raison]}
-                          {c.looks > 0 ? ` · ${c.looks} ${c.looks > 1 ? "looks" : "look"}` : ""}
+                          {c.looks > 0 ? ` · ${c.looks} ${c.looks > 1 ? "tenues" : "tenue"}` : ""}
                         </span>
                       </span>
                       <span aria-hidden="true" className={"w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 mr-2 " + (coche ? "bg-terracotta-deep text-cream" : "border border-border text-transparent")}>
@@ -2551,7 +2551,7 @@ function Resultat({
                 {(
                   [
                     ["Pièces", a.piecesAvant, a.piecesApres],
-                    ["Looks conservés", a.looksAvant, a.looksApres],
+                    ["Tenues conservées", a.looksAvant, a.looksApres],
                   ] as const
                 ).map(([libelle, avant, apres]) => (
                   <div key={libelle} className="flex items-baseline justify-between mt-2">
@@ -2566,7 +2566,7 @@ function Resultat({
                     Plus aucun look pour : {a.occasionsPerdues.map((o) => occasionShortLabel(o)).join(", ")}.
                   </div>
                 )}
-                <div className="text-[11px] text-muted leading-[1.45] mt-3">Une fois retirées, Capsela recompose les looks avec les pièces restantes : tu peux en retrouver davantage.</div>
+                <div className="text-[11px] text-muted leading-[1.45] mt-3">Une fois retirées, Capsela recompose les tenues avec les pièces restantes : tu peux en retrouver davantage.</div>
               </Card>
               <Button
                 variante="principal"
@@ -2605,7 +2605,7 @@ function Resultat({
                     className={"rounded-full border px-[14px] text-[12px] cursor-pointer " + (actif ? "bg-terracotta-deep text-cream border-terracotta-deep" : "bg-card text-ink border-border")}
                     style={{ minHeight: 44 }}
                   >
-                    {libelleSituation(i)} · {nb} {nb > 1 ? "looks" : "look"}
+                    {libelleSituation(i)} · {nb} {nb > 1 ? "tenues" : "tenue"}
                   </button>
                 );
               })}
@@ -2692,7 +2692,7 @@ function Resultat({
               {p.name}
             </div>
             <div className="text-[12px] text-terracotta mt-[6px]">
-              {sesLooks.length ? `Dans ${sesLooks.length} ${sesLooks.length > 1 ? "looks" : "look"}` : "Dans aucun look de la valise"}
+              {sesLooks.length ? `Dans ${sesLooks.length} ${sesLooks.length > 1 ? "tenues" : "tenue"}` : "Dans aucune tenue de la valise"}
             </div>
             {sesLooks.length > 0 && (
               <div className="grid grid-cols-3 gap-[6px] mt-3">
@@ -2700,7 +2700,7 @@ function Resultat({
                   <button
                     key={l.ids.join(",")}
                     onClick={() => setVue({ nom: "look", index: i })}
-                    aria-label={`Voir le look ${numero(i)}`}
+                    aria-label={`Voir la tenue ${numero(i)}`}
                     className="rounded-champ bg-warm-bg p-[3px] cursor-pointer grid grid-cols-2 gap-[2px] overflow-hidden"
                     style={{ height: 78 }}
                   >
@@ -2795,7 +2795,7 @@ function Resultat({
           <button
             onClick={() => setVue({ nom: "look", index: vue.index - 1 })}
             disabled={vue.index === 0}
-            aria-label="Look précédent"
+            aria-label="Tenue précédente"
             className="w-[44px] h-[44px] flex items-center justify-center text-terracotta cursor-pointer disabled:opacity-30 disabled:cursor-default"
           >
             {chevron("g")}
@@ -2806,14 +2806,14 @@ function Resultat({
           <button
             onClick={() => setVue({ nom: "look", index: vue.index + 1 })}
             disabled={vue.index >= looks.length - 1}
-            aria-label="Look suivant"
+            aria-label="Tenue suivante"
             className="w-[44px] h-[44px] flex items-center justify-center text-terracotta cursor-pointer disabled:opacity-30 disabled:cursor-default"
           >
             {chevron("d")}
           </button>
         </div>
 
-        <h2 className="t-titre-carte text-ink mt-6 mb-3">Les pièces du look</h2>
+        <h2 className="t-titre-carte text-ink mt-6 mb-3">Les pièces de la tenue</h2>
         <div className="flex flex-col gap-[10px]">
           {items.map((p) => {
             const n = parPiece.get(p.id) ?? 0;
@@ -3003,12 +3003,12 @@ function Resultat({
                       <div className="t-label text-terracotta">Nécessaire</div>
                       <div className="text-[12px] text-ink leading-[1.45] mt-[3px]">
                         {elargie
-                          ? `Tes looks ${occasionShortLabel(o)} empruntent des pièces pensées pour d'autres occasions${m?.categories.length ? " : ces pièces les compléteraient." : "."}`
+                          ? `Tes tenues ${occasionShortLabel(o)} empruntent des pièces pensées pour d'autres occasions${m?.categories.length ? " : ces pièces les compléteraient." : "."}`
                           : m?.capacite
-                            ? `Pas encore de look ${occasionShortLabel(o)} : ta valise manque de place pour lui.`
+                            ? `Pas encore de tenue ${occasionShortLabel(o)} : ta valise manque de place pour elle.`
                             : m?.categories.length
                               ? `Il manque une pièce pour couvrir ${occasionShortLabel(o)}.`
-                              : `Pas encore de look ${occasionShortLabel(o)}.`}
+                              : `Pas encore de tenue ${occasionShortLabel(o)}.`}
                       </div>
                       {m && m.pieces.length > 0 && (
                         <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
@@ -3065,7 +3065,7 @@ function Resultat({
                   <div>
                     <div className="t-label text-muted">Optionnel</div>
                     <div className="text-[12px] text-ink leading-[1.45] mt-[3px]">
-                      Quelques pièces de plus ajouteraient de la variété à tes looks : {looks.length} {looks.length > 1 ? "looks" : "look"} pour {nbJours} jours.
+                      Quelques pièces de plus ajouteraient de la variété à tes tenues : {looks.length} {looks.length > 1 ? "tenues" : "tenue"} pour {nbJours} jours.
                     </div>
                   </div>
                 )}
@@ -3078,8 +3078,8 @@ function Resultat({
     nbAAjouter > 0
       ? `${nbAAjouter} ${nbAAjouter > 1 ? "pièces de tes tenues ne sont" : "pièce de tes tenues n'est"} pas encore dans ton dressing.`
       : occasionsAManque.length > 0
-        ? `${occasionsAManque.length > 1 ? "Des occasions" : "Une occasion"} de ton séjour ${occasionsAManque.length > 1 ? "attendent" : "attend"} encore un look.`
-        : `${looks.length} ${looks.length > 1 ? "looks" : "look"} pour ${nbJours} jours : quelques pièces ajouteraient de la variété.`;
+        ? `${occasionsAManque.length > 1 ? "Des occasions" : "Une occasion"} de ton séjour ${occasionsAManque.length > 1 ? "attendent" : "attend"} encore une tenue.`
+        : `${looks.length} ${looks.length > 1 ? "tenues" : "tenue"} pour ${nbJours} jours : quelques pièces ajouteraient de la variété.`;
   const blocACompleter =
     aAjouter.length > 0 || aOptimiser ? (
       <button
@@ -3121,7 +3121,7 @@ function Resultat({
             <button
               key={c.creneau + c.sousId + (c.choix ?? "")}
               onClick={() => setVue({ nom: "look", index: c.look as number })}
-              aria-label={`${libelleCreneau(c)} : voir le look ${numero(c.look as number)}`}
+              aria-label={`${libelleCreneau(c)} : voir la tenue ${numero(c.look as number)}`}
               className="flex-1 min-w-0 flex items-center gap-3 py-[8px] text-left cursor-pointer min-h-[60px] transition-opacity active:opacity-70"
             >
               {/* Les vraies pièces du look, trois au plus, en miniatures plus grandes (19/10/2026, refonte). */}
@@ -3145,7 +3145,7 @@ function Resultat({
               <span className="block text-[12px] text-muted-3 leading-[1.4] mt-[2px]">
                 {c.sousId === "ceremonie"
                   ? "Ton dressing n'a pas encore de tenue pour un mariage ou une cérémonie."
-                  : "Aucun look de ta valise ne répond encore à cette occasion."}
+                  : "Aucune tenue de ta valise ne répond encore à cette occasion."}
               </span>
             </div>
           );
@@ -3213,7 +3213,7 @@ function Resultat({
                   <button
                     type="button"
                     onClick={() => setVue({ nom: "look", index: t.look as number })}
-                    aria-label={`${t.libelle} : voir le look ${numero(t.look)}`}
+                    aria-label={`${t.libelle} : voir la tenue ${numero(t.look)}`}
                     className="flex-1 min-w-0 flex items-center gap-3 py-[8px] text-left cursor-pointer min-h-[60px] transition-opacity active:opacity-70"
                   >
                     {contenu}
@@ -3320,7 +3320,7 @@ function Resultat({
         {!sejourCouvert && (
           <CarteInfo glyphe={G_AMPOULE}>
             {looks.length === 0
-              ? "Aucun look complet avec ces pièces pour l'instant : ajoute des pièces à ton dressing, Capsela composera tes looks avec elles."
+              ? "Aucune tenue complète avec ces pièces pour l'instant : ajoute des pièces à ton dressing, Capsela composera tes tenues avec elles."
               : manquePieces > 0
                 ? (
                   <>
@@ -3403,9 +3403,9 @@ function Resultat({
           <section className="mt-6" aria-labelledby="titre-galerie">
             <div className="flex items-baseline justify-between gap-3">
               <h2 id="titre-galerie" className="t-titre-section text-ink">
-                Tes looks pour le séjour
+                Tes tenues pour le séjour
               </h2>
-              <span className="text-[12px] text-muted flex-shrink-0">{looks.length} {looks.length > 1 ? "looks" : "look"}</span>
+              <span className="text-[12px] text-muted flex-shrink-0">{looks.length} {looks.length > 1 ? "tenues" : "tenue"}</span>
             </div>
             {filtresTenues.length > 1 && (
               <div className="mt-3 -mx-6 px-6 overflow-x-auto scrollarea" style={{ scrollbarWidth: "none" }}>
@@ -3513,7 +3513,7 @@ function Resultat({
             <>
           <div className="flex items-baseline justify-between gap-3">
             <h2 id="titre-looks" className="t-titre-section text-ink">
-              Tes looks pour le séjour
+              Tes tenues pour le séjour
             </h2>
             {l && (
               <span className="text-[12px] text-muted flex-shrink-0" aria-live="polite">
@@ -3524,7 +3524,7 @@ function Resultat({
           <div className="t-chapeau text-muted-3 mt-[4px]">Des tenues pensées à partir de ton dressing.</div>
 
           {!l ? (
-            <EmptyState className="mt-4">Aucun look complet avec les pièces de cette valise.</EmptyState>
+            <EmptyState className="mt-4">Aucune tenue complète avec les pièces de cette valise.</EmptyState>
           ) : (
             <>
               <Card
@@ -3541,7 +3541,7 @@ function Resultat({
                 <div className="relative">
                   <button
                     onClick={() => setVue({ nom: "look", index })}
-                    aria-label={`Voir le look ${numero(index)} : ${resumeLook(exterieurDuLook(l).principal)}`}
+                    aria-label={`Voir la tenue ${numero(index)} : ${resumeLook(exterieurDuLook(l).principal)}`}
                     className="block w-full rounded-carte px-[12px] py-[14px] cursor-pointer"
                     style={{ height: "clamp(270px, 80vw, 340px)", background: "var(--color-hero-background)" }}
                   >
@@ -3552,7 +3552,7 @@ function Resultat({
                       <button
                         onClick={() => setIndexLook(index - 1)}
                         disabled={index === 0}
-                        aria-label="Look précédent"
+                        aria-label="Tenue précédente"
                         className="absolute left-[8px] top-1/2 -translate-y-1/2 w-[44px] h-[44px] rounded-full bg-cream border border-border text-terracotta flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-default"
                       >
                         {chevron("g")}
@@ -3560,7 +3560,7 @@ function Resultat({
                       <button
                         onClick={() => setIndexLook(index + 1)}
                         disabled={index >= looks.length - 1}
-                        aria-label="Look suivant"
+                        aria-label="Tenue suivante"
                         className="absolute right-[8px] top-1/2 -translate-y-1/2 w-[44px] h-[44px] rounded-full bg-cream border border-border text-terracotta flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-default"
                       >
                         {chevron("d")}
@@ -3619,12 +3619,12 @@ function Resultat({
               </Card>
 
               {looks.length > 1 && (
-                <div role="group" aria-label="Choisir un look" className="flex flex-wrap justify-center mt-2">
+                <div role="group" aria-label="Choisir une tenue" className="flex flex-wrap justify-center mt-2">
                   {looks.map((_, i) => (
                     <button
                       key={i}
                       onClick={() => setIndexLook(i)}
-                      aria-label={`Look ${i + 1} sur ${looks.length}`}
+                      aria-label={`Tenue ${i + 1} sur ${looks.length}`}
                       aria-current={i === index ? "true" : undefined}
                       className="w-[24px] h-[24px] flex items-center justify-center cursor-pointer"
                     >
@@ -3690,7 +3690,7 @@ function Resultat({
                       <span className="flex-1 min-w-0">
                         <span className="block text-[13px] text-ink truncate">{p.name}</span>
                         <span className="block text-[11px] text-muted">
-                          {looksPerdus ? `${looksPerdus} ${looksPerdus > 1 ? "looks" : "look"} en moins sans elle` : "Dans aucun look de la valise"}
+                          {looksPerdus ? `${looksPerdus} ${looksPerdus > 1 ? "tenues" : "tenue"} en moins sans elle` : "Dans aucune tenue de la valise"}
                         </span>
                       </span>
                     </div>
