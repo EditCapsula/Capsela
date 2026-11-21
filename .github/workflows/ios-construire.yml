@@ -23,6 +23,14 @@ on:
         description: "Envoyer vers App Store Connect (TestFlight)"
         type: boolean
         default: true
+      # LE PASSAGE À XCODE 27 (21/11/2026, avertissement ITMS-90725 d'App Store Connect : les apps devront être construites avec le SDK
+      # iOS 27). Préparé sans être imposé : 26 reste le défaut tant qu'une construction en 27 n'a pas été vérifiée (un essai : xcode 27,
+      # envoyer décoché, puis un envoi TestFlight). Une fois validé, passer le défaut à "27".
+      xcode:
+        description: "Version majeure de Xcode (26 ou 27)"
+        type: choice
+        options: ["26", "27"]
+        default: "26"
   # Sur une pull request qui touche au projet iOS : la même construction, NON SIGNÉE, pour vérifier que l'app compile
   # (personne n'a de Mac : c'est la seule compilation native du projet iOS).
   pull_request:
@@ -33,7 +41,8 @@ on:
 
 jobs:
   construire:
-    # Xcode 26 : depuis avril 2026, App Store Connect n'accepte que les apps construites avec le SDK iOS 26.
+    # Xcode 26 : depuis avril 2026, App Store Connect n'accepte que les apps construites avec le SDK iOS 26. Xcode 27 : choisi par l'entrée
+    # « xcode » (ITMS-90725, cf. plus haut), sur la même image macOS 26.
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
@@ -43,11 +52,17 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Choisir Xcode 26
+      - name: Choisir Xcode ${{ inputs.xcode || '26' }}
+        env:
+          MAJEURE: ${{ inputs.xcode || '26' }}
         run: |
-          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          echo "Xcode présents : $(ls -d /Applications/Xcode*.app | tr '\n' ' ')"
+          # Une version publiée d'abord (Xcode_27.0.app, Xcode_27.1.app) ; une bêta seulement faute d'autre : App Store Connect refuse
+          # les apps construites avec une bêta, le journal le signale.
+          XCODE=$(ls -d /Applications/Xcode_${MAJEURE}*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)
+          [ -z "$XCODE" ] && XCODE=$(ls -d /Applications/Xcode_${MAJEURE}*.app 2>/dev/null | sort -V | tail -1) && [ -n "$XCODE" ] && echo "::warning::Seule une bêta de Xcode ${MAJEURE} est présente ($XCODE) : App Store Connect refusera l'envoi."
           if [ -z "$XCODE" ]; then
-            echo "::error::Aucun Xcode 26 sur la machine : $(ls -d /Applications/Xcode*.app | tr '\n' ' ')"
+            echo "::error::Aucun Xcode ${MAJEURE} sur la machine (liste ci-dessus) : relancer avec xcode = 26, ou attendre la mise à jour de l'image macOS de GitHub."
             exit 1
           fi
           sudo xcode-select -s "$XCODE"
