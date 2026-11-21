@@ -391,6 +391,13 @@ export default function OnboardingScreen() {
               <p className="text-[14px] [@media(max-height:700px)]:text-[13px] text-muted mt-3 [@media(max-height:700px)]:mt-2 leading-[1.5]" style={{ textWrap: "pretty" }}>
                 {t(slide.body)}
               </p>
+              {/* « Déjà un compte » en lien discret (21/11/2026, demandé), sous le texte et non dans le pied : le pied garde la même forme
+                  sur les six écrans, et « Créer mon compte » est exactement à la place de « Continuer ». */}
+              {dernier && (
+                <button type="button" onClick={actions.goLogin} className="mt-3 text-[13px] text-muted cursor-pointer py-2">
+                  {t("Déjà un compte")} · <span className="text-terracotta">{t("Se connecter")}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -424,18 +431,14 @@ export default function OnboardingScreen() {
           // LES BOUTONS DU BAS ALIGNÉS D'UN ÉCRAN À L'AUTRE (21/11/2026, demandé : « fais en sorte que les CTA du bas soient bien
           // alignés »). Avant : les points à gauche et un « Continuer » compact à droite, puis, au dernier écran, les points centrés au-dessus
           // de deux boutons pleine largeur — le bouton principal changeait de taille et de place. Désormais, sur tous les écrans, la même
-          // forme : les points centrés, puis le bouton principal en pleine largeur, à la même place ; le dernier y ajoute « J'ai déjà un compte ».
+          // forme : les points centrés, puis le bouton principal en pleine largeur, à la même place. « Déjà un compte » est un lien discret
+          // sous le texte du dernier écran (21/11/2026) : le pied ne change pas.
           return (
             <div className="flex flex-col gap-[10px] pt-4">
               <div className="flex justify-center pb-[2px]">{points}</div>
               <Button variante="sombre" onClick={actions.onbNext}>
                 {dernier ? t("Créer mon compte") : t("Continuer")}
               </Button>
-              {dernier && (
-                <Button variante="contour" onClick={actions.goLogin}>
-                  {t("J'ai déjà un compte")}
-                </Button>
-              )}
             </div>
           );
         })()}
