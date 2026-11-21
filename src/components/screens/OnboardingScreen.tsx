@@ -97,19 +97,24 @@ const REPERES_CAPSULE: { glyphe: string; libelle: string; texte: string }[] = [
 
 function VisuelDressing() {
   return (
-    <div role="img" aria-label={t("Exemple de capsule : une penderie de pièces qui vont ensemble")}>
+    <div role="img" aria-label={t("Exemple de capsule : une penderie de pièces qui vont ensemble, version femme puis version homme")}>
       <div className="relative rounded-carte overflow-hidden bg-border" style={{ height: "var(--h-visuel)" }}>
-        {/* Visuel fourni le 20/11/2026 (généré d'après le brief Capsela : penderie capsule, pièces femme et homme mêlées, sans texte),
-            900 × 1125 : nette à 2× sur un téléphone, contrairement à la penderie d'avant (368 px de large). */}
+        {/* DEUX PENDERIES EN FONDU (21/11/2026, demandé : « pour les femmes, remplace le visuel » ; arbitré le 21/11 : les versions femme et
+            homme s'enchaînent, le genre n'étant pas connu avant le compte). La penderie femme (fournie le 21/11/2026) est l'image de fond —
+            la seule montrée si le téléphone demande moins d'animations — ; la penderie homme (fournie le même jour, recadrée de 1024 × 1536
+            à 900 × 1125) apparaît par-dessus, en fondu lent (fondu-alterne, globals.css). Générées d'après le brief Capsela, sans texte.
+            La penderie mixte du 20/11/2026 (dressing-capsule.webp) reste dans public/onboarding/, plus utilisée. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/onboarding/dressing-capsule.webp" alt="" width={900} height={1125} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 42%" }} />
+        <img src="/onboarding/dressing-capsule-femme.webp" alt="" width={900} height={1125} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 42%" }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/onboarding/dressing-capsule-homme.webp" alt="" width={900} height={1125} decoding="async" className="absolute inset-0 w-full h-full object-cover opacity-0 motion-safe:animate-[fondu-alterne_12s_ease-in-out_infinite]" style={{ objectPosition: "center 40%" }} />
         {/* La pastille centrée (20/11/2026, signalé : « le texte dans la pastille n'est pas bien centré ») : posée à left 50 %, elle ne
             disposait que de la moitié de la largeur et son texte débordait à droite (320 px) ; w-max lui rend sa largeur, et le texte est
             centré en hauteur sur la marque (leading-none). */}
         <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 w-max inline-flex items-center justify-center gap-[6px] bg-card border border-border rounded-full py-[7px] px-[13px] whitespace-nowrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/capsela-c.png" alt="" className="block flex-shrink-0" style={{ width: 13, height: "auto" }} />
-          <span className="text-[11px] leading-none text-ink font-medium">{t("36 pièces · exemple")}</span>
+          <span className="text-[11px] leading-none text-ink font-medium">{t("15 pièces · exemple")}</span>
         </div>
       </div>
       <div className="flex justify-between mt-[12px]">
@@ -147,7 +152,7 @@ function VisuelTenue() {
   return (
     <div
       role="img"
-      aria-label={t("Exemple de tenue du jour : une tenue du quotidien, chemise, pull sans manches, pantalon à pinces, baskets et sac, avec les actions Sauvegarder, Avis d'un proche et Autre tenue")}
+      aria-label={t("Exemple de tenue du jour : une tenue du quotidien, version femme puis version homme, avec les actions Sauvegarder, Avis d'un proche et Autre tenue")}
       className="rounded-hero px-[14px] pt-[12px] pb-[8px] [@media(max-height:700px)]:pb-[14px]"
       style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}
     >
@@ -161,11 +166,22 @@ function VisuelTenue() {
         <span className="text-[10.5px] text-muted">{t("exemple")}</span>
       </div>
       <div className="font-serif text-[21px] leading-[1.15] text-ink mt-[6px]">
-        Casual <em className="italic text-terracotta">{t("et nuancé")}</em>
+        {/* Le titre suit la tenue affichée (21/11/2026, version femme puis homme en fondu) : celui que le texte éditorial donne à ses
+            pièces — la maille terracotta accordée aux neutres, « nuancé » ; tout en neutres (marine, blanc, beige), « minimaliste ». */}
+        Casual{" "}
+        <span className="relative inline-block">
+          <em className="italic text-terracotta motion-safe:animate-[fondu-alterne-inverse_12s_ease-in-out_infinite]">{t("et nuancé")}</em>
+          <em aria-hidden="true" className="absolute left-0 top-0 whitespace-nowrap italic text-terracotta opacity-0 motion-safe:animate-[fondu-alterne_12s_ease-in-out_infinite]">
+            {t("et minimaliste")}
+          </em>
+        </span>
       </div>
       <div className="relative rounded-bloc overflow-hidden bg-warm-bg mt-[10px]" style={{ height: "var(--h-visuel)" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/onboarding/tenue-quotidien.webp" alt="" width={900} height={1200} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 45%" }} />
+        {/* La tenue homme (fournie le 21/11/2026 : surchemise marine, t-shirt blanc, chino, baskets, montre), en fondu par-dessus. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/onboarding/tenue-quotidien-homme.webp" alt="" width={900} height={1350} decoding="async" className="absolute inset-0 w-full h-full object-cover opacity-0 motion-safe:animate-[fondu-alterne_12s_ease-in-out_infinite]" style={{ objectPosition: "center 42%" }} />
       </div>
       {/* PAS DE BOUTON DANS UNE IMAGE D'EXEMPLE (20/11/2026, signalé : « le CTA est tellement présent que l'on a l'impression qu'on peut
           cliquer dessus ») : « Voir la tenue » est retiré ; les trois actions restent, en ligne discrète, pour dire ce que l'on peut faire

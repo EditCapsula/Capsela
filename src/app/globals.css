@@ -395,6 +395,36 @@ input.capin[type="date"]::-webkit-date-and-time-value {
   }
 }
 
+/* Deux visuels qui s'enchaînent (onboarding, 21/11/2026) : l'image du dessus reste cachée 5 s, apparaît en 1 s, reste 5 s, disparaît en 1 s. */
+@keyframes fondu-alterne {
+  0%,
+  42% {
+    opacity: 0;
+  }
+  50%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* L'inverse : visible quand l'autre est caché (le titre de la première tenue). */
+@keyframes fondu-alterne-inverse {
+  0%,
+  42% {
+    opacity: 1;
+  }
+  50%,
+  92% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 @keyframes capsule-apparition {
   from {
     opacity: 0;

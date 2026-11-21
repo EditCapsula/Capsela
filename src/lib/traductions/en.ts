@@ -89,8 +89,8 @@ export const EN: Record<string, string> = {
   "Des pièces faciles à porter": "Easy pieces to wear",
   Évolutif: "Flexible",
   "Garde, remplace et personnalise": "Keep, swap and make it yours",
-  "Exemple de capsule : une penderie de pièces qui vont ensemble": "Sample capsule: a rail of pieces that go together",
-  "36 pièces · exemple": "36 pieces · example",
+  "Exemple de capsule : une penderie de pièces qui vont ensemble, version femme puis version homme": "Sample capsule: a rail of pieces that go together, women's then men's version",
+  "15 pièces · exemple": "15 pieces · example",
   Blazer: "Blazer",
   "Top rayé": "Striped top",
   Jean: "Jeans",
@@ -105,8 +105,9 @@ export const EN: Record<string, string> = {
   "Voir le détail": "See details",
   "Pour le quotidien": "For everyday",
   "et nuancé": "and nuanced",
-  "Exemple de tenue du jour : une tenue du quotidien, chemise, pull sans manches, pantalon à pinces, baskets et sac, avec les actions Sauvegarder, Avis d'un proche et Autre tenue":
-    "Sample outfit of the day: an everyday outfit, shirt, sweater vest, pleated trousers, sneakers and bag, with the actions Save, Ask a friend and Another outfit",
+  "Exemple de tenue du jour : une tenue du quotidien, version femme puis version homme, avec les actions Sauvegarder, Avis d'un proche et Autre tenue":
+    "Sample outfit of the day: an everyday outfit, women's then men's version, with the actions Save, Ask a friend and Another outfit",
+  "et minimaliste": "and minimal",
   robes: "dresses",
   hauts: "tops",
   bas: "bottoms",
