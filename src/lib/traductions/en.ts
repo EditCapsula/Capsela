@@ -58,6 +58,16 @@ export const EN: Record<string, string> = {
   "Tes tenues": "Your outfits",
   "Chaque matin,": "Every morning,",
   "tu sais quoi porter.": "you know what to wear.",
+  "Ta semaine,": "Your week,",
+  "prête d'avance.": "ready in advance.",
+  "Choisis un jour et une occasion : Capsela compose ta tenue avec la météo prévue, et te la rappelle le jour venu.":
+    "Pick a day and an occasion: Capsela puts your outfit together with the forecast, and reminds you on the day.",
+  "Lun.": "Mon",
+  "Mer.": "Wed",
+  "Sam.": "Sat",
+  "Bureau": "Office",
+  "Exemple de semaine planifiée : une tenue de bureau le lundi, une tenue du quotidien le mercredi, une tenue de soirée le samedi":
+    "Sample planned week: an office outfit on Monday, an everyday outfit on Wednesday, an evening outfit on Saturday",
   "Capsela compose des tenues adaptées à ton style, à la météo et à tes occasions, avec tes pièces et celles qui peuvent compléter ton dressing.":
     "Capsela puts together outfits suited to your style, the weather and your plans, with your pieces and the ones that can complete your wardrobe.",
   "Tes valises": "Your suitcases",
@@ -93,12 +103,23 @@ export const EN: Record<string, string> = {
   "Travail · Bureau": "Work · Office",
   "Pièces de la tenue": "Pieces in the outfit",
   "Voir le détail": "See details",
+  "Pour le quotidien": "For everyday",
+  "et nuancé": "and nuanced",
+  "Exemple de tenue du jour : une tenue du quotidien, chemise, pull sans manches, pantalon à pinces, baskets et sac, avec les actions Sauvegarder, Avis d'un proche et Autre tenue":
+    "Sample outfit of the day: an everyday outfit, shirt, sweater vest, pleated trousers, sneakers and bag, with the actions Save, Ask a friend and Another outfit",
   robes: "dresses",
   hauts: "tops",
   bas: "bottoms",
   vestes: "jackets",
   chaussures: "shoes",
   accessoires: "accessories",
+  mailles: "knitwear",
+  "Exemple de valise : Lisbonne, cinq jours, 17 degrés, 16 pièces sélectionnées et une tenue pour chaque jour":
+    "Sample suitcase: Lisbon, five days, 17 degrees, 16 selected pieces and an outfit for every day",
+  "5 jours · 17° · exemple": "5 days · 17° · example",
+  "Une tenue par jour": "An outfit a day",
+  "3 · Tenues": "3 · Outfits",
+  veste: "jacket",
   "Exemple de valise : Rhodes, sept jours, 23 degrés, 24 pièces sélectionnées et les tenues du séjour":
     "Sample suitcase: Rhodes, seven days, 23 degrees, 24 selected pieces and the outfits for the trip",
   "1 · Destination": "1 · Destination",
@@ -108,8 +129,8 @@ export const EN: Record<string, string> = {
   "3 · Tenues du séjour": "3 · Outfits for the trip",
   "Jour {n}": "Day {n}",
   "Une tenue pour chaque jour du séjour.": "An outfit for every day of the trip.",
-  "Un téléphone affichant Capsela, posé parmi un tissu terracotta, des lunettes et des créoles dorées":
-    "A phone showing Capsela, among terracotta fabric, glasses and gold hoop earrings",
+  "Un téléphone posé sur un lin terracotta, à côté de lunettes de soleil et de créoles dorées, affiche le logo Capsela":
+    "A phone resting on terracotta linen, next to sunglasses and gold hoop earrings, showing the Capsela logo",
   "Écran {i} sur {n}": "Screen {i} of {n}",
 
   // --- Styles (STYLE_CONFIG, profile.ts) ---

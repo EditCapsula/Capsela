@@ -516,6 +516,14 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     body: aTraduire("Capsela compose des tenues adaptées à ton style, à la météo et à tes occasions, avec tes pièces et celles qui peuvent compléter ton dressing."),
   },
   {
+    // PLANIFIER, PRÉSENTÉ À SON TOUR (20/11/2026, arbitré : un 6ᵉ écran, entre les tenues et les valises). Ce qui est dit est fait :
+    // une tenue planifiée pour un jour et une occasion (Planifier), composée avec la météo prévue de ce jour (sinon la règle de repli),
+    // rappelée le jour venu sur l'accueil (PlansDuJour).
+    kicker: aTraduire("Planifier"),
+    title: [aTraduire("Ta semaine,"), aTraduire("prête d'avance.")],
+    body: aTraduire("Choisis un jour et une occasion : Capsela compose ta tenue avec la météo prévue, et te la rappelle le jour venu."),
+  },
+  {
     kicker: aTraduire("Tes valises"),
     title: [aTraduire("Partir devient"), aTraduire("plus simple.")],
     body: aTraduire("Indique ta destination, tes dates et ton programme. Capsela sélectionne les pièces à emporter et compose tes tenues pour tout le séjour."),
