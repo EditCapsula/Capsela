@@ -244,7 +244,7 @@ function VisuelValise() {
   const total = REPARTITION_VALISE.reduce((s, r) => s + r.n, 0);
   return (
     <Card rayon="carte" className="overflow-hidden" role="img" aria-label={t("Exemple de valise : Lisbonne, cinq jours, 17 degrés, 16 pièces sélectionnées et une tenue pour chaque jour")}>
-      <div className="relative bg-border" style={{ height: "max(96px, calc(var(--h-visuel) - 130px))" }}>
+      <div className="relative bg-border" style={{ height: "max(74px, calc(var(--h-visuel) - 130px))" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/onboarding/valise-ouverte.webp" alt="" width={1200} height={800} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 45%" }} />
       </div>
@@ -312,7 +312,7 @@ function VisuelCompte() {
  * La hauteur que le texte, l'en-tête et le pied retirent à l'écran, par écran : le titre « Tout ce que tu peux porter. » tient
  * sur trois lignes sur un téléphone étroit, il laisse moins de place à son visuel. Mesuré en rendu à 320, 360, 375 et 390 px.
  */
-const RESERVE_VISUEL = [470, 545, 560, 470, 500, 500];
+const RESERVE_VISUEL = [498, 573, 588, 498, 528, 500];
 
 export default function OnboardingScreen() {
   const { state, actions } = useCapsela();
@@ -350,7 +350,7 @@ export default function OnboardingScreen() {
     <div
       className="absolute inset-0 flex flex-col"
       // La hauteur que se partagent les visuels à hauteur réglable : l'écran moins l'en-tête, le texte et le pied, bornée.
-      style={{ ["--h-visuel" as string]: `clamp(140px, calc(100svh - ${RESERVE_VISUEL[indice]}px), 300px)` }}
+      style={{ ["--h-visuel" as string]: `clamp(118px, calc(100svh - ${RESERVE_VISUEL[indice]}px), 300px)` }}
     >
       {/* Zone de contenu défilante au-dessus d'un pied fixe (recette 26/08/2026) : le bouton n'est jamais poussé vers le bas ni
           recouvert, quelle que soit la hauteur du contenu. */}
@@ -421,22 +421,21 @@ export default function OnboardingScreen() {
               ))}
             </div>
           );
-          return dernier ? (
+          // LES BOUTONS DU BAS ALIGNÉS D'UN ÉCRAN À L'AUTRE (21/11/2026, demandé : « fais en sorte que les CTA du bas soient bien
+          // alignés »). Avant : les points à gauche et un « Continuer » compact à droite, puis, au dernier écran, les points centrés au-dessus
+          // de deux boutons pleine largeur — le bouton principal changeait de taille et de place. Désormais, sur tous les écrans, la même
+          // forme : les points centrés, puis le bouton principal en pleine largeur, à la même place ; le dernier y ajoute « J'ai déjà un compte ».
+          return (
             <div className="flex flex-col gap-[10px] pt-4">
               <div className="flex justify-center pb-[2px]">{points}</div>
               <Button variante="sombre" onClick={actions.onbNext}>
-                {t("Créer mon compte")}
+                {dernier ? t("Créer mon compte") : t("Continuer")}
               </Button>
-              <Button variante="contour" onClick={actions.goLogin}>
-                {t("J'ai déjà un compte")}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between pt-4">
-              {points}
-              <Button variante="sombre" pleine={false} className="px-[26px]" onClick={actions.onbNext}>
-                {t("Continuer")}
-              </Button>
+              {dernier && (
+                <Button variante="contour" onClick={actions.goLogin}>
+                  {t("J'ai déjà un compte")}
+                </Button>
+              )}
             </div>
           );
         })()}
