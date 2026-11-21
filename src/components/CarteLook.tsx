@@ -118,7 +118,7 @@ export default function CarteLook({
       type="button"
       onClick={onOuvrir}
       aria-label={`Look ${look.name}, ${pieces.length} ${pieces.length <= 1 ? "pièce" : "pièces"}, ${porte > 0 ? `porté ${porte} fois` : "non porté"}${compacte ? (suggere ? ", suggéré par Capsela" : "") : ", " + LIBELLE_SOURCE[look.source].toLowerCase()}`}
-      className="text-left cursor-pointer active:opacity-80 min-w-0"
+      className="text-left cursor-pointer active:opacity-80 min-w-0 w-full"
     >
       <MosaiquePieces pieces={pieces} />
       <div className="px-[2px] pt-[10px]">
