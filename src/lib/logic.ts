@@ -8,6 +8,7 @@ import { BONUS_SILHOUETTE_RONDE_EN_PRODUCTION, bonusSilhouetteRonde, type Corpul
 import { BONUS_COUPES_PREFEREES_EN_PRODUCTION, bonusCoupesPreferees } from "./coupesPieces";
 import type { CoupePreferee } from "./preferencesSilhouette";
 import { vestePlusLongueQueLeManteau } from "./forme";
+import { manteauTropLeger, manteauxParChaleur } from "./plafondManteau";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, currentSeasonKey, estDeSaison } from "./capsule";
 import { accordVisage, candidatsCouleur, colorimetriePourPivot, type ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -482,6 +483,11 @@ export interface LeviersMesure {
   manchesIgnorees?: boolean;
   /** Reproduit le comportement d'AVANT le 19/10/2026 : aucun manteau ajouté par le froid, et le manteau soumis au plancher de formalité. */
   sansManteauParLeFroid?: boolean;
+  /**
+   * Reproduit le comportement d'AVANT le 21/11/2026 : le manteau ajouté par le froid est tiré au hasard parmi les manteaux admis, trench
+   * compris par 2°, au lieu du plus chaud à la température la plus basse de la journée (manteauxParChaleur, plafondManteau.ts).
+   */
+  manteauSansChaleur?: boolean;
   /**
    * R-B25, LA LONGUEUR DES COUCHES (12/11/2026, validé par la propriétaire : « une veste portée sous un manteau ne doit pas être plus
    * longue que lui » ; retour d'une testeuse : « robe longue noire + kimono + manteau court »). Une veste plus longue que le manteau tiré
@@ -1726,7 +1732,18 @@ export function generateOutfit(
     weather.temp < SEUIL_MANTEAU &&
     !ids.some((id) => chosen.some((c) => c.id === id && c.cat === "manteau"))
   ) {
-    const manteau = pick(["manteau"], false);
+    // LE PLUS CHAUD À LA PLUS BASSE TEMPÉRATURE (21/11/2026, arbitré par la propriétaire : la règle de « Pour l'extérieur » s'applique
+    // au moteur). La température de référence est la plus basse que le moteur connaisse (celle du jour, ou du soir si elle est plus
+    // basse) ; les manteaux admis y sont classés par manteauxParChaleur — un manteau trop léger (plancher : trench 10°, coupe-vent 12°…)
+    // en dernier, puis le plafond le plus bas d'abord. Seuls ceux du premier rang (même chaleur) restent tirables : la diversité joue entre
+    // manteaux également chauds, jamais un trench quand un manteau de laine est admis. Aucun manteau admis à cette température : la règle
+    // d'avant (pick seul), rien n'est retiré.
+    const tempFroide = Math.min(weather.temp, weather.tempSoir ?? weather.temp);
+    const parChaleur = leviers?.manteauSansChaleur ? [] : manteauxParChaleur(poolFor(["manteau"], false).filter((m) => m.cat === "manteau"), tempFroide);
+    const premier = parChaleur[0];
+    const rang = (m: Item) => `${manteauTropLeger(m, tempFroide) ? 1 : 0}|${m.meteoMaxTemp ?? "∞"}`;
+    const memeRang = (m: Item) => !!premier && parChaleur.includes(m) && rang(m) === rang(premier);
+    const manteau = (premier ? pick(["manteau"], false, memeRang) : null) ?? pick(["manteau"], false);
     if (manteau && !ids.includes(manteau.id)) ids.push(manteau.id);
   }
   // R-B25 — la longueur des couches (levier de mesure sansLongueurDesCouches) : une veste ne dépasse pas sous le manteau. D'abord un AUTRE MANTEAU,

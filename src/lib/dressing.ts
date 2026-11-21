@@ -100,7 +100,7 @@ export function rowToItem(row: DressingItemRow): Item {
     accessoireType: accessoireTypeFor(row.cat as CategoryKey, row.accessoire_type as AccessoireType | null, row.name),
     subtype: row.subtype ?? undefined,
     // Le plafond de température d'un manteau, d'après son sous-type (plafondManteau.ts) : la même règle que les manteaux du catalogue.
-    meteoMaxTemp: plafondDuSousType(row.cat as CategoryKey, row.subtype),
+    meteoMaxTemp: plafondDuSousType(row.cat as CategoryKey, row.subtype, row.name),
     photoUrl: row.photo_url ?? undefined,
     worn: row.worn,
     wornPrev: row.worn_prev ?? undefined,

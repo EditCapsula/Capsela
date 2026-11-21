@@ -16,7 +16,7 @@
 import { vestePlusLongueQueLeManteau } from "./forme";
 import { candidatsDeRemplacement, SEUIL_SANS_EXTERIEUR } from "./logic";
 import type { Weather } from "./data";
-import { manteauTropLeger } from "./plafondManteau";
+import { manteauTropLeger, manteauxParChaleur } from "./plafondManteau";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 
 /*
@@ -31,21 +31,8 @@ import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./ty
  * aucune chaleur n'est supposée. Aucune donnée de production modifiée : seules les bornes existantes servent.
  */
 
-/** Le plafond de température d'un manteau, ou +∞ s'il n'en a pas. */
-const plafond = (m: Item): number => m.meteoMaxTemp ?? Number.POSITIVE_INFINITY;
-
-/**
- * Les manteaux admis à `temperature`, du plus chaud (plafond le plus bas) au plus léger ; ordre d'origine à plafond égal. Un manteau TROP
- * LÉGER pour cette température (plancher de son sous-type, plafondManteau.ts — 19/11/2026) passe en dernier : il n'est retenu que faute
- * d'autre, et « Pour l'extérieur » le dit alors (phraseManteauTropLeger).
- */
-export function manteauxParChaleur(candidats: Item[], temperature: number): Item[] {
-  return candidats
-    .map((c, i) => ({ c, i, leger: manteauTropLeger(c, temperature) ? 1 : 0 }))
-    .filter(({ c }) => (c.meteoMaxTemp == null || temperature <= c.meteoMaxTemp) && (c.meteoMinTemp == null || temperature >= c.meteoMinTemp))
-    .sort((a, b) => a.leger - b.leger || plafond(a.c) - plafond(b.c) || a.i - b.i)
-    .map(({ c }) => c);
-}
+/** Le classement par chaleur vit dans plafondManteau.ts depuis le 21/11/2026 (partagé avec le moteur) ; réexporté pour les appelants. */
+export { manteauxParChaleur };
 
 /**
  * Les manteaux que le moteur admet pour la tenue À LA TEMPÉRATURE DE LA COUCHE (la minimale du jour, temperatureReelle), classés par
