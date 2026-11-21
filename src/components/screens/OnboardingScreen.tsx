@@ -310,10 +310,20 @@ function VisuelValise() {
 
 function VisuelCompte() {
   return (
-    <div role="img" aria-label={t("Un téléphone affichant Capsela, posé parmi un tissu terracotta, des lunettes et des créoles dorées")} className="relative rounded-carte overflow-hidden bg-border" style={{ height: "calc(var(--h-visuel) + 10px)" }}>
-      {/* Visuel fourni le 30/10/2026, au format paysage (1 200 × 800) : centré, le téléphone reste entier à toutes les hauteurs du cadre. */}
+    <div
+      role="img"
+      aria-label={t("Un téléphone posé sur un lin terracotta, à côté de lunettes de soleil et de créoles dorées, affiche l'écran de création de compte de Capsela")}
+      className="relative rounded-carte overflow-hidden bg-border mx-auto"
+      // Au format du visuel (portrait) et à la hauteur réglée : le téléphone reste entier à toutes les hauteurs d'écran.
+      style={{ height: "calc(var(--h-visuel) + 10px)", aspectRatio: "1024 / 1100" }}
+    >
+      {/* LA VRAIE CAPTURE DANS LE TÉLÉPHONE (20/11/2026, demandé : « il faut intégrer la vraie capture de l'application dans le téléphone
+          du visuel »). Visuel fourni le même jour ; son écran inventé (« CAPSELA », champs et boutons qui n'existent pas) est remplacé par
+          l'écran réel « Crée ton compte » (rendu à 390 px, 3×, sans la mention du mode démo), posé en perspective sur l'écran du téléphone,
+          l'encoche gardée. Remplace la photo du 30/10/2026 (compte-telephone.webp, gardée dans public/onboarding/). À refaire si l'écran
+          de création de compte change. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/onboarding/compte-telephone.webp" alt="" width={1200} height={800} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center" }} />
+      <img src="/onboarding/compte-capture.webp" alt="" width={1024} height={1100} decoding="async" className="absolute inset-0 w-full h-full object-cover" />
     </div>
   );
 }
