@@ -12,10 +12,10 @@ import { periodeCourte } from "@/lib/rappelsValise";
 import type { SavedLook } from "@/lib/types";
 
 /**
- * LE MENU « ••• » D'UN LOOK (20/11/2026 sur le détail ; 21/11/2026 sur les cartes de Mes looks, arbitré : Renommer, Ajouter à une valise,
- * Supprimer). Un seul composant pour les deux, les mêmes feuilles (BottomSheet, une seule à la fois — arbitré le 22/10/2026) et les mêmes
- * messages. Le parent ne garde que la feuille ouverte ; `onSupprimer` dit ce que la suppression fait de l'écran (le détail se referme,
- * la carte disparaît de la grille).
+ * LE MENU « ••• » D'UN LOOK, sur son détail (20/11/2026 : Renommer, Ajouter à une valise, Supprimer). Posé aussi sur les cartes de Mes
+ * looks le 21/11/2026, puis retiré le même jour (arbitré : « je ne suis pas fan des ••• sur les looks ») : il reste au détail.
+ * Les feuilles passent par BottomSheet, une seule à la fois (arbitré le 22/10/2026). Le parent ne garde que la feuille ouverte ;
+ * `onSupprimer` dit ce que la suppression fait de l'écran (le détail se referme).
  */
 export type FeuilleLook = null | "menu" | "renommer" | "valise" | "supprimer";
 

@@ -9,7 +9,6 @@ import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 import { filtresLooksDisponibles, looksAffiches, type CleFiltreLook } from "@/lib/looksFiltre";
 import EmptyState from "@/components/EmptyState";
-import { BoutonMenuLook, FeuillesLook, type FeuilleLook } from "@/components/MenuLook";
 
 /**
  * L'ONGLET « MES LOOKS » DU DRESSING (15/11/2026, brief « Refonte UX/UI – Page Dressing ») — l'ancien écran « Mes looks » (25/09/2026)
@@ -34,9 +33,6 @@ export function PanneauLooks() {
   const defilement = useDefilementRepris(zone, repris?.defilement);
   useGarderContexte("looks", (): ContexteLooks => ({ recherche, filtre, tri, defilement: defilement.position.current }));
   const pool = useMemo(() => [...state.items, ...vestiairePool], [state.items, vestiairePool]);
-  // Le look dont le menu « ••• » est ouvert, et sa feuille (une seule à la fois).
-  const [menu, setMenu] = useState<{ id: string; feuille: FeuilleLook } | null>(null);
-  const lookDuMenu = menu ? state.savedLooks.find((l) => l.id === menu.id) : undefined;
 
   const puces = filtresLooksDisponibles(state.savedLooks);
   // Un filtre qui n'a plus de look (le dernier look de l'occasion supprimé) retombe sur « Tous » plutôt que sur une grille vide.
@@ -78,18 +74,14 @@ export function PanneauLooks() {
                 {looks.map((look) => {
                   const pieces = look.pieceIds.map((id) => pool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
                   return (
-                    // Le menu « ••• » de la carte (21/11/2026, arbitré : Renommer, Ajouter à une valise, Supprimer — MenuLook.tsx), posé
-                    // sur la mosaïque, À CÔTÉ du bouton de la carte (jamais un bouton dans un bouton).
-                    <div key={look.id} className="relative min-w-0">
-                      <CarteLook
-                        look={look}
-                        pieces={pieces}
-                        porte={lookWornCount(look, state.history)}
-                        suggere={isWishlistLook(look)}
-                        onOuvrir={() => actions.openLook(look.id)}
-                      />
-                      <BoutonMenuLook nom={look.name} onClick={() => setMenu({ id: look.id, feuille: "menu" })} className="absolute top-[6px] right-[6px] !w-[30px] !h-[30px] shadow-sm" />
-                    </div>
+                    <CarteLook
+                      key={look.id}
+                      look={look}
+                      pieces={pieces}
+                      porte={lookWornCount(look, state.history)}
+                      suggere={isWishlistLook(look)}
+                      onOuvrir={() => actions.openLook(look.id)}
+                    />
                   );
                 })}
               </div>
@@ -97,17 +89,6 @@ export function PanneauLooks() {
           </>
         )}
       </div>
-      {lookDuMenu && menu && (
-        <FeuillesLook
-          look={lookDuMenu}
-          feuille={menu.feuille}
-          setFeuille={(f) => setMenu(f ? { id: lookDuMenu.id, feuille: f } : null)}
-          onSupprimer={() => {
-            actions.supprimerLook(lookDuMenu.id);
-            setMenu(null);
-          }}
-        />
-      )}
     </div>
   );
 }

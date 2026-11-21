@@ -687,8 +687,6 @@ export interface Actions {
   openLook: (id: string) => void;
   closeLookDetail: () => void;
   deleteActiveLook: () => void;
-  /** Supprime un look de Mes looks depuis sa carte (menu « ••• », 21/11/2026) ; le détail ouvert sur lui se referme. */
-  supprimerLook: (id: string) => void;
   wearLookToday: (id: string) => void;
   /** Ajoute une pièce du dressing réel à un look existant (recette 24/08/2026, PieceScreen "Ajouter à un look") — persistance best-effort, jamais bloquant. */
   addPieceToLook: (lookId: string, pieceId: number) => void;
@@ -3818,16 +3816,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }));
       if (deletedId && isSupabaseConfigured && userId) {
         deleteSavedLook(deletedId).catch((err) => reportDressingError("deleteSavedLook", err));
-      }
-    },
-    supprimerLook: (id) => {
-      setState((st) => ({
-        ...st,
-        savedLooks: st.savedLooks.filter((l) => l.id !== id),
-        ...(st.activeLookId === id ? { activeLookId: null, screen: st.screen === "lookDetail" ? st.lookReturn : st.screen } : {}),
-      }));
-      if (isSupabaseConfigured && userId) {
-        deleteSavedLook(id).catch((err) => reportDressingError("deleteSavedLook", err));
       }
     },
     wearLookToday: (id) => {
