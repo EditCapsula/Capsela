@@ -71,16 +71,6 @@ function TuileStyle({ id, univers, decale }: { id: StyleId; univers: "femme" | "
   );
 }
 
-/** Une image de pièce ou de look, cadrée pleine tuile ; décorative. */
-function Photo({ src, className = "", position = "center" }: { src: string; className?: string; position?: string }) {
-  return (
-    <div className={"relative overflow-hidden rounded-bloc bg-border " + className}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: position }} />
-    </div>
-  );
-}
-
 // ── 1 · Ton style : six univers ─────────────────────────────────────────
 
 function VisuelStyle() {
@@ -234,72 +224,60 @@ function VisuelPlanifier() {
 
 // ── 5 · Tes valises : destination → pièces → tenues du séjour ───────────
 
-/** La répartition d'une valise exemple de 24 pièces : le total est la somme des lignes. */
+/*
+ * LA VALISE (20/11/2026). Le visuel fourni le même jour (généré d'après le brief Capsela) : une valise ouverte de mi-saison — mailles,
+ * marinière, jean, chemise, pantalon kaki, foulard, baskets, sac. L'exemple suit la photo : une destination de mi-saison, 17°, des
+ * mailles et pas de robe (l'exemple d'avant, « Rhodes · 23° » avec quatre robes, ne lui correspondait plus). Plus d'emoji (☀️ 🌤️ :
+ * pas d'emoji dans l'interface). Les trois temps de la valise restent : la destination, les pièces, une tenue par jour.
+ */
+/** La répartition d'une valise exemple de 16 pièces : le total est la somme des lignes. */
 const REPARTITION_VALISE: { libelle: string; n: number; couleur: string }[] = [
-  { libelle: aTraduire("robes"), n: 4, couleur: "var(--color-terracotta-deep)" },
-  { libelle: aTraduire("hauts"), n: 6, couleur: "var(--color-terracotta)" },
-  { libelle: aTraduire("bas"), n: 4, couleur: "var(--color-gold)" },
-  { libelle: aTraduire("vestes"), n: 3, couleur: "var(--color-sand-border)" },
-  { libelle: aTraduire("chaussures"), n: 3, couleur: "var(--color-warm-border)" },
-  { libelle: aTraduire("accessoires"), n: 4, couleur: "var(--color-border)" },
+  { libelle: aTraduire("hauts"), n: 4, couleur: "var(--color-terracotta-deep)" },
+  { libelle: aTraduire("mailles"), n: 3, couleur: "var(--color-terracotta)" },
+  { libelle: aTraduire("bas"), n: 3, couleur: "var(--color-gold)" },
+  { libelle: aTraduire("veste"), n: 1, couleur: "var(--color-sand-border)" },
+  { libelle: aTraduire("chaussures"), n: 2, couleur: "var(--color-warm-border)" },
+  { libelle: aTraduire("accessoires"), n: 3, couleur: "var(--color-border)" },
 ];
 
 function VisuelValise() {
   const total = REPARTITION_VALISE.reduce((s, r) => s + r.n, 0);
   return (
-    <Card rayon="carte" className="overflow-hidden" role="img" aria-label={t("Exemple de valise : Rhodes, sept jours, 23 degrés, 24 pièces sélectionnées et les tenues du séjour")}>
-      {/* La valise ouverte : de la photo seulement, sur les écrans assez hauts. */}
-      <div className="relative h-[82px] [@media(max-height:760px)]:hidden bg-border">
+    <Card rayon="carte" className="overflow-hidden" role="img" aria-label={t("Exemple de valise : Lisbonne, cinq jours, 17 degrés, 16 pièces sélectionnées et une tenue pour chaque jour")}>
+      <div className="relative bg-border" style={{ height: "max(96px, calc(var(--h-visuel) - 130px))" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/onboarding/valise-bagage.webp" alt="" width={324} height={224} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 35%" }} />
+        <img src="/onboarding/valise-ouverte.webp" alt="" width={1200} height={800} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 45%" }} />
       </div>
       <div className="p-[14px] [@media(max-height:700px)]:p-[11px]">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-baseline justify-between gap-3">
           <div className="min-w-0">
             <div className="t-label text-terracotta">{t("1 · Destination")}</div>
-            <div className="t-titre-section text-ink mt-[4px]">Rhodes</div>
-            <div className="text-[11px] text-muted mt-[2px]">{t("7 jours · 23° · exemple")}</div>
+            <div className="t-titre-section text-ink mt-[4px]">Lisbonne</div>
           </div>
-          <div className="flex gap-[3px] text-[15px] leading-none flex-shrink-0 mt-[4px]" aria-hidden="true">
-            <span>☀️</span>
-            <span>☀️</span>
-            <span>☀️</span>
-            <span>🌤️</span>
-          </div>
+          <div className="text-[11px] text-muted flex-shrink-0">{t("5 jours · 17° · exemple")}</div>
         </div>
 
-        <div className="border-t border-divider mt-[12px] [@media(max-height:700px)]:mt-[8px] pt-[10px] [@media(max-height:700px)]:pt-[7px]">
-          <div className="t-label text-terracotta">{t("2 · Pièces")}</div>
-          <div className="flex items-baseline gap-[6px] mt-[4px]">
-            <span className="t-chiffre text-ink">{total}</span>
-            <span className="text-[12px] text-ink">{t("pièces sélectionnées")}</span>
+        <div className="border-t border-divider mt-[10px] pt-[9px]">
+          <div className="flex items-baseline justify-between gap-3">
+            <div className="t-label text-terracotta">{t("2 · Pièces")}</div>
+            <div className="flex items-baseline gap-[5px]">
+              <span className="text-[15px] font-semibold text-ink" style={{ fontFamily: "var(--font-chiffres)" }}>{total}</span>
+              <span className="text-[11.5px] text-ink">{t("pièces sélectionnées")}</span>
+            </div>
           </div>
-          <div className="flex h-[7px] rounded-full overflow-hidden mt-[8px]" aria-hidden="true">
+          <div className="flex h-[6px] rounded-full overflow-hidden mt-[8px]" aria-hidden="true">
             {REPARTITION_VALISE.map((r) => (
               <span key={r.libelle} style={{ flex: r.n, background: r.couleur }} />
             ))}
           </div>
-          <div className="mt-[7px] text-[10.5px] text-muted leading-[1.5] [@media(max-height:760px)]:hidden">
+          <div className="mt-[6px] text-[10.5px] text-muted leading-[1.45] [@media(max-height:760px)]:hidden">
             {REPARTITION_VALISE.map((r) => `${r.n} ${t(r.libelle)}`).join(" · ")}
           </div>
         </div>
 
-        <div className="border-t border-divider mt-[10px] [@media(max-height:700px)]:mt-[7px] pt-[10px] [@media(max-height:700px)]:pt-[7px]">
-          <div className="t-label text-terracotta">{t("3 · Tenues du séjour")}</div>
-          <div className="flex gap-[8px] mt-[7px]">
-            {(
-              [
-                [t("Jour {n}", { n: 1 }), "/onboarding/valise-look-1.webp"],
-                [t("Jour {n}", { n: 2 }), "/onboarding/valise-look-2.webp"],
-              ] as const
-            ).map(([jour, src]) => (
-              <div key={jour} className="w-[78px] [@media(max-height:700px)]:w-[60px] flex-shrink-0">
-                <Photo src={src} className="aspect-square" />
-                <div className="text-[10px] text-muted mt-[3px]">{jour}</div>
-              </div>
-            ))}
-            <div className="flex-1 min-w-0 text-[11px] text-muted leading-[1.4] self-center">{t("Une tenue pour chaque jour du séjour.")}</div>
-          </div>
+        <div className="border-t border-divider mt-[9px] pt-[9px] flex items-baseline justify-between gap-3">
+          <div className="t-label text-terracotta whitespace-nowrap">{t("3 · Tenues")}</div>
+          <div className="text-[11.5px] text-ink text-right">{t("Une tenue par jour")}</div>
         </div>
       </div>
     </Card>
@@ -334,7 +312,7 @@ function VisuelCompte() {
  * La hauteur que le texte, l'en-tête et le pied retirent à l'écran, par écran : le titre « Tout ce que tu peux porter. » tient
  * sur trois lignes sur un téléphone étroit, il laisse moins de place à son visuel. Mesuré en rendu à 320, 360, 375 et 390 px.
  */
-const RESERVE_VISUEL = [470, 545, 560, 470, 470, 500];
+const RESERVE_VISUEL = [470, 545, 560, 470, 500, 500];
 
 export default function OnboardingScreen() {
   const { state, actions } = useCapsela();

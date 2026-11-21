@@ -113,6 +113,13 @@ export const EN: Record<string, string> = {
   vestes: "jackets",
   chaussures: "shoes",
   accessoires: "accessories",
+  mailles: "knitwear",
+  "Exemple de valise : Lisbonne, cinq jours, 17 degrés, 16 pièces sélectionnées et une tenue pour chaque jour":
+    "Sample suitcase: Lisbon, five days, 17 degrees, 16 selected pieces and an outfit for every day",
+  "5 jours · 17° · exemple": "5 days · 17° · example",
+  "Une tenue par jour": "An outfit a day",
+  "3 · Tenues": "3 · Outfits",
+  veste: "jacket",
   "Exemple de valise : Rhodes, sept jours, 23 degrés, 24 pièces sélectionnées et les tenues du séjour":
     "Sample suitcase: Rhodes, seven days, 23 degrees, 24 selected pieces and the outfits for the trip",
   "1 · Destination": "1 · Destination",
