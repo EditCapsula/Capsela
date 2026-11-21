@@ -28,7 +28,9 @@ export const CYCLE_LAVAGE = 4;
 export const PLAFOND_LINGE_SANS_REPONSE = 7;
 /** T-shirts et débardeurs : au plus 3 par défaut (arbitré). Sans lavage, pas de plafond : la durée réelle du séjour. */
 export const PLAFOND_TSHIRTS = 3;
-/** Au-delà de ce nombre de jours, un maillot, une robe de plage, un short léger passent à 2 (brief). */
+/** Un maillot ou un short de bain pour ce nombre de jours de baignade (21/11/2026, arbitré). */
+export const JOURS_PAR_MAILLOT = 3;
+/** Au-delà de ce nombre de jours, une robe de plage, un short léger passent à 2 (brief). */
 export const SEUIL_DEUXIEME_EXEMPLAIRE = 5;
 
 /** Les activités physiques : chaque jour d'un t-shirt y compte pour un t-shirt entier (arbitré : « les activités sportives »). */
@@ -83,9 +85,12 @@ export interface RegleQuantite {
 export const REGLES_PIECES: readonly RegleQuantite[] = [
   {
     id: "bain",
-    libelle: "Maillot ou short de bain : 1, puis 2 au-delà de 5 jours de baignade",
+    // 1 POUR 3 JOURS DE BAIGNADE (21/11/2026, arbitré par la propriétaire ; « 1, puis 2 au-delà de 5 jours » avant) : un maillot pour une
+    // journée, deux de 4 à 6 jours, trois de 7 à 9. Plage, piscine et spa d'un même jour comptent pour un jour (usageDesPieces). Le
+    // lavage n'y change rien : c'est le temps de séchage qui compte, pas la lessive.
+    libelle: "Maillot ou short de bain : 1 pour 3 jours de baignade",
     sApplique: estTenueDeBain,
-    quantite: (u) => (u.baignade.size > SEUIL_DEUXIEME_EXEMPLAIRE ? 2 : 1),
+    quantite: (u) => Math.max(1, Math.ceil(u.baignade.size / JOURS_PAR_MAILLOT)),
   },
   {
     id: "robe_plage",

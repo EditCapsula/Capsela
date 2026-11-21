@@ -7,7 +7,7 @@ import type { Item } from "./types";
  *
  * Une quantité par pièce (et par indispensable), 1 par défaut : une pièce de la valise compte pour une, comme avant. La personne la
  * change ; ce qu'elle a réglé est gardé avec la valise (calcul jsonb : aucune migration) et compte dans le remplissage. Une quantité
- * revenue à 1 n'est plus écrite. Les règles qui proposeront une quantité initiale (« 1, puis 2 au-delà de 5 jours de baignade ») sont
+ * revenue à 1 n'est plus écrite. Les règles qui proposeront une quantité initiale (« 1 pour 3 jours de baignade », quantitesProposees.ts) sont
  * l'étape suivante : elles ne passeront jamais devant un réglage de la personne.
  */
 

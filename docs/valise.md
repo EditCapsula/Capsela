@@ -487,7 +487,8 @@ Brief « Refonte UX de l'écran de synthèse de la valise » et maquette du mêm
   `scripts/valise-quantites.audit.ts`). Une table de règles unique, calculée sur les jours d'utilisation réels du planning (un jour
   compté une fois) :
   - t-shirts et débardeurs : 1 pour 2 jours, 1 par jour chaud (≥ 25 °C) ou sportif, au plus 3 ; sans lavage, sur toute la durée ;
-  - maillot, short de bain, robe de plage, short léger : 1, puis 2 au-delà de 5 jours ;
+  - maillot, short de bain : 1 pour 3 jours de baignade (une seule journée : 1), lavage ou non — arbitré le 21/11/2026 ;
+  - robe de plage, short léger : 1, puis 2 au-delà de 5 jours ;
   - sous-vêtements et chaussettes : 1 par jour ; avec lavage, sur 4 jours ; sans lavage, sur toute la durée, sans plafond ; sans
     réponse (valise d'avant), au plus 7.
   Le lavage est demandé à l'étape 2 (« Pourras-tu laver tes vêtements pendant ton séjour ? », oui / non, `ValiseGardee.lavage`).
