@@ -134,7 +134,7 @@ function Marques({ marque, sur, ajout = false }: { marque: ReturnType<typeof mar
 }
 
 const nomMarque = (m: ReturnType<typeof marqueDuJour>) =>
-  [m.looks === "un" ? "un look planifié" : m.looks === "plusieurs" ? "plusieurs looks planifiés" : null, m.voyage ? "un voyage" : null]
+  [m.looks === "un" ? "une tenue planifiée" : m.looks === "plusieurs" ? "plusieurs tenues planifiées" : null, m.voyage ? "un voyage" : null]
     .filter(Boolean)
     .join(", ") || "rien de prévu";
 
@@ -197,7 +197,7 @@ export default function AgendaLooks({
     <>
       <div className="t-surtitre text-muted">Planifier</div>
       <h1 className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-        Mes <span className="italic text-terracotta">looks</span> à venir
+        Mes <span className="italic text-terracotta">tenues</span> à venir
       </h1>
     </>
   );
@@ -231,8 +231,8 @@ export default function AgendaLooks({
         {sousTitre && <div className="t-chapeau text-muted-3 mt-[8px]">{sousTitre}</div>}
         {(aVenir.length > 0 || passees.length > 0) && <div className="mt-[18px]">{onglets}</div>}
         {groupes.length === 0 ? (
-          <EmptyState forme={passe ? "carte" : "invitation"} className="mt-[22px]" titre={passe ? "Aucun look passé" : "Ton prochain look commence ici."}>
-            {passe ? "Tes looks et tes voyages viendront ici une fois leur date passée." : "Planifie une tenue pour une occasion, un voyage ou simplement demain."}
+          <EmptyState forme={passe ? "carte" : "invitation"} className="mt-[22px]" titre={passe ? "Aucune tenue passée" : "Ta prochaine tenue commence ici."}>
+            {passe ? "Tes tenues et tes voyages viendront ici une fois leur date passée." : "Planifie une tenue pour une occasion, un voyage ou simplement demain."}
           </EmptyState>
         ) : (
           groupes.map((g) => (
@@ -283,11 +283,11 @@ export default function AgendaLooks({
 
       {liste.length === 0 ? (
         passe ? (
-          <EmptyState forme="carte" className="mt-[26px]" titre="Aucun look passé">
+          <EmptyState forme="carte" className="mt-[26px]" titre="Aucune tenue passée">
             Tes looks et tes voyages viendront ici une fois leur date passée.
           </EmptyState>
         ) : (
-          <EmptyState forme="invitation" className="mt-[22px]" titre="Ton prochain look commence ici.">
+          <EmptyState forme="invitation" className="mt-[22px]" titre="Ta prochaine tenue commence ici.">
             Planifie une tenue pour une occasion, un voyage ou simplement demain.
           </EmptyState>
         )
@@ -305,7 +305,7 @@ export default function AgendaLooks({
           {autres.length > 0 && (
             <section className="mt-[30px]">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="t-surtitre text-muted">{passe ? "Tes derniers looks" : prochain ? "Autres looks à venir" : "Tes voyages à venir"}</h2>
+                <h2 className="t-surtitre text-muted">{passe ? "Tes dernières tenues" : prochain ? "Autres tenues à venir" : "Tes voyages à venir"}</h2>
                 {autres.length > AUTRES_MAX || (prochain && autres.length > 0) ? (
                   <button
                     onClick={() => onEtat({ ...etat, mode: "liste" })}
@@ -362,7 +362,7 @@ function Calendrier({
   const d = dateDe(mois);
   const semaines = grilleDuMoisComplete(d.getFullYear(), d.getMonth());
   return (
-    <section className="mt-[18px] rounded-carte border border-border bg-card px-[12px] pt-[12px] pb-[10px]" aria-label="Calendrier de tes looks">
+    <section className="mt-[18px] rounded-carte border border-border bg-card px-[12px] pt-[12px] pb-[10px]" aria-label="Calendrier de tes tenues">
       <div className="flex items-center justify-between pl-[6px]">
         {/* Chiffres en Bodoni dans le titre du mois (12/11/2026, chiffres-bodoni), comme « Mon planning ». */}
         <h2 className="t-titre-section chiffres-bodoni text-ink" aria-live="polite">
@@ -396,7 +396,7 @@ function Calendrier({
             <button
               key={jour}
               onClick={() => (ajout ? onPlanifierLe(jour) : onJour(jour))}
-              aria-label={`${titreJour(jour)}${auj ? ", aujourd'hui" : ""} : ${ajout ? "rien de prévu, planifier un look" : nomMarque(marque)}`}
+              aria-label={`${titreJour(jour)}${auj ? ", aujourd'hui" : ""} : ${ajout ? "rien de prévu, planifier une tenue" : nomMarque(marque)}`}
               aria-current={auj ? "date" : undefined}
               className="flex flex-col items-center justify-center min-h-[44px] cursor-pointer"
             >
@@ -419,10 +419,10 @@ function Calendrier({
       </div>
       <div className="flex items-center justify-center flex-wrap gap-x-[14px] gap-y-[4px] mt-[8px] pt-[8px] border-t border-border text-[10.5px] text-muted-3" aria-hidden="true">
         <span className="inline-flex items-center gap-[5px]">
-          <Marques marque={{ looks: "un", voyage: false }} sur="clair" /> Un look
+          <Marques marque={{ looks: "un", voyage: false }} sur="clair" /> Une tenue
         </span>
         <span className="inline-flex items-center gap-[5px]">
-          <Marques marque={{ looks: "plusieurs", voyage: false }} sur="clair" /> Plusieurs looks
+          <Marques marque={{ looks: "plusieurs", voyage: false }} sur="clair" /> Plusieurs tenues
         </span>
         <span className="inline-flex items-center gap-[5px]">
           <Marques marque={{ looks: "aucun", voyage: true }} sur="clair" /> Voyage
@@ -469,7 +469,7 @@ function LignePlanification({
     const nb = looksDisponibles(v, dressing);
     const occasions = occasionsDuVoyage(v);
     return (
-      <button onClick={() => onOuvrirValise(v)} className={classe} aria-label={`Voyage à ${v.destination}, ${dateLongue(v.depart)}${nb ? `, ${pluriel(nb, "look préparé", "looks préparés")}` : ""}`}>
+      <button onClick={() => onOuvrirValise(v)} className={classe} aria-label={`Voyage à ${v.destination}, ${dateLongue(v.depart)}${nb ? `, ${pluriel(nb, "tenue préparée", "tenues préparées")}` : ""}`}>
         {colonneDate}
         <span className="w-[52px] h-[52px] flex-shrink-0 rounded-champ bg-warm-bg flex items-center justify-center text-terracotta" aria-hidden="true">
           <GlypheOccasion occasion="voyage" taille={22} />
@@ -478,7 +478,7 @@ function LignePlanification({
           {!avecDate && <span className="block t-label text-terracotta">{dateCourte(v.depart)}{v.retour !== v.depart ? ` → ${dateCourte(v.retour).replace(/^\S+ /, "")}` : ""}</span>}
           <span className="block t-titre-vignette text-ink truncate">Voyage · {v.destination}</span>
           <span className="block text-[12px] text-muted-3 mt-[2px] truncate">
-            {nb > 0 ? pluriel(nb, "look préparé", "looks préparés") : "Valise préparée"}
+            {nb > 0 ? pluriel(nb, "tenue préparée", "tenues préparées") : "Valise préparée"}
             {occasions.length ? ` · ${occasions.join(", ")}` : ""}
           </span>
         </span>
@@ -613,13 +613,13 @@ function VueJour({
           forme="invitation"
           className="mt-[20px]"
           titre="Rien de prévu ce jour-là."
-          action={peutPlanifierLe(jour) ? { libelle: "Planifier un look ce jour-là", onClick: () => onPlanifierLe(jour) } : undefined}
+          action={peutPlanifierLe(jour) ? { libelle: "Planifier une tenue ce jour-là", onClick: () => onPlanifierLe(jour) } : undefined}
         >
           {peutPlanifierLe(jour) ? "Une occasion en vue ? Capsela compose la tenue avec la météo prévue." : "Choisis un autre jour, ou reviens au calendrier."}
         </EmptyState>
       ) : (
         <>
-          {nb > 0 && <h2 className="t-titre-section text-ink mt-[20px]">{pluriel(nb, "look planifié", "looks planifiés")}</h2>}
+          {nb > 0 && <h2 className="t-titre-section text-ink mt-[20px]">{pluriel(nb, "tenue planifiée", "tenues planifiées")}</h2>}
           {duJour.tenues.map((t) => {
             const pieces = piecesDuPlan(t);
             const detail = detailCapsela(pieces, t.occasion) ?? titreLookDuJour(t.occasion, (t.sousChoix ?? "") as WorkMode, (t.sousChoix ?? "") as DateContext);
@@ -629,7 +629,7 @@ function VueJour({
                   <div className="relative">
                     <button
                       onClick={() => onOuvrir(t)}
-                      aria-label={`Voir le look : ${occasionShortLabel(t.occasion)}, ${t.moment.toLowerCase()}`}
+                      aria-label={`Voir la tenue : ${occasionShortLabel(t.occasion)}, ${t.moment.toLowerCase()}`}
                       className="block w-full rounded-carte bg-warm-bg cursor-pointer transition-transform active:scale-[.99]"
                       style={{ aspectRatio: "100 / 86", padding: "18px 16px" }}
                     >
@@ -646,7 +646,7 @@ function VueJour({
                     </span>
                     <button
                       onClick={() => onMenu(t)}
-                      aria-label={`Actions pour ce look`}
+                      aria-label={`Actions pour cette tenue`}
                       className="absolute top-[4px] right-[4px] w-11 h-11 flex items-center justify-center cursor-pointer text-muted-3"
                     >
                       <span aria-hidden="true" className="text-[17px] leading-none">
@@ -692,7 +692,7 @@ function VueJour({
                   +
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-[13.5px] text-ink">Ajouter un look</span>
+                  <span className="block text-[13.5px] text-ink">Ajouter une tenue</span>
                   <span className="block text-[12px] text-muted-3 mt-[2px] truncate">{libres.join(", ")}</span>
                 </span>
                 <span className="text-muted">
@@ -756,7 +756,7 @@ function ProchainLook({
         <div className="relative">
           <button
             onClick={() => onOuvrir(t)}
-            aria-label={`Voir le look : ${occasion}, ${dateLongue(t.jour)}`}
+            aria-label={`Voir la tenue : ${occasion}, ${dateLongue(t.jour)}`}
             className="block w-full rounded-carte bg-warm-bg cursor-pointer transition-transform active:scale-[.99]"
             style={{ aspectRatio: "100 / 86", padding: "18px 16px" }}
           >
@@ -770,7 +770,7 @@ function ProchainLook({
           </button>
           <button
             onClick={() => onMenu(t)}
-            aria-label={`Actions pour le look du ${dateLongue(t.jour)}`}
+            aria-label={`Actions pour la tenue du ${dateLongue(t.jour)}`}
             className="absolute top-[4px] right-[4px] w-11 h-11 flex items-center justify-center cursor-pointer text-muted-3"
           >
             <span aria-hidden="true" className="text-[17px] leading-none">

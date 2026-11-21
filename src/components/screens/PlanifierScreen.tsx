@@ -439,7 +439,7 @@ function LigneValise({ v, dressing, passee, onClick }: { v: ValiseGardee; dressi
         <span className="block text-[12px] text-muted mt-[3px] truncate">
           {DOW[a.getDay()]}. {a.getDate()} {MOIS[a.getMonth()]}
           {v.depart !== v.retour ? ` → ${DOW[b.getDay()]}. ${b.getDate()} ${MOIS[b.getMonth()]}` : ""}
-          {nbLooks ? ` · ${nbLooks} ${nbLooks > 1 ? "looks" : "look"}` : ""}
+          {nbLooks ? ` · ${nbLooks} ${nbLooks > 1 ? "tenues" : "tenue"}` : ""}
         </span>
       </span>
       <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0 pr-1">
@@ -1168,7 +1168,7 @@ export default function PlanifierScreen() {
    */
   const ongletsPlans = (
     <SegmentedControl
-      ariaLabel="Looks à venir ou passés"
+      ariaLabel="Tenues à venir ou passées"
       segments={[
         { key: "up", label: `À venir${aVenir.length ? ` (${aVenir.length})` : ""}` },
         { key: "past", label: "Passées" },
@@ -1211,7 +1211,7 @@ export default function PlanifierScreen() {
           })}
         </span>
         <span className="flex-1 min-w-0">
-          <span className="block t-label text-terracotta">Look planifié</span>
+          <span className="block t-label text-terracotta">Tenue planifiée</span>
           <span className="block t-titre-vignette text-ink mt-[2px]">{occasionShortLabel(t.occasion)}</span>
           <span className="block text-[12px] text-muted mt-[3px] truncate">
             {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]}
@@ -1307,7 +1307,7 @@ export default function PlanifierScreen() {
     setPlans((l) => l.filter((x) => x.id !== id));
     try {
       await deleteTenuePlanifiee(id);
-      flash("Look retiré");
+      flash("Tenue retirée");
     } catch {
       // Remise en place : la ligne est toujours en base, la masquer mentirait.
       setPlans(() => avant);
@@ -1577,8 +1577,8 @@ export default function PlanifierScreen() {
             {/* Le titre à la même hauteur que sur les autres onglets (mesuré en rendu : le bandeau de cet écran est hors de la zone qui
                 défile, d'où une marge plus courte ici) ; le surtitre « Planifier », qui répétait
                 l'onglet, est retiré (TitrePage, 12/11/2026). */}
-            {/* Sur une ligne comme les autres titres (13/11/2026, validé) : « Capsela s'occupe du look » passe en tête de la phrase. */}
-            <TitrePage chapeau="Capsela s'occupe du look : des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing." />
+            {/* Sur une ligne comme les autres titres (13/11/2026, validé) : « Capsela s'occupe du look » passe en tête de la phrase ; « de tout » depuis le 21/11/2026 (vocabulaire tenue, sans répétition). */}
+            <TitrePage chapeau="Capsela s'occupe de tout : des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing." />
 
             {/* LES DEUX VISUELS ÉDITORIAUX sont ceux d'avant (recette du 26/09/2026, fournis par la propriétaire) : une tenue
                 pour « Planifier une tenue », la valise ouverte pour « Préparer ma valise » — les deux pour un profil femme,
@@ -1635,7 +1635,7 @@ export default function PlanifierScreen() {
                 glyphe={G_CINTRE}
                 etiquette="Occasion"
                 titre={["Planifier", "une tenue"]}
-                accroche="Un moment à venir ? On s'occupe du look."
+                accroche="Un moment à venir ? On s'occupe de la tenue."
                 description="Pour un dîner, un rendez-vous, une cérémonie ou toute occasion particulière."
                 ligne="Occasion · date et lieu · tenue personnalisée"
                 cta={tenuesAVenir.length > 0 ? "Planifier une nouvelle tenue" : "Planifier une tenue"}
@@ -1680,7 +1680,7 @@ export default function PlanifierScreen() {
                                 })}
                             </span>
                             <span className="flex-1 min-w-0">
-                              {i === 0 && <span className="block t-label text-terracotta">Ton prochain look</span>}
+                              {i === 0 && <span className="block t-label text-terracotta">Ta prochaine tenue</span>}
                               <span className="block t-titre-vignette text-ink">{occasionShortLabel(t.occasion)}</span>
                               <span className="block text-[12px] text-muted mt-[2px] truncate">
                                 {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]}
@@ -1704,7 +1704,7 @@ export default function PlanifierScreen() {
                 glyphe={G_VALISE}
                 etiquette="Voyage"
                 titre={["Préparer", "ma valise"]}
-                accroche="Une destination en vue ? On compose tes looks."
+                accroche="Une destination en vue ? On compose tes tenues."
                 description="Destination, météo, activités et dressing : Capsela prépare une sélection pensée pour ton voyage."
                 ligne="Destination · dates · météo · activités"
                 cta={valisesAVenir.length > 0 ? "Préparer une nouvelle valise" : "Préparer ma valise"}
@@ -1752,7 +1752,7 @@ export default function PlanifierScreen() {
                                     ? `${a.getDate()} → ${b.getDate()} ${MOIS[b.getMonth()]}`
                                     : `${a.getDate()} ${MOIS[a.getMonth()]} → ${b.getDate()} ${MOIS[b.getMonth()]}`}
                                 {nbPieces ? ` · ${nbPieces} ${nbPieces > 1 ? "pièces" : "pièce"}` : ""}
-                                {nbLooks ? ` · ${nbLooks} ${nbLooks > 1 ? "looks" : "look"}` : ""}
+                                {nbLooks ? ` · ${nbLooks} ${nbLooks > 1 ? "tenues" : "tenue"}` : ""}
                               </span>
                             </span>
                             <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0">›</span>
@@ -1771,14 +1771,14 @@ export default function PlanifierScreen() {
             {/* Les looks passés sont des TENUES planifiées : ils n'ont pas leur place sous l'onglet Valise (11/10/2026, signalé). */}
             {hub !== "tenue" ? null : nbPlanifications === 0 ? (
               <div className="mt-[30px]">
-                <Surtitre>Tes prochains looks</Surtitre>
-                <div className="text-[13px] text-muted leading-[1.5] mt-2">Tes prochains looks apparaîtront ici.</div>
+                <Surtitre>Tes prochaines tenues</Surtitre>
+                <div className="text-[13px] text-muted leading-[1.5] mt-2">Tes prochaines tenues apparaîtront ici.</div>
               </div>
             ) : (
               passees.length > 0 && (
                 <div className="mt-[30px]">
                   <div className="flex items-center justify-between gap-3">
-                    <Surtitre>Tes looks passés</Surtitre>
+                    <Surtitre>Tes tenues passées</Surtitre>
                     <button
                       onClick={() => {
                         setOnglet("past");
@@ -1823,7 +1823,7 @@ export default function PlanifierScreen() {
                     ? `${state.items.length} pièce${state.items.length > 1 ? "s" : ""} de ton dressing${dressingSeul ? "" : ", ta capsule en complément"}`
                     : "Ta capsule, en attendant ton dressing",
                 ],
-                ["Composition du look", profile.styles.length ? `Ton style ${libelleStyles(profile.styles, profile.gender)}` : "Les règles de composition de Capsela"],
+                ["Composition de la tenue", profile.styles.length ? `Ton style ${libelleStyles(profile.styles, profile.gender)}` : "Les règles de composition de Capsela"],
               ] as ([string, string] | null)[])
                 .filter((x): x is [string, string] => !!x)
                 .map(([titre, sous], i) => (
@@ -1862,14 +1862,14 @@ export default function PlanifierScreen() {
                 <span aria-hidden="true" className="text-terracotta">
                   ✓
                 </span>
-                {depuisPlan ? (adaptation ? "Ton look adapté à la météo" : "Ta tenue planifiée est gardée") : "La tenue de ta photo est gardée"} · {pieces.length} pièce
+                {depuisPlan ? (adaptation ? "Ta tenue adaptée à la météo" : "Ta tenue planifiée est gardée") : "La tenue de ta photo est gardée"} · {pieces.length} pièce
                 {pieces.length > 1 ? "s" : ""}
               </div>
             )}
             {/* Ce qui a changé par rapport au look planifié, dit simplement : les pièces gardées ne bougent pas. Un look planifié reste
                 modifiable : « Voir ma tenue », puis « Planifier » remplace l'ancien. */}
             {adaptation && notesAdaptation.length > 0 && (
-              <ul className="list-none p-0 mt-[10px] flex flex-col gap-[4px]" aria-label="Ce qui change dans ton look">
+              <ul className="list-none p-0 mt-[10px] flex flex-col gap-[4px]" aria-label="Ce qui change dans ta tenue">
                 {notesAdaptation.map((n) => (
                   <li key={n} className="text-[12.5px] text-ink-soft leading-[1.45]">
                     {n}
@@ -2098,7 +2098,7 @@ export default function PlanifierScreen() {
                 {/* « POURQUOI CE LOOK ? » : une liste, sans carte (non cliquable). Seuls les critères réellement utilisés par le
                     moteur y figurent — le type de lieu n'y est pas, il n'entre pas dans le calcul. */}
                 <div id="pourquoi" className="mt-6">
-                  <div className="t-titre-carte text-ink">Pourquoi ce look ?</div>
+                  <div className="t-titre-carte text-ink">Pourquoi cette tenue ?</div>
                   <ul className="mt-2">
                     {([
                       ["journee", secondaires.length ? "Tes occasions" : "Ton occasion", `${composition ? "Prévue" : "Pensée"}${secondaires.length && !composition && !tenue?.polyvalente ? " d'abord" : ""} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${sansBarre(dateContext)}` : ""}${
@@ -2328,7 +2328,7 @@ export default function PlanifierScreen() {
               <HeroTenue
                 // Une tenue passée ne se modifie plus : la fiche directe, comme avant.
                 onPiece={passee ? undefined : (it, look) => remplacement.ouvrir(it, configPlan(look))}
-                statut={passee ? "Ton look était planifié" : "Ta tenue planifiée"}
+                statut={passee ? "Ta tenue était planifiée" : "Ta tenue planifiée"}
                 pieces={pieces}
                 temperature={tempCouchePlan}
                 quand={passee ? "ce jour-là" : "prévus"}
@@ -2336,7 +2336,7 @@ export default function PlanifierScreen() {
                 candidatsExterieur={passee ? [] : candidatsPlan}
                 chezSoi={chezSoiPlan}
                 indicateurs={<IndicateursTenue items={indicateursPlan} />}
-                vide="Les pièces de ce look ne sont plus dans ton dressing."
+                vide="Les pièces de cette tenue ne sont plus dans ton dressing."
                 actions={
                   pieces.length > 0
                     ? [
@@ -2364,7 +2364,7 @@ export default function PlanifierScreen() {
                   planification ne doit pas être remplacée en silence. */}
               {manquantes > 0 && pieces.length > 0 && (
                 <div className="text-[12px] text-muted mt-3 leading-[1.45]">
-                  {manquantes === 1 ? "Une pièce de ce look n'est plus" : `${manquantes} pièces de ce look ne sont plus`} dans
+                  {manquantes === 1 ? "Une pièce de cette tenue n'est plus" : `${manquantes} pièces de cette tenue ne sont plus`} dans
                   ton dressing.
                 </div>
               )}
@@ -2540,7 +2540,7 @@ export default function PlanifierScreen() {
             largeur de tous les écrans, pas une pastille flottante qui
             n'existait nulle part ailleurs. */}
         {vue === "liste" && (
-          <Button onClick={recommencer}>Planifier un look</Button>
+          <Button onClick={recommencer}>Planifier une tenue</Button>
         )}
         {vue === "confirmation" && (
           <>
@@ -2620,7 +2620,7 @@ export default function PlanifierScreen() {
           destructive ne doit pas être la plus visible des secondaires. */}
       {/* La feuille Voir / Remplacer d'une pièce du flat lay, et sa confirmation (RemplacementPiece). */}
       {remplacement.rendu}
-      <BottomSheet title="Ce look" open={!!menuPlan} onClose={() => setMenuPlan(null)}>
+      <BottomSheet title="Cette tenue" open={!!menuPlan} onClose={() => setMenuPlan(null)}>
         <div className="flex flex-col">
           <button
             onClick={() => {
@@ -2631,7 +2631,7 @@ export default function PlanifierScreen() {
             className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-divider"
             style={{ minHeight: 52 }}
           >
-            Voir le look
+            Voir la tenue
           </button>
           <button
             onClick={() => {
@@ -2643,7 +2643,7 @@ export default function PlanifierScreen() {
             className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-divider"
             style={{ minHeight: 52 }}
           >
-            Modifier ce look
+            Modifier cette tenue
           </button>
           <button
             onClick={() => { const t = menuPlan; setMenuPlan(null); setASupprimer(t); }}
@@ -2666,10 +2666,10 @@ export default function PlanifierScreen() {
 
       {/* CONFIRMATION — la suppression retire une ligne de la base et n'a
           aucune annulation après coup. Elle se demande. */}
-      <BottomSheet title="Supprimer ce look ?" open={!!aSupprimer} onClose={() => setASupprimer(null)}>
+      <BottomSheet title="Supprimer cette tenue ?" open={!!aSupprimer} onClose={() => setASupprimer(null)}>
         <div className="flex flex-col">
           <div className="text-[13px] text-muted-3 leading-[1.5]">
-            Ce look sera retiré de ton agenda. Tes pièces, elles, restent dans ton dressing.
+            Cette tenue sera retirée de ton agenda. Tes pièces, elles, restent dans ton dressing.
           </div>
           <Button variante="principal" className="mt-4"
             onClick={() => {

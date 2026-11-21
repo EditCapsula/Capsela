@@ -635,7 +635,7 @@ export default function HomeScreen() {
           {carteDuJour(
             <CarteHero
               sansCadre
-              surtitre={texteHero ? sansLeJour(texteHero.surtitre) : "Ton look du jour"}
+              surtitre={texteHero ? sansLeJour(texteHero.surtitre) : "Ta tenue du jour"}
               titre={titreHero}
               sousTitre={sousTitreHero}
               pourquoi={!texteHero}
@@ -692,7 +692,7 @@ export default function HomeScreen() {
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="t-surtitre text-ink whitespace-nowrap">
-              {passee ? (retroActif === 1 ? t("Ton look d’hier") : t("Ton look passé")) : texteHero ? sansLeJour(texteHero.surtitre) : t("Ton look du jour")}
+              {passee ? (retroActif === 1 ? t("Ta tenue d’hier") : t("Ta tenue passée")) : texteHero ? sansLeJour(texteHero.surtitre) : t("Ta tenue du jour")}
             </span>
           </div>
 

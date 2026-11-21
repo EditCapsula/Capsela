@@ -16,7 +16,7 @@ export const D_VALISE = "M3 10a2.5 2.5 0 0 1 2.5-2.5h13A2.5 2.5 0 0 1 21 10v8a2.
 const ACCES = [
   { cle: "dressing", d: D_DRESSING, a: "Mon", b: "dressing", label: "Mon dressing" },
   { cle: "capsule", d: D_CAPSULE, a: "Ma", b: "capsule", label: "Ma capsule" },
-  { cle: "planifier", d: D_AGENDA, a: "Planifier", b: "mes looks", label: "Planifier mes looks" },
+  { cle: "planifier", d: D_AGENDA, a: "Planifier", b: "mes tenues", label: "Planifier mes tenues" },
   { cle: "valise", d: D_VALISE, a: "Préparer", b: "une valise", label: "Préparer une valise" },
 ] as const;
 

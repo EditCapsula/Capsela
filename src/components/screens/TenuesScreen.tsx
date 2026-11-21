@@ -849,7 +849,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
                   du look (sans le manteau à part). Une tenue à compléter garde son statut (« À compléter · 3/4 pièces ») : il dit ce qui manque. */}
               {planApplique
                 ? estPlanValise(planApplique.plan.id)
-                  ? t("Look de ta valise")
+                  ? t("Tenue de ta valise")
                   : t("Ta tenue planifiée")
                 : statut.cle === "a_completer"
                   ? statut.libelle
@@ -978,7 +978,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
                 className="mt-[2px] w-full flex items-center justify-between gap-2 px-[6px] min-h-[36px] text-left text-[12.5px] leading-[1.4] cursor-pointer"
                 style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}
               >
-                <span>{t("Il te manque une paire de chaussures pour compléter ce look.")}</span>
+                <span>{t("Il te manque une paire de chaussures pour compléter cette tenue.")}</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta" style={{ display: "block" }}>
                   <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -1518,7 +1518,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
         <span className="flex flex-col min-w-0 flex-1 pl-4 pr-3 py-[12px]">
           {/* Pas de badge Premium (17/10/2026, décidé : la planification de tenues n'est pas une fonctionnalité Premium ; la valise l'est). */}
           <span className="t-surtitre text-muted-3 !text-[9.5px] whitespace-nowrap">{t("À préparer")}</span>
-          <span className="block t-titre-carte text-ink mt-[4px]">{t("Planifie tes looks")}</span>
+          <span className="block t-titre-carte text-ink mt-[4px]">{t("Planifie tes tenues")}</span>
           <span className="block text-[12px] text-muted leading-[1.4] mt-[3px]" style={{ textWrap: "pretty" }}>
             {t("Prépare tes tenues selon l'occasion, la date et le lieu.")}
           </span>
