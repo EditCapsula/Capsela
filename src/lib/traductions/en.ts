@@ -122,8 +122,8 @@ export const EN: Record<string, string> = {
   "3 · Tenues du séjour": "3 · Outfits for the trip",
   "Jour {n}": "Day {n}",
   "Une tenue pour chaque jour du séjour.": "An outfit for every day of the trip.",
-  "Un téléphone posé sur un lin terracotta, à côté de lunettes de soleil et de créoles dorées, affiche l'écran de création de compte de Capsela":
-    "A phone resting on terracotta linen, next to sunglasses and gold hoop earrings, showing Capsela's sign-up screen",
+  "Un téléphone posé sur un lin terracotta, à côté de lunettes de soleil et de créoles dorées, affiche le logo Capsela":
+    "A phone resting on terracotta linen, next to sunglasses and gold hoop earrings, showing the Capsela logo",
   "Écran {i} sur {n}": "Screen {i} of {n}",
 
   // --- Styles (STYLE_CONFIG, profile.ts) ---

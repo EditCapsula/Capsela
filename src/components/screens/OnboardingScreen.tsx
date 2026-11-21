@@ -312,16 +312,16 @@ function VisuelCompte() {
   return (
     <div
       role="img"
-      aria-label={t("Un téléphone posé sur un lin terracotta, à côté de lunettes de soleil et de créoles dorées, affiche l'écran de création de compte de Capsela")}
+      aria-label={t("Un téléphone posé sur un lin terracotta, à côté de lunettes de soleil et de créoles dorées, affiche le logo Capsela")}
       className="relative rounded-carte overflow-hidden bg-border mx-auto"
       // Au format du visuel (portrait) et à la hauteur réglée : le téléphone reste entier à toutes les hauteurs d'écran.
       style={{ height: "calc(var(--h-visuel) + 10px)", aspectRatio: "1024 / 1100" }}
     >
-      {/* LA VRAIE CAPTURE DANS LE TÉLÉPHONE (20/11/2026, demandé : « il faut intégrer la vraie capture de l'application dans le téléphone
-          du visuel »). Visuel fourni le même jour ; son écran inventé (« CAPSELA », champs et boutons qui n'existent pas) est remplacé par
-          l'écran réel « Crée ton compte » (rendu à 390 px, 3×, sans la mention du mode démo), posé en perspective sur l'écran du téléphone,
-          l'encoche gardée. Remplace la photo du 30/10/2026 (compte-telephone.webp, gardée dans public/onboarding/). À refaire si l'écran
-          de création de compte change. */}
+      {/* LE LOGO DANS LE TÉLÉPHONE (20/11/2026). Visuel fourni le même jour ; son écran inventé (« CAPSELA », des champs et des boutons
+          qui n'existent pas) est remplacé, sur demande, par le logo de l'app (brand/capsela-logo.png) sur le fond crème de l'app (#F3EEE5)
+          — la capture réelle de la création de compte, essayée d'abord, n'était « pas très sexy ». Posé en perspective sur l'écran du
+          téléphone (ses quatre bords mesurés sur la photo), l'encoche gardée. Remplace la photo du 30/10/2026 (compte-telephone.webp,
+          gardée dans public/onboarding/). */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/onboarding/compte-capture.webp" alt="" width={1024} height={1100} decoding="async" className="absolute inset-0 w-full h-full object-cover" />
     </div>
