@@ -24,3 +24,24 @@ export async function lireNomEvenement(nom: string): Promise<OccasionKey | null>
     return null;
   }
 }
+
+/**
+ * L'OCCASION DÉCRITE DANS PLANIFIER (22/11/2026) : la même lecture, avec ses PISTES — jusqu'à trois occasions plausibles quand le texte
+ * ne permet pas de trancher (« signature chez le notaire »). Mêmes garanties : jamais bloquante, { occasion: null, suggestions: [] } en
+ * démo, hors ligne, au-delà du quota ou sur une réponse douteuse.
+ */
+export async function lireOccasionDecrite(texte: string): Promise<{ occasion: OccasionKey | null; suggestions: OccasionKey[] }> {
+  const vide = { occasion: null, suggestions: [] as OccasionKey[] };
+  const propre = texte.trim();
+  if (!propre || !isSupabaseConfigured) return vide;
+  try {
+    const { data, error } = await getSupabase().functions.invoke("lire-evenement", { body: { nom: propre } });
+    if (error) return vide;
+    const d = data as { occasion?: unknown; suggestions?: unknown } | null;
+    const valide = (o: unknown): o is OccasionKey => typeof o === "string" && OCCASIONS_LISIBLES.includes(o as OccasionKey);
+    const suggestions = Array.isArray(d?.suggestions) ? (d.suggestions as unknown[]).filter(valide).filter((o, i, t) => t.indexOf(o) === i).slice(0, 3) : [];
+    return { occasion: valide(d?.occasion) ? d.occasion : null, suggestions };
+  } catch {
+    return vide;
+  }
+}

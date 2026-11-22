@@ -40,3 +40,14 @@ describe("lireOccasionLocale", () => {
     expect(o("débarquement")).toBeNull();
   });
 });
+
+describe("pistesLocales (22/11/2026)", () => {
+  it("des pistes quand le texte oriente sans trancher", async () => {
+    const { pistesLocales } = await import("../occasionSaisie");
+    expect(o("Signature notaire")).toBeNull();
+    expect(pistesLocales("Signature notaire")).toEqual(["travail_formel", "quotidien"]);
+    expect(pistesLocales("Déjeuner chez les beaux-parents")).toEqual(["soiree", "quotidien"]);
+    expect(pistesLocales("chez Paul")).toEqual([]);
+    expect(pistesLocales("obsèques")).toEqual([]);
+  });
+});

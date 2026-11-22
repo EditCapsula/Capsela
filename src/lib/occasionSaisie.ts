@@ -63,3 +63,23 @@ export function lireOccasionLocale(texte: string): OccasionComprise | null {
   }
   return null;
 }
+
+/*
+ * LES PISTES LOCALES (22/11/2026, demandé : « que le moteur fasse des recommandations d'occasions selon ce qui est saisi », capture
+ * « Signature notaire » non reconnue). Des mots qui ne suffisent pas à TRANCHER mais orientent : ils proposent deux occasions, la plus
+ * probable d'abord, que la personne choisit. Complètent les pistes de la lecture IA, ou les remplacent sans elle (démo, hors ligne).
+ * Les obsèques n'y sont pas non plus (cf. plus haut). ARBITRAGE ÉDITORIAL.
+ */
+const INDICES: readonly { mots: RegExp; pistes: OccasionKey[] }[] = [
+  { mots: /\b(notaire|banque|banquier|avocat|signature|mairie|administratif|prefecture|comptable|assurance|etat des lieux|agence immobiliere|visite d appartement)\b/, pistes: ["travail_formel", "quotidien"] },
+  { mots: /\b(medecin|docteur|dentiste|kine|rendez vous|rdv|coiffeur)\b/, pistes: ["quotidien", "travail_formel"] },
+  { mots: /\b(famille|parents|beaux parents|belle famille|repas|invitation|invites|cremaillere|reveillon|noel|nouvel an)\b/, pistes: ["soiree", "quotidien"] },
+];
+
+/** Les occasions que le texte suggère sans les dire (au plus trois, sans doublon), ou une liste vide. */
+export function pistesLocales(texte: string): OccasionKey[] {
+  const t = normaliser(texte);
+  const out: OccasionKey[] = [];
+  for (const i of INDICES) if (i.mots.test(t)) for (const o of i.pistes) if (!out.includes(o)) out.push(o);
+  return out.slice(0, 3);
+}
