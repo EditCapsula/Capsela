@@ -44,3 +44,23 @@ describe("l'occasion lue ne vaut que pour un « Autre »", () => {
     expect(occasionDeLEvenement({ type: "diner", occasionLue: "evenement_perso" })).toBe("soiree");
   });
 });
+
+describe("suggestionsLues (22/11/2026)", () => {
+  it("au plus trois clés de la liste, sans doublon, dans l'ordre", async () => {
+    const { suggestionsLues } = await import("../../../supabase/functions/_shared/lectureEvenement");
+    expect(suggestionsLues({ suggestions: ["travail_formel", "quotidien"] })).toEqual(["travail_formel", "quotidien"]);
+    expect(suggestionsLues({ suggestions: ["soiree", "soiree", "voyage", "robe", "date", "sport", "quotidien"] })).toEqual(["soiree", "date", "sport"]);
+    expect(suggestionsLues({ occasion: "soiree" })).toEqual([]);
+    expect(suggestionsLues(null)).toEqual([]);
+  });
+});
+
+describe("humeurLue (22/11/2026)", () => {
+  it("une préférence proposée, sinon null", async () => {
+    const { humeurLue } = await import("../../../supabase/functions/_shared/lectureEvenement");
+    expect(humeurLue({ humeur: "elegant" })).toBe("elegant");
+    expect(humeurLue({ humeur: "audacieux" })).toBeNull();
+    expect(humeurLue({ humeur: null })).toBeNull();
+    expect(humeurLue({})).toBeNull();
+  });
+});

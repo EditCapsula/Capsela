@@ -35,7 +35,10 @@ export function invite(nom: string): string {
     "sport (activité physique : randonnée, yoga, course, ski),",
     "cocooning (détente au calme : spa, journée à l'hôtel),",
     "evenement_perso (événement habillé : mariage, baptême, cérémonie, gala, remise de diplôme, communion).",
-    'Réponds en JSON : {"occasion": "<une des clés>"} ; si le nom ne permet pas de choisir avec une confiance raisonnable, {"occasion": null}.',
+    'Réponds en JSON : {"occasion": "<une des clés>", "suggestions": ["<clé>", ...], "humeur": "<clé d\'humeur>"}.',
+    '"occasion" : la clé si le nom permet de choisir avec une confiance raisonnable, sinon null.',
+    '"suggestions" : de 1 à 3 clés de la liste, de la plus probable à la moins probable, MÊME si tu as répondu null — ce sont des pistes que la personne choisira elle-même (ex. « signature chez le notaire » : ["travail_formel", "quotidien"]). Liste vide seulement si le nom ne décrit aucune occasion.',
+    '"humeur" : seulement si le nom DIT explicitement le niveau d\'habillement ou l\'allure voulue, la clé parmi : elegant (chic, habillé, dress code), feminin (glamour), decontracte (décontracté, casual, simple), confortable (confort, beaucoup de marche), leger (chaleur, tenue légère) ; sinon null. Ne la déduis jamais de l\'occasion seule.',
     "N'invente rien d'autre : pas de tenue, pas de vêtement, pas de commentaire.",
   ].join("\n");
 }
@@ -44,4 +47,26 @@ export function invite(nom: string): string {
 export function occasionLue(reponse: unknown): OccasionEvenement | null {
   const o = (reponse as { occasion?: unknown } | null)?.occasion;
   return typeof o === "string" && (OCCASIONS_EVENEMENT as readonly string[]).includes(o) ? (o as OccasionEvenement) : null;
+}
+
+/**
+ * LES PISTES (22/11/2026, demandé : « que le moteur fasse des recommandations d'occasions selon ce qui est saisi ») : jusqu'à trois
+ * occasions de la liste, sans doublon, dans l'ordre du modèle. Ce ne sont que des propositions : l'écran les montre, la personne choisit.
+ */
+export function suggestionsLues(reponse: unknown): OccasionEvenement[] {
+  const brut = (reponse as { suggestions?: unknown } | null)?.suggestions;
+  if (!Array.isArray(brut)) return [];
+  const out: OccasionEvenement[] = [];
+  for (const x of brut) {
+    if (typeof x === "string" && (OCCASIONS_EVENEMENT as readonly string[]).includes(x) && !out.includes(x as OccasionEvenement)) out.push(x as OccasionEvenement);
+    if (out.length === 3) break;
+  }
+  return out;
+}
+
+/** La nuance que le nom dit (22/11/2026, Planifier) : une clé de préférence connue, ou null. « audacieux » n'est plus proposé. */
+export const HUMEURS_LISIBLES = ["elegant", "feminin", "decontracte", "confortable", "leger"] as const;
+export function humeurLue(reponse: unknown): (typeof HUMEURS_LISIBLES)[number] | null {
+  const h = (reponse as { humeur?: unknown } | null)?.humeur;
+  return typeof h === "string" && (HUMEURS_LISIBLES as readonly string[]).includes(h) ? (h as (typeof HUMEURS_LISIBLES)[number]) : null;
 }

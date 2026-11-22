@@ -1,3 +1,4 @@
+import type { Humeur } from "./humeur";
 import type { DateContext, OccasionKey, WorkMode } from "./types";
 
 /*
@@ -22,6 +23,31 @@ export interface OccasionComprise {
   occasion: OccasionKey;
   /** Le sous-choix quand le texte le dit (Entretien, Télétravail ; le type de date) ; sinon celui par défaut de l'écran. */
   sousChoix?: WorkMode | DateContext;
+  /** La nuance que le texte donne (« habillé », « décontracté »…) : la préférence de l'étape « Préférences », préremplie. */
+  humeur?: Humeur;
+  /** Le type de lieu quand le texte le dit (« rooftop ») et que l'occasion le propose. */
+  typeLieu?: string;
+}
+
+/*
+ * LES NUANCES (22/11/2026, demandé : « la barre de recherche doit être plus intelligente », arbitré : « mieux comprendre » — lire
+ * habillé, décontracté… pour régler le niveau d'habillement). Elles préremplissent la préférence de l'étape 3 (humeur.ts), que le moteur
+ * lit déjà ; la personne la voit et la change. Seuls des mots explicites : aucune nuance n'est déduite de l'occasion seule.
+ */
+const NUANCES: readonly { mots: RegExp; humeur: Humeur }[] = [
+  { mots: /\b(habille|habillee|chic|elegant|elegante|classe|soignee?|tenue correcte|dress code|black tie|smart)\b/, humeur: "elegant" },
+  { mots: /\b(glamour|sexy|feminine?)\b/, humeur: "feminin" },
+  { mots: /\b(decontracte|decontractee|casual|cool|relax|detendu|simple)\b/, humeur: "decontracte" },
+  { mots: /\b(confortable|confort|a l aise|marcher beaucoup|debout toute la journee)\b/, humeur: "confortable" },
+  { mots: /\b(leger|legere|chaleur|canicule|il fera chaud|en plein soleil)\b/, humeur: "leger" },
+];
+
+/** La nuance et le lieu que le texte dit explicitement, sans l'occasion. */
+export function lireNuances(texte: string): Pick<OccasionComprise, "humeur" | "typeLieu"> {
+  const t = normaliser(texte);
+  const humeur = NUANCES.find((n) => n.mots.test(t))?.humeur;
+  const typeLieu = /\b(rooftop|roof top|bar)\b/.test(t) ? "Bar / Rooftop" : undefined;
+  return { ...(humeur ? { humeur } : {}), ...(typeLieu ? { typeLieu } : {}) };
 }
 
 /** Minuscules, sans accents ni ponctuation : « Dîner d'affaires ! » → « diner d affaires ». */
@@ -40,7 +66,7 @@ const contexteDate = (t: string): DateContext | undefined =>
   /\b(verre|bar|apero)\b/.test(t) ? "Verre" : /\b(cinema|balade|promenade|expo|musee)\b/.test(t) ? "Cinéma / balade" : /\b(restaurant|resto|diner|dejeuner)\b/.test(t) ? "Restaurant / date romantique" : undefined;
 
 const REGLES: readonly Regle[] = [
-  { mots: /\banniversaire de mariage\b|\bsaint valentin\b|\b(rendez vous|rdv|diner|soiree) (amoureux|romantique|galant)\b|\bpremier rendez vous\b|\btete a tete\b|\bdate\b/, occasion: "date", sousChoix: contexteDate },
+  { mots: /\banniversaire de mariage\b|\bsaint valentin\b|\b(rendez vous|rdv|diner|soiree) (amoureux|romantique|galant)\b|\bpremier rendez vous\b|\btete a tete\b|\ben amoureux\b|\bdate\b/, occasion: "date", sousChoix: contexteDate },
   { mots: /\b(mariage|bapteme|ceremonie|gala|communion|fiancailles|remise (de|des) diplomes?|bar mitzvah|bat mitzvah)\b/, occasion: "evenement_perso" },
   { mots: /\bentretien\b/, occasion: "travail_formel", sousChoix: () => "Entretien" },
   { mots: /\bteletravail\b|\btravail (a|de) la maison\b/, occasion: "travail_formel", sousChoix: () => "Télétravail" },
@@ -48,7 +74,7 @@ const REGLES: readonly Regle[] = [
   { mots: /\b(sport|salle de sport|gym|yoga|pilates|running|footing|jogging|course a pied|randonnee|rando|trek|velo|ski|fitness|crossfit|tennis|padel|natation|escalade|danse)\b/, occasion: "sport" },
   { mots: /\b(voyage|avion|train|aeroport|gare|trajet|road trip|vol|deplacement)\b/, occasion: "voyage" },
   { mots: /\b(cocooning|maison|canape|pyjama|spa|journee tranquille|chez moi)\b/, occasion: "cocooning" },
-  { mots: /\b(soiree|anniversaire|fete|pot|afterwork|after work|bar|club|boite|concert|diner|restaurant|resto|apero|aperitif|cocktail|vernissage|theatre|opera|spectacle|festival)\b/, occasion: "soiree" },
+  { mots: /\b(soiree|anniversaire|fete|pot|reveillon|cremaillere|rooftop|afterwork|after work|bar|club|boite|concert|diner|restaurant|resto|apero|aperitif|cocktail|vernissage|theatre|opera|spectacle|festival)\b/, occasion: "soiree" },
   { mots: /\b(courses|marche|brunch|pique nique|picnic|ecole|balade|promenade|parc|shopping|musee|expo|exposition|dejeuner|famille|week end|journee libre|cafe)\b/, occasion: "quotidien" },
 ];
 
@@ -59,7 +85,93 @@ export function lireOccasionLocale(texte: string): OccasionComprise | null {
   for (const r of REGLES) {
     if (!r.mots.test(t)) continue;
     const sousChoix = r.sousChoix?.(t);
-    return sousChoix ? { occasion: r.occasion, sousChoix } : { occasion: r.occasion };
+    const nuances = lireNuances(texte);
+    // Le type de lieu ne vaut que pour la Soirée (le seul qui en propose, PlanifierScreen) : un « bar » ailleurs n'en dit rien.
+    if (nuances.typeLieu && r.occasion !== "soiree") delete nuances.typeLieu;
+    return { occasion: r.occasion, ...(sousChoix ? { sousChoix } : {}), ...nuances };
   }
   return null;
+}
+
+/*
+ * LES PISTES LOCALES (22/11/2026, demandé : « que le moteur fasse des recommandations d'occasions selon ce qui est saisi », capture
+ * « Signature notaire » non reconnue). Des mots qui ne suffisent pas à TRANCHER mais orientent : ils proposent deux occasions, la plus
+ * probable d'abord, que la personne choisit. Complètent les pistes de la lecture IA, ou les remplacent sans elle (démo, hors ligne).
+ * Les obsèques n'y sont pas non plus (cf. plus haut). ARBITRAGE ÉDITORIAL.
+ */
+const INDICES: readonly { mots: RegExp; pistes: OccasionKey[] }[] = [
+  { mots: /\b(notaire|banque|banquier|avocat|signature|mairie|administratif|prefecture|comptable|assurance|etat des lieux|agence immobiliere|visite d appartement)\b/, pistes: ["travail_formel", "quotidien"] },
+  { mots: /\b(medecin|docteur|dentiste|kine|rendez vous|rdv|coiffeur)\b/, pistes: ["quotidien", "travail_formel"] },
+  { mots: /\b(famille|parents|beaux parents|belle famille|repas|invitation|invites|noel|nouvel an)\b/, pistes: ["soiree", "quotidien"] },
+];
+
+/** Les occasions que le texte suggère sans les dire (au plus trois, sans doublon), ou une liste vide. */
+export function pistesLocales(texte: string): OccasionKey[] {
+  const t = normaliser(texte);
+  const out: OccasionKey[] = [];
+  for (const i of INDICES) if (i.mots.test(t)) for (const o of i.pistes) if (!out.includes(o)) out.push(o);
+  return out.slice(0, 3);
+}
+
+/*
+ * LES EXEMPLES (22/11/2026, arbitré : « suggestions en tapant » et « exemples cliquables »). Une liste d'intitulés courants, chacun avec
+ * l'occasion qu'il désigne (et son sous-choix, sa nuance) : sous la barre vide, quelques-uns à toucher ; en tapant, ceux dont un mot
+ * commence comme la saisie. Toucher un exemple vaut une lecture sûre — c'est la liste qui le dit, pas une déduction.
+ */
+export interface ExempleOccasion extends OccasionComprise {
+  libelle: string;
+}
+export const EXEMPLES_OCCASION: readonly ExempleOccasion[] = [
+  { libelle: "Mariage", occasion: "evenement_perso" },
+  { libelle: "Baptême", occasion: "evenement_perso" },
+  { libelle: "Communion", occasion: "evenement_perso" },
+  { libelle: "Fiançailles", occasion: "evenement_perso" },
+  { libelle: "Gala", occasion: "evenement_perso", humeur: "elegant" },
+  { libelle: "Remise de diplôme", occasion: "evenement_perso" },
+  { libelle: "Entretien d'embauche", occasion: "travail_formel", sousChoix: "Entretien" },
+  { libelle: "Réunion", occasion: "travail_formel", sousChoix: "Présentiel" },
+  { libelle: "Rendez-vous client", occasion: "travail_formel", sousChoix: "Présentiel" },
+  { libelle: "Présentation", occasion: "travail_formel", sousChoix: "Présentiel" },
+  { libelle: "Séminaire", occasion: "travail_formel", sousChoix: "Présentiel" },
+  { libelle: "Dîner d'affaires", occasion: "travail_formel", sousChoix: "Présentiel" },
+  { libelle: "Signature chez le notaire", occasion: "travail_formel", sousChoix: "Présentiel" },
+  { libelle: "Télétravail", occasion: "travail_formel", sousChoix: "Télétravail" },
+  { libelle: "Dîner romantique", occasion: "date", sousChoix: "Restaurant / date romantique" },
+  { libelle: "Verre en amoureux", occasion: "date", sousChoix: "Verre" },
+  { libelle: "Cinéma en amoureux", occasion: "date", sousChoix: "Cinéma / balade" },
+  { libelle: "Afterwork", occasion: "soiree" },
+  { libelle: "Anniversaire", occasion: "soiree" },
+  { libelle: "Soirée entre amis", occasion: "soiree" },
+  { libelle: "Verre en rooftop", occasion: "soiree", typeLieu: "Bar / Rooftop" },
+  { libelle: "Concert", occasion: "soiree" },
+  { libelle: "Dîner entre amis", occasion: "soiree" },
+  { libelle: "Pot de départ", occasion: "soiree" },
+  { libelle: "Réveillon", occasion: "soiree", humeur: "elegant" },
+  { libelle: "Crémaillère", occasion: "soiree", humeur: "decontracte" },
+  { libelle: "Brunch", occasion: "quotidien" },
+  { libelle: "Déjeuner en famille", occasion: "quotidien" },
+  { libelle: "Shopping", occasion: "quotidien" },
+  { libelle: "Balade", occasion: "quotidien", humeur: "confortable" },
+  { libelle: "Musée", occasion: "quotidien" },
+  { libelle: "Pique-nique", occasion: "quotidien", humeur: "decontracte" },
+  { libelle: "Salle de sport", occasion: "sport" },
+  { libelle: "Yoga", occasion: "sport" },
+  { libelle: "Randonnée", occasion: "sport" },
+  { libelle: "Footing", occasion: "sport" },
+  { libelle: "Voyage en train", occasion: "voyage" },
+  { libelle: "Voyage en avion", occasion: "voyage" },
+  { libelle: "Journée cocooning", occasion: "cocooning" },
+];
+
+/** Sous la barre vide : des intitulés variés, une occasion chacun. */
+export const EXEMPLES_VEDETTES: readonly string[] = ["Mariage", "Entretien d'embauche", "Afterwork", "Dîner romantique", "Brunch"];
+
+/** Les exemples dont un mot commence comme chaque mot de la saisie (« diner aff » → Dîner d'affaires), au plus `max`. */
+export function exemplesPour(saisie: string, max = 4): ExempleOccasion[] {
+  const mots = normaliser(saisie).split(" ").filter(Boolean);
+  if (!mots.length || normaliser(saisie).length < 2) return [];
+  return EXEMPLES_OCCASION.filter((e) => {
+    const motsExemple = normaliser(e.libelle).split(" ");
+    return mots.every((m) => motsExemple.some((x) => x.startsWith(m)));
+  }).slice(0, max);
 }

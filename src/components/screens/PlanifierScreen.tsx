@@ -673,6 +673,8 @@ export default function PlanifierScreen() {
    * des tenues déjà compatibles (humeur.ts). Une composition imposée (photo d'un avis) n'a pas cette étape : sa tenue est faite.
    */
   const [humeur, setHumeur] = useState<Humeur | null>(() => (instant ? instant.humeur : (state.planAAdapter?.plan.humeur ?? null)));
+  /** La préférence posée par la barre « Décris ton occasion » (SaisieOccasion, 22/11/2026), pour la distinguer d'un choix à la main. */
+  const humeurDeLaBarre = useRef<Humeur | null>(null);
   /** L'écran « Capsela compose ta tenue… » : affiché entre la dernière question et le résultat, le temps de la prévision. */
   const [compose, setCompose] = useState(false);
   /** La tenue qui vient d'être gardée — pour l'écran de confirmation. */
@@ -1889,12 +1891,20 @@ export default function PlanifierScreen() {
                     cochée comme une tuile, son sous-choix aussi quand le texte le dit ; les tuiles restent la façon de corriger. */}
                 <SaisieOccasion
                   choisies={choisies}
+                  gender={profile.gender}
                   onComprise={(c) => {
                     setChoisies([c.occasion]);
                     if (c.occasion === "travail_formel" && c.sousChoix && WORK_MODES.includes(c.sousChoix as WorkMode)) setWorkMode(c.sousChoix as WorkMode);
                     if (c.occasion === "date" && c.sousChoix && DATE_CONTEXTS.some(([d]) => d === c.sousChoix)) setDateContext(c.sousChoix as DateContext);
                     const permis = TYPES_LIEU_PAR_OCCASION[c.occasion];
-                    if (!permis || (typeLieu !== TYPE_LIEU_AUTRE && !permis.includes(typeLieu ?? ""))) setTypeLieu(null);
+                    if (c.typeLieu && permis?.includes(c.typeLieu)) setTypeLieu(c.typeLieu);
+                    else if (!permis || (typeLieu !== TYPE_LIEU_AUTRE && !permis.includes(typeLieu ?? ""))) setTypeLieu(null);
+                    // La nuance lue préremplit la préférence de l'étape 3 ; une nuance posée par une lecture précédente de la barre (et
+                    // non choisie à la main) s'efface quand la nouvelle saisie n'en dit pas.
+                    const proposee = c.humeur && humeursProposees(profile.gender).some((h) => h.key === c.humeur) ? c.humeur : null;
+                    if (proposee) setHumeur(proposee);
+                    else if (humeur && humeur === humeurDeLaBarre.current) setHumeur(null);
+                    humeurDeLaBarre.current = proposee;
                   }}
                 />
                 <div className="grid grid-cols-2 gap-x-3 gap-y-4 mt-3">
