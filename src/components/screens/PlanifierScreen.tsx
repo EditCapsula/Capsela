@@ -9,6 +9,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useContexteRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { sansBarre } from "@/lib/phraseOccasion";
 import AgendaLooks, { type EtatAgenda } from "@/components/AgendaLooks";
+import SaisieOccasion from "@/components/SaisieOccasion";
 import AppHeader from "@/components/AppHeader";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
@@ -1884,7 +1885,19 @@ export default function PlanifierScreen() {
                  contexte du rendez-vous) naît dans un panneau sous la grille, à l'écran dès qu'on touche la tuile — le
                  défaut mesuré le 23/09 (question obligatoire sous le pli) ne revient pas : le panneau suit immédiatement. */
               <>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-4 mt-5">
+                {/* LA SAISIE LIBRE (22/11/2026, arbitré : en plus des tuiles, au-dessus — SaisieOccasion.tsx) : l'occasion comprise est
+                    cochée comme une tuile, son sous-choix aussi quand le texte le dit ; les tuiles restent la façon de corriger. */}
+                <SaisieOccasion
+                  choisies={choisies}
+                  onComprise={(c) => {
+                    setChoisies([c.occasion]);
+                    if (c.occasion === "travail_formel" && c.sousChoix && WORK_MODES.includes(c.sousChoix as WorkMode)) setWorkMode(c.sousChoix as WorkMode);
+                    if (c.occasion === "date" && c.sousChoix && DATE_CONTEXTS.some(([d]) => d === c.sousChoix)) setDateContext(c.sousChoix as DateContext);
+                    const permis = TYPES_LIEU_PAR_OCCASION[c.occasion];
+                    if (!permis || (typeLieu !== TYPE_LIEU_AUTRE && !permis.includes(typeLieu ?? ""))) setTypeLieu(null);
+                  }}
+                />
+                <div className="grid grid-cols-2 gap-x-3 gap-y-4 mt-3">
                   {OCCASIONS.map(([key, label]) => (
                     <TuileOccasion
                       key={key}
