@@ -1,4 +1,5 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
+import type { Humeur } from "./humeur";
 import type { OccasionKey } from "./types";
 
 /*
@@ -30,17 +31,21 @@ export async function lireNomEvenement(nom: string): Promise<OccasionKey | null>
  * ne permet pas de trancher (« signature chez le notaire »). Mêmes garanties : jamais bloquante, { occasion: null, suggestions: [] } en
  * démo, hors ligne, au-delà du quota ou sur une réponse douteuse.
  */
-export async function lireOccasionDecrite(texte: string): Promise<{ occasion: OccasionKey | null; suggestions: OccasionKey[] }> {
-  const vide = { occasion: null, suggestions: [] as OccasionKey[] };
+/** Les nuances qu'une lecture peut rendre — miroir de HUMEURS_LISIBLES côté serveur. */
+const HUMEURS_LISIBLES: readonly Humeur[] = ["elegant", "feminin", "decontracte", "confortable", "leger"];
+
+export async function lireOccasionDecrite(texte: string): Promise<{ occasion: OccasionKey | null; suggestions: OccasionKey[]; humeur: Humeur | null }> {
+  const vide = { occasion: null, suggestions: [] as OccasionKey[], humeur: null };
   const propre = texte.trim();
   if (!propre || !isSupabaseConfigured) return vide;
   try {
     const { data, error } = await getSupabase().functions.invoke("lire-evenement", { body: { nom: propre } });
     if (error) return vide;
-    const d = data as { occasion?: unknown; suggestions?: unknown } | null;
+    const d = data as { occasion?: unknown; suggestions?: unknown; humeur?: unknown } | null;
     const valide = (o: unknown): o is OccasionKey => typeof o === "string" && OCCASIONS_LISIBLES.includes(o as OccasionKey);
     const suggestions = Array.isArray(d?.suggestions) ? (d.suggestions as unknown[]).filter(valide).filter((o, i, t) => t.indexOf(o) === i).slice(0, 3) : [];
-    return { occasion: valide(d?.occasion) ? d.occasion : null, suggestions };
+    const humeur = typeof d?.humeur === "string" && HUMEURS_LISIBLES.includes(d.humeur as Humeur) ? (d.humeur as Humeur) : null;
+    return { occasion: valide(d?.occasion) ? d.occasion : null, suggestions, humeur };
   } catch {
     return vide;
   }

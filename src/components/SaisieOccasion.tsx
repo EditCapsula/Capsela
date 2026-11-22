@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { occasionShortLabel } from "@/lib/data";
+import { useRef, useState } from "react";
+import { OCCASIONS } from "@/lib/data";
+import { libelleHumeur } from "@/lib/humeur";
 import { lireOccasionDecrite } from "@/lib/lectureEvenement";
-import { lireOccasionLocale, pistesLocales, type OccasionComprise } from "@/lib/occasionSaisie";
+import { EXEMPLES_OCCASION, EXEMPLES_VEDETTES, exemplesPour, lireNuances, lireOccasionLocale, normaliser, pistesLocales, type OccasionComprise } from "@/lib/occasionSaisie";
 import type { OccasionKey } from "@/lib/types";
 
 /*
@@ -14,29 +15,81 @@ import type { OccasionKey } from "@/lib/types";
  * LES PISTES (22/11/2026, demandé : « que le moteur fasse des recommandations d'occasions selon ce qui est saisi ») : quand rien ne
  * tranche, jusqu'à trois occasions plausibles — celles de la lecture IA d'abord, puis les indices locaux (pistesLocales) — en puces à
  * toucher. Rien n'est coché d'office : une piste reste une proposition.
+ *
+ * PLUS INTELLIGENTE (22/11/2026, demandé ; arbitré : « mieux comprendre », « suggestions en tapant », « exemples cliquables ») :
+ *   · barre vide : quelques exemples à toucher (EXEMPLES_VEDETTES) ;
+ *   · en tapant : les intitulés qui commencent comme la saisie (exemplesPour), à toucher sans valider ;
+ *   · les nuances dites (« chic », « décontracté », « rooftop ») préremplissent la préférence et le lieu (lireNuances) ; quand le texte
+ *     est long et que les mots-clés n'en trouvent pas, la lecture IA est aussi consultée pour la nuance, sans changer l'occasion lue.
  */
-export default function SaisieOccasion({ choisies, onComprise }: { choisies: readonly OccasionKey[]; onComprise: (c: OccasionComprise) => void }) {
-  const [texte, setTexte] = useState("");
-  const [etat, setEtat] = useState<{ nom: "vide" } | { nom: "lecture" } | { nom: "inconnu" } | { nom: "pistes"; pistes: OccasionKey[] } | { nom: "compris"; c: OccasionComprise }>({ nom: "vide" });
+/** Le nom d'une occasion tel que la tuile le dit, avant son « · » (« Rendez-vous amoureux », « Événement ») : la barre et les tuiles parlent pareil. */
+const nomTuile = (o: OccasionKey): string => (OCCASIONS.find(([k]) => k === o)?.[1] ?? o).split(" · ")[0];
 
-  const lire = async () => {
-    const saisie = texte.trim();
+type Etat = { nom: "vide" } | { nom: "lecture" } | { nom: "inconnu" } | { nom: "pistes"; pistes: OccasionKey[] } | { nom: "compris"; c: OccasionComprise };
+
+export default function SaisieOccasion({
+  choisies,
+  gender,
+  onComprise,
+}: {
+  choisies: readonly OccasionKey[];
+  gender: "femme" | "homme" | null | undefined;
+  onComprise: (c: OccasionComprise) => void;
+}) {
+  const [texte, setTexte] = useState("");
+  const [etat, setEtat] = useState<Etat>({ nom: "vide" });
+  // La saisie lue en dernier : une réponse IA arrivée après une nouvelle frappe ne s'applique pas.
+  const derniere = useRef("");
+
+  const choisir = (c: OccasionComprise) => {
+    // « Glamour » n'est jamais proposé à un profil homme (humeur.ts) : la nuance n'y est pas reprise.
+    const propre = gender === "homme" && c.humeur === "feminin" ? { ...c, humeur: undefined } : c;
+    setEtat({ nom: "compris", c: propre });
+    onComprise(propre);
+  };
+
+  const lire = async (saisie = texte.trim()) => {
     if (!saisie || etat.nom === "lecture") return;
+    derniere.current = saisie;
     const locale = lireOccasionLocale(saisie);
-    if (locale) return choisir(locale);
+    if (locale) {
+      choisir(locale);
+      // La nuance par l'IA, seulement si le texte en dit plus que son mot-clé et qu'aucune nuance n'a été lue.
+      if (!locale.humeur && normaliser(saisie).split(" ").length >= 3) {
+        const lue = await lireOccasionDecrite(saisie);
+        if (derniere.current === saisie && lue.humeur && (!lue.occasion || lue.occasion === locale.occasion)) choisir({ ...locale, humeur: lue.humeur });
+      }
+      return;
+    }
     setEtat({ nom: "lecture" });
     const lue = await lireOccasionDecrite(saisie);
-    if (lue.occasion) return choisir({ occasion: lue.occasion });
+    if (derniere.current !== saisie) return;
+    if (lue.occasion) {
+      const nuances = lireNuances(saisie);
+      return choisir({
+        occasion: lue.occasion,
+        ...(nuances.humeur || lue.humeur ? { humeur: nuances.humeur ?? lue.humeur ?? undefined } : {}),
+        ...(nuances.typeLieu && lue.occasion === "soiree" ? { typeLieu: nuances.typeLieu } : {}),
+      });
+    }
     const pistes = [...lue.suggestions, ...pistesLocales(saisie)].filter((o, i, t) => t.indexOf(o) === i).slice(0, 3);
     setEtat(pistes.length ? { nom: "pistes", pistes } : { nom: "inconnu" });
   };
-  const choisir = (c: OccasionComprise) => {
-    setEtat({ nom: "compris", c });
-    onComprise(c);
+
+  const prendreExemple = (libelle: string) => {
+    const e = EXEMPLES_OCCASION.find((x) => x.libelle === libelle);
+    if (!e) return;
+    setTexte(e.libelle);
+    derniere.current = e.libelle;
+    const { libelle: _l, ...c } = e;
+    void _l;
+    choisir(c);
   };
 
   // La lecture n'est plus dite quand une autre tuile a été choisie depuis : elle ne décrirait plus l'écran.
   const comprisAffiche = etat.nom === "compris" && choisies.includes(etat.c.occasion);
+  const propositions = etat.nom === "vide" ? exemplesPour(texte) : [];
+  const puce = "inline-flex items-center rounded-full px-[14px] text-[12.5px] font-semibold cursor-pointer border bg-card border-sand-border text-ink";
 
   return (
     <div className="mt-5">
@@ -62,10 +115,12 @@ export default function SaisieOccasion({ choisies, onComprise }: { choisies: rea
           maxLength={60}
           onChange={(e) => {
             setTexte(e.target.value);
-            if (etat.nom !== "lecture") setEtat({ nom: "vide" });
+            derniere.current = "";
+            setEtat({ nom: "vide" });
           }}
-          placeholder="Décris ton occasion : mariage, entretien…"
+          placeholder="Décris ton occasion…"
           aria-label="Décris ton occasion"
+          aria-autocomplete="list"
           className="flex-1 min-w-0 h-full bg-transparent outline-none text-[13.5px] font-medium text-ink placeholder:text-placeholder appearance-none [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
         />
         <button
@@ -79,12 +134,44 @@ export default function SaisieOccasion({ choisies, onComprise }: { choisies: rea
           </svg>
         </button>
       </form>
-      <div role="status" aria-live="polite" className="text-[12px] leading-[1.45] mt-2 px-1 min-h-[18px] block">
+
+      {/* Barre vide : des exemples à toucher. */}
+      {!texte && etat.nom === "vide" && (
+        <div className="mt-3 px-1">
+          <div className="text-[12px] text-muted-3">Par exemple :</div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {EXEMPLES_VEDETTES.map((l) => (
+              <button key={l} type="button" onClick={() => prendreExemple(l)} className={puce} style={{ minHeight: 36 }}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* En tapant : les intitulés qui commencent comme la saisie. */}
+      {propositions.length > 0 && (
+        <ul aria-label="Suggestions d'occasions" className="mt-2 rounded-bloc bg-card border border-border overflow-hidden">
+          {propositions.map((e) => (
+            <li key={e.libelle} className="border-b border-border last:border-b-0">
+              <button type="button" onClick={() => prendreExemple(e.libelle)} className="w-full flex items-center justify-between gap-3 px-4 text-left cursor-pointer" style={{ minHeight: 44 }}>
+                <span className="text-[13.5px] text-ink truncate">{e.libelle}</span>
+                <span className="text-[11.5px] text-muted-3 flex-shrink-0">{nomTuile(e.occasion)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div role="status" aria-live="polite" className="text-[12px] leading-[1.45] mt-2 px-1">
         {etat.nom === "lecture" && <span className="text-muted-3">Lecture de ton occasion…</span>}
         {comprisAffiche && etat.nom === "compris" && (
           <span className="text-ink-soft">
-            Compris : <span className="text-terracotta font-semibold">{occasionShortLabel(etat.c.occasion)}{etat.c.sousChoix ? ` · ${etat.c.sousChoix}` : ""}</span>. Une autre
-            occasion ? Choisis-la ci-dessous.
+            Compris :{" "}
+            <span className="text-terracotta font-semibold">
+              {[nomTuile(etat.c.occasion), etat.c.sousChoix, etat.c.humeur ? libelleHumeur(etat.c.humeur, gender) : null, etat.c.typeLieu].filter(Boolean).join(" · ")}
+            </span>
+            . Une autre occasion ? Choisis-la ci-dessous.
           </span>
         )}
         {etat.nom === "pistes" && (
@@ -92,14 +179,8 @@ export default function SaisieOccasion({ choisies, onComprise }: { choisies: rea
             <span className="text-ink-soft">Ça ressemble à :</span>
             <span className="flex flex-wrap gap-2 mt-2">
               {etat.pistes.map((o) => (
-                <button
-                  key={o}
-                  type="button"
-                  onClick={() => choisir({ occasion: o })}
-                  className="inline-flex items-center rounded-full px-[14px] text-[12.5px] font-semibold cursor-pointer border bg-card border-sand-border text-ink"
-                  style={{ minHeight: 40 }}
-                >
-                  {occasionShortLabel(o)}
+                <button key={o} type="button" onClick={() => choisir({ occasion: o, ...lireNuances(texte) })} className={puce} style={{ minHeight: 40 }}>
+                  {nomTuile(o)}
                 </button>
               ))}
             </span>

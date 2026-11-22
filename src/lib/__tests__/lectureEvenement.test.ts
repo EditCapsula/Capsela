@@ -54,3 +54,13 @@ describe("suggestionsLues (22/11/2026)", () => {
     expect(suggestionsLues(null)).toEqual([]);
   });
 });
+
+describe("humeurLue (22/11/2026)", () => {
+  it("une préférence proposée, sinon null", async () => {
+    const { humeurLue } = await import("../../../supabase/functions/_shared/lectureEvenement");
+    expect(humeurLue({ humeur: "elegant" })).toBe("elegant");
+    expect(humeurLue({ humeur: "audacieux" })).toBeNull();
+    expect(humeurLue({ humeur: null })).toBeNull();
+    expect(humeurLue({})).toBeNull();
+  });
+});

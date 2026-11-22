@@ -13,7 +13,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
 import { authentifier, consommerQuota, estAppelantAdmin, jetonDepuisEntete, limiteDepuisEnv } from "../_shared/protection.ts";
-import { invite, nomPropre, occasionLue, suggestionsLues } from "../_shared/lectureEvenement.ts";
+import { humeurLue, invite, nomPropre, occasionLue, suggestionsLues } from "../_shared/lectureEvenement.ts";
 import { destinationPropre, ideesLues, inviteIdees } from "../_shared/ideesSejour.ts";
 
 // Plafond de lectures par compte et par jour : quelques événements par valise suffisent. Modifiable par le secret
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
         store: false,
         temperature: 0,
         response_format: { type: "json_object" },
-        max_tokens: 80,
+        max_tokens: 100,
         messages: [{ role: "user", content: invite(nom) }],
       }),
     });
@@ -114,8 +114,8 @@ Deno.serve(async (req) => {
     const data = await res.json();
     const contenu = data?.choices?.[0]?.message?.content;
     const lu = contenu ? JSON.parse(contenu) : null;
-    // `suggestions` depuis le 22/11/2026 (Planifier) ; la valise ne lit que `occasion`, inchangée.
-    return json({ occasion: occasionLue(lu), suggestions: suggestionsLues(lu) });
+    // `suggestions` et `humeur` depuis le 22/11/2026 (Planifier) ; la valise ne lit que `occasion`, inchangée.
+    return json({ occasion: occasionLue(lu), suggestions: suggestionsLues(lu), humeur: humeurLue(lu) });
   } catch (err) {
     console.error(JSON.stringify({ fonction: "lire-evenement", error: err instanceof Error ? err.message : "inconnue" }));
     return json({ occasion: null, suggestions: [] });

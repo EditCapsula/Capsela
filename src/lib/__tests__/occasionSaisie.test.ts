@@ -51,3 +51,31 @@ describe("pistesLocales (22/11/2026)", () => {
     expect(pistesLocales("obsèques")).toEqual([]);
   });
 });
+
+describe("plus intelligente (22/11/2026) : nuances, exemples", () => {
+  it("les nuances explicites préremplissent la préférence ; rien n'est déduit de l'occasion seule", async () => {
+    expect(o("Mariage chic")).toEqual({ occasion: "evenement_perso", humeur: "elegant" });
+    expect(o("anniversaire décontracté")).toEqual({ occasion: "soiree", humeur: "decontracte" });
+    expect(o("Mariage")).toEqual({ occasion: "evenement_perso" });
+  });
+  it("le rooftop vaut pour la Soirée seulement", () => {
+    expect(o("soirée sur un rooftop")).toEqual({ occasion: "soiree", typeLieu: "Bar / Rooftop" });
+  });
+  it("les exemples en tapant : un mot qui commence comme la saisie", async () => {
+    const { exemplesPour, EXEMPLES_VEDETTES, EXEMPLES_OCCASION } = await import("../occasionSaisie");
+    expect(exemplesPour("mari").map((e) => e.libelle)).toEqual(["Mariage"]);
+    expect(exemplesPour("diner aff").map((e) => e.libelle)).toEqual(["Dîner d'affaires"]);
+    expect(exemplesPour("d").length).toBe(0);
+    expect(exemplesPour("ver").map((e) => e.libelle)).toEqual(["Verre en amoureux", "Verre en rooftop"]);
+    for (const v of EXEMPLES_VEDETTES) expect(EXEMPLES_OCCASION.some((e) => e.libelle === v)).toBe(true);
+  });
+  it("chaque exemple saisi tel quel est lu comme son occasion, ou la propose en piste (la liste et les mots-clés disent la même chose)", async () => {
+    const { EXEMPLES_OCCASION, pistesLocales } = await import("../occasionSaisie");
+    const lu = (l: string, occ: string) => {
+      const r = lireOccasionLocale(l);
+      return r ? r.occasion === occ : pistesLocales(l).includes(occ as never);
+    };
+    const ecarts = EXEMPLES_OCCASION.filter((e) => !lu(e.libelle, e.occasion)).map((e) => e.libelle);
+    expect(ecarts).toEqual([]);
+  });
+});
