@@ -1,4 +1,5 @@
-// La lecture du nom d'un événement de valise (22/10/2026, demandé : « lance la lecture IA »).
+// La lecture du nom d'un événement de valise (22/10/2026, demandé : « lance la lecture IA ») — et, depuis le 22/11/2026, de l'occasion
+// saisie librement dans Planifier (src/lib/occasionSaisie.ts, quand la lecture par mots-clés ne reconnaît rien).
 //
 // Le moteur de tenues ne lit pas de texte libre : un événement de type « Autre » nommé « gala de charité » ou « brunch entre amies »
 // recevait l'occasion Quotidien, quel que soit son nom. Cette lecture traduit le NOM en l'une des occasions que le moteur connaît, et
@@ -24,7 +25,7 @@ export function nomPropre(brut: unknown): string {
 
 export function invite(nom: string): string {
   return [
-    "Tu aides une application de garde-robe à habiller une personne pour un événement prévu pendant un voyage.",
+    "Tu aides une application de garde-robe à habiller une personne pour un événement qu'elle prévoit (pendant un voyage, ou dans son agenda).",
     `Voici le nom que la personne a donné à l'événement : "${nom}".`,
     "Choisis l'occasion vestimentaire qui lui correspond le mieux, EXACTEMENT parmi :",
     "quotidien (journée simple, décontractée : brunch, pique-nique, marché, visite entre amis),",
