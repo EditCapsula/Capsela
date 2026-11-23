@@ -85,3 +85,14 @@ describe("plus intelligente (22/11/2026) : nuances, exemples", () => {
     expect(ecarts).toEqual([]);
   });
 });
+
+describe("titrePourSaisie (23/11/2026)", () => {
+  it("un exemple prend son article ; un texte libre reste tel quel", async () => {
+    const { titrePourSaisie, EXEMPLES_OCCASION } = await import("../occasionSaisie");
+    expect(titrePourSaisie("Entretien d'embauche")).toBe("ton entretien d'embauche");
+    expect(titrePourSaisie("afterwork")).toBe("l'afterwork");
+    expect(titrePourSaisie("Mariage")).toBe("le mariage");
+    expect(titrePourSaisie("Mariage à la campagne.")).toBe("mariage à la campagne");
+    for (const e of EXEMPLES_OCCASION) expect(e.titre.length).toBeGreaterThan(e.libelle.length);
+  });
+});

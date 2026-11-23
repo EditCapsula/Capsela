@@ -82,8 +82,9 @@ export default function SaisieOccasion({
     if (!e) return;
     setTexte(e.libelle);
     derniere.current = e.libelle;
-    const { libelle: _l, ...c } = e;
+    const { libelle: _l, titre: _t, ...c } = e;
     void _l;
+    void _t;
     choisir(c, e.libelle);
   };
 

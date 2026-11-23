@@ -10,6 +10,7 @@ import { useContexteRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { sansBarre } from "@/lib/phraseOccasion";
 import AgendaLooks, { type EtatAgenda } from "@/components/AgendaLooks";
 import SaisieOccasion from "@/components/SaisieOccasion";
+import { titrePourSaisie } from "@/lib/occasionSaisie";
 import AppHeader from "@/components/AppHeader";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
@@ -684,11 +685,8 @@ export default function PlanifierScreen() {
    * ensuite à sa place, et le texte ne décrirait plus la tenue. Sur l'appareil, le temps du parcours (aucune colonne en base).
    */
   const [saisieOccasion, setSaisieOccasion] = useState<{ texte: string; occasion: OccasionKey } | null>(null);
-  /** Le texte tel qu'il entre dans le titre (« mariage à la campagne ») : première lettre en minuscule, sans point final. */
-  const saisieAffichee =
-    saisieOccasion && !composition && choisies.includes(saisieOccasion.occasion)
-      ? (saisieOccasion.texte.charAt(0).toLowerCase() + saisieOccasion.texte.slice(1)).replace(/[.!\s]+$/, "")
-      : null;
+  /** Le texte tel qu'il entre dans le titre (titrePourSaisie : l'article d'un exemple, sinon le texte libre tel quel). */
+  const saisieAffichee = saisieOccasion && !composition && choisies.includes(saisieOccasion.occasion) ? titrePourSaisie(saisieOccasion.texte) : null;
   /** L'écran « Capsela compose ta tenue… » : affiché entre la dernière question et le résultat, le temps de la prévision. */
   const [compose, setCompose] = useState(false);
   /** La tenue qui vient d'être gardée — pour l'écran de confirmation. */
