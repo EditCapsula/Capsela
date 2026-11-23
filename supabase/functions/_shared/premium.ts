@@ -86,6 +86,17 @@ export async function assertPremium(
 export type RegleAcces = "PREMIUM_REQUIRED" | "ACCES_LIBRE";
 
 /**
+ * LA MISE À PLAT EN OFFRE GRATUITE (23/11/2026, demandé : « pour les gratuits, deux pièces uniquement… cela ne libère pas une place
+ * même en cas de suppression d'une pièce » ; arbitré : chaque mise à plat RÉUSSIE compte, gardée ou non) : 2 mises à plat offertes par
+ * compte, sur un compteur qui ne redescend jamais (migration 0066). Premium : sans limite. COPIE de LIMITE_MISES_A_PLAT_GRATUITES
+ * (src/lib/premium.ts), vérifiée par test miroir.
+ */
+export const LIMITE_MISES_A_PLAT_GRATUITES = 2;
+export function miseAPlatGratuitePossible(nbUtilisees: number): boolean {
+  return nbUtilisees < LIMITE_MISES_A_PLAT_GRATUITES;
+}
+
+/**
  * PHASE DE TEST (26/09/2026) : ACCES_LIBRE, cf. src/lib/autorisations.ts. Tout
  * compte AUTHENTIFIÉ passe, sans lecture de `premium_access` ; chaque demande
  * déclenche donc un appel payant au modèle. Au lancement : "PREMIUM_REQUIRED"

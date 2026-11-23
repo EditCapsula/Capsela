@@ -20,6 +20,7 @@ import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { computeDefaultCapsule } from "@/lib/capsule";
 import { useCapsela } from "@/lib/store";
+import { peutCreerValise } from "@/lib/premium";
 import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import {
   allegement,
@@ -1028,7 +1029,7 @@ function DestinationsDuVoyage({
 }
 
 export default function ValiseScreen() {
-  const { state, weather, defaultCapsule, vestiairePool, catalogueDisponible, actions } = useCapsela();
+  const { state, weather, defaultCapsule, vestiairePool, catalogueDisponible, actions, etatPremium } = useCapsela();
   const { profile } = useAuth();
   /** La capsule du séjour : bâtie sur la météo du séjour, pas sur celle d'aujourd'hui à la maison (capsuleDuSejour, 22/10/2026). */
   // Les pièces de baignade du profil, réservées à la valise (06/11/2026, piecesDeValise.ts) : jamais dans une capsule, ajoutées à
@@ -1461,6 +1462,8 @@ export default function ValiseScreen() {
 
   /** « Nouvelle valise » : la précédente reste dans « Mes planifications ». */
   const recommencer = () => {
+    // La limite de valises gardées en offre gratuite (23/11/2026, premium.ts) : comme à l'ouverture (ouvrirValise).
+    if (!peutCreerValise(etatPremium, state.valises.length)) return actions.goPremium("valise");
     actions.afficherValise(null);
     setIdEnModification(null);
     setDestination("");

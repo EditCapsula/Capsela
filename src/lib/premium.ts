@@ -13,6 +13,44 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
 
 /** Pièces qu'un dressing gratuit peut contenir — arbitré le 24/09/2026 à 20, porté à 50 le 12/10/2026 (demandé : « élève à 50 le nombre de pièces autorisées, après on bascule sur Premium »). */
 export const LIMITE_DRESSING_GRATUIT = 50;
+/**
+ * Valises qu'un compte gratuit peut GARDER à la fois (23/11/2026, demandé : « limiter à 2 valises par compte avant de basculer au
+ * premium » ; arbitré : les valises gardées — en supprimer une libère une place, comme les pièces du dressing). La limite porte sur la
+ * création d'une nouvelle valise, jamais sur celles déjà gardées.
+ */
+export const LIMITE_VALISES_GRATUITES = 2;
+
+/**
+ * Mises à plat offertes à un compte gratuit (23/11/2026, demandé : « pour les gratuits, deux pièces uniquement… cela ne libère pas une
+ * place même en cas de suppression d'une pièce » ; arbitré : chaque mise à plat RÉUSSIE compte, gardée ou non). Le compteur, qui ne
+ * redescend jamais, est gardé en base (migration 0066, écrit par `detourer-photo`) ; le serveur applique la même limite (copie dans
+ * supabase/functions/_shared/premium.ts, test miroir).
+ */
+export const LIMITE_MISES_A_PLAT_GRATUITES = 2;
+
+/** Peut-on lancer une mise à plat ? Un statut ou un compteur inconnus ne limitent pas ici : le serveur, lui, refuse en cas de doute. */
+export function peutMettreAPlat(etat: EtatPremium, nbUtilisees: number | null): boolean {
+  if (etat !== "gratuit" || nbUtilisees == null) return true;
+  return nbUtilisees < LIMITE_MISES_A_PLAT_GRATUITES;
+}
+
+/** Le compteur de mises à plat du compte (migration 0066), ou null (démo, réseau, table pas encore créée). */
+export async function fetchMisesAPlatUtilisees(userId: string): Promise<number | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await getSupabase().from("mises_a_plat_utilisees").select("nombre").eq("user_id", userId).maybeSingle();
+    if (error) return null;
+    return (data as { nombre?: number } | null)?.nombre ?? 0;
+  } catch {
+    return null;
+  }
+}
+
+/** Peut-on préparer une NOUVELLE valise ? Même règle que peutAjouter : un statut inconnu ne limite pas (le paywall échoue en ouvrant). */
+export function peutCreerValise(etat: EtatPremium, nbValises: number): boolean {
+  if (etat !== "gratuit") return true;
+  return nbValises < LIMITE_VALISES_GRATUITES;
+}
 
 /**
  * Générations de tenues offertes par jour sans abonnement — arbitré le

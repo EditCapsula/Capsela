@@ -319,7 +319,7 @@ export function estPhotoDetouree(url: string | null | undefined): boolean {
  * l'URL signée de la photo détourée, ou null — service non branché, plafond du jour atteint, photo refusée, réseau :
  * jamais une erreur pour l'appelant, qui garde simplement la photo d'origine. Même principe qu'analyzeDressingPhoto.
  */
-export type CodeMiseAPlat = "quota_atteint" | "non_configure" | "credits_epuises" | "photo_refusee" | "photo_invalide" | "indisponible";
+export type CodeMiseAPlat = "quota_atteint" | "non_configure" | "credits_epuises" | "photo_refusee" | "photo_invalide" | "indisponible" | "premium_requis";
 
 /**
  * Comme detourerPhoto, mais dit POURQUOI quand ça échoue (10/10/2026, « pourquoi l'application ne veut plus mettre à plat ») : le code
@@ -345,7 +345,7 @@ export async function detourerPhotoAvecCause(photoUrl: string, mode?: "mise_a_pl
         /* corps illisible : « indisponible » */
       }
     }
-    const connus: CodeMiseAPlat[] = ["quota_atteint", "non_configure", "credits_epuises", "photo_refusee", "photo_invalide"];
+    const connus: CodeMiseAPlat[] = ["quota_atteint", "non_configure", "credits_epuises", "photo_refusee", "photo_invalide", "premium_requis"];
     return { code: connus.includes(code as CodeMiseAPlat) ? (code as CodeMiseAPlat) : "indisponible" };
   } catch {
     return { code: "indisponible" };
