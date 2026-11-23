@@ -34,18 +34,19 @@ export default function SaisieOccasion({
 }: {
   choisies: readonly OccasionKey[];
   gender: "femme" | "homme" | null | undefined;
-  onComprise: (c: OccasionComprise) => void;
+  /** `texte` : ce que la personne a écrit (ou l'exemple touché), repris au-dessus de la tenue composée (23/11/2026). */
+  onComprise: (c: OccasionComprise, texte: string) => void;
 }) {
   const [texte, setTexte] = useState("");
   const [etat, setEtat] = useState<Etat>({ nom: "vide" });
   // La saisie lue en dernier : une réponse IA arrivée après une nouvelle frappe ne s'applique pas.
   const derniere = useRef("");
 
-  const choisir = (c: OccasionComprise) => {
+  const choisir = (c: OccasionComprise, lu: string = texte.trim()) => {
     // « Glamour » n'est jamais proposé à un profil homme (humeur.ts) : la nuance n'y est pas reprise.
     const propre = gender === "homme" && c.humeur === "feminin" ? { ...c, humeur: undefined } : c;
     setEtat({ nom: "compris", c: propre });
-    onComprise(propre);
+    onComprise(propre, lu);
   };
 
   const lire = async (saisie = texte.trim()) => {
@@ -53,11 +54,11 @@ export default function SaisieOccasion({
     derniere.current = saisie;
     const locale = lireOccasionLocale(saisie);
     if (locale) {
-      choisir(locale);
+      choisir(locale, saisie);
       // La nuance par l'IA, seulement si le texte en dit plus que son mot-clé et qu'aucune nuance n'a été lue.
       if (!locale.humeur && normaliser(saisie).split(" ").length >= 3) {
         const lue = await lireOccasionDecrite(saisie);
-        if (derniere.current === saisie && lue.humeur && (!lue.occasion || lue.occasion === locale.occasion)) choisir({ ...locale, humeur: lue.humeur });
+        if (derniere.current === saisie && lue.humeur && (!lue.occasion || lue.occasion === locale.occasion)) choisir({ ...locale, humeur: lue.humeur }, saisie);
       }
       return;
     }
@@ -70,7 +71,7 @@ export default function SaisieOccasion({
         occasion: lue.occasion,
         ...(nuances.humeur || lue.humeur ? { humeur: nuances.humeur ?? lue.humeur ?? undefined } : {}),
         ...(nuances.typeLieu && lue.occasion === "soiree" ? { typeLieu: nuances.typeLieu } : {}),
-      });
+      }, saisie);
     }
     const pistes = [...lue.suggestions, ...pistesLocales(saisie)].filter((o, i, t) => t.indexOf(o) === i).slice(0, 3);
     setEtat(pistes.length ? { nom: "pistes", pistes } : { nom: "inconnu" });
@@ -81,9 +82,10 @@ export default function SaisieOccasion({
     if (!e) return;
     setTexte(e.libelle);
     derniere.current = e.libelle;
-    const { libelle: _l, ...c } = e;
+    const { libelle: _l, titre: _t, ...c } = e;
     void _l;
-    choisir(c);
+    void _t;
+    choisir(c, e.libelle);
   };
 
   // La lecture n'est plus dite quand une autre tuile a été choisie depuis : elle ne décrirait plus l'écran.

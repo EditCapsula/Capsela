@@ -58,6 +58,12 @@ describe("plus intelligente (22/11/2026) : nuances, exemples", () => {
     expect(o("anniversaire décontracté")).toEqual({ occasion: "soiree", humeur: "decontracte" });
     expect(o("Mariage")).toEqual({ occasion: "evenement_perso" });
   });
+  it("le cadre donne l'allure (23/11/2026) ; l'allure dite l'emporte", () => {
+    expect(o("Mariage à la campagne")).toEqual({ occasion: "evenement_perso", humeur: "decontracte" });
+    expect(o("Baptême au jardin")).toEqual({ occasion: "evenement_perso", humeur: "decontracte" });
+    expect(o("anniversaire à la plage")).toEqual({ occasion: "soiree", humeur: "leger" });
+    expect(o("Mariage chic à la campagne")).toEqual({ occasion: "evenement_perso", humeur: "elegant" });
+  });
   it("le rooftop vaut pour la Soirée seulement", () => {
     expect(o("soirée sur un rooftop")).toEqual({ occasion: "soiree", typeLieu: "Bar / Rooftop" });
   });
@@ -77,5 +83,16 @@ describe("plus intelligente (22/11/2026) : nuances, exemples", () => {
     };
     const ecarts = EXEMPLES_OCCASION.filter((e) => !lu(e.libelle, e.occasion)).map((e) => e.libelle);
     expect(ecarts).toEqual([]);
+  });
+});
+
+describe("titrePourSaisie (23/11/2026)", () => {
+  it("un exemple prend son article ; un texte libre reste tel quel", async () => {
+    const { titrePourSaisie, EXEMPLES_OCCASION } = await import("../occasionSaisie");
+    expect(titrePourSaisie("Entretien d'embauche")).toBe("ton entretien d'embauche");
+    expect(titrePourSaisie("afterwork")).toBe("l'afterwork");
+    expect(titrePourSaisie("Mariage")).toBe("le mariage");
+    expect(titrePourSaisie("Mariage à la campagne.")).toBe("mariage à la campagne");
+    for (const e of EXEMPLES_OCCASION) expect(e.titre.length).toBeGreaterThan(e.libelle.length);
   });
 });

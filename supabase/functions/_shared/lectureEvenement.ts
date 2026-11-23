@@ -38,7 +38,7 @@ export function invite(nom: string): string {
     'Réponds en JSON : {"occasion": "<une des clés>", "suggestions": ["<clé>", ...], "humeur": "<clé d\'humeur>"}.',
     '"occasion" : la clé si le nom permet de choisir avec une confiance raisonnable, sinon null.',
     '"suggestions" : de 1 à 3 clés de la liste, de la plus probable à la moins probable, MÊME si tu as répondu null — ce sont des pistes que la personne choisira elle-même (ex. « signature chez le notaire » : ["travail_formel", "quotidien"]). Liste vide seulement si le nom ne décrit aucune occasion.',
-    '"humeur" : seulement si le nom DIT explicitement le niveau d\'habillement ou l\'allure voulue, la clé parmi : elegant (chic, habillé, dress code), feminin (glamour), decontracte (décontracté, casual, simple), confortable (confort, beaucoup de marche), leger (chaleur, tenue légère) ; sinon null. Ne la déduis jamais de l\'occasion seule.',
+    '"humeur" : seulement si le nom dit le niveau d\'habillement ou l\'allure voulue, ou un CADRE qui la donne, la clé parmi : elegant (chic, habillé, dress code, gala), feminin (glamour), decontracte (décontracté, casual, simple ; cadre champêtre, campagne, jardin, guinguette), confortable (confort, beaucoup de marche), leger (chaleur, tenue légère ; plage, bord de mer) ; sinon null. L\'allure dite l\'emporte sur le cadre (« mariage chic à la campagne » : elegant). Ne la déduis jamais de l\'occasion seule (« mariage » : null).',
     "N'invente rien d'autre : pas de tenue, pas de vêtement, pas de commentaire.",
   ].join("\n");
 }
