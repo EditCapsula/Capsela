@@ -6,8 +6,9 @@ import { achatsIntegresIci, acheter, chargerFormules, restaurer, type FormuleSto
 import { useAuth } from "@/lib/auth";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
-import { GENERATIONS_GRATUITES_PAR_JOUR, LIMITE_DRESSING_GRATUIT, LIMITE_VALISES_GRATUITES } from "@/lib/premium";
+import { GENERATIONS_GRATUITES_PAR_JOUR, LIMITE_DRESSING_GRATUIT, LIMITE_MISES_A_PLAT_GRATUITES, LIMITE_VALISES_GRATUITES } from "@/lib/premium";
 import { TICKET_DE_CAISSE_VISIBLE } from "@/lib/autorisations";
+import { MISE_A_PLAT_DISPONIBLE } from "@/lib/miseAPlat";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 
@@ -104,6 +105,17 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
     titre: "Valises sans limite",
     desc: `Garde toutes tes valises. Sans abonnement, ${LIMITE_VALISES_GRATUITES} à la fois.`,
   },
+  // La mise à plat sans limite (23/11/2026 ; 2 pièces en offre gratuite) : promise seulement quand elle existe dans l'app
+  // (MISE_A_PLAT_DISPONIBLE, plan Photoroom Plus).
+  ...(MISE_A_PLAT_DISPONIBLE
+    ? [
+        {
+          glyphe: G_CINTRE,
+          titre: "Mise à plat sans limite",
+          desc: `Transforme la photo d'une pièce portée en visuel à plat. Sans abonnement, ${LIMITE_MISES_A_PLAT_GRATUITES} pièces.`,
+        },
+      ]
+    : []),
   // Disponible (recette du 26/09/2026) : l'Avis de styliste fonctionne déjà,
   // il n'est donc jamais « bientôt ». Même promesse que la carte de l'accueil.
   {
@@ -213,6 +225,21 @@ function PremiumSansAchat() {
             Rien ne s'affiche quand l'origine est inconnue — un encart qui
             annoncerait « ce que tu voulais faire » sans savoir quoi serait
             une phrase pour rien. */}
+        {/* Venue de « Mettre à plat » (23/11/2026, miseAPlat.ts) : la même forme que la valise. */}
+        {state.premiumOrigine === "mise_a_plat" && (
+          <div className="flex items-start gap-[11px] mt-[14px] bg-warm-bg rounded-tuile px-[14px] py-[13px]">
+            <span className="flex-shrink-0 text-terracotta-deep mt-[1px]">
+              <Glyphe>{G_CINTRE}</Glyphe>
+            </span>
+            <span className="min-w-0">
+              <span className="block t-label text-terracotta">Ce que tu voulais faire</span>
+              <span className="block text-[13px] text-ink leading-[1.4] mt-[3px]">Mettre ta pièce à plat</span>
+              <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
+                Sans abonnement, {LIMITE_MISES_A_PLAT_GRATUITES} pièces mises à plat dans ton dressing.
+              </span>
+            </span>
+          </div>
+        )}
         {state.premiumOrigine === "valise" && (
           <div className="flex items-start gap-[11px] mt-[14px] bg-warm-bg rounded-tuile px-[14px] py-[13px]">
             <span className="flex-shrink-0 text-terracotta-deep mt-[1px]">

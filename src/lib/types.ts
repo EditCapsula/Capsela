@@ -359,7 +359,7 @@ export interface AppState {
    * quelqu'un qui arrive là après avoir touché « Préparer une valise » n'a pas
    * la même question en tête que quelqu'un qui explore l'offre.
    */
-  premiumOrigine: "valise" | null;
+  premiumOrigine: "valise" | "mise_a_plat" | null;
   /** Clé de l'étape (ex. "taille"), pas un index — le nombre d'étapes n'est plus fixe (Tâche 4, arbitrages 20/08/2026). */
   profileSetupStep: string;
   profileSetupFromEdit: boolean;

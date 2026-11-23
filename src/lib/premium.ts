@@ -20,6 +20,19 @@ export const LIMITE_DRESSING_GRATUIT = 50;
  */
 export const LIMITE_VALISES_GRATUITES = 2;
 
+/**
+ * Pièces qu'un compte gratuit peut garder MISES À PLAT dans son dressing (23/11/2026, demandé : « deux pièces uniquement sur leur
+ * dressing ; sur d'autres pièces, redirigés vers le premium »). Une pièce supprimée, ou rendue à sa photo d'origine, libère une place.
+ * Le serveur (`detourer-photo`) applique la même limite (copie dans supabase/functions/_shared/premium.ts, test miroir).
+ */
+export const LIMITE_MISES_A_PLAT_GRATUITES = 2;
+
+/** Peut-on mettre une pièce de plus à plat ? Un statut inconnu ne limite pas ici : le serveur, lui, refuse en cas de doute. */
+export function peutMettreAPlat(etat: EtatPremium, nbPiecesAPlat: number): boolean {
+  if (etat !== "gratuit") return true;
+  return nbPiecesAPlat < LIMITE_MISES_A_PLAT_GRATUITES;
+}
+
 /** Peut-on préparer une NOUVELLE valise ? Même règle que peutAjouter : un statut inconnu ne limite pas (le paywall échoue en ouvrant). */
 export function peutCreerValise(etat: EtatPremium, nbValises: number): boolean {
   if (etat !== "gratuit") return true;

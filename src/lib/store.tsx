@@ -359,7 +359,7 @@ export interface Actions {
   openLegalDoc: (slug: string) => void;
   closeLegalDoc: () => void;
   /** Ouvre la page Premium en mémorisant d'où l'on vient. */
-  goPremium: (origine?: "valise") => void;
+  goPremium: (origine?: "valise" | "mise_a_plat") => void;
   /**
    * Ouvre une valise (id) ou une nouvelle (null), selon la règle d'accès
    * PREPARER_VALISE : sous PREMIUM_REQUIRED, un refus mène à la page Premium.

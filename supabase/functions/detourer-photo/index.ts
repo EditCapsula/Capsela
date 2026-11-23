@@ -25,6 +25,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
+import { assertPremium, miseAPlatGratuitePossible, type LecteurPremium } from "../_shared/premium.ts";
 import {
   cheminDansLeBucket,
   cheminDetoure,
@@ -108,6 +109,23 @@ Deno.serve(async (req) => {
   // Une photo déjà détourée n'a rien à retirer : refusée AVANT le quota et l'appel payant. La mise à plat, elle, accepte une photo
   // détourée (le bouton « Mettre à plat » d'une pièce déjà importée) — mais pas une photo déjà mise à plat.
   if (miseAPlat ? estPhotoMiseAPlat(chemin) : estPhotoDetouree(chemin)) return echec("photo_invalide");
+
+  // LA MISE À PLAT : PREMIUM, OU 2 PIÈCES EN OFFRE GRATUITE (23/11/2026, _shared/premium.ts) — vérifiée avant le quota et l'appel
+  // payant ; échoue en fermant (un statut ou un compte illisibles refusent). Le détourage simple n'est pas concerné.
+  if (utilisatrice && miseAPlat) {
+    const verdict = await assertPremium(admin as unknown as LecteurPremium, utilisatrice);
+    if (!verdict.ok) {
+      if (verdict.statut === 503) return reponse({ ok: false, code: "indisponible" }, 503);
+      // Les pièces déjà mises à plat et gardées dans le dressing (le nom du fichier le dit, cf. estPhotoMiseAPlat).
+      const { count, error } = await admin
+        .from("dressing_items")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", utilisatrice.id)
+        .like("photo_url", "%.detouree.plat.%");
+      if (error) return reponse({ ok: false, code: "indisponible" }, 503);
+      if (!miseAPlatGratuitePossible(count ?? 0)) return reponse({ ok: false, code: "premium_requis" }, 403);
+    }
+  }
 
   if (utilisatrice) {
     // Une mise à plat est un appel génératif, plus cher : son plafond du jour est à part et plus bas.

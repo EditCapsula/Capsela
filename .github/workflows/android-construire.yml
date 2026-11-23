@@ -51,6 +51,9 @@ jobs:
           # même nom (04/11/2026 : les exports 1.1 et 1.2 sont partis sans, l'identifiant n'étant pas rangé parmi les variables). Absent :
           # bloc de test de Google, publicités de test non rémunérées — un export pour Google Play est alors refusé, plus bas.
           NEXT_PUBLIC_ADMOB_RECOMPENSE_ID: ${{ vars.ADMOB_RECOMPENSE_ID || secrets.ADMOB_RECOMPENSE_ID }}
+          # La mise à plat (23/11/2026, src/lib/miseAPlat.ts) : masquée tant que la variable du dépôt MISE_A_PLAT n'est pas « 1 » — à poser
+          # avec le plan Photoroom Plus, en même temps que NEXT_PUBLIC_MISE_A_PLAT=1 sur Vercel. Réservée à Premium.
+          NEXT_PUBLIC_MISE_A_PLAT: ${{ vars.MISE_A_PLAT }}
           CAPSELA_ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID || secrets.ADMOB_APP_ID }}
           # « Continuer avec Apple » (05/11/2026, src/components/ConnexionSociale.tsx) : « 1 » une fois Apple et Supabase réglés
           # (docs/connexion-apple.md). Absente : le bouton n'est pas affiché.

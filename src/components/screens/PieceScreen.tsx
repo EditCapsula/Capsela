@@ -1,7 +1,7 @@
 "use client";
 
 import { lienAffiliationValide } from "@/lib/remplacementPiece";
-import { MISE_A_PLAT_DISPONIBLE } from "@/lib/miseAPlat";
+import { MISE_A_PLAT_DISPONIBLE, ouvrirSiPermis } from "@/lib/miseAPlat";
 import { useEffect, useState } from "react";
 import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
 import { bestStyleFor } from "@/lib/capsule";
@@ -31,6 +31,8 @@ export const MESSAGE_ECHEC_MISE_A_PLAT: Record<CodeMiseAPlat, string> = {
   photo_refusee: "Le service n'a pas pu traiter cette photo.",
   photo_invalide: "Cette photo ne peut pas être mise à plat.",
   indisponible: "La mise à plat n'a pas abouti : le service n'a pas répondu.",
+  // Le serveur refuse un compte sans Premium (23/11/2026) ; l'écran ouvre Premium avant, ce message ne sert qu'en dernier recours.
+  premium_requis: "Tu as déjà mis 2 pièces à plat : au-delà, la mise à plat fait partie de Capsela Premium.",
 };
 
 const LENGTH_SUBTYPES = new Set(["Mini", "Midi", "Longue", "Courte"]);
@@ -84,7 +86,7 @@ function BulbIcon() {
 
 /** `onFermer` : la fiche posée dans une feuille. Depuis le 13/11/2026, la fiche complète est une page (openItem) : plus aucun appelant. */
 export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}) {
-  const { state, actions, vestiairePool } = useCapsela();
+  const { state, actions, vestiairePool, etatPremium } = useCapsela();
   const revenir = onFermer ?? (() => actions.go(state.pieceReturn));
   /*
    * DANS UNE FEUILLE (17/10/2026, signalé en capture : logo en double et grand vide en bas) : ni logo, ni barre du bas sous la fiche.
@@ -325,7 +327,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
               {peutMettreAPlat && (
                 <button
                   type="button"
-                  onClick={() => setPlat({ etape: "repos" })}
+                  onClick={() => void ouvrirSiPermis(actions, etatPremium, state.items.filter((i) => estPhotoMiseAPlat(i.photoUrl)).length, () => setPlat({ etape: "repos" }))}
                   className="absolute left-[18px] bottom-[40px] z-10 h-[40px] px-[14px] rounded-full inline-flex items-center gap-[7px] text-[12.5px] font-medium text-ink cursor-pointer"
                   style={{ background: "rgba(251,248,243,.94)", border: "1px solid var(--color-border)", boxShadow: "0 2px 8px rgba(29,26,22,.12)" }}
                 >
