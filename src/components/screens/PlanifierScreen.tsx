@@ -244,11 +244,13 @@ function Surtitre({ children }: { children: React.ReactNode }) {
 }
 
 /** Titre éditorial en deux temps — la seconde moitié en italique terracotta. */
-function TitreEtape({ a, b }: { a: string; b: string }) {
+function TitreEtape({ a, b, apres }: { a: string; b: string; apres?: string }) {
   return (
     // Sous « Mon agenda. » du bandeau (13/11/2026) : la question d'une étape est un titre de section, plus un second titre de page.
+    // `apres` (23/11/2026) : la suite en encre, quand le temps fort est au milieu (« Ta tenue pour <événement> est prête »).
     <div className="t-titre-section text-ink mt-[6px]" style={{ textWrap: "balance" }}>
       {a} <span className="italic text-terracotta">{b}</span>
+      {apres ? ` ${apres}` : null}
     </div>
   );
 }
@@ -2073,12 +2075,12 @@ export default function PlanifierScreen() {
                 l'app (accueil, Valise). Le 10 px d'ici était un troisième
                 réglage pour le même objet. */}
             <Surtitre>{sansTenueTextes ? "À préparer" : "Tenue planifiée"}</Surtitre>
-            {/* « Ta tenue pour mariage à la campagne est prête » (23/11/2026, demandé) : ce qui a été écrit dans la barre entre dans le titre,
+            {/* « Ta tenue pour mariage à la campagne est prête » (23/11/2026, demandé ; l'événement en terracotta, « est prête » en encre) : ce qui a été écrit dans la barre entre dans le titre,
                 tant que l'occasion qu'il a donnée reste choisie (saisieOccasion). */}
             {sansTenueTextes ? (
               <TitreEtape a={sansTenueTextes.titreA} b={sansTenueTextes.titreB} />
             ) : saisieAffichee ? (
-              <TitreEtape a={`Ta tenue pour ${saisieAffichee}`} b="est prête" />
+              <TitreEtape a="Ta tenue pour" b={saisieAffichee} apres="est prête" />
             ) : (
               <TitreEtape a="Ta tenue est" b="prête" />
             )}
