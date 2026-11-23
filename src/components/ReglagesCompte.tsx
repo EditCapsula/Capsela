@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { Capacitor } from "@capacitor/core";
+import { ouvrirStore } from "@/lib/miseAJour";
 import BottomSheet from "@/components/BottomSheet";
 import Rangee from "@/components/Rangee";
 import { Toggle } from "@/components/screens/PreferencesScreen";
@@ -11,6 +13,9 @@ import { buildDataExport, downloadJson, exportFileName } from "@/lib/dataExport"
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+
+/** La page des abonnements du compte Apple (ouvre les réglages d'abonnement sur iPhone). */
+const URL_ABONNEMENTS_APPLE = "https://apps.apple.com/account/subscriptions";
 
 /*
  * MON COMPTE DANS RÉGLAGES CAPSELA (05/11/2026, maquette « Réglages Capsela »). L'ancien écran « Gérer mon compte »
@@ -202,6 +207,17 @@ export function VueDonnees() {
           Cette action est <span className="text-rust">définitive et irréversible</span>. Ton dressing, tes tenues enregistrées, tes
           looks et les informations de ton profil seront supprimés — il ne sera plus possible de les récupérer.
         </div>
+        {/* L'ABONNEMENT APPLE N'EST PAS RÉSILIÉ PAR LA SUPPRESSION (23/11/2026, avant la mise en vente iOS) : seule la personne peut le
+            résilier, dans les réglages de son compte Apple — sinon il continue d'être facturé. Dans l'app iOS seulement, là où il s'achète. */}
+        {Capacitor.getPlatform() === "ios" && (
+          <div className="mt-[14px] rounded-bloc bg-warm-bg px-4 py-3 text-[12.5px] text-ink leading-[1.5]" style={{ border: "1px solid var(--color-warm-border)" }}>
+            Un abonnement Premium acheté sur l&apos;App Store <span className="font-semibold">n&apos;est pas résilié</span> par la suppression du
+            compte : résilie-le d&apos;abord dans les réglages de ton compte Apple, sinon il continuera d&apos;être facturé.
+            <button type="button" onClick={() => void ouvrirStore(URL_ABONNEMENTS_APPLE)} className="block mt-2 text-terracotta font-semibold underline cursor-pointer">
+              Gérer mes abonnements Apple
+            </button>
+          </div>
+        )}
         {error && <div className="mt-[14px] text-[12px] text-rust leading-[1.5]">{error}</div>}
         <Button variante="destructif" className="mt-[22px]" onClick={handleDeleteAccount} disabled={deleting}>
           {deleting ? "Suppression en cours…" : "Supprimer définitivement"}

@@ -18,6 +18,7 @@
 // 1. Fichiers du bucket dressing-photos sous le préfixe {user_id}/ — un
 //    retrait de ligne SQL ne supprime jamais les objets Storage associés,
 //    ils resteraient orphelins sinon (droit à l'effacement RGPD).
+// 1 ter. Le client chez RevenueCat (abonnement App Store), cf. plus bas.
 // 2. auth.admin.deleteUser(user_id) — supprime la ligne auth.users, ce qui
 //    cascade automatiquement (on delete cascade, déjà en place sur toutes
 //    les migrations concernées) vers profiles, dressing_items,
@@ -102,7 +103,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. Compte Auth — cascade profiles/dressing_items/outfit_history/saved_looks/avis_styliste.
+    // 1 ter. Le client chez RevenueCat (23/11/2026, avant la mise en vente iOS) : l'abonnement acheté dans l'App Store y est suivi
+    // sous l'identifiant du compte (app_user_id). Sans cette étape, l'identifiant et l'historique d'achat restaient chez RevenueCat
+    // après la suppression du compte (droit à l'effacement). Clé SECRÈTE RevenueCat (v1, « sk_… ») dans le secret
+    // REVENUECAT_SECRET_KEY ; absente, l'étape est sautée et le journal le dit. Un échec est journalisé sans bloquer la
+    // suppression du compte : le reste des données ne doit pas survivre à un service tiers indisponible. Cela ne résilie PAS
+    // l'abonnement chez Apple (seule la personne le peut) : l'écran de suppression le dit.
+    const cleRevenueCat = Deno.env.get("REVENUECAT_SECRET_KEY");
+    if (!cleRevenueCat) {
+      console.error(JSON.stringify({ user_id: userId, step: "revenuecat", error: "REVENUECAT_SECRET_KEY absente : client RevenueCat non supprimé" }));
+    } else {
+      try {
+        const rc = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${cleRevenueCat}` },
+        });
+        // 404 : aucun achat, aucun client chez RevenueCat — rien à effacer.
+        if (!rc.ok && rc.status !== 404) console.error(JSON.stringify({ user_id: userId, step: "revenuecat", error: `HTTP ${rc.status}` }));
+      } catch (e) {
+        console.error(JSON.stringify({ user_id: userId, step: "revenuecat", error: e instanceof Error ? e.message : "inconnue" }));
+      }
+    }
+
+    // 2. Compte Auth — cascade profiles/dressing_items/outfit_history/saved_looks/avis_styliste/premium_access.
     const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (delErr) throw delErr;
 
