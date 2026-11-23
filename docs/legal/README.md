@@ -114,6 +114,12 @@ l'appareil). Ce qui avait changé depuis le 30/09, et ce qui a été fait :
   (`capsela.valise.check.<id>`) restaient sur l'appareil. Effacées (`donneesLocales.ts`, testé).
 
 **Reste à décider ou à vérifier (avant le lancement)**
+- **Abonnement iOS (RevenueCat), relevé le 23/11/2026** : la Politique de confidentialité dit désormais la vente par l'App Store
+  et RevenueCat. Deux écarts dans le code, à traiter avant la mise en vente : (1) la suppression du compte (`delete-account`)
+  n'efface pas le client chez RevenueCat (il faut l'appel « delete subscriber » de son API, avec une clé secrète côté serveur) ;
+  (2) elle ne prévient pas qu'un abonnement Apple en cours continue d'être facturé tant qu'il n'est pas résilié dans les réglages
+  Apple. Les CGV (version A, achat intégré) sont à finaliser : article 4 version B à retirer, CGV à ajouter aux « Informations
+  légales » de l'app.
 - **Photoroom** : contrat de traitement des données (annoncé seulement en offre Enterprise), hébergement sans résidence
   européenne annoncée, durée réelle de conservation des images (cf. `docs/detourage.md`).
 - **Open-Meteo** : gratuit pour un usage NON commercial seulement. Une app avec abonnement payant relève du plan commercial :
