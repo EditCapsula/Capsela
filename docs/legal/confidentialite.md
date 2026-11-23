@@ -138,14 +138,14 @@ gardées sur ton appareil pour te les reproposer.
 
 ### Ton abonnement Premium
 
-Sur iPhone, l'abonnement Premium s'achète dans l'application, par l'App
-Store. **Apple encaisse le paiement : nous ne recevons jamais tes données
-bancaires.** Pour savoir si ton abonnement est actif et le suivre
+Dans l'application, l'abonnement Premium s'achète par l'App Store (iPhone)
+ou par Google Play (Android). **Apple ou Google encaisse le paiement : nous ne
+recevons jamais tes données bancaires.** Pour savoir si ton abonnement est actif et le suivre
 (renouvellement, résiliation, remboursement), nous recevons, par notre
 prestataire RevenueCat :
 
 - l'identifiant de ton compte Capsela, qui relie l'achat à ton compte ;
-- les informations d'achat transmises par Apple : la formule (mensuelle ou
+- les informations d'achat transmises par Apple ou Google : la formule (mensuelle ou
   annuelle), les dates d'achat et d'échéance, le prix et la devise, le pays
   de la boutique, l'état de l'abonnement ;
 - des données techniques de l'appareil nécessaires à l'achat (modèle, version
@@ -153,10 +153,10 @@ prestataire RevenueCat :
   collectées par le SDK RevenueCat.]
 
 RevenueCat ne reçoit ni ton nom, ni ton e-mail, ni tes photos, ni ton
-dressing. Apple traite le paiement en tant que responsable de traitement
-distinct, selon sa propre politique de confidentialité.
+dressing. Apple et Google traitent le paiement en tant que responsables de
+traitement distincts, selon leur propre politique de confidentialité.
 
-Sur Android et sur le site, l'abonnement n'est pas encore en vente.
+Sur le site, l'abonnement n'est pas encore en vente.
 
 ## 3. Pourquoi, et sur quelle base
 
@@ -168,7 +168,7 @@ Sur Android et sur le site, l'abonnement n'est pas encore en vente.
 | Analyser une photo que tu envoies (préremplissage d'une pièce, repérage des pièces d'une tenue, L'œil de Capsela) | Exécution du contrat, à ta demande |
 | Retirer le fond des photos de tes pièces (détourage) | Exécution du contrat |
 | Gérer ton statut Premium et les limites d'usage (nombre de pièces, « Autre tenue ») | Exécution du contrat |
-| Vendre l'abonnement Premium par l'App Store et suivre son état (achat, renouvellement, résiliation) | Exécution du contrat (les Conditions générales de vente) |
+| Vendre l'abonnement Premium par l'App Store ou Google Play et suivre son état (achat, renouvellement, résiliation) | Exécution du contrat (les Conditions générales de vente) |
 | Conserver la trace de tes achats | Obligation légale (comptabilité) |
 | Afficher la vidéo que tu choisis de regarder et t'accorder la tenue de plus (Android) | Exécution du contrat, à ta demande |
 | Personnaliser cette publicité (Android) | Ton consentement, que tu peux retirer à tout moment |
@@ -197,7 +197,7 @@ compte et selon nos instructions (sous-traitants au sens du RGPD).
 | Google Ireland Ltd | Connexion avec Google (si tu la choisis) ; mesure d'audience (si tu l'acceptes) | Données de connexion ; données d'usage | Irlande, avec transferts possibles vers les États-Unis |
 | Google Ireland Ltd (AdMob) [À VÉRIFIER — Google agit en responsable de traitement distinct pour la publicité personnalisée] | Vidéos publicitaires que tu choisis de regarder (application Android) | Identifiant publicitaire et données techniques de l'appareil, adresse IP, interactions avec la publicité ; identifiant de ton compte Capsela, pour confirmer la vidéo vue — jamais ton nom ni ton e-mail | Irlande, avec transferts possibles vers les États-Unis |
 | Functional Software Inc. (Sentry) | Rapports d'erreur | Données techniques de l'erreur, sans identifiant | États-Unis |
-| RevenueCat, Inc. [À VÉRIFIER — entité contractante et contrat de traitement des données] | Gestion de l'abonnement Premium acheté dans l'App Store (vérification des achats, renouvellements, restauration) | Identifiant de ton compte Capsela, informations d'achat transmises par Apple, données techniques de l'appareil — jamais ton nom ni ton e-mail | États-Unis |
+| RevenueCat, Inc. [À VÉRIFIER — entité contractante et contrat de traitement des données] | Gestion de l'abonnement Premium acheté dans l'App Store ou Google Play (vérification des achats, renouvellements, restauration) | Identifiant de ton compte Capsela, informations d'achat transmises par Apple ou Google, données techniques de l'appareil — jamais ton nom ni ton e-mail | États-Unis |
 
 Les analyses de photos, les lectures de noms d'activités et les idées d'activités sont demandées sans conservation par OpenAI pour
 l'amélioration de ses modèles (paramètre `store: false`). [À VÉRIFIER —
@@ -244,8 +244,8 @@ de la Commission. [À VÉRIFIER — mécanisme retenu pour chaque prestataire.]
   existe ; la trace des achats, le temps que la loi l'impose. [À VÉRIFIER —
   durée de conservation des justificatifs, et effacement chez RevenueCat à la
   suppression du compte.] Supprimer ton compte ne résilie pas un abonnement
-  en cours chez Apple : résilie-le d'abord dans les réglages de ton compte
-  Apple (Abonnements).
+  en cours chez Apple ou Google : résilie-le d'abord dans les réglages de ton
+  compte Apple (Abonnements) ou dans Google Play (Abonnements).
 - **Session de connexion** : jusqu'à 400 jours sur ton appareil, ou jusqu'à ta
   déconnexion.
 

@@ -54,6 +54,9 @@ jobs:
           # La mise à plat (23/11/2026, src/lib/miseAPlat.ts) : masquée tant que la variable du dépôt MISE_A_PLAT n'est pas « 1 » — à poser
           # avec le plan Photoroom Plus, en même temps que NEXT_PUBLIC_MISE_A_PLAT=1 sur Vercel. Réservée à Premium.
           NEXT_PUBLIC_MISE_A_PLAT: ${{ vars.MISE_A_PLAT }}
+          # Les abonnements Google Play (23/11/2026, src/lib/achats.ts) : la clé PUBLIQUE Android de RevenueCat (« goog_… »), variable du
+          # dépôt REVENUECAT_ANDROID_KEY. Absente : l'écran Premium Android reste celui d'avant, sans achat.
+          NEXT_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
           CAPSELA_ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID || secrets.ADMOB_APP_ID }}
           # « Continuer avec Apple » (05/11/2026, src/components/ConnexionSociale.tsx) : « 1 » une fois Apple et Supabase réglés
           # (docs/connexion-apple.md). Absente : le bouton n'est pas affiché.

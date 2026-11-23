@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
-import { achatsIntegresIci, acheter, chargerFormules, restaurer, type FormuleStore } from "@/lib/achats";
+import { achatsIntegresIci, acheter, chargerFormules, magasinIci, restaurer, type FormuleStore } from "@/lib/achats";
 import { useAuth } from "@/lib/auth";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
@@ -428,8 +428,31 @@ function ListeAvantages() {
  * elles ne le sont pas du tout, l'écran le dit et propose de réessayer. Le droit s'applique dès la confirmation d'Apple
  * (premiumConfirmeParLeStore) ; la fonction revenuecat-webhook l'écrit dans premium_access.
  */
-const TEXTE_RENOUVELLEMENT =
-  "Abonnement à renouvellement automatique. Le paiement est débité sur ton compte Apple à la confirmation de l'achat. L'abonnement se renouvelle automatiquement, au même prix et pour la même durée, sauf s'il est annulé au moins 24 heures avant la fin de la période en cours. Tu peux le gérer ou l'annuler à tout moment dans les réglages de ton compte Apple.";
+/*
+ * LES MOTS DU STORE (23/11/2026, Google Play ajouté) : le même écran pour l'App Store et Google Play ; seuls changent le nom du store et
+ * l'endroit où l'on gère l'abonnement.
+ */
+const MOTS_DU_STORE = {
+  apple: {
+    renouvellement:
+      "Abonnement à renouvellement automatique. Le paiement est débité sur ton compte Apple à la confirmation de l'achat. L'abonnement se renouvelle automatiquement, au même prix et pour la même durée, sauf s'il est annulé au moins 24 heures avant la fin de la période en cours. Tu peux le gérer ou l'annuler à tout moment dans les réglages de ton compte Apple.",
+    nonConfirme: "L'achat n'a pas été confirmé par Apple. Rien ne t'a été facturé.",
+    aucunAbonnement: "Aucun abonnement actif n'a été trouvé sur ce compte Apple.",
+    injoignable: "L'App Store ne répond pas pour le moment. Réessaie dans un instant.",
+    actif: "Ton abonnement Premium est actif. Tu peux le gérer dans les réglages de ton compte Apple.",
+    ouverture: "Ouverture de l'App Store…",
+  },
+  google: {
+    renouvellement:
+      "Abonnement à renouvellement automatique. Le paiement est débité sur ton compte Google Play à la confirmation de l'achat. L'abonnement se renouvelle automatiquement, au même prix et pour la même durée, sauf s'il est annulé avant la fin de la période en cours. Tu peux le gérer ou l'annuler à tout moment dans Google Play, rubrique Abonnements.",
+    nonConfirme: "L'achat n'a pas été confirmé par Google Play. Rien ne t'a été facturé.",
+    aucunAbonnement: "Aucun abonnement actif n'a été trouvé sur ce compte Google.",
+    injoignable: "Google Play ne répond pas pour le moment. Réessaie dans un instant.",
+    actif: "Ton abonnement Premium est actif. Tu peux le gérer dans Google Play, rubrique Abonnements.",
+    ouverture: "Ouverture de Google Play…",
+  },
+} as const;
+const motsDuStore = () => MOTS_DU_STORE[magasinIci() ?? "apple"];
 
 function PremiumStore() {
   const { state, actions, etatPremium } = useCapsela();
@@ -463,9 +486,9 @@ function PremiumStore() {
       actions.premiumConfirmeParLeStore();
       setMessage(apres === "achat" ? "Bienvenue dans Capsela Premium." : "Ton abonnement Premium est restauré.");
     } else if (r === "sans_droit") {
-      setMessage(apres === "achat" ? "L'achat n'a pas été confirmé par Apple. Rien ne t'a été facturé." : "Aucun abonnement actif n'a été trouvé sur ce compte Apple.");
+      setMessage(apres === "achat" ? motsDuStore().nonConfirme : motsDuStore().aucunAbonnement);
     } else if (r === "erreur") {
-      setMessage("L'App Store ne répond pas pour le moment. Réessaie dans un instant.");
+      setMessage(motsDuStore().injoignable);
     } else {
       setMessage(null);
     }
@@ -490,7 +513,7 @@ function PremiumStore() {
 
         {dejaPremium ? (
           <div className="mt-[22px] rounded-tuile bg-warm-bg px-[14px] py-[13px] text-[13px] text-ink leading-[1.45]" role="status">
-            Ton abonnement Premium est actif. Tu peux le gérer dans les réglages de ton compte Apple.
+            {motsDuStore().actif}
           </div>
         ) : (
           <>
@@ -549,7 +572,7 @@ function PremiumStore() {
               </div>
             )}
             <div className="text-[11px] text-muted leading-[1.5] mt-[14px]" style={{ textWrap: "pretty" }}>
-              {TEXTE_RENOUVELLEMENT}
+              {motsDuStore().renouvellement}
             </div>
           </>
         )}
@@ -573,7 +596,7 @@ function PremiumStore() {
               setOccupe(null);
             }}
           >
-            {occupe === "achat" ? "Ouverture de l'App Store…" : choisie ? `S'abonner · ${choisie.prix} ${choisie.duree === "annuel" ? "/ an" : "/ mois"}` : "S'abonner"}
+            {occupe === "achat" ? motsDuStore().ouverture : choisie ? `S'abonner · ${choisie.prix} ${choisie.duree === "annuel" ? "/ an" : "/ mois"}` : "S'abonner"}
           </Button>
         )}
         <div className="flex items-center justify-center flex-wrap mt-[4px]">

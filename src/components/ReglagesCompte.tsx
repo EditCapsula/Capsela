@@ -16,6 +16,8 @@ import Card from "@/components/Card";
 
 /** La page des abonnements du compte Apple (ouvre les réglages d'abonnement sur iPhone). */
 const URL_ABONNEMENTS_APPLE = "https://apps.apple.com/account/subscriptions";
+/** La page des abonnements Google Play du compte. */
+const URL_ABONNEMENTS_GOOGLE = "https://play.google.com/store/account/subscriptions";
 
 /*
  * MON COMPTE DANS RÉGLAGES CAPSELA (05/11/2026, maquette « Réglages Capsela »). L'ancien écran « Gérer mon compte »
@@ -215,6 +217,16 @@ export function VueDonnees() {
             compte : résilie-le d&apos;abord dans les réglages de ton compte Apple, sinon il continuera d&apos;être facturé.
             <button type="button" onClick={() => void ouvrirStore(URL_ABONNEMENTS_APPLE)} className="block mt-2 text-terracotta font-semibold underline cursor-pointer">
               Gérer mes abonnements Apple
+            </button>
+          </div>
+        )}
+        {/* Même avertissement pour Google Play (23/11/2026), dans l'app Android : l'abonnement se résilie dans Google Play. */}
+        {Capacitor.getPlatform() === "android" && (
+          <div className="mt-[14px] rounded-bloc bg-warm-bg px-4 py-3 text-[12.5px] text-ink leading-[1.5]" style={{ border: "1px solid var(--color-warm-border)" }}>
+            Un abonnement Premium acheté sur Google Play <span className="font-semibold">n&apos;est pas résilié</span> par la suppression du
+            compte : résilie-le d&apos;abord dans Google Play, rubrique Abonnements, sinon il continuera d&apos;être facturé.
+            <button type="button" onClick={() => void ouvrirStore(URL_ABONNEMENTS_GOOGLE)} className="block mt-2 text-terracotta font-semibold underline cursor-pointer">
+              Gérer mes abonnements Google Play
             </button>
           </div>
         )}
