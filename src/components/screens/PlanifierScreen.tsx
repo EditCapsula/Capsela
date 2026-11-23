@@ -682,6 +682,11 @@ export default function PlanifierScreen() {
    * ensuite à sa place, et le texte ne décrirait plus la tenue. Sur l'appareil, le temps du parcours (aucune colonne en base).
    */
   const [saisieOccasion, setSaisieOccasion] = useState<{ texte: string; occasion: OccasionKey } | null>(null);
+  /** Le texte tel qu'il entre dans le titre (« mariage à la campagne ») : première lettre en minuscule, sans point final. */
+  const saisieAffichee =
+    saisieOccasion && !composition && choisies.includes(saisieOccasion.occasion)
+      ? (saisieOccasion.texte.charAt(0).toLowerCase() + saisieOccasion.texte.slice(1)).replace(/[.!\s]+$/, "")
+      : null;
   /** L'écran « Capsela compose ta tenue… » : affiché entre la dernière question et le résultat, le temps de la prévision. */
   const [compose, setCompose] = useState(false);
   /** La tenue qui vient d'être gardée — pour l'écran de confirmation. */
@@ -2068,9 +2073,14 @@ export default function PlanifierScreen() {
                 l'app (accueil, Valise). Le 10 px d'ici était un troisième
                 réglage pour le même objet. */}
             <Surtitre>{sansTenueTextes ? "À préparer" : "Tenue planifiée"}</Surtitre>
-            {sansTenueTextes ? <TitreEtape a={sansTenueTextes.titreA} b={sansTenueTextes.titreB} /> : <TitreEtape a="Ta tenue est" b="prête" />}
-            {saisieOccasion && !composition && choisies.includes(saisieOccasion.occasion) && (
-              <div className="text-[15px] font-semibold text-ink mt-[10px]">« {saisieOccasion.texte.charAt(0).toUpperCase() + saisieOccasion.texte.slice(1)} »</div>
+            {/* « Ta tenue pour mariage à la campagne est prête » (23/11/2026, demandé) : ce qui a été écrit dans la barre entre dans le titre,
+                tant que l'occasion qu'il a donnée reste choisie (saisieOccasion). */}
+            {sansTenueTextes ? (
+              <TitreEtape a={sansTenueTextes.titreA} b={sansTenueTextes.titreB} />
+            ) : saisieAffichee ? (
+              <TitreEtape a={`Ta tenue pour ${saisieAffichee}`} b="est prête" />
+            ) : (
+              <TitreEtape a="Ta tenue est" b="prête" />
             )}
             <div className="text-[13px] text-ink mt-[8px]">
               {/* L'envie à côté de l'occasion (23/11/2026, demandé : « mariage à la campagne » doit afficher Cérémonie · Décontracté). */}
