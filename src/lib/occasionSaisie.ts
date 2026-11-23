@@ -23,7 +23,7 @@ export interface OccasionComprise {
   occasion: OccasionKey;
   /** Le sous-choix quand le texte le dit (Entretien, Télétravail ; le type de date) ; sinon celui par défaut de l'écran. */
   sousChoix?: WorkMode | DateContext;
-  /** La nuance que le texte donne (« habillé », « décontracté »…) : la préférence de l'étape « Préférences », préremplie. */
+  /** La nuance que le texte donne (« habillé », « décontracté »…) : l'envie de Planifier (sous les tuiles), préremplie. */
   humeur?: Humeur;
   /** Le type de lieu quand le texte le dit (« rooftop ») et que l'occasion le propose. */
   typeLieu?: string;
@@ -31,8 +31,9 @@ export interface OccasionComprise {
 
 /*
  * LES NUANCES (22/11/2026, demandé : « la barre de recherche doit être plus intelligente », arbitré : « mieux comprendre » — lire
- * habillé, décontracté… pour régler le niveau d'habillement). Elles préremplissent la préférence de l'étape 3 (humeur.ts), que le moteur
- * lit déjà ; la personne la voit et la change. Seuls des mots explicites : aucune nuance n'est déduite de l'occasion seule.
+ * habillé, décontracté… pour régler le niveau d'habillement). Elles préremplissent l'envie de Planifier (humeur.ts), que le moteur
+ * lit déjà ; la personne la voit et la change. Seuls des mots du texte — l'allure dite, ou le cadre (campagne, plage) depuis le
+ * 23/11/2026 : aucune nuance n'est déduite de l'occasion seule.
  */
 const NUANCES: readonly { mots: RegExp; humeur: Humeur }[] = [
   { mots: /\b(habille|habillee|chic|elegant|elegante|classe|soignee?|tenue correcte|dress code|black tie|smart)\b/, humeur: "elegant" },
@@ -40,6 +41,10 @@ const NUANCES: readonly { mots: RegExp; humeur: Humeur }[] = [
   { mots: /\b(decontracte|decontractee|casual|cool|relax|detendu|simple)\b/, humeur: "decontracte" },
   { mots: /\b(confortable|confort|a l aise|marcher beaucoup|debout toute la journee)\b/, humeur: "confortable" },
   { mots: /\b(leger|legere|chaleur|canicule|il fera chaud|en plein soleil)\b/, humeur: "leger" },
+  // LE CADRE (23/11/2026, demandé : « mariage à la campagne » doit donner Cérémonie et Décontracté). Après les mots explicites : « un
+  // mariage chic à la campagne » reste Plus habillé. Le cadre dit l'allure d'un événement, pas l'occasion seule. ARBITRAGE ÉDITORIAL.
+  { mots: /\b(campagne|champetre|jardin|plein air|en exterieur|guinguette|boheme|grange|ferme|domaine|garden party)\b/, humeur: "decontracte" },
+  { mots: /\b(plage|bord de mer|pieds dans le sable|piscine)\b/, humeur: "leger" },
 ];
 
 /** La nuance et le lieu que le texte dit explicitement, sans l'occasion. */

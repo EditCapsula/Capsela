@@ -58,6 +58,12 @@ describe("plus intelligente (22/11/2026) : nuances, exemples", () => {
     expect(o("anniversaire décontracté")).toEqual({ occasion: "soiree", humeur: "decontracte" });
     expect(o("Mariage")).toEqual({ occasion: "evenement_perso" });
   });
+  it("le cadre donne l'allure (23/11/2026) ; l'allure dite l'emporte", () => {
+    expect(o("Mariage à la campagne")).toEqual({ occasion: "evenement_perso", humeur: "decontracte" });
+    expect(o("Baptême au jardin")).toEqual({ occasion: "evenement_perso", humeur: "decontracte" });
+    expect(o("anniversaire à la plage")).toEqual({ occasion: "soiree", humeur: "leger" });
+    expect(o("Mariage chic à la campagne")).toEqual({ occasion: "evenement_perso", humeur: "elegant" });
+  });
   it("le rooftop vaut pour la Soirée seulement", () => {
     expect(o("soirée sur un rooftop")).toEqual({ occasion: "soiree", typeLieu: "Bar / Rooftop" });
   });

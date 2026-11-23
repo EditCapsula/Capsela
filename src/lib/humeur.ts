@@ -39,7 +39,7 @@ export const HUMEURS: { key: Humeur; label: string }[] = [
   { key: "audacieux", label: "Audacieux(se)" },
 ];
 
-/** Les préférences proposées à l'étape « Préférences », dans cet ordre (brief du 04/11/2026). */
+/** Les préférences proposées (« Ton envie », sur la page de l'occasion depuis le 23/11/2026), dans cet ordre (brief du 04/11/2026). */
 const HUMEURS_PROPOSEES: readonly Humeur[] = ["confortable", "elegant", "feminin", "decontracte", "leger"];
 
 export const LIBELLE_HUMEUR: Record<Humeur, string> = Object.fromEntries(HUMEURS.map((h) => [h.key, h.label])) as Record<Humeur, string>;

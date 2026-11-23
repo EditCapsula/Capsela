@@ -15,7 +15,7 @@ import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { CalendrierMois, IconeTuile, LigneIcone, ProgressionLibelles, TuileIcone, TuileOccasion, type IconePlanifier } from "@/components/PlanifierUI";
+import { CalendrierMois, IconeTuile, ProgressionLibelles, TuileIcone, TuileOccasion, type IconePlanifier } from "@/components/PlanifierUI";
 import { OCCASIONS_EDITORIALES } from "@/lib/occasionEditoriale";
 import { GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { HeroTenue, ICONES_INDICATEUR, IndicateursTenue, RailPiecesTenue } from "@/components/HeroTenue";
@@ -218,7 +218,8 @@ const EFFET_TYPE_LIEU: Partial<Record<OccasionKey, string>> = {
 
 const JOURS_PROPOSES = 21;
 /** Les noms sous les points du fil (maquettes du 07/10/2026) ; une tenue imposée n'a pas la dernière. */
-const LIBELLES_ETAPES = ["Occasion", "Où et quand", "Préférences"] as const;
+// Deux étapes depuis le 23/11/2026 : la préférence a rejoint l'occasion (demandé : « fusionner l'étape choix de l'occasion et l'étape préférence »).
+const LIBELLES_ETAPES = ["Occasion", "Où et quand"] as const;
 const ICONE_MOMENT: Record<string, IconePlanifier> = { Matin: "matin", "Après-midi": "apresmidi", Soirée: "soiree", "Toute la journée": "journee" };
 const DOW = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const DOW_LONG = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
@@ -603,7 +604,7 @@ export default function PlanifierScreen() {
     if (decisionAcces("AVIS_DE_STYLISTE", etat, true) === "acces") actions.goAvisStyliste();
     else setGateAvisStyliste(true);
   };
-  const [etape, setEtape] = useState(() => (instant ? 3 : state.planAAdapter ? 2 : 1));
+  const [etape, setEtape] = useState(() => (instant ? 2 : state.planAAdapter ? 2 : 1));
   /**
    * LES OCCASIONS DU MOMENT (04/11/2026, « une ou plusieurs ») dans l'ordre du choix. `occ` est l'occasion PRINCIPALE, celle pour laquelle
    * le moteur compose (tenuePolyvalente.ts) ; `setOcc` choisit une seule occasion (reprise d'un plan, retour d'un avis).
@@ -1413,7 +1414,7 @@ export default function PlanifierScreen() {
    * Trois questions (04/11/2026 : « Où » et « Quand » réunies en « Où et quand ? »), deux pour une tenue imposée (sa composition est faite,
    * la préférence n'aurait rien à départager).
    */
-  const derniere = composition ? 2 : 3;
+  const derniere = 2;
   const etapeValide = etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment && momentPossible(moment, jour) : true;
 
   // Écran de composition : la prévision doit être revenue ET un temps minimal écoulé, pour que la transition se lise.
@@ -1523,12 +1524,10 @@ export default function PlanifierScreen() {
    * étaient devenues fausses, ce qui est pire qu'inutile.
    */
   const ETAPES: Record<number, [string, string, string, string]> = {
-    1: [`Étape 1 sur ${derniere}`, "Quelle est", "l'occasion ?", "Une ou plusieurs : Capsela compose une tenue qui passe de l'une à l'autre."],
+    1: [`Étape 1 sur ${derniere}`, "Quelle est", "l'occasion ?", "Une ou plusieurs, et ton envie si tu en as une : Capsela compose une tenue qui passe de l'une à l'autre."],
     // « Où » et « Quand » réunies (04/11/2026, brief « Évolution du parcours de planification ») : la date fixe la saison, le lieu la prévision,
     // le moment le créneau de la prévision. Le type de lieu précise l'occasion ; le moteur le lit pour une soirée (soireeHabillee).
     2: [`Étape 2 sur ${derniere}`, "Où et", "quand ?", "Capsela adapte la tenue à la date, au lieu et à la météo de ce moment."],
-    // Une préférence, pas un style : elle ne départage que des tenues déjà compatibles (humeur.ts).
-    3: [`Étape 3 sur ${derniere}`, "Une", "préférence ?", "Facultatif : comment veux-tu te sentir dans cette tenue ?"],
   };
 
   return (
@@ -1899,7 +1898,7 @@ export default function PlanifierScreen() {
                     const permis = TYPES_LIEU_PAR_OCCASION[c.occasion];
                     if (c.typeLieu && permis?.includes(c.typeLieu)) setTypeLieu(c.typeLieu);
                     else if (!permis || (typeLieu !== TYPE_LIEU_AUTRE && !permis.includes(typeLieu ?? ""))) setTypeLieu(null);
-                    // La nuance lue préremplit la préférence de l'étape 3 ; une nuance posée par une lecture précédente de la barre (et
+                    // La nuance lue préremplit l'envie, sous les tuiles ; une nuance posée par une lecture précédente de la barre (et
                     // non choisie à la main) s'efface quand la nouvelle saisie n'en dit pas.
                     const proposee = c.humeur && humeursProposees(profile.gender).some((h) => h.key === c.humeur) ? c.humeur : null;
                     if (proposee) setHumeur(proposee);
@@ -1961,6 +1960,36 @@ export default function PlanifierScreen() {
                     </div>
                   </div>
                 )}
+                {/* L'ENVIE, SUR LA MÊME PAGE QUE L'OCCASION (23/11/2026, demandé : « fusionner l'étape choix de l'occasion et l'étape
+                    préférence » — « mariage à la campagne » doit montrer Cérémonie et Décontracté ensemble). Facultative, préremplie par la
+                    barre (SaisieOccasion) ; une préférence, pas un style : elle ne départage que des tenues déjà compatibles (humeur.ts).
+                    Pas pour une composition imposée : sa tenue est faite, il n'y a rien à départager (elle n'avait pas cette étape). */}
+                {!composition && occ && (
+                  <div className="mt-6">
+                    <Surtitre>Ton envie · Facultatif</Surtitre>
+                    <div className="flex flex-wrap gap-2 mt-3" role="radiogroup" aria-label="Préférence pour cet événement">
+                      {humeursProposees(profile.gender).map((h) => {
+                        const on = humeur === h.key;
+                        return (
+                          <button
+                            key={h.key}
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            onClick={() => setHumeur(on ? null : h.key)}
+                            className={
+                              "inline-flex items-center rounded-full px-[14px] text-[12.5px] cursor-pointer border transition-colors " +
+                              (on ? "bg-terracotta border-terracotta text-cream font-semibold" : "bg-card border-sand-border text-ink")
+                            }
+                            style={{ minHeight: 40 }}
+                          >
+                            {h.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
@@ -2016,14 +2045,6 @@ export default function PlanifierScreen() {
               </>
             )}
 
-            {etape === 3 && (
-              <div className="flex flex-col gap-[7px] mt-4" role="radiogroup" aria-label="Préférence pour cet événement">
-                {humeursProposees(profile.gender).map((h) => (
-                  <LigneIcone key={h.key} icone={h.key} label={h.label} actif={humeur === h.key} onClick={() => setHumeur(humeur === h.key ? null : h.key)} />
-                ))}
-                <LigneIcone icone="aucune" label="Aucune préférence" actif={humeur === null} onClick={() => setHumeur(null)} />
-              </div>
-            )}
 
             {/* L'encart météo commun aux trois étapes est retiré (recette du
                 26/09/2026) : il affichait « Indique la ville… » dès l'étape
@@ -2042,7 +2063,9 @@ export default function PlanifierScreen() {
             <Surtitre>{sansTenueTextes ? "À préparer" : "Tenue planifiée"}</Surtitre>
             {sansTenueTextes ? <TitreEtape a={sansTenueTextes.titreA} b={sansTenueTextes.titreB} /> : <TitreEtape a="Ta tenue est" b="prête" />}
             <div className="text-[13px] text-ink mt-[8px]">
-              {choisies.map((o) => occasionShortLabel(o)).join(" · ") || occLabel} · {dateLongue}
+              {/* L'envie à côté de l'occasion (23/11/2026, demandé : « mariage à la campagne » doit afficher Cérémonie · Décontracté). */}
+              {choisies.map((o) => occasionShortLabel(o)).join(" · ") || occLabel}
+              {humeur && !composition ? ` · ${libelleHumeur(humeur, profile.gender)}` : ""} · {dateLongue}
               {moment ? ` · ${moment}` : ""}
             </div>
             <div className="text-[12px] text-muted mt-[2px]">
@@ -2541,23 +2564,9 @@ export default function PlanifierScreen() {
               aria-disabled={!etapeValide}
               className={!etapeValide ? "opacity-50" : ""}
             >
-              {etape === derniere ? (etape === 3 ? "Composer ma tenue" : "Voir ma tenue") : "Continuer"}
+              {etape === derniere ? (composition ? "Voir ma tenue" : "Composer ma tenue") : "Continuer"}
             </Button>
           </>
-        )}
-        {vue === "etape" && !compose && etape === 3 && (
-          <button
-            onClick={() => {
-              setHumeur(null);
-              setComposeDelaiOk(false);
-              setCoche(0);
-              setCompose(true);
-            }}
-            className="w-full text-[13px] text-muted cursor-pointer underline"
-            style={{ minHeight: 44 }}
-          >
-            Passer cette étape
-          </button>
         )}
         {/* « + PLANIFIER UN LOOK » (30/09/2026) : la barre d'action pleine
             largeur de tous les écrans, pas une pastille flottante qui
