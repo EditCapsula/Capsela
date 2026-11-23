@@ -118,8 +118,9 @@ l'appareil). Ce qui avait changé depuis le 30/09, et ce qui a été fait :
   et RevenueCat. Deux écarts dans le code, à traiter avant la mise en vente : (1) la suppression du compte (`delete-account`)
   n'efface pas le client chez RevenueCat (il faut l'appel « delete subscriber » de son API, avec une clé secrète côté serveur) ;
   (2) elle ne prévient pas qu'un abonnement Apple en cours continue d'être facturé tant qu'il n'est pas résilié dans les réglages
-  Apple. Les CGV (version A, achat intégré) sont à finaliser : article 4 version B à retirer, CGV à ajouter aux « Informations
-  légales » de l'app.
+  Apple. **Traités le 23/11/2026** : `delete-account` supprime le client RevenueCat (secret `REVENUECAT_SECRET_KEY`, à poser
+  dans Supabase ; sans lui, l'étape est sautée et journalisée) ; l'écran de suppression, sur iPhone, prévient et renvoie vers les
+  abonnements Apple. CGV finalisées pour l'App Store (version B retirée) et ajoutées aux « Informations légales ».
 - **Photoroom** : contrat de traitement des données (annoncé seulement en offre Enterprise), hébergement sans résidence
   européenne annoncée, durée réelle de conservation des images (cf. `docs/detourage.md`).
 - **Open-Meteo** : gratuit pour un usage NON commercial seulement. Une app avec abonnement payant relève du plan commercial :
@@ -138,5 +139,5 @@ Les six textes sont publiés par l'app sur `/legal/<page>` (`mentions-legales`,
 `confidentialite`, `cgu`, `droits-rgpd`, `cookies`, `cgv`), rendus à la
 compilation depuis ce dossier. Une page qui contient encore un
 `[À COMPLÉTER]` ou un `[À VÉRIFIER]` affiche « Version provisoire ». La liste
-« Informations légales » de l'app y renvoie, hors CGV (Premium ne s'achète pas
+« Informations légales » de l'app y renvoie, CGV comprises depuis le 23/11/2026 (Premium s'achète par l'App Store ; avant, elles en étaient retirées : Premium ne s'achetait pas
 encore).

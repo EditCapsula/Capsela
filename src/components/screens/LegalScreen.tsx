@@ -7,8 +7,9 @@ import { useCapsela } from "@/lib/store";
 import AppHeader from "@/components/AppHeader";
 import Card from "@/components/Card";
 
-// Les CGV ne figurent pas ici tant que Premium ne s'achète pas (docs/legal/README.md).
-const LEGAL_ROWS = DOCUMENTS_LEGAUX.filter((d) => d.slug !== "cgv");
+// Les CGV ne figuraient pas ici tant que Premium ne s'achetait pas (docs/legal/README.md) ; elles y sont depuis le 23/11/2026, avec
+// la vente par l'App Store.
+const LEGAL_ROWS = DOCUMENTS_LEGAUX;
 
 export default function LegalScreen() {
   const { actions } = useCapsela();
