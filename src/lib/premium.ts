@@ -21,16 +21,29 @@ export const LIMITE_DRESSING_GRATUIT = 50;
 export const LIMITE_VALISES_GRATUITES = 2;
 
 /**
- * Pièces qu'un compte gratuit peut garder MISES À PLAT dans son dressing (23/11/2026, demandé : « deux pièces uniquement sur leur
- * dressing ; sur d'autres pièces, redirigés vers le premium »). Une pièce supprimée, ou rendue à sa photo d'origine, libère une place.
- * Le serveur (`detourer-photo`) applique la même limite (copie dans supabase/functions/_shared/premium.ts, test miroir).
+ * Mises à plat offertes à un compte gratuit (23/11/2026, demandé : « pour les gratuits, deux pièces uniquement… cela ne libère pas une
+ * place même en cas de suppression d'une pièce » ; arbitré : chaque mise à plat RÉUSSIE compte, gardée ou non). Le compteur, qui ne
+ * redescend jamais, est gardé en base (migration 0066, écrit par `detourer-photo`) ; le serveur applique la même limite (copie dans
+ * supabase/functions/_shared/premium.ts, test miroir).
  */
 export const LIMITE_MISES_A_PLAT_GRATUITES = 2;
 
-/** Peut-on mettre une pièce de plus à plat ? Un statut inconnu ne limite pas ici : le serveur, lui, refuse en cas de doute. */
-export function peutMettreAPlat(etat: EtatPremium, nbPiecesAPlat: number): boolean {
-  if (etat !== "gratuit") return true;
-  return nbPiecesAPlat < LIMITE_MISES_A_PLAT_GRATUITES;
+/** Peut-on lancer une mise à plat ? Un statut ou un compteur inconnus ne limitent pas ici : le serveur, lui, refuse en cas de doute. */
+export function peutMettreAPlat(etat: EtatPremium, nbUtilisees: number | null): boolean {
+  if (etat !== "gratuit" || nbUtilisees == null) return true;
+  return nbUtilisees < LIMITE_MISES_A_PLAT_GRATUITES;
+}
+
+/** Le compteur de mises à plat du compte (migration 0066), ou null (démo, réseau, table pas encore créée). */
+export async function fetchMisesAPlatUtilisees(userId: string): Promise<number | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await getSupabase().from("mises_a_plat_utilisees").select("nombre").eq("user_id", userId).maybeSingle();
+    if (error) return null;
+    return (data as { nombre?: number } | null)?.nombre ?? 0;
+  } catch {
+    return null;
+  }
 }
 
 /** Peut-on préparer une NOUVELLE valise ? Même règle que peutAjouter : un statut inconnu ne limite pas (le paywall échoue en ouvrant). */

@@ -86,14 +86,14 @@ export async function assertPremium(
 export type RegleAcces = "PREMIUM_REQUIRED" | "ACCES_LIBRE";
 
 /**
- * LA MISE À PLAT EN OFFRE GRATUITE (23/11/2026, demandé : « pour les gratuits, deux pièces uniquement sur leur dressing ; sur d'autres
- * pièces, redirigés vers le premium ») : au plus 2 pièces mises à plat GARDÉES dans le dressing (photo `….detouree.plat.…`) ; une pièce
- * supprimée, ou remise sur sa photo d'origine, libère une place. Premium : sans limite. COPIE de LIMITE_MISES_A_PLAT_GRATUITES
+ * LA MISE À PLAT EN OFFRE GRATUITE (23/11/2026, demandé : « pour les gratuits, deux pièces uniquement… cela ne libère pas une place
+ * même en cas de suppression d'une pièce » ; arbitré : chaque mise à plat RÉUSSIE compte, gardée ou non) : 2 mises à plat offertes par
+ * compte, sur un compteur qui ne redescend jamais (migration 0066). Premium : sans limite. COPIE de LIMITE_MISES_A_PLAT_GRATUITES
  * (src/lib/premium.ts), vérifiée par test miroir.
  */
 export const LIMITE_MISES_A_PLAT_GRATUITES = 2;
-export function miseAPlatGratuitePossible(nbPiecesAPlat: number): boolean {
-  return nbPiecesAPlat < LIMITE_MISES_A_PLAT_GRATUITES;
+export function miseAPlatGratuitePossible(nbUtilisees: number): boolean {
+  return nbUtilisees < LIMITE_MISES_A_PLAT_GRATUITES;
 }
 
 /**

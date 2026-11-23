@@ -112,7 +112,7 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
         {
           glyphe: G_CINTRE,
           titre: "Mise à plat sans limite",
-          desc: `Transforme la photo d'une pièce portée en visuel à plat. Sans abonnement, ${LIMITE_MISES_A_PLAT_GRATUITES} pièces.`,
+          desc: `Transforme la photo d'une pièce portée en visuel à plat. Sans abonnement, ${LIMITE_MISES_A_PLAT_GRATUITES} mises à plat offertes.`,
         },
       ]
     : []),
@@ -235,7 +235,7 @@ function PremiumSansAchat() {
               <span className="block t-label text-terracotta">Ce que tu voulais faire</span>
               <span className="block text-[13px] text-ink leading-[1.4] mt-[3px]">Mettre ta pièce à plat</span>
               <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
-                Sans abonnement, {LIMITE_MISES_A_PLAT_GRATUITES} pièces mises à plat dans ton dressing.
+                Sans abonnement, {LIMITE_MISES_A_PLAT_GRATUITES} mises à plat offertes, et tu les as utilisées.
               </span>
             </span>
           </div>

@@ -9,6 +9,7 @@ import { avecTraitsDUnion } from "@/components/TraitsDUnion";
 import { CameraIcon, CarteAnalyse, GalerieIcon, ChampSelect, chip, Coche, EYEBROW, luminance, NOMS_PASTILLES, SpinnerCintre } from "@/components/screens/AddScreen";
 import { useAuth } from "@/lib/auth";
 import { MISE_A_PLAT_DISPONIBLE, ouvrirSiPermis } from "@/lib/miseAPlat";
+import { fetchMisesAPlatUtilisees } from "@/lib/premium";
 import { CATS, FAMILLES_COULEURS, PALETTE, PALETTE_BIJOU } from "@/lib/data";
 import { motifDisponible, deleteDressingPhotos, detourerPhotoAvecCause, dressingPhotoPath, estPhotoDetouree, estPhotoMiseAPlat, importerTenue, uploadDressingPhoto, type CodeImportTenue, type CodeMiseAPlat } from "@/lib/dressing";
 import { MESSAGE_ECHEC_MISE_A_PLAT } from "@/components/screens/PieceScreen";
@@ -73,7 +74,7 @@ const MESSAGE_ECHEC_DETOURAGE: Record<CodeMiseAPlat, string> = {
   photo_invalide: "Cette photo ne peut pas être détourée.",
   indisponible: "Le détourage n'a pas abouti : le service n'a pas répondu.",
   // Ne concerne que la mise à plat (23/11/2026) : le détourage simple n'est jamais réservé à Premium.
-  premium_requis: "Tu as déjà mis 2 pièces à plat : au-delà, la mise à plat fait partie de Capsela Premium.",
+  premium_requis: "Tes 2 mises à plat offertes sont utilisées : au-delà, la mise à plat fait partie de Capsela Premium.",
 };
 
 /**
@@ -379,7 +380,7 @@ export default function ImporterTenueScreen() {
   const mettreAPlat = async (b: BrouillonPiece) => {
     if (plat[b.cle]?.etat === "cours") return;
     // Premium, ou 2 pièces mises à plat en offre gratuite (23/11/2026, miseAPlat.ts) : au-delà, Premium, rien n'est appelé.
-    if (!(await ouvrirSiPermis(actions, etatPremium, state.items.filter((i) => estPhotoMiseAPlat(i.photoUrl)).length, () => undefined))) return;
+    if (!(await ouvrirSiPermis(actions, etatPremium, () => (userId ? fetchMisesAPlatUtilisees(userId) : Promise.resolve(null)), () => undefined))) return;
     setPlat((p) => ({ ...p, [b.cle]: { etat: "cours" } }));
     const r = await detourerPhotoAvecCause(b.photoUrl, "mise_a_plat");
     if ("code" in r) {

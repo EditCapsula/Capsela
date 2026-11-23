@@ -17,19 +17,19 @@ import { peutMettreAPlat, type EtatPremium } from "./premium";
 export const MISE_A_PLAT_DISPONIBLE = process.env.NEXT_PUBLIC_MISE_A_PLAT === "1";
 
 /*
- * PREMIUM, OU 2 PIÈCES EN OFFRE GRATUITE (23/11/2026, demandé : « seuls les premium… prépare le code et lance plus tard quand
- * l'abonnement [Photoroom] sera prêt », puis : « pour les gratuits, deux pièces uniquement sur leur dressing ; sur d'autres pièces,
- * redirigés vers le premium »). Un Premium confirmé passe toujours ; un compte gratuit passe tant que son dressing garde moins de
- * LIMITE_MISES_A_PLAT_GRATUITES pièces mises à plat (premium.ts), sinon il voit Premium (« Ce que tu voulais faire : mettre ta pièce
- * à plat »). Un statut resté inconnu après vérification laisse passer : le serveur (`detourer-photo`) applique la même limite et
- * refuse, lui, en cas de doute. Tant que MISE_A_PLAT_DISPONIBLE est faux, aucun bouton n'existe : rien de tout cela ne se voit.
+ * PREMIUM, OU 2 MISES À PLAT OFFERTES EN OFFRE GRATUITE (23/11/2026, demandé : « seuls les premium… prépare le code et lance plus tard
+ * quand l'abonnement [Photoroom] sera prêt », puis « pour les gratuits, deux pièces uniquement », « cela ne libère pas une place même en
+ * cas de suppression d'une pièce » ; arbitré : chaque mise à plat RÉUSSIE compte). Un Premium confirmé passe toujours ; un compte gratuit
+ * passe tant que son compteur (migration 0066, premium.ts) est sous LIMITE_MISES_A_PLAT_GRATUITES, sinon il voit Premium (« Ce que tu
+ * voulais faire : mettre ta pièce à plat »). Un statut ou un compteur restés inconnus laissent passer : le serveur (`detourer-photo`)
+ * applique la même limite et refuse, lui, en cas de doute. Tant que MISE_A_PLAT_DISPONIBLE est faux, aucun bouton n'existe.
  */
 type ActionsPremium = { goPremium: (origine?: "valise" | "mise_a_plat") => void; verifierEtatPremium: () => Promise<EtatPremium> };
 
-/** Lance `ouvrir` quand une mise à plat de plus est permise et rend true ; sinon ouvre Premium et rend false. */
-export async function ouvrirSiPermis(actions: ActionsPremium, etat: EtatPremium, nbPiecesAPlat: number, ouvrir: () => void): Promise<boolean> {
+/** Lance `ouvrir` quand une mise à plat est permise et rend true ; sinon ouvre Premium et rend false. */
+export async function ouvrirSiPermis(actions: ActionsPremium, etat: EtatPremium, lireUtilisees: () => Promise<number | null>, ouvrir: () => void): Promise<boolean> {
   const connu = etat === "inconnu" ? await actions.verifierEtatPremium() : etat;
-  if (peutMettreAPlat(connu, nbPiecesAPlat)) {
+  if (peutMettreAPlat(connu, connu === "gratuit" ? await lireUtilisees() : null)) {
     ouvrir();
     return true;
   }

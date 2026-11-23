@@ -110,20 +110,17 @@ Deno.serve(async (req) => {
   // détourée (le bouton « Mettre à plat » d'une pièce déjà importée) — mais pas une photo déjà mise à plat.
   if (miseAPlat ? estPhotoMiseAPlat(chemin) : estPhotoDetouree(chemin)) return echec("photo_invalide");
 
-  // LA MISE À PLAT : PREMIUM, OU 2 PIÈCES EN OFFRE GRATUITE (23/11/2026, _shared/premium.ts) — vérifiée avant le quota et l'appel
-  // payant ; échoue en fermant (un statut ou un compte illisibles refusent). Le détourage simple n'est pas concerné.
+  // LA MISE À PLAT : PREMIUM, OU 2 MISES À PLAT OFFERTES EN OFFRE GRATUITE (23/11/2026, _shared/premium.ts) — vérifiée avant le quota
+  // et l'appel payant, sur le compteur définitif (migration 0066 : chaque mise à plat réussie compte, une pièce supprimée ne rend rien).
+  // Échoue en fermant : un statut ou un compteur illisibles (table absente avant la migration) refusent. Le détourage simple n'est pas
+  // concerné.
   if (utilisatrice && miseAPlat) {
     const verdict = await assertPremium(admin as unknown as LecteurPremium, utilisatrice);
     if (!verdict.ok) {
       if (verdict.statut === 503) return reponse({ ok: false, code: "indisponible" }, 503);
-      // Les pièces déjà mises à plat et gardées dans le dressing (le nom du fichier le dit, cf. estPhotoMiseAPlat).
-      const { count, error } = await admin
-        .from("dressing_items")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", utilisatrice.id)
-        .like("photo_url", "%.detouree.plat.%");
+      const { data: compteur, error } = await admin.from("mises_a_plat_utilisees").select("nombre").eq("user_id", utilisatrice.id).maybeSingle();
       if (error) return reponse({ ok: false, code: "indisponible" }, 503);
-      if (!miseAPlatGratuitePossible(count ?? 0)) return reponse({ ok: false, code: "premium_requis" }, 403);
+      if (!miseAPlatGratuitePossible((compteur as { nombre?: number } | null)?.nombre ?? 0)) return reponse({ ok: false, code: "premium_requis" }, 403);
     }
   }
 
@@ -154,6 +151,16 @@ Deno.serve(async (req) => {
         return echec(plat.code);
       }
       aDetourer = plat.octets;
+      // Une mise à plat rendue par Photoroom compte, gardée ou non (migration 0066) : le compteur ne redescend jamais. Un échec
+      // d'écriture est journalisé sans priver la personne du résultat déjà payé.
+      if (utilisatrice) {
+        const { data: avant } = await admin.from("mises_a_plat_utilisees").select("nombre").eq("user_id", utilisatrice.id).maybeSingle();
+        const nombre = ((avant as { nombre?: number } | null)?.nombre ?? 0) + 1;
+        const { error: erreurCompteur } = await admin
+          .from("mises_a_plat_utilisees")
+          .upsert({ user_id: utilisatrice.id, nombre, mise_a_jour_le: new Date().toISOString() }, { onConflict: "user_id" });
+        if (erreurCompteur) console.error("[detourer-photo] compteur de mises à plat non écrit :", erreurCompteur.message);
+      }
     }
     const detouree = await detourerAvecFournisseur(fetch, cleFournisseur, aDetourer);
     if (!detouree.ok) {
