@@ -66,7 +66,7 @@ import { basculerSaison, saisonsDe, seasonDepuisSaisons } from "./saisons";
 import { composeWardrobePool } from "./selectors";
 import { notifLookSauvegarde, notifPieceAjoutee, notifValiseEnregistree } from "./centreNotifications";
 import { noterNotifications } from "./notificationsStore";
-import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
+import { fetchEtatPremium, peutAjouter, type EtatPremium, peutCreerValise } from "./premium";
 import { cleSlideIds, porteeLe } from "./retourPiece";
 
 /** L'instant présent, lu au geste (porter, annuler : 17/11/2026) et jamais pendant un rendu. */
@@ -2194,6 +2194,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         setState((s) => ({ ...s, valiseOuverte: id, valiseRetour: s.screen === "valise" ? s.valiseRetour : s.screen, screen: "valise" }));
       const versPremium = () =>
         setState((s) => ({ ...s, premiumReturn: s.screen === "premium" ? s.premiumReturn : s.screen, premiumOrigine: "valise", screen: "premium" }));
+      // LA LIMITE DE VALISES GARDÉES (23/11/2026, premium.ts) : une NOUVELLE valise, en offre gratuite, au-delà de deux gardées, ouvre
+      // Premium ; rouvrir une valise déjà gardée n'est jamais limité.
+      if (id === null && !peutCreerValise(etatPremiumRef.current, stateRef.current.valises.length)) return versPremium();
       const decision = decisionAcces("PREPARER_VALISE", etatPremiumRef.current, false);
       if (decision === "acces") return ouvrir();
       if (decision === "gate") return versPremium();

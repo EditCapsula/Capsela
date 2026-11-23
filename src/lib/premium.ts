@@ -13,6 +13,18 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
 
 /** Pièces qu'un dressing gratuit peut contenir — arbitré le 24/09/2026 à 20, porté à 50 le 12/10/2026 (demandé : « élève à 50 le nombre de pièces autorisées, après on bascule sur Premium »). */
 export const LIMITE_DRESSING_GRATUIT = 50;
+/**
+ * Valises qu'un compte gratuit peut GARDER à la fois (23/11/2026, demandé : « limiter à 2 valises par compte avant de basculer au
+ * premium » ; arbitré : les valises gardées — en supprimer une libère une place, comme les pièces du dressing). La limite porte sur la
+ * création d'une nouvelle valise, jamais sur celles déjà gardées.
+ */
+export const LIMITE_VALISES_GRATUITES = 2;
+
+/** Peut-on préparer une NOUVELLE valise ? Même règle que peutAjouter : un statut inconnu ne limite pas (le paywall échoue en ouvrant). */
+export function peutCreerValise(etat: EtatPremium, nbValises: number): boolean {
+  if (etat !== "gratuit") return true;
+  return nbValises < LIMITE_VALISES_GRATUITES;
+}
 
 /**
  * Générations de tenues offertes par jour sans abonnement — arbitré le

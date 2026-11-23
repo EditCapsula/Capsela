@@ -6,7 +6,7 @@ import { achatsIntegresIci, acheter, chargerFormules, restaurer, type FormuleSto
 import { useAuth } from "@/lib/auth";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
-import { GENERATIONS_GRATUITES_PAR_JOUR, LIMITE_DRESSING_GRATUIT } from "@/lib/premium";
+import { GENERATIONS_GRATUITES_PAR_JOUR, LIMITE_DRESSING_GRATUIT, LIMITE_VALISES_GRATUITES } from "@/lib/premium";
 import { TICKET_DE_CAISSE_VISIBLE } from "@/lib/autorisations";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
@@ -97,6 +97,12 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
     glyphe: G_ETINCELLE,
     titre: "Tenues sans limite",
     desc: `Génère autant de tenues que tu veux. Sans abonnement, ${GENERATIONS_GRATUITES_PAR_JOUR} par jour.`,
+  },
+  // Les valises au-delà de deux (23/11/2026, premium.ts) : la préparation reste gratuite, le nombre de valises gardées est limité.
+  {
+    glyphe: G_VALISE,
+    titre: "Valises sans limite",
+    desc: `Garde toutes tes valises. Sans abonnement, ${LIMITE_VALISES_GRATUITES} à la fois.`,
   },
   // Disponible (recette du 26/09/2026) : l'Avis de styliste fonctionne déjà,
   // il n'est donc jamais « bientôt ». Même promesse que la carte de l'accueil.
@@ -216,7 +222,11 @@ function PremiumSansAchat() {
               <span className="block t-label text-terracotta">
                 Ce que tu voulais faire
               </span>
-              <span className="block text-[13px] text-ink leading-[1.4] mt-[3px]">Préparer une valise</span>
+              <span className="block text-[13px] text-ink leading-[1.4] mt-[3px]">Préparer une nouvelle valise</span>
+              {/* La raison du passage ici (23/11/2026, limite de valises gardées) et l'autre issue que l'abonnement. */}
+              <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
+                Sans abonnement, {LIMITE_VALISES_GRATUITES} valises gardées à la fois. Supprime-en une dans Mes planifications, ou passe à Premium.
+              </span>
             </span>
           </div>
         )}

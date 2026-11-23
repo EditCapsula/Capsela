@@ -57,3 +57,16 @@ describe("limite du dressing gratuit", () => {
     expect(placesRestantes("gratuit", 999)).toBe(0);
   });
 });
+
+describe("peutCreerValise (23/11/2026)", () => {
+  it("deux valises gardées en offre gratuite ; aucune limite en Premium ni quand le statut est inconnu", async () => {
+    const { peutCreerValise, LIMITE_VALISES_GRATUITES } = await import("../premium");
+    expect(LIMITE_VALISES_GRATUITES).toBe(2);
+    expect(peutCreerValise("gratuit", 0)).toBe(true);
+    expect(peutCreerValise("gratuit", 1)).toBe(true);
+    expect(peutCreerValise("gratuit", 2)).toBe(false);
+    expect(peutCreerValise("gratuit", 5)).toBe(false);
+    expect(peutCreerValise("premium", 10)).toBe(true);
+    expect(peutCreerValise("inconnu", 10)).toBe(true);
+  });
+});
