@@ -676,6 +676,12 @@ export default function PlanifierScreen() {
   const [humeur, setHumeur] = useState<Humeur | null>(() => (instant ? instant.humeur : (state.planAAdapter?.plan.humeur ?? null)));
   /** La préférence posée par la barre « Décris ton occasion » (SaisieOccasion, 22/11/2026), pour la distinguer d'un choix à la main. */
   const humeurDeLaBarre = useRef<Humeur | null>(null);
+  /**
+   * CE QUE LA PERSONNE A ÉCRIT dans la barre (23/11/2026, demandé : « sur l'étape de l'affichage de la tenue, reprendre la recherche
+   * saisie »), avec l'occasion qu'elle a donnée. Repris au-dessus de la tenue tant que cette occasion reste choisie : une tuile choisie
+   * ensuite à sa place, et le texte ne décrirait plus la tenue. Sur l'appareil, le temps du parcours (aucune colonne en base).
+   */
+  const [saisieOccasion, setSaisieOccasion] = useState<{ texte: string; occasion: OccasionKey } | null>(null);
   /** L'écran « Capsela compose ta tenue… » : affiché entre la dernière question et le résultat, le temps de la prévision. */
   const [compose, setCompose] = useState(false);
   /** La tenue qui vient d'être gardée — pour l'écran de confirmation. */
@@ -1891,8 +1897,9 @@ export default function PlanifierScreen() {
                 <SaisieOccasion
                   choisies={choisies}
                   gender={profile.gender}
-                  onComprise={(c) => {
+                  onComprise={(c, texte) => {
                     setChoisies([c.occasion]);
+                    setSaisieOccasion({ texte, occasion: c.occasion });
                     if (c.occasion === "travail_formel" && c.sousChoix && WORK_MODES.includes(c.sousChoix as WorkMode)) setWorkMode(c.sousChoix as WorkMode);
                     if (c.occasion === "date" && c.sousChoix && DATE_CONTEXTS.some(([d]) => d === c.sousChoix)) setDateContext(c.sousChoix as DateContext);
                     const permis = TYPES_LIEU_PAR_OCCASION[c.occasion];
@@ -2062,6 +2069,9 @@ export default function PlanifierScreen() {
                 réglage pour le même objet. */}
             <Surtitre>{sansTenueTextes ? "À préparer" : "Tenue planifiée"}</Surtitre>
             {sansTenueTextes ? <TitreEtape a={sansTenueTextes.titreA} b={sansTenueTextes.titreB} /> : <TitreEtape a="Ta tenue est" b="prête" />}
+            {saisieOccasion && !composition && choisies.includes(saisieOccasion.occasion) && (
+              <div className="text-[15px] font-semibold text-ink mt-[10px]">« {saisieOccasion.texte.charAt(0).toUpperCase() + saisieOccasion.texte.slice(1)} »</div>
+            )}
             <div className="text-[13px] text-ink mt-[8px]">
               {/* L'envie à côté de l'occasion (23/11/2026, demandé : « mariage à la campagne » doit afficher Cérémonie · Décontracté). */}
               {choisies.map((o) => occasionShortLabel(o)).join(" · ") || occLabel}
