@@ -31,7 +31,7 @@ import { CATS, DATE_CONTEXTS, OCCASIONS, WORK_MODES, occasionShortLabel, type We
 import { sansTenueCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { estContexteMaison } from "@/lib/logic";
-import { humeursProposees, libelleHumeur, genererTenueHumeur, type Humeur } from "@/lib/humeur";
+import { envieRetenue, humeursProposees, libelleHumeur, genererTenueHumeur, type Humeur } from "@/lib/humeur";
 import { soireeHabillee } from "@/lib/occasions";
 import { clePieces, jourLocal } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
@@ -832,6 +832,10 @@ export default function PlanifierScreen() {
   }, [cleClimat]);
   const climat = cleClimat && climatBrut?.cle === cleClimat ? climatBrut.c : null;
   const meteoUtilisee = meteoPourLaDate({ date: dateChoisie, creneau: meteoMoment, aujourdhui: weather, auDela, climat });
+  /** L'envie que la météo permet (23/11/2026, humeur.ts) : « Léger et ventilé » n'est plus retenu sous 15°. Celle choisie reste dans l'état. */
+  const humeurRetenue = envieRetenue(humeur, meteoUtilisee.temp);
+  /** Les envies proposées : la date déjà connue (plan rouvert), « Léger et ventilé » n'est pas proposé quand il fait trop froid. */
+  const enviesProposees = humeursProposees(profile.gender).filter((h) => !dateChoisie || envieRetenue(h.key, meteoUtilisee.temp) === h.key);
   /**
    * LA CAPSULE DE LA DATE (08/10/2026) : celle du jour est bâtie sur la météo et la saison d'AUJOURD'HUI. Une tenue planifiée pour une autre
    * saison complétait donc ses catégories vides — les chaussures en premier — avec des pièces d'aujourd'hui (des bottines pour juillet).
@@ -879,7 +883,7 @@ export default function PlanifierScreen() {
     workMode,
     dateContext,
     profile,
-    humeur,
+    humeur: humeurRetenue,
     typeLieu,
     secondaires,
   };
@@ -887,7 +891,7 @@ export default function PlanifierScreen() {
   const tenue = useMemo(
     () => composerTenuePlan(entreesMoteur),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cleOccasions, dressingSeul, state.items, capsuleDeLaDate, meteoUtilisee, workMode, dateContext, profile, humeur, typeLieu]
+    [cleOccasions, dressingSeul, state.items, capsuleDeLaDate, meteoUtilisee, workMode, dateContext, profile, humeurRetenue, typeLieu]
   );
   /** La tenue choisie par « Autre tenue » : valable tant que les critères qui l'ont produite ne changent pas. */
   const cleParams = cleDesCriteres({ choisies, dressingSeul, humeur, typeLieu, jour, moment, workMode, dateContext });
@@ -1268,14 +1272,14 @@ export default function PlanifierScreen() {
       });
       // La préférence s'écrit à part (colonne mood_style, migration 0048) : tant que la migration n'est pas passée,
       // la tenue est gardée sans elle et l'échec est dit, jamais tu.
-      const humeurGardee = humeur && !composition ? await enregistrerHumeurPlan(ligne.id, humeur) : true;
+      const humeurGardee = humeurRetenue && !composition ? await enregistrerHumeurPlan(ligne.id, humeurRetenue) : true;
       // « PORTER CETTE TENUE » (04/11/2026) : la tenue est associée à sa date, « Planifiée » — pas « Confirmée » (arbitré le même jour par la
       // propriétaire : la confirmation reste « Je porterai cette tenue », sur la page Look planifié). Les autres occasions d'une tenue
       // polyvalente s'écrivent à part (migration 0058) : avant la migration, la tenue est gardée sans elles et l'échec est dit.
       const secondairesGardees = secondaires.length ? await enregistrerOccasionsSecondaires(ligne.id, secondaires) : true;
       const gardeeComplete: TenuePlanifiee = {
         ...ligne,
-        ...(humeur && !composition && humeurGardee ? { humeur } : null),
+        ...(humeurRetenue && !composition && humeurGardee ? { humeur: humeurRetenue } : null),
         ...(secondaires.length && secondairesGardees ? { occasionsSecondaires: secondaires } : null),
       };
       setPlans((l) => [...l.filter((x) => x.id !== ligne.id), gardeeComplete]);
@@ -1825,7 +1829,7 @@ export default function PlanifierScreen() {
                   [
                     choisies.map((o) => occasionShortLabel(o)).join(" et "),
                     meteoMoment && villeAffichee ? `${villeAffichee} · ${degres(meteoMoment.temp)}` : villeAffichee || lieu.trim() || "",
-                    humeur ? libelleHumeur(humeur, profile.gender) : "",
+                    humeurRetenue ? libelleHumeur(humeurRetenue, profile.gender) : "",
                   ]
                     .filter(Boolean)
                     .join(" · "),
@@ -1912,7 +1916,7 @@ export default function PlanifierScreen() {
                     else if (!permis || (typeLieu !== TYPE_LIEU_AUTRE && !permis.includes(typeLieu ?? ""))) setTypeLieu(null);
                     // La nuance lue préremplit l'envie, sous les tuiles ; une nuance posée par une lecture précédente de la barre (et
                     // non choisie à la main) s'efface quand la nouvelle saisie n'en dit pas.
-                    const proposee = c.humeur && humeursProposees(profile.gender).some((h) => h.key === c.humeur) ? c.humeur : null;
+                    const proposee = c.humeur && enviesProposees.some((h) => h.key === c.humeur) ? c.humeur : null;
                     if (proposee) setHumeur(proposee);
                     else if (humeur && humeur === humeurDeLaBarre.current) setHumeur(null);
                     humeurDeLaBarre.current = proposee;
@@ -1980,7 +1984,7 @@ export default function PlanifierScreen() {
                   <div className="mt-6">
                     <Surtitre>Ton envie · Facultatif</Surtitre>
                     <div className="flex flex-wrap gap-2 mt-3" role="radiogroup" aria-label="Préférence pour cet événement">
-                      {humeursProposees(profile.gender).map((h) => {
+                      {enviesProposees.map((h) => {
                         const on = humeur === h.key;
                         return (
                           <button
@@ -2085,7 +2089,7 @@ export default function PlanifierScreen() {
             <div className="text-[13px] text-ink mt-[8px]">
               {/* L'envie à côté de l'occasion (23/11/2026, demandé : « mariage à la campagne » doit afficher Cérémonie · Décontracté). */}
               {choisies.map((o) => occasionShortLabel(o)).join(" · ") || occLabel}
-              {humeur && !composition ? ` · ${libelleHumeur(humeur, profile.gender)}` : ""} · {dateLongue}
+              {humeurRetenue && !composition ? ` · ${libelleHumeur(humeurRetenue, profile.gender)}` : ""} · {dateLongue}
               {moment ? ` · ${moment}` : ""}
             </div>
             <div className="text-[12px] text-muted mt-[2px]">
@@ -2179,7 +2183,7 @@ export default function PlanifierScreen() {
                       ...(!composition && !dressingSeul && nbCapsule > 0 && profile.styles.length
                         ? [["elegant", "Ton style", `Une base de ta capsule ${libelleStyles(profile.styles, profile.gender)}.`] as [IconePlanifier, string, string]]
                         : []),
-                      ...(humeur && !composition ? [["confortable", "Ton envie", `« ${libelleHumeur(humeur, profile.gender)} » a départagé des tenues proches.`] as [IconePlanifier, string, string]] : []),
+                      ...(humeurRetenue && !composition ? [["confortable", "Ton envie", `« ${libelleHumeur(humeurRetenue, profile.gender)} » a départagé des tenues proches.`] as [IconePlanifier, string, string]] : []),
                       ["cintre", composition ? "Ta tenue" : "Ton dressing", provenance],
                     ] as [IconePlanifier, string, string][]).map(([icone, titre, texte]) => (
                       <li key={titre} className="flex gap-3 items-start py-3 border-b border-border last:border-b-0">

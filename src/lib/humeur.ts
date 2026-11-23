@@ -42,6 +42,19 @@ export const HUMEURS: { key: Humeur; label: string }[] = [
 /** Les préférences proposées (« Ton envie », sur la page de l'occasion depuis le 23/11/2026), dans cet ordre (brief du 04/11/2026). */
 const HUMEURS_PROPOSEES: readonly Humeur[] = ["confortable", "elegant", "feminin", "decontracte", "leger"];
 
+/**
+ * « LÉGER ET VENTILÉ » PAR LE FROID (23/11/2026, signalé : « rave », 5° et pluie, aucune différence ; arbitré : ne plus l'appliquer).
+ * Ses pièces repères (lin, manches courtes, chaussures ouvertes) sont écartées par les règles du moteur sous 15° et sous la pluie :
+ * l'envie ne départageait rien et s'affichait quand même. Sous ce seuil, elle n'est plus retenue — ni par le moteur, ni à l'écran, ni
+ * dans le plan gardé. 15° : le seuil des chaussures d'été (SEUIL_CHAUSSURES_D_ETE, logic.ts). Une température inconnue ne retire rien.
+ * ARBITRAGE ÉDITORIAL limité à cette envie.
+ */
+export const SEUIL_ENVIE_LEGERE = 15;
+export function envieRetenue(h: Humeur | null | undefined, temp: number | null | undefined): Humeur | null {
+  if (!h) return null;
+  return h === "leger" && typeof temp === "number" && Number.isFinite(temp) && temp < SEUIL_ENVIE_LEGERE ? null : h;
+}
+
 export const LIBELLE_HUMEUR: Record<Humeur, string> = Object.fromEntries(HUMEURS.map((h) => [h.key, h.label])) as Record<Humeur, string>;
 
 /**
