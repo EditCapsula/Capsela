@@ -80,8 +80,8 @@ jobs:
           # Google est proposé (règle 4.8). Absente : le bouton n'est pas affiché.
           NEXT_PUBLIC_CONNEXION_APPLE: ${{ vars.CONNEXION_APPLE }}
           # La mesure d'audience (24/11/2026, demandé : « je veux qu'on branche Google Analytics ») : l'identifiant de mesure GA4
-          # (« G-… »), variable du dépôt GA_ID. Absent : aucun script Google ni bandeau de consentement (App.tsx, consent.ts).
-          NEXT_PUBLIC_GA_ID: ${{ vars.GA_ID }}
+          # (« G-… »), identifiant public, celui du flux Web « capsela.app » (24/11/2026), sauf variable du dépôt GA_ID.
+          NEXT_PUBLIC_GA_ID: ${{ vars.GA_ID || 'G-D5KJXCVKCV' }}
           # Les achats intégrés (17/11/2026, src/lib/achats.ts) : la clé PUBLIQUE iOS de RevenueCat (« appl_… »), variable du dépôt
           # REVENUECAT_IOS_KEY. Absente : l'écran Premium reste sans prix ni achat.
           NEXT_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
