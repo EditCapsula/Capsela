@@ -475,7 +475,7 @@ function composerTenuePlan(e: {
 }) {
   if (!e.occ) return null;
   const occ = e.occ;
-  const pool = poolDePlanification({ items: e.items, capsule: e.capsule, occasion: occ, dressingSeul: e.dressingSeul, meteo: e.meteo, categories: CAT_KEYS });
+  const pool = poolDePlanification({ items: e.items, capsule: e.capsule, occasion: occ, dressingSeul: e.dressingSeul, meteo: e.meteo, categories: CAT_KEYS, genre: e.profile.gender });
   const tirer = () =>
     genererTenueHumeur({
       pool,

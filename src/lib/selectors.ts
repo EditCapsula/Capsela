@@ -970,8 +970,11 @@ export function buildOpinionMessage(args: Parameters<typeof buildOpinionMessageP
  * LE MÊME pool que celui qui a composé le look (« pour compléter une tenue, on peut faire appel aux pièces de la capsule de la saison en
  * cours en plus du dressing : c'est déjà implémenté »).
  */
-export function poolDePlanification(e: { items: Item[]; capsule: Item[]; occasion: OccasionKey; dressingSeul: boolean; meteo: Weather; categories: CategoryKey[] }): Item[] {
+export function poolDePlanification(e: { items: Item[]; capsule: Item[]; occasion: OccasionKey; dressingSeul: boolean; meteo: Weather; categories: CategoryKey[]; genre?: string | null }): Item[] {
+  // Le genre (24/11/2026, signalé : vernissage sans chaussures, une paire de babies et des sandales au dressing) : en soirée, les
+  // chaussures ADAPTÉES d'une femme sont habillées (R-S25). Sans lui, les babies comptaient comme adaptées, la capsule ne prêtait pas
+  // ses escarpins, et le moteur — qui, lui, applique R-S25 — n'avait plus aucune paire. La tenue du jour le passait déjà (store.tsx).
   return e.dressingSeul
     ? e.items
-    : composeWardrobePool(e.items, e.capsule, e.categories, { completerPourOccasion: e.occasion, saison: e.meteo, exclureHorsOccasion: true, completerPourSaison: e.meteo, pieceAdaptee: true });
+    : composeWardrobePool(e.items, e.capsule, e.categories, { completerPourOccasion: e.occasion, saison: e.meteo, exclureHorsOccasion: true, completerPourSaison: e.meteo, pieceAdaptee: true, genre: e.genre ?? null });
 }
