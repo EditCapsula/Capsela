@@ -28,6 +28,7 @@ import { prochaineActionProfil } from "@/lib/profile";
 import { jourLocal } from "@/lib/outfitFeedback";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CapselaProvider, useCapsela } from "@/lib/store";
+import EcranOuverture from "@/components/EcranOuverture";
 import WelcomeScreen from "./screens/WelcomeScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import AuthScreen from "./screens/AuthScreen";
@@ -379,6 +380,8 @@ function Screens() {
       {/* Les visites guidées (lib/visites.ts) : un seul composant, le seul qui manipule Driver.js. */}
       <VisiteGuidee />
       <Analytics />
+      {/* L'écran d'ouverture, à chaque lancement (24/11/2026, EcranOuverture.tsx). */}
+      <EcranOuverture surBienvenue={state.screen === "welcome"} />
     </div>
   );
 }
