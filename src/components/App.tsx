@@ -53,7 +53,7 @@ import AvisEnregistreScreen from "./screens/AvisEnregistreScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import DateNaissanceScreen from "./screens/DateNaissanceScreen";
-import { doitDemanderNaissance } from "@/lib/ageMinimum";
+import { doitDemanderTranche, estMineur, trancheDuProfil } from "@/lib/ageMinimum";
 import { decisionSession, ECRANS_AVANT_CONNEXION, PREMIERE_ETAPE } from "@/lib/onboarding";
 import ProfileScreen from "./screens/ProfileScreen";
 import PreferencesScreen from "./screens/PreferencesScreen";
@@ -116,10 +116,12 @@ function Screens() {
   // dans les deux cas, la feuille qui propose la vidéo ne s'ouvre jamais.
   const userIdPub = auth.userId;
   const profilCompletPub = auth.profile.completed;
+  // Les 15-17 ans (24/11/2026, ageMinimum.ts) : publicités non personnalisées seulement.
+  const mineurPub = estMineur(trancheDuProfil(auth.profile));
   useEffect(() => {
     if (!userIdPub) arreterPublicite();
-    else if (profilCompletPub && etatPremium === "gratuit") void demarrerPublicite(userIdPub);
-  }, [userIdPub, profilCompletPub, etatPremium]);
+    else if (profilCompletPub && etatPremium === "gratuit") void demarrerPublicite(userIdPub, mineurPub);
+  }, [userIdPub, profilCompletPub, etatPremium, mineurPub]);
 
   // LE CENTRE DE NOTIFICATIONS (12/11/2026, notificationsStore.ts) : chargé dès que la personne est connue (le mode démo garde les
   // siennes sur l'appareil), puis les événements DÉRIVÉS sont relevés depuis les données déjà chargées — un départ en valise dans les
@@ -287,7 +289,7 @@ function Screens() {
   // connecté qui n'en a pas et dont le profil n'est pas terminé — en pratique
   // le compte qui vient d'être créé avec Google. `refusAge` garde le message
   // de refus affiché après la suppression du compte, qui ferme la session.
-  if (ready && (refusAge || doitDemanderNaissance({ signedIn, profileLoaded: auth.profileLoaded, birthdate: auth.profile.birthdate, completed: profileCompleted }))) {
+  if (ready && (refusAge || doitDemanderTranche({ signedIn, profileLoaded: auth.profileLoaded, trancheAge: auth.profile.trancheAge, birthdate: auth.profile.birthdate, completed: profileCompleted }))) {
     return (
       <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden pt-safe-top">
         <div className="relative flex-1 min-h-0">

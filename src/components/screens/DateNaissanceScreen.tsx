@@ -2,13 +2,15 @@
 
 import { t } from "@/lib/langue";
 import { useState } from "react";
-import { messageAge, verifierAge, AGE_MINIMUM } from "@/lib/ageMinimum";
+import { messageTranche, verifierTranche, AGE_MINIMUM, type TrancheAge } from "@/lib/ageMinimum";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
-import Input from "@/components/Input";
+import ChoixTrancheAge from "@/components/ChoixTrancheAge";
 
 /**
+ * LA TRANCHE D'ÂGE (24/11/2026, à la place de la date de naissance, ageMinimum.ts), après la connexion Google ou Apple.
+ *
  * « DATE DE NAISSANCE » après la connexion Google (01/10/2026). La création de
  * compte par e-mail la demande déjà (AuthScreen) ; Google n'en transmet aucune.
  * App.tsx affiche cet écran à la place de tout autre tant qu'un compte connecté
@@ -30,24 +32,24 @@ export default function DateNaissanceScreen({
 }) {
   const auth = useAuth();
   const { actions } = useCapsela();
-  const [naissance, setNaissance] = useState("");
+  const [tranche, setTranche] = useState<TrancheAge | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
   const continuer = async () => {
     if (envoi) return;
-    const age = verifierAge(naissance);
-    if (!age.ok && age.raison !== "trop_jeune") return setErreur(messageAge(age.raison));
+    const age = verifierTranche(tranche);
+    if (!age.ok && age.raison !== "trop_jeune") return setErreur(messageTranche(age.raison));
     setErreur(null);
     setEnvoi(true);
     if (!age.ok) {
       // Trop jeune : le message d'abord (il survit à la déconnexion), puis la suppression.
-      onRefus(messageAge(age.raison));
+      onRefus(messageTranche(age.raison));
       await auth.deleteAccount();
       setEnvoi(false);
       return;
     }
-    await auth.saveProfile({ ...auth.profile, birthdate: naissance });
+    await auth.saveProfile({ ...auth.profile, trancheAge: tranche });
     setEnvoi(false);
   };
 
@@ -71,16 +73,15 @@ export default function DateNaissanceScreen({
         {t("Une dernière")} <span className="italic text-terracotta">{t("chose")}</span>
       </div>
       <div className="t-chapeau text-muted mt-[10px]">
-        {t("Pour créer ton compte, indique ta date de naissance. Il faut avoir au moins {n} ans.", { n: AGE_MINIMUM })}
+        {t("Pour créer ton compte, indique ta tranche d'âge. Il faut avoir au moins {n} ans.", { n: AGE_MINIMUM })}
       </div>
-      <Input
-        type="date"
+      <ChoixTrancheAge
         className="mt-7"
-        style={{ colorScheme: "light" }}
-        value={naissance}
-        max={new Date().toISOString().slice(0, 10)}
-        onChange={(e) => setNaissance(e.target.value)}
-        aria-label={t("Date de naissance")}
+        valeur={tranche}
+        onChange={(tr) => {
+          setTranche(tr);
+          setErreur(null);
+        }}
       />
       {erreur && (
         <div role="alert" className="mt-4 bg-error-bg border border-error-border rounded-champ px-4 py-3 text-[12px] text-rust leading-[1.45]">

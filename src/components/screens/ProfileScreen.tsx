@@ -13,7 +13,7 @@ import {
   I_METRE,
   I_PALETTE,
   I_REGLAGES,
-  FeuilleDateNaissance,
+  FeuilleTrancheAge,
   I_SILHOUETTE,
   I_SORTIE,
   Icone,
@@ -25,6 +25,7 @@ import {
 } from "@/components/ProfilUI";
 import { libelleMembreDepuis } from "@/lib/membreDepuis";
 import { useAuth } from "@/lib/auth";
+import { libelleTranche, trancheDuProfil } from "@/lib/ageMinimum";
 import { silhouetteOrienteLaCapsule } from "@/lib/capsule";
 import { SIGNATURE_AFFICHEE_MAX, colorimetrieUtilisable } from "@/lib/colorimetrie";
 import {
@@ -87,9 +88,8 @@ export default function ProfileScreen() {
   // pour l'avatar ; elle ne dure que le temps de l'écran.
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const naissance = profile.birthdate
-    ? new Date(profile.birthdate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
-    : null;
+  const tranche = trancheDuProfil(profile);
+  const libelleAge = tranche ? libelleTranche(tranche) : null;
 
   /* Le genre se modifie par le mécanisme existant — la feuille et la
      revalidation de l'écran d'édition (applyGenderChange) — et non par
@@ -196,7 +196,7 @@ export default function ProfileScreen() {
         renseigne={Boolean(profile.displayName)}
         onClick={() => actions.goProfileSetup("prenom", true)}
       />
-      <LigneInfo label="Date de naissance" valeur={naissance || "Non renseignée"} renseigne={Boolean(naissance)} onClick={() => setDateOuverte(true)} />
+      <LigneInfo label="Tranche d'âge" valeur={libelleAge || "Non renseignée"} renseigne={Boolean(libelleAge)} onClick={() => setDateOuverte(true)} />
       </Card>
 
       {/* MON ABONNEMENT (27/09/2026) — l'emplacement de la gestion de l'offre,
@@ -420,7 +420,7 @@ export default function ProfileScreen() {
           seul endroit ») : elle ne faisait que mener à Réglages, « Météo et localisation », la seule page qui règle la ville et la
           géolocalisation. Rien n'est supprimé des données. */}
 
-      <FeuilleDateNaissance open={dateOuverte} onClose={() => setDateOuverte(false)} />
+      <FeuilleTrancheAge open={dateOuverte} onClose={() => setDateOuverte(false)} />
       {genreOuvert && <GenderModal current={profile.gender} onSelect={changerGenre} onClose={() => setGenreOuvert(false)} />}
       {aRevalider && (
         <RevalidationSheet

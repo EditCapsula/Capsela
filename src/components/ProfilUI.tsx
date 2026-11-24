@@ -5,12 +5,13 @@ import { useEffect, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { useAuth } from "@/lib/auth";
 import { CITIES } from "@/lib/data";
-import { jourLocal } from "@/lib/outfitFeedback";
 import { GENDERS, type Gender, type GenderDependentField } from "@/lib/profile";
 import { fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
 import EmptyState from "@/components/EmptyState";
+import ChoixTrancheAge from "@/components/ChoixTrancheAge";
+import { trancheDuProfil, type TrancheAge } from "@/lib/ageMinimum";
 
 /*
  * Éléments partagés par les écrans du profil (Mon profil, Mon compte) :
@@ -379,63 +380,37 @@ export function FeuilleVille({ open, onClose }: { open: boolean; onClose: () => 
   );
 }
 
-/** LA DATE DE NAISSANCE — même origine que FeuilleVille ; privée, jamais affichée ailleurs que sur le compte. */
-export function FeuilleDateNaissance({ open, onClose }: { open: boolean; onClose: () => void }) {
+/**
+ * LA TRANCHE D'ÂGE (24/11/2026, à la place de la date de naissance, ageMinimum.ts) — même origine que FeuilleVille ; privée, jamais
+ * affichée ailleurs que sur le compte. « Moins de 15 ans » n'y est pas proposé : un compte existe déjà, l'âge minimum a été vérifié à
+ * sa création. La tranche ne se retire pas : elle est obligatoire depuis l'inscription.
+ */
+export function FeuilleTrancheAge({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { profile, saveProfile } = useAuth();
-  const dateOuverte = open;
-  const setDateOuverte = (v: boolean) => {
-    if (!v) onClose();
-  };
-  const [dateBrouillon, setDateBrouillon] = useState(profile.birthdate ?? "");
-  // Bornes de la date : jamais dans le futur, jamais avant 1900 — relues à
-  // chaque ouverture de la feuille.
-  const [aujourdhui, setAujourdhui] = useState("");
+  const actuelle = trancheDuProfil(profile);
+  const [brouillon, setBrouillon] = useState<TrancheAge | null>(actuelle);
   useEffect(() => {
     if (!open) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDateBrouillon(profile.birthdate ?? "");
-    setAujourdhui(jourLocal());
-  }, [open, profile.birthdate]);
-  const dateValide = /^\d{4}-\d{2}-\d{2}$/.test(dateBrouillon) && dateBrouillon >= "1900-01-01" && dateBrouillon <= aujourdhui;
+    setBrouillon(actuelle);
+  }, [open, actuelle]);
   return (
-    <BottomSheet title="Ta date de naissance" open={dateOuverte} onClose={() => setDateOuverte(false)}>
-      <label htmlFor="date-naissance" className="block text-[12px] text-muted leading-[1.45] mb-2">
-        Elle reste privée et n&apos;est jamais affichée ailleurs que sur ton profil.
-      </label>
-      <Input
-        id="date-naissance"
-        type="date"
-        value={dateBrouillon}
-        min="1900-01-01"
-        max={aujourdhui || undefined}
-        onChange={(e) => setDateBrouillon(e.target.value)}
-        style={{ colorScheme: "light" }}
-      />
-      {dateBrouillon && !dateValide && (
-        <div className="text-[12px] text-rust mt-2" role="alert">
-          Choisis une date passée, après 1900.
-        </div>
-      )}
-      <Button variante="principal" className="mt-4"
-        disabled={!dateValide}
+    <BottomSheet title="Ta tranche d'âge" open={open} onClose={onClose}>
+      <div className="block text-[12px] text-muted leading-[1.45] mb-3">
+        Elle reste privée et n&apos;est jamais affichée ailleurs que sur ton profil. Elle sert à vérifier l&apos;âge minimum et à mesurer, de façon agrégée, l&apos;âge des personnes qui utilisent Capsela.
+      </div>
+      <ChoixTrancheAge valeur={brouillon} onChange={(tr) => tr !== "moins_15" && setBrouillon(tr)} sansMoinsDe15 />
+      <Button
+        variante="principal"
+        className="mt-4"
+        disabled={!brouillon || brouillon === actuelle}
         onClick={() => {
-          setDateOuverte(false);
-          saveProfile({ ...profile, birthdate: dateBrouillon });
+          onClose();
+          if (brouillon) saveProfile({ ...profile, trancheAge: brouillon });
         }}
       >
         Enregistrer
       </Button>
-      {profile.birthdate && (
-        <button
-          onClick={() => {
-            setDateOuverte(false);
-            saveProfile({ ...profile, birthdate: null });
-          }}
-          className="mt-2 w-full text-center text-[12px] text-muted min-h-[44px] cursor-pointer"
-        >
-          Retirer ma date de naissance
-        </button>
-      )}
     </BottomSheet>
   );
 }

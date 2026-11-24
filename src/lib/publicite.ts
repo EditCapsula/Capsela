@@ -98,7 +98,7 @@ export const reessayerVideo = (): void => rechargerVideo?.();
 
 type ModuleAdMob = typeof import("@capacitor-community/admob");
 
-/** Le compte pour lequel la publicité a été démarrée : une seule fois par compte et par lancement. */
+/** Le compte (et s'il est mineur) pour lequel la publicité a été démarrée : une seule fois par compte et par lancement. */
 let demarreePour: string | null = null;
 
 export function publiciteDisponibleIci(): boolean {
@@ -109,16 +109,21 @@ export function publiciteDisponibleIci(): boolean {
  * Démarre la publicité pour un compte connecté, non Premium : consentement, initialisation, première vidéo chargée.
  * Ne jette jamais : un échec laisse simplement la carte vidéo absente, ce qui est l'état d'avant AdMob.
  */
-export async function demarrerPublicite(userId: string): Promise<void> {
-  if (!publiciteDisponibleIci() || demarreePour === userId) return;
-  demarreePour = userId;
+export async function demarrerPublicite(userId: string, mineur = false): Promise<void> {
+  const cle = `${userId}:${mineur ? "mineur" : "majeur"}`;
+  if (!publiciteDisponibleIci() || demarreePour === cle) return;
+  demarreePour = cle;
   try {
     const m: ModuleAdMob = await import("@capacitor-community/admob");
     const { AdMob, AdmobConsentStatus, MaxAdContentRating } = m;
 
     // 1. LE CONSENTEMENT, AVANT TOUTE DEMANDE DE PUBLICITÉ. Google ne présente le formulaire que là où il est exigé,
     // et une seule fois : les lancements suivants relisent le choix enregistré.
-    let info = await AdMob.requestConsentInfo();
+    //
+    // LES 15-17 ANS (24/11/2026, ageMinimum.ts ; règlement sur les services numériques, art. 28) : l'indication « sous l'âge du
+    // consentement » (TFUA) part avec la demande de consentement et avec toutes les demandes de publicité : Google ne sert alors que
+    // des publicités non personnalisées, et ne présente pas le formulaire qui proposerait de les personnaliser.
+    let info = await AdMob.requestConsentInfo(mineur ? { tagForUnderAgeOfConsent: true } : undefined);
     if (info.isConsentFormAvailable && info.status === AdmobConsentStatus.REQUIRED) {
       info = await AdMob.showConsentForm();
     }
@@ -132,7 +137,7 @@ export async function demarrerPublicite(userId: string): Promise<void> {
     // 2. L'INITIALISATION. Capsela est ouverte dès 15 ans (`ageMinimum.ts`) : contenu publicitaire « Teen » au plus.
     const bloc = blocRecompense(process.env.NEXT_PUBLIC_ADMOB_RECOMPENSE_ID);
     poserEtat({ etape: "chargement", test: bloc.test, detail: null });
-    await AdMob.initialize({ initializeForTesting: bloc.test, maxAdContentRating: MaxAdContentRating.Teen });
+    await AdMob.initialize({ initializeForTesting: bloc.test, maxAdContentRating: MaxAdContentRating.Teen, ...(mineur ? { tagForUnderAgeOfConsent: true } : {}) });
 
     // 3. LE FOURNISSEUR. Il ne se dit prêt qu'avec une vidéo DÉJÀ chargée : une vidéo qu'on attend se lit comme une panne.
     enregistrerFournisseurVideo(creerFournisseurAdMob(m, bloc, userId));

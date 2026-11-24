@@ -1,3 +1,4 @@
+import type { TrancheAge } from "./ageMinimum";
 import type { Corpulence } from "./silhouetteRonde";
 import { miseEnValeurDuGenre, miseEnValeurPosee, PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
 import { langue, t } from "./langue";
@@ -30,7 +31,10 @@ export type Intensite = "Douces et discrètes" | "Profondes et intenses" | "Lumi
 
 export interface Profile {
   displayName: string;
+  /** LEGACY, LECTURE SEULE depuis le 24/11/2026 : la date des comptes d'avant les tranches, effacée par la migration 0067. */
   birthdate: string | null;
+  /** La tranche d'âge déclarée (24/11/2026, ageMinimum.ts) : colonne `tranche_age` (0067), à défaut les métadonnées du compte. */
+  trancheAge: TrancheAge | null;
   gender: Gender | null;
   /** Palette personnelle (recette 12/08/2026, champ unique depuis le 20/08/2026 — fusion base/neutres/accents, Tâche 8). */
   paletteCouleurs: string[];
@@ -81,6 +85,7 @@ export const DEFAULT_PREFS: ProfilePrefs = {
 export const EMPTY_PROFILE: Profile = {
   displayName: "",
   birthdate: null,
+  trancheAge: null,
   gender: null,
   paletteCouleurs: [],
   paletteAffinite: null,
