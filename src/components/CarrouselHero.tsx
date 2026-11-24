@@ -163,21 +163,34 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
  * terracotta sur la même ligne, le « i » de la pertinence ; le texte d'un plan ou d'une valise sous le titre ; « Portée aujourd'hui ».
  * Partagé par les slides et par la carte seule (un autre jour), pour qu'elles se lisent pareil.
  */
+/**
+ * L'OCCASION EN TITRE, L'ALLURE EN SURTITRE (24/11/2026, demandé : « intervertis la typo pour le travail et chic et affirmé ») : avant,
+ * « POUR LE TRAVAIL » en petites capitales et « Chic *et affirmé* » en titre d'écran. Désormais l'occasion est le titre — son premier
+ * mot droit, la suite en italique terracotta (« Pour *le travail* ») — et l'allure passe en surtitre, avec l'étoile. Le « i » de la
+ * pertinence reste au bout du titre.
+ */
+function enDeuxTemps(texte: string): { a: string; b: string } {
+  const i = texte.indexOf(" ");
+  return i < 0 ? { a: texte, b: "" } : { a: texte.slice(0, i), b: texte.slice(i + 1) };
+}
+
 export function EnTeteTenue({ surtitre, titre, sousTitre, pourquoi, portee }: { surtitre: string; titre: { a: string; b: string }; sousTitre: string; pourquoi: boolean; portee?: boolean }) {
+  const occasion = enDeuxTemps(t(surtitre));
+  const allure = [titre.a, titre.b].filter(Boolean).join(" ");
   return (
     <>
       <div className="flex items-center gap-[7px]">
         <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
           <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="t-surtitre text-ink whitespace-nowrap">{t(surtitre)}</span>
+        <span className="t-surtitre text-ink">{allure}</span>
       </div>
       <div className="relative t-titre-ecran text-ink mt-2" style={{ textWrap: "balance" }}>
-        {titre.a}
-        {titre.b && (
+        {occasion.a}
+        {occasion.b && (
           <>
             {" "}
-            <span className="italic text-terracotta">{titre.b}</span>
+            <span className="italic text-terracotta">{occasion.b}</span>
           </>
         )}
         {/* La pertinence derrière le « i » du titre (12/11/2026, PourquoiCetteTenue). */}
@@ -220,6 +233,7 @@ export function CarrouselHero({
   retrait = 0,
   ecart = 0,
   enveloppe,
+  fleches,
 }: {
   slides: React.ReactNode[];
   libelles: string[];
@@ -241,6 +255,12 @@ export function CarrouselHero({
    * dessous, hors de la carte — demandé).
    */
   enveloppe?: (piste: React.ReactNode) => React.ReactNode;
+  /**
+   * LES FLÈCHES SUR LA PLANCHE (24/11/2026, retour d'une testeuse : « mets des flèches dans le flat lay pour montrer que tu peux aller à
+   * gauche ou à droite ») : les pastilles rondes de « Ma sélection du moment » (Capsule), posées à hauteur de la planche (`hauteur`,
+   * depuis le haut de la piste). Pas de flèche gauche sur la première tenue, ni droite sur la dernière. Le glissé reste.
+   */
+  fleches?: { hauteur: string };
 }) {
   const piste = useRef<HTMLDivElement>(null);
   const [actif, setActif] = useState(0);
@@ -323,9 +343,38 @@ export function CarrouselHero({
         ))}
       </div>
   );
+  const fleche = (sens: "precedente" | "suivante") => {
+    const gauche = sens === "precedente";
+    const cible = gauche ? indexActif - 1 : indexActif + 1;
+    if (cible < 0 || cible > n - 1) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => aller(cible)}
+        onPointerDown={(e) => e.stopPropagation()}
+        aria-label={gauche ? t("Tenue précédente") : t("Tenue suivante")}
+        className={`absolute z-10 -translate-y-1/2 ${gauche ? "left-[10px]" : "right-[10px]"} w-[40px] h-[40px] rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-ink cursor-pointer`}
+        style={{ top: fleches!.hauteur }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path d={gauche ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    );
+  };
+  const pisteEtFleches =
+    fleches && n > 1 ? (
+      <div className="relative">
+        {laPiste}
+        {fleche("precedente")}
+        {fleche("suivante")}
+      </div>
+    ) : (
+      laPiste
+    );
   return (
     <div className={className} role="region" aria-roledescription={t("carrousel")} aria-label={t(label)}>
-      {enveloppe ? enveloppe(laPiste) : laPiste}
+      {enveloppe ? enveloppe(pisteEtFleches) : pisteEtFleches}
       {n > 1 && (
         <div className="flex items-center justify-center gap-[6px] mt-[10px]">
           {slides.map((_, i) => (

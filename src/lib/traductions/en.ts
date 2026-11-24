@@ -207,6 +207,8 @@ export const EN: Record<string, string> = {
   "Indique ta tranche d'âge pour créer ton compte.": "Select your age range to create your account.",
   "Pour créer ton compte, indique ta tranche d'âge. Il faut avoir au moins {n} ans.": "To create your account, select your age range. You must be at least {n} years old.",
   "Ta tranche d'âge": "Your age range",
+  "Tenue précédente": "Previous outfit",
+  "Tenue suivante": "Next outfit",
   "Moins de 15 ans": "Under 15",
   "15 à 17 ans": "15 to 17",
   "18 à 24 ans": "18 to 24",

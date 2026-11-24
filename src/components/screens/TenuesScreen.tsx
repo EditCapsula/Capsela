@@ -71,17 +71,18 @@ function PlusIcon() {
 /** La carte de la tenue (12/11/2026) : 564 px avant, plus la signature stylistique sous le flat lay — le flat lay garde sa hauteur. */
 const HAUTEUR_CARTE = 612;
 /** Une action secondaire de la carte (12/11/2026) : du texte et une icône, sans fond ni contour, 44 px de cible. */
+// Des BOUTONS, pas des liens (24/11/2026, retour d'une testeuse : « renforcer le côté bouton… avec un chevron comme Voir tout mais en
+// gras ») : libellé demi-gras et chevron gras à droite (ChevronAction), à la place des glyphes de tête (♡, ✦, ↻) — les deux ne tenaient
+// pas sur la largeur de la carte. Toujours sans fond ni contour : ils ne rivalisent pas avec « Porter cette tenue ».
 const ACTION_SECONDAIRE =
-  "flex items-center justify-center gap-[5px] min-h-[44px] px-[4px] text-[12px] leading-[1.2] text-center text-ink cursor-pointer min-[360px]:whitespace-nowrap disabled:cursor-default disabled:opacity-45";
-function IconeAutreTenue() {
+  "flex items-center justify-center gap-[4px] min-h-[44px] px-[4px] text-[12px] font-semibold leading-[1.2] text-center text-ink cursor-pointer min-[360px]:whitespace-nowrap disabled:cursor-default disabled:opacity-45";
+function ChevronAction() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" className="text-terracotta flex-shrink-0" style={{ display: "block" }}>
-      <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta" style={{ display: "block" }}>
+      <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
-
 /**
  * Une pièce proposée pour compléter la tenue (14/10/2026) : sa vignette ouvre la fiche, « Choisir » la met dans la tenue. Une pièce de
  * la capsule garde son traitement de suggestion (atténuée, « Suggérée ») pour ne jamais passer pour une pièce possédée — la seule
@@ -1078,8 +1079,8 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
               title={canSaveOutfit ? undefined : t("Ajoute au moins 2 pièces à cette tenue pour l'enregistrer.")}
               aria-pressed={isOutfitSaved}
             >
-              <span aria-hidden="true" className="text-terracotta">{isOutfitSaved ? "♥" : "♡"}</span>
               {isOutfitSaved ? t("Enregistrée") : t("Enregistrer")}
+              <ChevronAction />
             </button>
             <button
               type="button"
@@ -1096,11 +1097,13 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
                   : actions.openOpinionShare()
               }
             >
-              <span aria-hidden="true" className="text-terracotta">✦</span> {t("Avis d'un proche")}
+              {t("Avis d'un proche")}
+              <ChevronAction />
             </button>
             {planApplique ? (
               <button type="button" className={ACTION_SECONDAIRE} onClick={actions.voirAutreProposition}>
-                <IconeAutreTenue /> {t("Autre tenue")}
+                {t("Autre tenue")}
+                <ChevronAction />
               </button>
             ) : (
               <button
@@ -1110,7 +1113,8 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
                 disabled={noCompleteOutfit || tirageEnCours}
                 aria-busy={tirageEnCours}
               >
-                <IconeAutreTenue /> {t("Autre tenue")}
+                {t("Autre tenue")}
+                <ChevronAction />
               </button>
             )}
           </div>
