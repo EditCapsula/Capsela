@@ -1,7 +1,7 @@
 "use client";
 
 import LegalDocOverlay from "@/components/legal/LegalDocOverlay";
-import { idMesure, poserPlateforme } from "@/lib/mesureAudience";
+import { chargerGoogleAnalytics, idMesure } from "@/lib/mesureAudience";
 import { lireVersionPubliee, miseAJourDisponible, numeroInstalle, plateformeStore, urlStore } from "@/lib/miseAJour";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { App as CapApp } from "@capacitor/app";
@@ -26,9 +26,9 @@ import { notificationsDesValises, notifMiseAJour, notifProfilACompleter } from "
 import { demarrerNotifications, noterNotifications } from "@/lib/notificationsStore";
 import { prochaineActionProfil } from "@/lib/profile";
 import { jourLocal } from "@/lib/outfitFeedback";
-import { GoogleAnalytics } from "@next/third-parties/google";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CapselaProvider, useCapsela } from "@/lib/store";
+import EcranOuverture from "@/components/EcranOuverture";
 import WelcomeScreen from "./screens/WelcomeScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import AuthScreen from "./screens/AuthScreen";
@@ -380,14 +380,16 @@ function Screens() {
       {/* Les visites guidées (lib/visites.ts) : un seul composant, le seul qui manipule Driver.js. */}
       <VisiteGuidee />
       <Analytics />
+      {/* L'écran d'ouverture, à chaque lancement (24/11/2026, EcranOuverture.tsx). */}
+      <EcranOuverture surBienvenue={state.screen === "welcome"} />
     </div>
   );
 }
 
 /**
  * Mesure d'audience — chargée seulement après un consentement explicite
- * (cf. lib/consent.ts). Le composant GoogleAnalytics de @next/third-parties
- * n'est monté qu'à ce moment : tant que la réponse n'est pas "granted",
+ * (cf. lib/consent.ts). Google Analytics (chargerGoogleAnalytics, mesureAudience.ts, depuis le 24/11/2026 à la place du
+ * composant de @next/third-parties) n'est chargé qu'à ce moment : tant que la réponse n'est pas "granted",
  * aucun script Google n'est injecté dans la page, ce que la CNIL exige.
  *
  * Sans ID de mesure (idMesure, mesureAudience.ts : en développement local) : rien n'est
@@ -402,16 +404,15 @@ function Analytics() {
   // montée en ssr:false (AppLoader), mais l'écrire évite tout écart
   // d'hydratation si ça changeait un jour.
   const consent = useSyncExternalStore(subscribeConsent, readConsent, () => "unknown" as ConsentState);
-  // La plateforme (24/11/2026, mesureAudience.ts) : site, app Android ou app iOS, dans le même flux Web.
+  // Chargé à l'accord, avec la plateforme (site, app Android ou app iOS) et la durée des cookies (mesureAudience.ts).
   useEffect(() => {
-    if (gaId && consent === "granted") poserPlateforme(Capacitor.getPlatform());
+    if (gaId && consent === "granted") chargerGoogleAnalytics(gaId, Capacitor.getPlatform());
   }, [gaId, consent]);
 
   if (!gaId) return null;
   return (
     <>
       {consent === "unknown" && <CookieBanner />}
-      {consent === "granted" && <GoogleAnalytics gaId={gaId} />}
     </>
   );
 }

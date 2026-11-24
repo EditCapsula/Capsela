@@ -36,7 +36,7 @@ qu'après ton accord ; sans lui, rien n'est déposé.
 
 | Nom | Émetteur | Rôle | Durée |
 | --- | --- | --- | --- |
-| `_ga`, `_ga_…` | Google | Distinguer les visites de façon statistique | 13 mois au plus [À VÉRIFIER — réglage du compte Analytics] |
+| `_ga`, `_ga_…` | Google | Distinguer les visites de façon statistique | 13 mois au plus, sans prolongation à chaque visite ; données conservées 2 mois (événements) et 14 mois (identifiant statistique) dans Google Analytics |
 
 Refuser est aussi simple qu'accepter, et ton choix se modifie à tout moment
 dans « Gérer mon compte ».

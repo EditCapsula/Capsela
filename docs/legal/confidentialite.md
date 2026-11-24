@@ -245,7 +245,10 @@ de la Commission. [À VÉRIFIER — mécanisme retenu pour chaque prestataire.]
 - **La photo d'une tenue importée et ses découpes** : effacées à la fin de
   l'import ; seules restent les pièces que tu as ajoutées.
 - **Rapports d'erreur** : [À COMPLÉTER — durée de conservation du plan Sentry].
-- **Mesure d'audience** : [À COMPLÉTER — durée réglée dans Google Analytics, 2 ou 14 mois].
+- **Mesure d'audience** : les événements détaillés (pages vues, actions)
+  2 mois, les données rattachées à l'identifiant statistique de ton appareil
+  14 mois, dans Google Analytics ; le cookie qui porte cet identifiant, 13 mois
+  au plus, sans être prolongé à chaque visite.
 - **Ton choix sur la publicité personnalisée** : gardé sur ton appareil par
   Google, jusqu'à ce que tu le changes (« Gérer mon compte → Choix
   publicitaires ») ou que tu désinstalles l'application.
