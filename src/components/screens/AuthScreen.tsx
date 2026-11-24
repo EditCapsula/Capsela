@@ -94,10 +94,13 @@ export default function AuthScreen() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder={t("Mot de passe")}
         />
-        <div className="mt-2">
-          <div className="text-[13px] text-ink-soft">{t("Ta tranche d'âge")}</div>
-          <ChoixTrancheAge className="mt-2" valeur={trancheAge} onChange={(tr) => { setTrancheAge(tr); setErreurAge(null); }} />
-        </div>
+        <ChoixTrancheAge
+          valeur={trancheAge}
+          onChange={(tr) => {
+            setTrancheAge(tr);
+            setErreurAge(null);
+          }}
+        />
       </div>
 
       {erreurAge && (
