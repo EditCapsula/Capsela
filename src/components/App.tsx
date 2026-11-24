@@ -1,6 +1,7 @@
 "use client";
 
 import LegalDocOverlay from "@/components/legal/LegalDocOverlay";
+import { idMesure, poserPlateforme } from "@/lib/mesureAudience";
 import { lireVersionPubliee, miseAJourDisponible, numeroInstalle, plateformeStore, urlStore } from "@/lib/miseAJour";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { App as CapApp } from "@capacitor/app";
@@ -53,7 +54,7 @@ import AvisEnregistreScreen from "./screens/AvisEnregistreScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import DateNaissanceScreen from "./screens/DateNaissanceScreen";
-import { doitDemanderNaissance } from "@/lib/ageMinimum";
+import { doitDemanderTranche, estMineur, trancheDuProfil } from "@/lib/ageMinimum";
 import { decisionSession, ECRANS_AVANT_CONNEXION, PREMIERE_ETAPE } from "@/lib/onboarding";
 import ProfileScreen from "./screens/ProfileScreen";
 import PreferencesScreen from "./screens/PreferencesScreen";
@@ -116,10 +117,12 @@ function Screens() {
   // dans les deux cas, la feuille qui propose la vidéo ne s'ouvre jamais.
   const userIdPub = auth.userId;
   const profilCompletPub = auth.profile.completed;
+  // Les 15-17 ans (24/11/2026, ageMinimum.ts) : publicités non personnalisées seulement.
+  const mineurPub = estMineur(trancheDuProfil(auth.profile));
   useEffect(() => {
     if (!userIdPub) arreterPublicite();
-    else if (profilCompletPub && etatPremium === "gratuit") void demarrerPublicite(userIdPub);
-  }, [userIdPub, profilCompletPub, etatPremium]);
+    else if (profilCompletPub && etatPremium === "gratuit") void demarrerPublicite(userIdPub, mineurPub);
+  }, [userIdPub, profilCompletPub, etatPremium, mineurPub]);
 
   // LE CENTRE DE NOTIFICATIONS (12/11/2026, notificationsStore.ts) : chargé dès que la personne est connue (le mode démo garde les
   // siennes sur l'appareil), puis les événements DÉRIVÉS sont relevés depuis les données déjà chargées — un départ en valise dans les
@@ -287,7 +290,7 @@ function Screens() {
   // connecté qui n'en a pas et dont le profil n'est pas terminé — en pratique
   // le compte qui vient d'être créé avec Google. `refusAge` garde le message
   // de refus affiché après la suppression du compte, qui ferme la session.
-  if (ready && (refusAge || doitDemanderNaissance({ signedIn, profileLoaded: auth.profileLoaded, birthdate: auth.profile.birthdate, completed: profileCompleted }))) {
+  if (ready && (refusAge || doitDemanderTranche({ signedIn, profileLoaded: auth.profileLoaded, trancheAge: auth.profile.trancheAge, birthdate: auth.profile.birthdate, completed: profileCompleted }))) {
     return (
       <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden pt-safe-top">
         <div className="relative flex-1 min-h-0">
@@ -387,18 +390,22 @@ function Screens() {
  * n'est monté qu'à ce moment : tant que la réponse n'est pas "granted",
  * aucun script Google n'est injecté dans la page, ce que la CNIL exige.
  *
- * NEXT_PUBLIC_GA_ID absent (développement local, préproduction) : rien n'est
+ * Sans ID de mesure (idMesure, mesureAudience.ts : en développement local) : rien n'est
  * chargé et le bandeau ne s'affiche pas — inutile de demander un
  * consentement pour une mesure qui n'existe pas.
  */
 function Analytics() {
-  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  const gaId = idMesure();
   // useSyncExternalStore plutôt qu'un useState + useEffect : le
   // consentement vit dans localStorage, c'est un store externe au sens de
   // React. Le snapshot serveur vaut "unknown" — l'app est de toute façon
   // montée en ssr:false (AppLoader), mais l'écrire évite tout écart
   // d'hydratation si ça changeait un jour.
   const consent = useSyncExternalStore(subscribeConsent, readConsent, () => "unknown" as ConsentState);
+  // La plateforme (24/11/2026, mesureAudience.ts) : site, app Android ou app iOS, dans le même flux Web.
+  useEffect(() => {
+    if (gaId && consent === "granted") poserPlateforme(Capacitor.getPlatform());
+  }, [gaId, consent]);
 
   if (!gaId) return null;
   return (

@@ -4,7 +4,8 @@ import { t } from "@/lib/langue";
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { markSignupIntent, useAuth } from "@/lib/auth";
-import { messageAge, verifierAge } from "@/lib/ageMinimum";
+import { messageTranche, verifierTranche, type TrancheAge } from "@/lib/ageMinimum";
+import ChoixTrancheAge from "@/components/ChoixTrancheAge";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
 import Input, { ChampMotDePasse } from "@/components/Input";
@@ -15,7 +16,7 @@ export default function AuthScreen() {
   const auth = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [birthdate, setBirthdate] = useState("");
+  const [trancheAge, setTrancheAge] = useState<TrancheAge | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmPending, setConfirmPending] = useState(false);
 
@@ -23,17 +24,16 @@ export default function AuthScreen() {
 
   const submitEmail = async () => {
     if (busy) return;
-    // Âge minimum (01/10/2026) : la date de naissance est obligatoire, et
-    // l'inscription refusée sous AGE_MINIMUM ans. Le contrôle se fait ici,
-    // avant toute création de compte.
-    const age = verifierAge(birthdate);
+    // Âge minimum (01/10/2026) : la tranche d'âge (24/11/2026, à la place de la date de naissance) est obligatoire, et l'inscription
+    // refusée sous AGE_MINIMUM ans. Le contrôle se fait ici, avant toute création de compte.
+    const age = verifierTranche(trancheAge);
     if (!age.ok) {
-      setErreurAge(messageAge(age.raison));
+      setErreurAge(messageTranche(age.raison));
       return;
     }
     setErreurAge(null);
     setBusy(true);
-    const res = await auth.signUpEmail(state.authName.trim(), email.trim(), password, birthdate);
+    const res = await auth.signUpEmail(state.authName.trim(), email.trim(), password, trancheAge ?? undefined);
     setBusy(false);
     if (res === "ok") actions.goProfileSetup("genre");
     else if (res === "confirm_email") setConfirmPending(true);
@@ -94,36 +94,13 @@ export default function AuthScreen() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder={t("Mot de passe")}
         />
-        {/* Un <input type="date"> vide n'a pas de placeholder, et les
-            navigateurs ne s'accordent pas sur ce qu'ils affichent à la place :
-            Chrome bureau écrit « jj/mm/aaaa », Chrome Android ne montre
-            RIEN — juste une case vide (signalé le 28/08/2026 sur Samsung).
-            Le correctif du 24/08/2026 se contentait de recolorer le texte du
-            navigateur, ce qui ne pouvait donc rien donner là où il n'y a pas
-            de texte.
-            On pose notre propre libellé par-dessus, avec le style exact des
-            placeholders des trois champs au-dessus, et on rend transparent le
-            texte natif tant qu'aucune date n'est choisie — sinon les deux se
-            superposeraient sur bureau. `pointer-events-none` laisse le
-            toucher atteindre le champ, qui reste un vrai sélecteur de date. */}
-        <div className="relative">
-          <Input
-            type="date"
-            style={{ colorScheme: "light", color: birthdate ? undefined : "transparent" }}
-            value={birthdate}
-            onChange={(e) => setBirthdate(e.target.value)}
-            max={new Date().toISOString().slice(0, 10)}
-            aria-label={t("Date de naissance")}
-          />
-          {!birthdate && (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute left-[17px] top-1/2 -translate-y-1/2 text-[14px] text-placeholder font-sans"
-            >
-              {t("Date de naissance")}
-            </span>
-          )}
-        </div>
+        <ChoixTrancheAge
+          valeur={trancheAge}
+          onChange={(tr) => {
+            setTrancheAge(tr);
+            setErreurAge(null);
+          }}
+        />
       </div>
 
       {erreurAge && (

@@ -31,9 +31,14 @@ Contact pour toute question sur tes données : capsela.app@gmail.com.
 
 - ton prénom, ton adresse e-mail et ton mot de passe (conservé sous forme
   chiffrée, jamais lisible, y compris par nous) ;
-- ta date de naissance, demandée quand tu crées ton compte (par e-mail, ou
-  juste après la connexion avec Google), pour vérifier l'âge minimum (15 ans) ;
-  sous cet âge, le compte est supprimé aussitôt ;
+- ta tranche d'âge (par exemple « 25 à 34 ans »), demandée quand tu crées ton
+  compte (par e-mail, ou juste après la connexion avec Google ou Apple). Elle
+  sert à vérifier l'âge minimum (15 ans) — sous cet âge, le compte n'est pas
+  créé, ou il est supprimé aussitôt —, à ne te montrer que des publicités non
+  personnalisées si tu as entre 15 et 17 ans, et à mesurer, de façon agrégée,
+  l'âge des personnes qui utilisent Capsela. Nous ne demandons plus ta date de
+  naissance ; celles enregistrées avant le 24/11/2026 ont été remplacées par
+  leur tranche, puis effacées ;
 - si tu te connectes avec Google : ton nom tel que Google nous le transmet et
   ton adresse e-mail.
 
@@ -121,7 +126,9 @@ gardées sur ton appareil pour te les reproposer.
 - **Publicité (application Android seulement)** : si tu choisis de regarder
   une vidéo pour obtenir une tenue de plus, elle est fournie par Google AdMob.
   Avant toute publicité, Google te demande ton accord pour la personnaliser ;
-  sans cet accord, la publicité n'est pas personnalisée. Google reçoit les
+  sans cet accord, la publicité n'est pas personnalisée. Si tu as entre 15 et
+  17 ans, la publicité n'est jamais personnalisée et cet accord ne t'est pas
+  demandé. Google reçoit les
   données techniques de ton appareil, dont son identifiant publicitaire, et
   l'identifiant de ton compte Capsela, qui lui sert seulement à nous confirmer
   que la vidéo a été vue en entier. Il ne reçoit ni ton nom, ni ton e-mail, ni
@@ -172,6 +179,8 @@ Sur le site, l'abonnement n'est pas encore en vente.
 | Conserver la trace de tes achats | Obligation légale (comptabilité) |
 | Afficher la vidéo que tu choisis de regarder et t'accorder la tenue de plus (Android) | Exécution du contrat, à ta demande |
 | Personnaliser cette publicité (Android) | Ton consentement, que tu peux retirer à tout moment |
+| Vérifier l'âge minimum ; ne montrer que des publicités non personnalisées aux 15-17 ans | Obligation légale |
+| Mesurer, de façon agrégée, l'âge des personnes qui utilisent Capsela (tranche d'âge) | Intérêt légitime : connaître notre public pour améliorer l'application ; jamais pour composer tes tenues |
 | Mesurer l'audience | Ton consentement, que tu peux retirer à tout moment |
 | Détecter et résoudre les erreurs, sécuriser le service | Intérêt légitime : faire fonctionner l'application de façon fiable |
 | Répondre à tes demandes | Exécution du contrat, ou obligation légale pour les demandes RGPD |
@@ -287,7 +296,8 @@ Cedex 07).
 ## 9. Âge minimum
 
 Capsela est destinée aux personnes de 15 ans et plus. [À VÉRIFIER — âge
-retenu.]
+retenu.] Entre 15 et 17 ans, la publicité n'est jamais personnalisée. Ta
+tranche d'âge ne change rien à tes tenues, à ta capsule ni aux suggestions.
 
 ## 10. Modifications
 

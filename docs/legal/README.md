@@ -69,7 +69,11 @@ Relevés en écrivant, par ordre d'importance. État au 01/10/2026.
 3. **Liens « Acheter »** : **vérifié le 15/10/2026** — aucune pièce du
    catalogue n'a de `lien_affiliation` (0 ligne). Si des liens sont ajoutés,
    ils devront être signalés comme liens commerciaux.
-4. **Inscription** : **traité.** Date de naissance obligatoire, inscription
+4. **Inscription** : **traité.** Depuis le 24/11/2026, une TRANCHE D'ÂGE
+   obligatoire (huit tranches, `ageMinimum.ts`) remplace la date de naissance :
+   minimisation, mesure agrégée de l'âge, et publicités non personnalisées pour
+   les 15-17 ans (`publicite.ts`). Migrations 0067 (tranches) puis 0068
+   (effacement des dates, destructif). Avant : date de naissance obligatoire, inscription
    refusée sous 15 ans (`ageMinimum.ts`), et « Conditions » et « Politique de
    confidentialité » sont des liens vers les pages publiques `/legal/cgu` et
    `/legal/confidentialite`. « Continuer avec Google » demande la date juste

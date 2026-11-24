@@ -203,6 +203,18 @@ export const EN: Record<string, string> = {
     "To create your account, enter your date of birth. You must be at least {n} years old.",
   "Pourquoi ? Voir notre": "Why? See our",
   "Indique ta date de naissance pour créer ton compte.": "Enter your date of birth to create your account.",
+  // Les tranches d'âge (24/11/2026, ageMinimum.ts).
+  "Indique ta tranche d'âge pour créer ton compte.": "Select your age range to create your account.",
+  "Pour créer ton compte, indique ta tranche d'âge. Il faut avoir au moins {n} ans.": "To create your account, select your age range. You must be at least {n} years old.",
+  "Ta tranche d'âge": "Your age range",
+  "Moins de 15 ans": "Under 15",
+  "15 à 17 ans": "15 to 17",
+  "18 à 24 ans": "18 to 24",
+  "25 à 34 ans": "25 to 34",
+  "35 à 44 ans": "35 to 44",
+  "45 à 54 ans": "45 to 54",
+  "55 à 64 ans": "55 to 64",
+  "65 ans et plus": "65 and over",
   "Cette date de naissance n'est pas valide.": "This date of birth isn't valid.",
   "Il faut avoir au moins {n} ans pour créer un compte.": "You must be at least {n} years old to create an account.",
 

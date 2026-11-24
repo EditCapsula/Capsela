@@ -7,6 +7,7 @@ import { lirePreferencesSilhouette, memesPreferencesSilhouette, preferencesSilho
 import { COLORIMETRIE_VIDE, rafraichirColorimetrie, type Colorimetrie } from "./colorimetrie";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { DEFAULT_PREFS, EMPTY_PROFILE, stylesDuGenre, type Profile } from "./profile";
+import { estTrancheAge, trancheDepuisNaissance, type TrancheAge } from "./ageMinimum";
 import { effacerDonneesLocales } from "./donneesLocales";
 import { compteToutJusteCree, consumeSignupIntent, forgetSignupIntent } from "./signupIntent";
 import { lireRetourLien, messageErreurNouveauMotDePasse, PARAM_RECUPERATION } from "./motDePasse";
@@ -64,7 +65,7 @@ export interface AuthContextValue {
     name: string,
     email: string,
     password: string,
-    birthdate?: string
+    trancheAge?: TrancheAge
   ) => Promise<"ok" | "confirm_email" | "error">;
   signInEmail: (email: string, password: string) => Promise<boolean>;
   signInGoogle: () => Promise<boolean>;
@@ -102,6 +103,8 @@ function rowToProfile(row: Record<string, unknown>): Profile {
   return {
     displayName: (row.display_name as string) ?? "",
     birthdate: (row.birthdate as string) ?? null,
+    // Colonne de 0067 : absente avant la migration (undefined), donc null.
+    trancheAge: estTrancheAge(row.tranche_age) ? row.tranche_age : null,
     gender: (row.gender as Profile["gender"]) ?? null,
     paletteCouleurs: (row.palette_couleurs as string[]) ?? [],
     paletteAffinite: (row.palette_affinite as Profile["paletteAffinite"]) ?? null,
@@ -197,13 +200,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // compte Google partage) ; à défaut, l'étape "prenom" de l'onboarding
     // (ProfileSetupScreen) prend le relais plutôt que de laisser le champ vide.
     const meta = authUser.user_metadata as
-      | { display_name?: string; birthdate?: string; given_name?: string; full_name?: string; name?: string }
+      | { display_name?: string; birthdate?: string; tranche_age?: string; given_name?: string; full_name?: string; name?: string }
       | undefined;
     const metaFirstName = meta?.given_name || meta?.full_name?.split(" ")[0] || meta?.name?.split(" ")[0];
+    // LA TRANCHE D'ÂGE (24/11/2026, ageMinimum.ts) : la colonne (0067), sinon les métadonnées (inscription, ou avant la migration),
+    // sinon celle de la date des comptes d'avant. La date des métadonnées n'est plus recopiée dans le profil : elle ne sert qu'à
+    // déduire la tranche, et ne repart jamais vers la table.
     setProfile({
       ...loaded,
       displayName: loaded.displayName || meta?.display_name || metaFirstName || "",
-      birthdate: loaded.birthdate || meta?.birthdate || null,
+      trancheAge: loaded.trancheAge ?? (estTrancheAge(meta?.tranche_age) ? meta.tranche_age : null) ?? trancheDepuisNaissance(loaded.birthdate || meta?.birthdate || null),
     });
     setProfilChargeReel(true);
   }, []);
@@ -303,10 +309,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string,
     email: string,
     password: string,
-    birthdate?: string
+    trancheAge?: TrancheAge
   ): Promise<"ok" | "confirm_email" | "error"> => {
     setError(null);
-    const fresh = { ...EMPTY_PROFILE, displayName: name, birthdate: birthdate || null };
+    const fresh = { ...EMPTY_PROFILE, displayName: name, trancheAge: trancheAge ?? null };
     if (!isSupabaseConfigured) {
       persistDemo({ email, profile: fresh, creeLe: new Date().toISOString() });
       setProfile(fresh);
@@ -315,7 +321,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error: err } = await getSupabase().auth.signUp({
       email,
       password,
-      options: { data: { display_name: name, birthdate: birthdate || null } },
+      // La tranche part dans les métadonnées : le déclencheur de 0067 la recopie dans la colonne ; avant la migration, l'app l'y relit.
+      options: { data: { display_name: name, tranche_age: trancheAge ?? null } },
     });
     if (err) {
       setError(frenchAuthError(err.message));
@@ -447,6 +454,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .update({ preferences_silhouette: preferencesSilhouetteVersLigne(p.preferencesSilhouette) })
         .eq("id", user.id);
       if (errPref) setError("Ton profil est enregistré, mais pas tes préférences de mise en valeur et de coupes : " + errPref.message);
+    }
+    // LA TRANCHE D'ÂGE (24/11/2026) : écrite À PART, et seulement quand elle change — jamais dans profileToRow (colonne de 0067, règle
+    // de CLAUDE.md). Dans les métadonnées du compte d'abord, qui existent avant la migration ; puis dans la colonne. Gardée si l'une
+    // des deux réussit ; l'échec des deux est signalé.
+    if (!err && p.trancheAge && p.trancheAge !== profile.trancheAge) {
+      const { error: errMeta } = await getSupabase().auth.updateUser({ data: { tranche_age: p.trancheAge, birthdate: null } });
+      const { error: errCol } = await getSupabase().from("profiles").update({ tranche_age: p.trancheAge }).eq("id", user.id);
+      if (errMeta && errCol) setError("Ton profil est enregistré, mais pas ta tranche d'âge : " + errCol.message);
     }
   };
 

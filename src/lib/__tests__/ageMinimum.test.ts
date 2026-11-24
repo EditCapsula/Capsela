@@ -53,3 +53,49 @@ describe("doitDemanderNaissance — après la connexion Google", () => {
     expect(doitDemanderNaissance({ ...base, completed: true })).toBe(false);
   });
 });
+
+describe("les tranches d'âge (24/11/2026)", () => {
+  it("huit tranches, les coupures aux seuils légaux puis par dix ans", async () => {
+    const { TRANCHES_AGE, libelleTranche } = await import("../ageMinimum");
+    expect(TRANCHES_AGE).toEqual(["moins_15", "15_17", "18_24", "25_34", "35_44", "45_54", "55_64", "65_plus"]);
+    expect(libelleTranche("15_17")).toBe("15 à 17 ans");
+    expect(libelleTranche("65_plus")).toBe("65 ans et plus");
+  });
+  it("la tranche d'une date de naissance (comptes d'avant), aux bornes", async () => {
+    const { trancheDepuisNaissance } = await import("../ageMinimum");
+    expect(trancheDepuisNaissance("2011-10-02", AUJOURDHUI)).toBe("moins_15");
+    expect(trancheDepuisNaissance("2011-10-01", AUJOURDHUI)).toBe("15_17");
+    expect(trancheDepuisNaissance("2008-10-01", AUJOURDHUI)).toBe("18_24");
+    expect(trancheDepuisNaissance("2008-10-02", AUJOURDHUI)).toBe("15_17");
+    expect(trancheDepuisNaissance("1991-10-01", AUJOURDHUI)).toBe("35_44");
+    expect(trancheDepuisNaissance("1961-10-01", AUJOURDHUI)).toBe("65_plus");
+    expect(trancheDepuisNaissance(null, AUJOURDHUI)).toBeNull();
+    expect(trancheDepuisNaissance("2011-02-30", AUJOURDHUI)).toBeNull();
+  });
+  it("la tranche déclarée passe avant celle de la date", async () => {
+    const { trancheDuProfil } = await import("../ageMinimum");
+    expect(trancheDuProfil({ trancheAge: "25_34", birthdate: "2010-01-01" }, AUJOURDHUI)).toBe("25_34");
+    expect(trancheDuProfil({ trancheAge: null, birthdate: "1990-01-15" }, AUJOURDHUI)).toBe("35_44");
+    expect(trancheDuProfil({ trancheAge: null, birthdate: null }, AUJOURDHUI)).toBeNull();
+  });
+  it("refus sous 15 ans, tranche obligatoire ; seuls les 15-17 ans sont mineurs pour la publicité", async () => {
+    const { verifierTranche, messageTranche, estMineur } = await import("../ageMinimum");
+    expect(verifierTranche("moins_15")).toEqual({ ok: false, raison: "trop_jeune" });
+    expect(verifierTranche(null)).toEqual({ ok: false, raison: "manquante" });
+    expect(verifierTranche("18_24")).toEqual({ ok: true });
+    expect(messageTranche("manquante")).toContain("tranche d'âge");
+    expect(messageTranche("trop_jeune")).toContain("15 ans");
+    expect(estMineur("15_17")).toBe(true);
+    expect(estMineur("18_24")).toBe(false);
+    expect(estMineur(null)).toBe(false);
+  });
+  it("la tranche est demandée au compte qui n'a ni tranche ni date, au profil non terminé", async () => {
+    const { doitDemanderTranche } = await import("../ageMinimum");
+    const base = { signedIn: true, profileLoaded: true, trancheAge: null, birthdate: null, completed: false };
+    expect(doitDemanderTranche(base)).toBe(true);
+    expect(doitDemanderTranche({ ...base, trancheAge: "25_34" })).toBe(false);
+    expect(doitDemanderTranche({ ...base, birthdate: "1990-01-01" })).toBe(false);
+    expect(doitDemanderTranche({ ...base, completed: true })).toBe(false);
+    expect(doitDemanderTranche({ ...base, profileLoaded: false })).toBe(false);
+  });
+});

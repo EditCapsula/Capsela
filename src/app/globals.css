@@ -329,14 +329,18 @@ input.capin::placeholder {
  * 1. Safari sur iPhone ZOOME toute la page dès qu'on touche un champ écrit sous 16 px, et ne dézoome pas en le quittant : l'écran
  *    reste agrandi et déborde. Le zoom à deux doigts reste permis (pas de maximum-scale, WCAG 1.4.4, layout.tsx) : seuls les
  *    champs passent à 16 px, et seulement sur iOS (`-webkit-touch-callout` n'existe que là) — Android et le bureau gardent 14 px.
+ *    ÉLARGI LE 24/11/2026 (signalé en vidéo : « le cadrage ne va pas du tout, on a perdu le côté responsive ») : la règle ne visait que
+ *    les champs `capin` ; la barre « Décris ton occasion » de Planifier (22/11, 13,5 px, sans `capin`) rouvrait le zoom, qui restait
+ *    sur tous les écrans suivants. Désormais tout champ de saisie, quelle que soit sa classe — d'où `!important` face aux tailles
+ *    posées par les classes utilitaires.
  * 2. Le champ date natif d'iOS impose sa propre largeur minimale et centre sa valeur : il dépassait la colonne et ne ressemblait
  *    pas aux autres champs. Apparence native retirée, largeur libérée, valeur à gauche, hauteur d'un champ vide tenue.
  */
 @supports (-webkit-touch-callout: none) {
-  input.capin,
-  select.capin,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
   textarea {
-    font-size: 16px;
+    font-size: 16px !important;
   }
 }
 input.capin[type="date"] {
