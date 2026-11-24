@@ -163,21 +163,34 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
  * terracotta sur la même ligne, le « i » de la pertinence ; le texte d'un plan ou d'une valise sous le titre ; « Portée aujourd'hui ».
  * Partagé par les slides et par la carte seule (un autre jour), pour qu'elles se lisent pareil.
  */
+/**
+ * L'OCCASION EN TITRE, L'ALLURE EN SURTITRE (24/11/2026, demandé : « intervertis la typo pour le travail et chic et affirmé ») : avant,
+ * « POUR LE TRAVAIL » en petites capitales et « Chic *et affirmé* » en titre d'écran. Désormais l'occasion est le titre — son premier
+ * mot droit, la suite en italique terracotta (« Pour *le travail* ») — et l'allure passe en surtitre, avec l'étoile. Le « i » de la
+ * pertinence reste au bout du titre.
+ */
+function enDeuxTemps(texte: string): { a: string; b: string } {
+  const i = texte.indexOf(" ");
+  return i < 0 ? { a: texte, b: "" } : { a: texte.slice(0, i), b: texte.slice(i + 1) };
+}
+
 export function EnTeteTenue({ surtitre, titre, sousTitre, pourquoi, portee }: { surtitre: string; titre: { a: string; b: string }; sousTitre: string; pourquoi: boolean; portee?: boolean }) {
+  const occasion = enDeuxTemps(t(surtitre));
+  const allure = [titre.a, titre.b].filter(Boolean).join(" ");
   return (
     <>
       <div className="flex items-center gap-[7px]">
         <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
           <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="t-surtitre text-ink whitespace-nowrap">{t(surtitre)}</span>
+        <span className="t-surtitre text-ink">{allure}</span>
       </div>
       <div className="relative t-titre-ecran text-ink mt-2" style={{ textWrap: "balance" }}>
-        {titre.a}
-        {titre.b && (
+        {occasion.a}
+        {occasion.b && (
           <>
             {" "}
-            <span className="italic text-terracotta">{titre.b}</span>
+            <span className="italic text-terracotta">{occasion.b}</span>
           </>
         )}
         {/* La pertinence derrière le « i » du titre (12/11/2026, PourquoiCetteTenue). */}
