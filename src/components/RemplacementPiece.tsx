@@ -238,10 +238,7 @@ export function VuePiece({ piece, onFermer, onVoir, onRemplacer }: { piece: Item
             </Button>
             {onRemplacer && (
               <Button variante="contour" onClick={onRemplacer} aria-label={`Remplacer ${piece.name} dans ce look`}>
-                <span className="inline-flex items-center gap-[8px]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h12l-3-3M19 15H7l3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  Remplacer
-                </span>
+                Remplacer
               </Button>
             )}
             {lien && (

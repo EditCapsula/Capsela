@@ -13,17 +13,22 @@ import type { CategoryKey, Item } from "@/lib/types";
  * Une action discrète sous le look : une icône et un libellé (« Sauvegarder », « Autre idée »). Un seul bouton, cible tactile de 44 px.
  * Le CTA « Voir le look » reste l'action dominante de la carte.
  */
-export function ActionRonde({ icone, libelle, onClick, actif, disabled, label }: { icone: React.ReactNode; libelle: string; onClick: () => void; actif?: boolean; disabled?: boolean; label?: string }) {
+export function ActionRonde({ icone, libelle, onClick, actif, disabled, label, chevron = false }: { icone: React.ReactNode; libelle: string; onClick: () => void; actif?: boolean; disabled?: boolean; label?: string; /** Demi-gras et chevron gras (24/11/2026, demandé sur « Autre tenue » de la Capsule). */ chevron?: boolean }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       aria-pressed={actif}
       aria-label={label}
-      className="inline-flex items-center gap-[7px] min-h-[44px] px-1 text-[12.5px] text-ink-soft cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]"
+      className={"inline-flex items-center gap-[7px] min-h-[44px] px-1 text-[12.5px] cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97] " + (chevron ? "font-semibold text-ink" : "text-ink-soft")}
     >
       <span className="flex-shrink-0 text-ink">{icone}</span>
       <span>{libelle}</span>
+      {chevron && (
+        <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta" style={{ display: "block" }}>
+          <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
     </button>
   );
 }

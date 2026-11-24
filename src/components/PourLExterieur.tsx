@@ -85,8 +85,10 @@ export default function PourLExterieur({
       onClick={onClick}
       className={"w-full flex items-center text-left border-y border-border cursor-pointer " + (compact ? "gap-[10px] py-[8px]" : "gap-[12px] py-[10px]")}
     >
-      <span className={"flex-shrink-0 " + (compact ? "w-[48px]" : "w-[64px]")}>
-        <PhotoPiece piece={piece} ratio={1} rayon={compact ? 10 : 12} />
+      {/* LE MANTEAU EN ENTIER (24/11/2026, retour : « on ne voit pas suffisamment le manteau ») : un manteau long, dans une vignette
+          carrée de 48 px, ne se lisait pas. Vignette en portrait (3:4), un peu plus large, la pièce entière dedans. */}
+      <span className={"flex-shrink-0 " + (compact ? "w-[60px]" : "w-[72px]")}>
+        <PhotoPiece piece={piece} ratio={3 / 4} rayon={compact ? 10 : 12} entiere />
       </span>
       <span className="flex-1 min-w-0">
         <span className="flex items-center justify-between gap-2">

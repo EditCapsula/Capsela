@@ -15,7 +15,6 @@ import {
   I_REGLAGES,
   FeuilleTrancheAge,
   I_SILHOUETTE,
-  I_SORTIE,
   Icone,
   LigneInfo,
   LigneProfil,
@@ -408,7 +407,6 @@ export default function ProfileScreen() {
           actions.goLogin();
         }}
       >
-        <Icone taille={17}>{I_SORTIE}</Icone>
         Se déconnecter
       </Button>
 
