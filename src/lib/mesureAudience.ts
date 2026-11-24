@@ -17,6 +17,29 @@ export const ID_MESURE_CAPSELA = "G-D5KJXCVKCV";
 export const idMesure = (): string =>
   process.env.NEXT_PUBLIC_GA_ID || (process.env.NODE_ENV === "production" ? ID_MESURE_CAPSELA : "");
 
+/**
+ * LA PLATEFORME (24/11/2026, demandé : distinguer le site et les apps dans un même flux Web). Les apps iOS et Android affichent le site
+ * dans une vue web : sans ce repère, toutes leurs visites se confondent avec celles du site. Posée en PROPRIÉTÉ UTILISATEUR
+ * `plateforme_capsela` (web, android, ios), elle accompagne chaque événement ; à déclarer une fois dans Google Analytics (Admin →
+ * Définitions personnalisées, dimension de portée Utilisateur) pour filtrer les rapports. Rien de personnel : le type d'appareil.
+ * Appelée seulement après consentement (App.tsx) ; met la commande en file si gtag.js n'est pas encore chargé.
+ */
+export function poserPlateforme(plateforme: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const w = window as unknown as { dataLayer?: unknown[] };
+    w.dataLayer = w.dataLayer || [];
+    // La forme exacte de gtag : il pousse son objet `arguments`, pas un tableau.
+    const gtag = function () {
+      // eslint-disable-next-line prefer-rest-params
+      w.dataLayer!.push(arguments);
+    } as (...args: unknown[]) => void;
+    gtag("set", "user_properties", { plateforme_capsela: plateforme });
+  } catch {
+    // La mesure ne doit jamais casser l'écran.
+  }
+}
+
 export type EvenementCapsule = "fiche_piece_capsule" | "clic_lien_affilie" | "piece_deja_possedee";
 
 export function suivreEvenement(nom: EvenementCapsule, parametres: Record<string, string | number>): void {

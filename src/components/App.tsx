@@ -1,7 +1,7 @@
 "use client";
 
 import LegalDocOverlay from "@/components/legal/LegalDocOverlay";
-import { idMesure } from "@/lib/mesureAudience";
+import { idMesure, poserPlateforme } from "@/lib/mesureAudience";
 import { lireVersionPubliee, miseAJourDisponible, numeroInstalle, plateformeStore, urlStore } from "@/lib/miseAJour";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { App as CapApp } from "@capacitor/app";
@@ -402,6 +402,10 @@ function Analytics() {
   // montée en ssr:false (AppLoader), mais l'écrire évite tout écart
   // d'hydratation si ça changeait un jour.
   const consent = useSyncExternalStore(subscribeConsent, readConsent, () => "unknown" as ConsentState);
+  // La plateforme (24/11/2026, mesureAudience.ts) : site, app Android ou app iOS, dans le même flux Web.
+  useEffect(() => {
+    if (gaId && consent === "granted") poserPlateforme(Capacitor.getPlatform());
+  }, [gaId, consent]);
 
   if (!gaId) return null;
   return (
