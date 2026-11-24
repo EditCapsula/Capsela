@@ -163,6 +163,16 @@ export function autresManteaux(candidats: Item[], tenue: Item[], exterieur: Item
  * elle qui décide de la couche extérieure — stable toute la journée, la même sur toutes les cartes. On prend son manteau pour le moment
  * le plus froid, pas pour l'heure où l'on ouvre l'app. Sans prévision, la règle d'avant.
  */
+/**
+ * La température de « Pour l'extérieur » est-elle la MINIMALE du jour (24/11/2026, retour d'un testeur : « on voit 4 degrés en haut et 2
+ * sur la strate extérieur, ce n'est pas très clair que l'on parle de minimale ») ? Mêmes cas que temperatureReelle : vrai quand c'est la
+ * minimale qu'elle rend. L'écran le dit alors (« min 2° », « minimale d'aujourd'hui : 2° »).
+ */
+export function temperatureEstMinimale(args: { decalage: number; sourceMeteo: string; minDuJour?: number | null }): boolean {
+  const min = typeof args.minDuJour === "number" && Number.isFinite(args.minDuJour);
+  return min && (args.decalage !== 0 || args.sourceMeteo !== "defaut");
+}
+
 export function temperatureReelle(args: {
   decalage: number;
   sourceMeteo: string;

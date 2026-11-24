@@ -17,6 +17,7 @@ export default function PourLExterieur({
   compact = false,
   forme = "ligne",
   note = null,
+  minimale = false,
 }: {
   piece: Item;
   temperature: number;
@@ -31,8 +32,14 @@ export default function PourLExterieur({
   forme?: "ligne" | "carte" | "bandeau";
   /** Une phrase de plus sous le texte (19/11/2026, phraseManteauTropLeger : les manteaux du dressing sont trop légers). */
   note?: string | null;
+  /** La température est la minimale du jour (temperatureEstMinimale, 24/11/2026) : l'écran le dit, pour ne pas la confondre avec celle d'en haut. */
+  minimale?: boolean;
 }) {
   const t = Math.round(temperature);
+  const pastille = minimale ? `min ${degres(t)}` : degres(t);
+  const phrase = minimale
+    ? `${piece.name}, à ajouter selon la météo (minimale ${quand === "aujourd'hui" ? "d'aujourd'hui" : "prévue"} : ${degres(t)}).`
+    : `${piece.name}, à ajouter selon la météo (${degres(t)} ${quand}).`;
   if (forme === "bandeau") {
     return (
       <button type="button" onClick={onClick} className="w-full flex items-center gap-[10px] text-left rounded-bloc px-[10px] py-[6px] cursor-pointer" style={{ background: "var(--color-warm-bg)" }}>
@@ -41,7 +48,7 @@ export default function PourLExterieur({
         </span>
         <span className="flex-1 min-w-0 truncate text-[12.5px] text-ink">
           <span className="font-semibold">Pour l&apos;extérieur</span>
-          <span className="text-muted-3"> · {degres(t)} · {piece.name}</span>
+          <span className="text-muted-3"> · {pastille} · {piece.name}</span>
         </span>
         <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
       </button>
@@ -57,11 +64,11 @@ export default function PourLExterieur({
           <span className="flex items-center justify-between gap-2">
             <span className="t-titre-carte text-ink">Pour l&apos;extérieur</span>
             <span className="inline-flex items-center gap-[4px] flex-shrink-0 rounded-full px-[8px] py-[3px] text-[11px] text-ink" style={{ background: "var(--color-warm-bg)" }}>
-              {degres(t)}
+              {pastille}
             </span>
           </span>
           <span className="block text-[12px] text-muted-3 leading-[1.4] mt-[4px]" style={{ textWrap: "pretty" }}>
-            {piece.name}, à ajouter selon la météo ({degres(t)} {quand}).
+            {phrase}
           </span>
           {note && (
             <span className="block text-[12px] text-ink-soft leading-[1.4] mt-[4px]" style={{ textWrap: "pretty" }}>
@@ -88,11 +95,11 @@ export default function PourLExterieur({
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
               <path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0Z" />
             </svg>
-            {degres(t)}
+            {pastille}
           </span>
         </span>
         <span className={"block text-muted-3 leading-[1.4] mt-[2px] " + (compact ? "text-[11px]" : "text-[12px]")} style={{ textWrap: "pretty" }}>
-          {piece.name}, à ajouter selon la météo ({degres(t)} {quand}).
+          {phrase}
         </span>
         {note && (
           <span className={"block text-ink-soft leading-[1.4] mt-[4px] " + (compact ? "text-[11px]" : "text-[12px]")} style={{ textWrap: "pretty" }}>

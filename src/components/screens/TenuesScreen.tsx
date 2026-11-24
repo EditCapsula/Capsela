@@ -25,7 +25,7 @@ import { ecrireRetourDuCompte, envoyerRetoursAuCompte, lireRetoursDuCompte } fro
 import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { autresManteaux, manteauxPourLaCouche, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
+import { autresManteaux, manteauxPourLaCouche, separerCoucheExterieure, temperatureEstMinimale, temperatureReelle } from "@/lib/coucheExterieure";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { RailPiecesTenue } from "@/components/HeroTenue";
 import { alternativesClassees, poolDeRemplacement } from "@/lib/remplacementPiece";
@@ -387,6 +387,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
    * elle, rien n'est séparé (le manteau reste dans le look, comme avant) : aucune recommandation « selon la météo » sans météo.
    */
   const tempReelle = temperatureReelle({ decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp, minDuJour: jourConsulte.minDuJour });
+  const tempMinimale = temperatureEstMinimale({ decalage, sourceMeteo, minDuJour: jourConsulte.minDuJour });
   // Les manteaux que le moteur admet ici (même appel que « Changer cette pièce ») : sous 22 °C hors maison depuis le 17/11/2026
   // (avant : par le froid seulement), pour proposer un manteau quand la tenue n'en a pas (04/11/2026). « Voir une autre proposition » fait passer un autre de ces candidats devant.
   const [manteauChoisi, setManteauChoisi] = useState<number | null>(null);
@@ -927,7 +928,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
                 (12/11/2026, demandé : « la formulation doit rester la même pour toute l'application »). */}
             {exterieur && tempReelle != null && (
               <div className={forme === "ligne" ? "mb-[6px]" : ""}>
-                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} forme={forme} note={phraseManteauTropLeger(state.items, tempReelle, momentDeLaCouche({ decalage, occasion: state.occasion }))} />
+                <PourLExterieur piece={exterieur} temperature={tempReelle} quand={decalage === 0 ? "aujourd'hui" : "prévus"} onClick={() => setExterieurOuvert(true)} forme={forme} minimale={tempMinimale} note={phraseManteauTropLeger(state.items, tempReelle, momentDeLaCouche({ decalage, occasion: state.occasion }))} />
               </div>
             )}
             {!exterieur && conseilManteauPlusLong && (

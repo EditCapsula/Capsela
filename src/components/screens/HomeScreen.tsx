@@ -34,7 +34,7 @@ import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
 import { CarrouselHero, CarteHero } from "@/components/CarrouselHero";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
-import { manteauxPourLaCouche, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
+import { manteauxPourLaCouche, separerCoucheExterieure, temperatureReelle, temperatureEstMinimale } from "@/lib/coucheExterieure";
 import { momentDeLaCouche, phraseManteauTropLeger } from "@/lib/plafondManteau";
 import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
 import { annoncerTenueSauvegardee } from "@/components/ToastCapsela";
@@ -207,6 +207,7 @@ export default function HomeScreen() {
    * montre le look seul ; le manteau ajouté par le froid se montre dessous, dans « Pour l'extérieur », qui mène à la page Tenue.
    */
   const tempReelle = temperatureReelle({ decalage: jourConsulte.decalage, sourceMeteo, tempDuJour: weather.temp, prevue: jourConsulte.meteoPrevue?.temp, minDuJour: jourConsulte.minDuJour });
+  const tempMinimale = temperatureEstMinimale({ decalage: jourConsulte.decalage, sourceMeteo, minDuJour: jourConsulte.minDuJour });
   // Les manteaux que le moteur admet pour cette occasion et cette météo (17/11/2026 : sous 22 °C, hors maison — plus seulement
   // par le froid) : une tenue sans manteau en reçoit un, à part. Leurs bornes choisissent un trench à 16°, rien à partir de 22°.
   const manteauxPour = (pieces: Item[], occasion: OccasionKey) =>
@@ -240,6 +241,7 @@ export default function HomeScreen() {
           quand={jourConsulte.decalage === 0 ? "aujourd'hui" : "prévus"}
           onClick={actions.goTenues}
           compact
+          minimale={tempMinimale}
           note={phraseManteauTropLeger(state.items, tempReelle, momentDeLaCouche({ decalage: jourConsulte.decalage, occasion: occasionKey }))}
         />
       </div>
@@ -452,6 +454,7 @@ export default function HomeScreen() {
             quand={jourConsulte.decalage === 0 ? "aujourd'hui" : "prévus"}
             onClick={() => (duJour ? actions.goTenues() : actions.consulterTenue(slide.ids, slide.occasion, null))}
             compact
+            minimale={tempMinimale}
             note={phraseManteauTropLeger(state.items, tempReelle, momentDeLaCouche({ decalage: jourConsulte.decalage, occasion: slide.occasion }))}
           />
         </div>
