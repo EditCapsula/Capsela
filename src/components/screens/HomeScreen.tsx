@@ -3,7 +3,6 @@
 import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { SejourEnCours } from "@/components/SejourEnCours";
 import { sejourEnCours } from "@/lib/valiseDuJour";
-import TitrePage from "@/components/TitrePage";
 import { t } from "@/lib/langue";
 import { styleDuLook, texteEditorialLook } from "@/lib/editorialLook";
 import { useContexteLook, useRemplacementPiece } from "@/components/RemplacementPiece";
@@ -36,7 +35,6 @@ import Button from "@/components/Button";
 import { CarrouselHero, CarteHero } from "@/components/CarrouselHero";
 import PourLExterieur, { ConseilManteauPlusLong } from "@/components/PourLExterieur";
 import { manteauxPourLaCouche, separerCoucheExterieure, temperatureReelle } from "@/lib/coucheExterieure";
-import AccesAccueil from "@/components/AccesAccueil";
 import { momentDeLaCouche, phraseManteauTropLeger } from "@/lib/plafondManteau";
 import { composerSlides, cleTenue as cleSlide, slidesDuSejour, typeDeJour, type SlideCarrousel, type SlideId } from "@/lib/carrousel";
 import { annoncerTenueSauvegardee } from "@/components/ToastCapsela";
@@ -150,12 +148,6 @@ export default function HomeScreen() {
    * (arbitrage de la propriétaire) : même quota, même Gate (QuotaTenues).
    */
   const quota = useQuotaTenues();
-  /**
-   * PRÉPARER UNE VALISE (27/09/2026, docs/valise.md) — la décision d'accès
-   * (règle PREPARER_VALISE) vit dans le store (`ouvrirValise`), partagée avec
-   * Planifier. Depuis l'accueil : une nouvelle valise.
-   */
-  const ouvrirValise = () => void actions.ouvrirValise(null);
 
   /**
    * L'avis du jour vient désormais du store, donc de la base (0029), et non
@@ -187,7 +179,6 @@ export default function HomeScreen() {
     });
   };
   const { profile, saveProfile } = useAuth();
-  const firstNameOrYou = profile.displayName || t("toi");
 
   // Lecture seule des données déjà disponibles ailleurs dans l'app
   // (météo/localisation, occasion auto-sélectionnée, tenue déjà déterminée) —
@@ -600,12 +591,9 @@ export default function HomeScreen() {
           sable, puis une seule section « Tout pour ton style ». Les sections « Pour aller plus loin », « Ton dressing » (catégories)
           et « Ta capsule » (bannière) et la carte Avis de styliste n'y figurent pas : l'avis reste accessible depuis le Journal. */}
       <div className="px-6">
-        {/* Le titre des pages majeures (TitrePage, 12/11/2026) : la salutation quitte t-display (28 px) pour la taille des autres. */}
-        <TitrePage>
-          {t("Bonjour,")} <span className="italic">{firstNameOrYou}</span>
-        </TitrePage>
-        {/* LE JOUR ET SA MÉTÉO SUR LEUR LIGNE, sous la salutation (19/11/2026, option B arbitrée) — les mêmes données et les mêmes gestes que
-            l'en-tête de carte d'avant, jours passés compris (retro). */}
+        {/* LE JOUR ET SA MÉTÉO SUR LEUR LIGNE (19/11/2026, option B arbitrée) — les mêmes données et les mêmes gestes que l'en-tête de
+            carte d'avant, jours passés compris (retro). Sans la salutation depuis le 24/11/2026 (retour d'une testeuse : « supprimer la
+            salutation sur l'accueil pour remonter le contenu ») : « Bonjour, Camille. » prenait une ligne de titre au-dessus de la tenue. */}
         <BarreDuJour retro={retroJour} meteoEnLigne className="mt-1" />
         {/* Ce qui est planifié ce jour-là (Planifier) : un rappel qui mène à la fiche du plan. Rien sans plan. */}
         {retroActif === 0 && <PlansDuJour depuis="home" className="mt-3" sansJourneeValise={!!sejour} />}
@@ -623,6 +611,7 @@ export default function HomeScreen() {
             className="mt-3"
             classeSlide=""
             enveloppe={(piste) => carteDuJour(piste)}
+            fleches={{ hauteur: "46%" }}
             slides={slides.map(carteSlide)}
             libelles={slides.map((sl) => sl.surtitre)}
             onAvantDerniere={actions.etendreCarrousel}
@@ -781,14 +770,9 @@ export default function HomeScreen() {
         </div>
       )}
 
-      {/* ══ LES QUATRE ACCÈS EN RANGÉE (19/11/2026, option B arbitrée) : Mon dressing, Ma capsule, Planifier mes looks, Préparer une valise —
-          les mêmes destinations que les quatre cartes « Explorer Capsela · Tout pour ton style » qu'ils remplacent (CarteUnivers, gardé pour
-          l'écran d'essai). La valise garde sa règle d'accès (ouvrirValise). */}
-      <div className="px-6 mt-5">
-        <AccesAccueil
-          ouvrir={{ dressing: actions.goWardrobe, capsule: actions.goCapsule, planifier: () => actions.planifierDirect(), valise: ouvrirValise }}
-        />
-      </div>
+      {/* LES QUATRE ACCÈS DE L'ACCUEIL, RETIRÉS LE 24/11/2026 (retour d'une testeuse : « n'est-ce pas redondant avec le menu ? » ; arbitré :
+          oui). Dressing, Capsule et Planifier sont dans la barre du bas, la valise dans Planifier et le « + ». AccesAccueil reste pour
+          l'écran d'essai. */}
 
       {/* Quota « Autre tenue » : la même feuille de quota partout. */}
       {quota.feuille}

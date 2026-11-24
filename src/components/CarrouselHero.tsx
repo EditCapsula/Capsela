@@ -220,6 +220,7 @@ export function CarrouselHero({
   retrait = 0,
   ecart = 0,
   enveloppe,
+  fleches,
 }: {
   slides: React.ReactNode[];
   libelles: string[];
@@ -241,6 +242,12 @@ export function CarrouselHero({
    * dessous, hors de la carte — demandé).
    */
   enveloppe?: (piste: React.ReactNode) => React.ReactNode;
+  /**
+   * LES FLÈCHES SUR LA PLANCHE (24/11/2026, retour d'une testeuse : « mets des flèches dans le flat lay pour montrer que tu peux aller à
+   * gauche ou à droite ») : les pastilles rondes de « Ma sélection du moment » (Capsule), posées à hauteur de la planche (`hauteur`,
+   * depuis le haut de la piste). Pas de flèche gauche sur la première tenue, ni droite sur la dernière. Le glissé reste.
+   */
+  fleches?: { hauteur: string };
 }) {
   const piste = useRef<HTMLDivElement>(null);
   const [actif, setActif] = useState(0);
@@ -323,9 +330,38 @@ export function CarrouselHero({
         ))}
       </div>
   );
+  const fleche = (sens: "precedente" | "suivante") => {
+    const gauche = sens === "precedente";
+    const cible = gauche ? indexActif - 1 : indexActif + 1;
+    if (cible < 0 || cible > n - 1) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => aller(cible)}
+        onPointerDown={(e) => e.stopPropagation()}
+        aria-label={gauche ? t("Tenue précédente") : t("Tenue suivante")}
+        className={`absolute z-10 -translate-y-1/2 ${gauche ? "left-[10px]" : "right-[10px]"} w-[40px] h-[40px] rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-ink cursor-pointer`}
+        style={{ top: fleches!.hauteur }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path d={gauche ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    );
+  };
+  const pisteEtFleches =
+    fleches && n > 1 ? (
+      <div className="relative">
+        {laPiste}
+        {fleche("precedente")}
+        {fleche("suivante")}
+      </div>
+    ) : (
+      laPiste
+    );
   return (
     <div className={className} role="region" aria-roledescription={t("carrousel")} aria-label={t(label)}>
-      {enveloppe ? enveloppe(laPiste) : laPiste}
+      {enveloppe ? enveloppe(pisteEtFleches) : pisteEtFleches}
       {n > 1 && (
         <div className="flex items-center justify-center gap-[6px] mt-[10px]">
           {slides.map((_, i) => (
