@@ -1,5 +1,5 @@
 import { planningDeLaValise } from "./planningValise";
-import { destinationDuJour } from "./etapesSejour";
+import { destinationDuJour, etapeDuJour } from "./etapesSejour";
 import type { TenuePlanifiee } from "./planifier";
 import { elementProgramme } from "./programmeValise";
 import { joursDuSejour, lookAChaussuresEtSac, lookChezSoi, type LookValise } from "./valise";
@@ -26,6 +26,38 @@ export const estPlanValise = (id: string | null | undefined): boolean => !!id &&
 /** La valise du séjour en cours ce jour-là (départ ≤ jour ≤ retour) ; la plus proche du départ s'il y en a plusieurs. */
 export function valiseDuJour(valises: readonly ValiseGardee[], jour: string): ValiseGardee | null {
   return [...valises].filter((v) => v.depart <= jour && jour <= v.retour).sort((a, b) => a.depart.localeCompare(b.depart))[0] ?? null;
+}
+
+/**
+ * PAS SUR PLACE, PAS DE VALISE (24/11/2026, signalé : un look de spa à l'accueil, à Pantin par 5°, la valise étant ailleurs ; arbitré :
+ * B). Aujourd'hui, entre le jour du départ et celui du retour (exclus : ces jours-là on voyage, le look du trajet vaut), une position
+ * connue à plus de 50 km de la destination du jour dit que la personne n'est pas partie, ou est rentrée : la tenue du jour revient au
+ * dressing et à la capsule. Position ou coordonnées de la destination inconnues : la valise s'applique, comme avant. La valise reste
+ * entière à son écran. ARBITRAGE ÉDITORIAL (le seuil de 50 km).
+ */
+export const DISTANCE_SUR_PLACE_KM = 50;
+
+/** La distance à vol d'oiseau entre deux points, en kilomètres (formule de haversine). Pure. */
+export function distanceKm(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Les coordonnées de la destination de ce jour (l'étape d'un road trip, sinon le lieu de la valise), ou null. */
+export function coordonneesDuJour(v: Pick<ValiseGardee, "etapes" | "lieu">, jour: string): { lat: number; lon: number } | null {
+  const etape = v.etapes?.length ? etapeDuJour(v.etapes, jour) : null;
+  const c = etape ? (etape.lat != null && etape.lon != null ? { lat: etape.lat, lon: etape.lon } : null) : v.lieu ? { lat: v.lieu.lat, lon: v.lieu.lon } : null;
+  return c && Number.isFinite(c.lat) && Number.isFinite(c.lon) ? c : null;
+}
+
+/** Vrai quand la position du jour dit que la personne n'est pas à la destination de la valise (règle ci-dessus). */
+export function loinDeLaValise(v: Pick<ValiseGardee, "depart" | "retour" | "etapes" | "lieu">, jour: string, position: { lat: number; lon: number } | null): boolean {
+  if (!position || !(v.depart < jour && jour < v.retour)) return false;
+  const destination = coordonneesDuJour(v, jour);
+  return destination != null && distanceKm(position, destination) > DISTANCE_SUR_PLACE_KM;
 }
 
 /** Les looks que l'écran Valise montre : toutes leurs pièces dans la valise, des chaussures et un sac (ValiseScreen, `looks`). */

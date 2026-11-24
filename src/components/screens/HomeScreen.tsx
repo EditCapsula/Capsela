@@ -206,7 +206,9 @@ export default function HomeScreen() {
   // (recette du 26/09/2026) : une tenue réduite à un sac, parce que ses
   // autres pièces ne se résolvaient plus, s'affichait comme prête. Le store
   // la recompose (réparation) ; d'ici là, la card n'annonce rien de faux.
-  const hasOutfit = piecesResolues.length > 0 && tenueAUnSocle(piecesResolues);
+  // Un look de la valise (24/11/2026, signalé : carte vide le jour du spa) : composé pour la valise, il s'affiche même sans socle — un
+  // look de bain (maillot, kimono) n'a ni haut avec bas, ni robe.
+  const hasOutfit = piecesResolues.length > 0 && (tenueAUnSocle(piecesResolues) || estPlanValise(state.planAppliqueId));
   const occasionKey =
     state.occasion && state.occasion !== "all" ? state.occasion : occasionParDefaut(profile.prefs, jourConsulte.date);
   /*
