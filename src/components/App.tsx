@@ -1,6 +1,7 @@
 "use client";
 
 import LegalDocOverlay from "@/components/legal/LegalDocOverlay";
+import { idMesure } from "@/lib/mesureAudience";
 import { lireVersionPubliee, miseAJourDisponible, numeroInstalle, plateformeStore, urlStore } from "@/lib/miseAJour";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { App as CapApp } from "@capacitor/app";
@@ -389,12 +390,12 @@ function Screens() {
  * n'est monté qu'à ce moment : tant que la réponse n'est pas "granted",
  * aucun script Google n'est injecté dans la page, ce que la CNIL exige.
  *
- * NEXT_PUBLIC_GA_ID absent (développement local, préproduction) : rien n'est
+ * Sans ID de mesure (idMesure, mesureAudience.ts : en développement local) : rien n'est
  * chargé et le bandeau ne s'affiche pas — inutile de demander un
  * consentement pour une mesure qui n'existe pas.
  */
 function Analytics() {
-  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  const gaId = idMesure();
   // useSyncExternalStore plutôt qu'un useState + useEffect : le
   // consentement vit dans localStorage, c'est un store externe au sens de
   // React. Le snapshot serveur vaut "unknown" — l'app est de toute façon

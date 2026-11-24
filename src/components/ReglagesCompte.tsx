@@ -13,6 +13,7 @@ import { buildDataExport, downloadJson, exportFileName } from "@/lib/dataExport"
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+import { idMesure } from "@/lib/mesureAudience";
 
 /** La page des abonnements du compte Apple (ouvre les réglages d'abonnement sur iPhone). */
 const URL_ABONNEMENTS_APPLE = "https://apps.apple.com/account/subscriptions";
@@ -112,7 +113,7 @@ export function VueDonnees() {
   // Le choix donné dans le formulaire publicitaire de Google se change ici, aussi simplement qu'il s'est donné (RGPD).
   // La ligne n'existe que là où Google l'exige (Espace économique européen, Royaume-Uni), et seulement sur Android.
   const choixPub = useSyncExternalStore(suivreChoixPublicitaires, choixPublicitairesDisponibles, () => false);
-  const mesureConfiguree = Boolean(process.env.NEXT_PUBLIC_GA_ID);
+  const mesureConfiguree = Boolean(idMesure());
 
   const handleExport = async () => {
     if (!userId) return;
