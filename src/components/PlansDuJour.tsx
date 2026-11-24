@@ -69,7 +69,7 @@ export function useCalculAdaptation() {
     const saisonDuPlan = saisonCalendairePour(new Date(`${plan.jour}T12:00:00`));
     const meteoMoteur = weatherForDay(meteo.temp, meteo.label, saisonDuPlan, CHALEUR_HORS_SAISON);
     const capsule = plan.dressingSeul ? [] : computeDefaultCapsule(profile, meteoMoteur, state.suggestedExcluded, saisonDuPlan, vestiairePool);
-    const pool = poolDePlanification({ items: state.items, capsule, occasion: plan.occasion, dressingSeul: plan.dressingSeul, meteo: meteoMoteur, categories: CATS.map(([k]) => k) as CategoryKey[] });
+    const pool = poolDePlanification({ items: state.items, capsule, occasion: plan.occasion, dressingSeul: plan.dressingSeul, meteo: meteoMoteur, categories: CATS.map(([k]) => k) as CategoryKey[], genre: profile.gender });
     return proposerAdaptation({
       pieces,
       pool,

@@ -37,12 +37,13 @@ peux alors résilier.
 
 ## 4. Souscription et paiement
 
-L'abonnement se souscrit dans l'application iPhone, par l'intermédiaire
-d'Apple (App Store), qui encaisse le paiement selon ses propres conditions.
-Capsela n'a jamais accès à tes données bancaires. La facturation, le
-renouvellement et les remboursements sont gérés par Apple.
+L'abonnement se souscrit dans l'application, par l'intermédiaire d'Apple
+(App Store, sur iPhone) ou de Google (Google Play, sur Android), qui
+encaissent le paiement selon leurs propres conditions. Capsela n'a jamais
+accès à tes données bancaires. La facturation, le renouvellement et les
+remboursements sont gérés par le store où tu as souscrit.
 
-Sur Android et sur le site, l'abonnement n'est pas encore en vente.
+Sur le site, l'abonnement n'est pas encore en vente.
 
 ## 5. Durée, renouvellement, résiliation
 
@@ -50,13 +51,14 @@ Sur Android et sur le site, l'abonnement n'est pas encore en vente.
   se renouvelle automatiquement pour la même durée.
 - Tu peux le résilier à tout moment. La résiliation prend effet à la fin de la
   période déjà payée : tu gardes Premium jusque-là, aucun prorata n'est dû.
-- La résiliation se fait depuis les réglages d'abonnement de ton compte
-  Apple (sur iPhone : Réglages → ton nom → Abonnements), au plus tard
-  24 heures avant la fin de la période en cours.
+- La résiliation se fait depuis les réglages d'abonnement du store : sur
+  iPhone, Réglages → ton nom → Abonnements, au plus tard 24 heures avant la
+  fin de la période en cours ; sur Android, Google Play → Paiements et
+  abonnements → Abonnements, avant la fin de la période en cours.
 - **Supprimer ton compte Capsela ne résilie pas l'abonnement** : résilie-le
-  d'abord chez Apple, sinon il continue d'être facturé.
-- **Formule annuelle** : Apple te prévient avant son renouvellement, selon ses
-  propres conditions. [À VÉRIFIER — suffisance de cette information au regard
+  d'abord chez Apple ou Google, sinon il continue d'être facturé.
+- **Formule annuelle** : Apple ou Google te prévient avant son renouvellement,
+  selon ses propres conditions. [À VÉRIFIER — suffisance de cette information au regard
   de l'art. L215-1 du Code de la consommation pour un abonnement vendu par
   l'App Store.]
 
@@ -70,8 +72,9 @@ avoir à te justifier (art. L221-18 du Code de la consommation).
 
 Si tu demandes à profiter de Premium immédiatement, avant la fin de ce délai,
 et que tu te rétractes ensuite, le montant correspondant au service déjà
-fourni reste dû (art. L221-25). L'abonnement étant acheté par l'App Store,
-le remboursement se demande à Apple (reportaproblem.apple.com). [À VÉRIFIER
+fourni reste dû (art. L221-25). L'abonnement étant acheté par un store, le
+remboursement se demande à Apple (reportaproblem.apple.com) ou à Google
+(Google Play → Historique des commandes). [À VÉRIFIER
 — mécanique exacte avec le juriste, et articulation avec la politique de
 remboursement d'Apple.]
 
@@ -83,7 +86,7 @@ ci-dessous.
 > l'abonnement Capsela Premium souscrit le [date], au nom de [nom], adresse
 > e-mail du compte [e-mail]. Date, signature (si envoi papier).
 
-Le remboursement est effectué par Apple, par le même moyen de paiement, dans les 14 jours. [À VÉRIFIER — délai réel des
+Le remboursement est effectué par le store, par le même moyen de paiement, dans les 14 jours. [À VÉRIFIER — délai réel des
 remboursements d'Apple.]
 
 ## 7. Garanties

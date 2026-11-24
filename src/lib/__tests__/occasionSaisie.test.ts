@@ -46,9 +46,33 @@ describe("pistesLocales (22/11/2026)", () => {
     const { pistesLocales } = await import("../occasionSaisie");
     expect(o("Signature notaire")).toBeNull();
     expect(pistesLocales("Signature notaire")).toEqual(["travail_formel", "quotidien"]);
-    expect(pistesLocales("Déjeuner chez les beaux-parents")).toEqual(["soiree", "quotidien"]);
+    // La belle-famille : Quotidien d'abord depuis le 23/11/2026 (arbitré : la rencontre a le plus souvent lieu de jour).
+    expect(pistesLocales("Déjeuner chez les beaux-parents")).toEqual(["quotidien", "soiree"]);
     expect(pistesLocales("chez Paul")).toEqual([]);
     expect(pistesLocales("obsèques")).toEqual([]);
+  });
+});
+
+describe("la belle-famille (23/11/2026, capture « Rencontre belle-mère » non reconnue)", () => {
+  it("une rencontre ne se tranche pas : pistes Quotidien puis Soirée, nuance Élégant", async () => {
+    const { pistesLocales, lireNuances } = await import("../occasionSaisie");
+    for (const t of ["Rencontre belle-mère", "Rencontrer mes beaux-parents", "Présentation à la belle-famille", "Première fois chez mon beau-père", "Rencontre avec la belle-sœur"]) {
+      expect(o(t), t).toBeNull();
+      expect(pistesLocales(t), t).toEqual(["quotidien", "soiree"]);
+      expect(lireNuances(t).humeur, t).toBe("elegant");
+    }
+    // Les parents (sans alliance) : les pistes de la famille, et la même nuance pour une rencontre.
+    expect(o("Rencontrer les parents de mon copain")).toBeNull();
+    expect(pistesLocales("Rencontrer les parents de mon copain")).toEqual(["soiree", "quotidien"]);
+    expect(lireNuances("Rencontrer les parents de mon copain").humeur).toBe("elegant");
+  });
+  it("sans rencontre, aucune nuance ; l'allure dite l'emporte ; les parents d'élèves restent du travail", async () => {
+    const { lireNuances } = await import("../occasionSaisie");
+    expect(o("Déjeuner chez ma belle-mère")).toEqual({ occasion: "quotidien" });
+    expect(o("Dîner chez mon beau-frère")).toEqual({ occasion: "soiree" });
+    expect(lireNuances("Rencontre décontractée avec mes beaux-parents").humeur).toBe("decontracte");
+    expect(o("Réunion de présentation aux parents d'élèves")).toEqual({ occasion: "travail_formel", sousChoix: "Présentiel" });
+    expect(o("Rencontre client")).toEqual({ occasion: "travail_formel", sousChoix: "Présentiel" });
   });
 });
 

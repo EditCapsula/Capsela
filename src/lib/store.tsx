@@ -10,7 +10,7 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import type { Humeur } from "./humeur";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsuleDuJour, CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
-import { estPlanValise, looksValiseDuJour, lookSuivantConforme, piecesDeLaValisePourLeJour, valisePeutHabiller, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
+import { estPlanValise, loinDeLaValise, looksValiseDuJour, lookSuivantConforme, piecesDeLaValisePourLeJour, valisePeutHabiller, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
 import { previsionPour, type MeteoMoment, type MomentJournee, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
 import { clePlanApplique, doitAppliquerPlan, planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
@@ -1089,6 +1089,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // que la vraie position se charge (recette 17/08/2026 "Règle de
   // géolocalisation sur la page Tenue du jour").
   const [liveWeather, setLiveWeather] = useState<City | null>(null);
+  /** La position de l'appareil (24/11/2026) : seulement pour savoir si l'on est à la destination de la valise du jour (valiseDuJour.ts). */
+  const [positionActuelle, setPositionActuelle] = useState<{ lat: number; lon: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<"disabled" | "loading" | "success" | "failed">("disabled");
   useEffect(() => {
     let cancelled = false;
@@ -1106,6 +1108,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       const w = await Promise.race([
         (async () => {
           const pos = await getBrowserPosition();
+          if (pos && !cancelled) setPositionActuelle({ lat: pos.coords.latitude, lon: pos.coords.longitude });
           return pos ? await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude) : null;
         })(),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), DELAI_POSITION_MS)),
@@ -1366,10 +1369,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const jourConsulteIso = jourLocal(dateDuJour(state.jourDecalage));
   const valiseConsultee: ValiseDuJourConsulte | null = useMemo(() => {
     const v = valiseDuJour(state.valises, jourConsulteIso);
+    // Pas sur place aujourd'hui (24/11/2026, loinDeLaValise) : la tenue du jour revient au dressing. La position ne dit rien des autres jours.
+    if (v && state.jourDecalage === 0 && loinDeLaValise(v, jourConsulteIso, positionActuelle)) return null;
     const pool = [...state.items, ...vestiairePool];
     // Une valise qui ne peut composer aucune tenue ne prend pas la main sur la tenue du jour (valisePeutHabiller).
     return v && valisePeutHabiller(piecesDeLaValisePourLeJour(v, pool)) ? looksValiseDuJour(v, jourConsulteIso, pool) : null;
-  }, [state.valises, jourConsulteIso, state.items, vestiairePool]);
+  }, [state.valises, jourConsulteIso, state.jourDecalage, positionActuelle, state.items, vestiairePool]);
   // LA CAPSULE DU JOUR CONSULTÉ (22/10/2026, demandé : « pioche dans les bonnes capsules » quand il fait chaud) : `defaultCapsule` est
   // bâtie sur la météo d'AUJOURD'HUI ; la tenue d'un autre jour reçoit la capsule de SA météo et de SA saison (saisonCapsuleDuJour),
   // comme Planifier. Aujourd'hui, c'est la même capsule.

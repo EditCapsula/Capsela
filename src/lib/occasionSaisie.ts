@@ -35,12 +35,23 @@ export interface OccasionComprise {
  * lit déjà ; la personne la voit et la change. Seuls des mots du texte — l'allure dite, ou le cadre (campagne, plage) depuis le
  * 23/11/2026 : aucune nuance n'est déduite de l'occasion seule.
  */
+// La famille, celle d'alliance d'abord, et les mots d'une première rencontre (23/11/2026) : sur un texte normalisé (normaliser).
+const FAMILLE = String.raw`\b(belle famille|belles familles|belle mere|belles meres|beau pere|beaux peres|beaux parents|belle soeur|belles soeurs|beau frere|beaux freres|parents|famille|grands parents)\b`;
+const RENCONTRE = String.raw`\b(rencontre|rencontrer|rencontres|presente|presenter|presentation|presentations|premiere fois|faire connaissance)\b`;
+// Les « parents d'élèves » ne sont pas une famille à rencontrer : une réunion de présentation reste du travail, sans nuance.
+const sansParentsDEleves = (t: string): string => t.replace(/\bparents d eleves?\b/g, "");
+const estRencontreFamille = (t: string): boolean => new RegExp(RENCONTRE).test(t) && new RegExp(FAMILLE).test(sansParentsDEleves(t));
+
 const NUANCES: readonly { mots: RegExp; humeur: Humeur }[] = [
   { mots: /\b(habille|habillee|chic|elegant|elegante|classe|soignee?|tenue correcte|dress code|black tie|smart)\b/, humeur: "elegant" },
   { mots: /\b(glamour|sexy|feminine?)\b/, humeur: "feminin" },
   { mots: /\b(decontracte|decontractee|casual|cool|relax|detendu|simple)\b/, humeur: "decontracte" },
   { mots: /\b(confortable|confort|a l aise|marcher beaucoup|debout toute la journee)\b/, humeur: "confortable" },
   { mots: /\b(leger|legere|chaleur|canicule|il fera chaud|en plein soleil)\b/, humeur: "leger" },
+  // LA PREMIÈRE RENCONTRE DE LA BELLE-FAMILLE (23/11/2026, capture « Rencontre belle-mère » non reconnue ; arbitré : Quotidien ou
+  // Soirée, nuance Élégant — une tenue soignée, pas de cérémonie). Après les mots explicites : « rencontre décontractée avec ses
+  // beaux-parents » reste Décontracté. Seulement la RENCONTRE : un déjeuner chez sa belle-mère ne reçoit aucune nuance. ARBITRAGE ÉDITORIAL.
+  { mots: new RegExp(`${RENCONTRE}.*${FAMILLE}|${FAMILLE}.*${RENCONTRE}`), humeur: "elegant" },
   // LE CADRE (23/11/2026, demandé : « mariage à la campagne » doit donner Cérémonie et Décontracté). Après les mots explicites : « un
   // mariage chic à la campagne » reste Plus habillé. Le cadre dit l'allure d'un événement, pas l'occasion seule. ARBITRAGE ÉDITORIAL.
   { mots: /\b(campagne|champetre|jardin|plein air|en exterieur|guinguette|boheme|grange|ferme|domaine|garden party)\b/, humeur: "decontracte" },
@@ -50,7 +61,7 @@ const NUANCES: readonly { mots: RegExp; humeur: Humeur }[] = [
 /** La nuance et le lieu que le texte dit explicitement, sans l'occasion. */
 export function lireNuances(texte: string): Pick<OccasionComprise, "humeur" | "typeLieu"> {
   const t = normaliser(texte);
-  const humeur = NUANCES.find((n) => n.mots.test(t))?.humeur;
+  const humeur = NUANCES.find((n) => n.mots.test(sansParentsDEleves(t)))?.humeur;
   const typeLieu = /\b(rooftop|roof top|bar)\b/.test(t) ? "Bar / Rooftop" : undefined;
   return { ...(humeur ? { humeur } : {}), ...(typeLieu ? { typeLieu } : {}) };
 }
@@ -59,6 +70,9 @@ export function lireNuances(texte: string): Pick<OccasionComprise, "humeur" | "t
 export function normaliser(texte: string): string {
   return texte
     .toLowerCase()
+    // Les ligatures ne se décomposent pas (« belle-sœur » donnait « belle s ur », 23/11/2026).
+    .replace(/œ/g, "oe")
+    .replace(/æ/g, "ae")
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
@@ -87,6 +101,9 @@ const REGLES: readonly Regle[] = [
 export function lireOccasionLocale(texte: string): OccasionComprise | null {
   const t = normaliser(texte);
   if (!t) return null;
+  // Une rencontre de la famille ne se tranche pas (23/11/2026) : « présentation à mes beaux-parents » n'est pas du travail. Les pistes
+  // (Quotidien, Soirée) et la lecture IA proposent, la personne choisit.
+  if (estRencontreFamille(t)) return null;
   for (const r of REGLES) {
     if (!r.mots.test(t)) continue;
     const sousChoix = r.sousChoix?.(t);
@@ -107,7 +124,9 @@ export function lireOccasionLocale(texte: string): OccasionComprise | null {
 const INDICES: readonly { mots: RegExp; pistes: OccasionKey[] }[] = [
   { mots: /\b(notaire|banque|banquier|avocat|signature|mairie|administratif|prefecture|comptable|assurance|etat des lieux|agence immobiliere|visite d appartement)\b/, pistes: ["travail_formel", "quotidien"] },
   { mots: /\b(medecin|docteur|dentiste|kine|rendez vous|rdv|coiffeur)\b/, pistes: ["quotidien", "travail_formel"] },
-  { mots: /\b(famille|parents|beaux parents|belle famille|repas|invitation|invites|noel|nouvel an)\b/, pistes: ["soiree", "quotidien"] },
+  // La belle-famille (23/11/2026, arbitré : Quotidien ou Soirée, Quotidien d'abord — la rencontre a le plus souvent lieu de jour).
+  { mots: /\b(belle famille|belles familles|belle mere|belles meres|beau pere|beaux peres|beaux parents|belle soeur|belles soeurs|beau frere|beaux freres)\b/, pistes: ["quotidien", "soiree"] },
+  { mots: /\b(famille|parents|grands parents|repas|repas du dimanche|invitation|invites|noel|nouvel an)\b/, pistes: ["soiree", "quotidien"] },
 ];
 
 /** Les occasions que le texte suggère sans les dire (au plus trois, sans doublon), ou une liste vide. */

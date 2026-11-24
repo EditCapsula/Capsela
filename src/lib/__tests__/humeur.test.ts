@@ -73,3 +73,16 @@ describe("mots et choix selon le genre du profil", () => {
     expect(libelleHumeur("elegant", null)).toBe("Plus habillé");
   });
 });
+
+describe("« Léger et ventilé » par le froid (23/11/2026)", () => {
+  it("n'est plus retenu sous 15° ; les autres envies et une température inconnue ne changent rien", async () => {
+    const { envieRetenue, SEUIL_ENVIE_LEGERE } = await import("../humeur");
+    expect(SEUIL_ENVIE_LEGERE).toBe(15);
+    expect(envieRetenue("leger", 5)).toBeNull();
+    expect(envieRetenue("leger", 14.9)).toBeNull();
+    expect(envieRetenue("leger", 15)).toBe("leger");
+    expect(envieRetenue("leger", null)).toBe("leger");
+    expect(envieRetenue("elegant", 5)).toBe("elegant");
+    expect(envieRetenue(null, 5)).toBeNull();
+  });
+});

@@ -21,10 +21,24 @@ import { Capacitor } from "@capacitor/core";
 export const DROIT_PREMIUM = "premium";
 
 const CLE_IOS = process.env.NEXT_PUBLIC_REVENUECAT_IOS_KEY ?? "";
+/**
+ * LA CLÉ PUBLIQUE ANDROID DE REVENUECAT (« goog_… », 23/11/2026, demandé : « passons à Google »), posée par le workflow de build
+ * Android (variable du dépôt REVENUECAT_ANDROID_KEY). Sur Google Play aussi, un abonnement numérique passe par la facturation du
+ * store (Play Billing). Sans elle, l'écran Premium Android reste celui d'avant.
+ */
+const CLE_ANDROID = process.env.NEXT_PUBLIC_REVENUECAT_ANDROID_KEY ?? "";
 
-/** Les achats intégrés sont-ils proposés ici ? L'app iOS, avec sa clé RevenueCat. */
+/** Le magasin qui encaisse ici : l'App Store (iOS), Google Play (Android), ou aucun (le site, ou une app sans sa clé). */
+export function magasinIci(): "apple" | "google" | null {
+  const p = Capacitor.getPlatform();
+  if (p === "ios" && CLE_IOS.length > 0) return "apple";
+  if (p === "android" && CLE_ANDROID.length > 0) return "google";
+  return null;
+}
+
+/** Les achats intégrés sont-ils proposés ici ? L'app iOS ou Android, avec sa clé RevenueCat. */
 export function achatsIntegresIci(): boolean {
-  return Capacitor.getPlatform() === "ios" && CLE_IOS.length > 0;
+  return magasinIci() !== null;
 }
 
 export type DureeFormule = "annuel" | "mensuel";
@@ -80,7 +94,7 @@ export async function configurerAchats(userId: string): Promise<boolean> {
   try {
     const P = await charger();
     if (utilisateurConfigure === null) {
-      await P.configure({ apiKey: CLE_IOS, appUserID: userId });
+      await P.configure({ apiKey: magasinIci() === "google" ? CLE_ANDROID : CLE_IOS, appUserID: userId });
       utilisateurConfigure = userId;
     } else if (utilisateurConfigure !== userId) {
       await P.logIn({ appUserID: userId });
@@ -107,7 +121,7 @@ export async function chargerFormules(userId: string): Promise<FormuleStore[] | 
 
 export type ResultatAchat = "premium" | "annule" | "sans_droit" | "erreur";
 
-/** Achète une formule. « annule » : la personne a fermé la fenêtre d'Apple ; rien n'est dit comme une erreur. */
+/** Achète une formule. « annule » : la personne a fermé la fenêtre du store ; rien n'est dit comme une erreur. */
 export async function acheter(userId: string, formule: FormuleStore): Promise<ResultatAchat> {
   if (!(await configurerAchats(userId))) return "erreur";
   try {
@@ -122,7 +136,7 @@ export async function acheter(userId: string, formule: FormuleStore): Promise<Re
   }
 }
 
-/** Restaure les achats (exigé par Apple) : « premium » si un abonnement actif est retrouvé. */
+/** Restaure les achats (exigé par Apple, utile sur Google Play) : « premium » si un abonnement actif est retrouvé. */
 export async function restaurer(userId: string): Promise<ResultatAchat> {
   if (!(await configurerAchats(userId))) return "erreur";
   try {
