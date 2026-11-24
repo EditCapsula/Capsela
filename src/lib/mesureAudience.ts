@@ -18,23 +18,36 @@ export const idMesure = (): string =>
   process.env.NEXT_PUBLIC_GA_ID || (process.env.NODE_ENV === "production" ? ID_MESURE_CAPSELA : "");
 
 /**
- * LA PLATEFORME (24/11/2026, demandé : distinguer le site et les apps dans un même flux Web). Les apps iOS et Android affichent le site
- * dans une vue web : sans ce repère, toutes leurs visites se confondent avec celles du site. Posée en PROPRIÉTÉ UTILISATEUR
- * `plateforme_capsela` (web, android, ios), elle accompagne chaque événement ; à déclarer une fois dans Google Analytics (Admin →
- * Définitions personnalisées, dimension de portée Utilisateur) pour filtrer les rapports. Rien de personnel : le type d'appareil.
- * Appelée seulement après consentement (App.tsx) ; met la commande en file si gtag.js n'est pas encore chargé.
+ * LE CHARGEMENT DE GOOGLE ANALYTICS (24/11/2026), appelé seulement après consentement (App.tsx, consent.ts). Écrit ici plutôt que
+ * par le composant de @next/third-parties, qui n'accepte aucun réglage : il fallait poser, AVANT la première visite comptée,
+ *   · la PLATEFORME (demandé : distinguer le site et les apps dans un même flux Web — les apps affichent le site dans une vue web) :
+ *     propriété utilisateur `plateforme_capsela` (web, android, ios), à déclarer dans Google Analytics (Admin → Définitions
+ *     personnalisées, dimension de portée Utilisateur). Rien de personnel : le type d'appareil ;
+ *   · la DURÉE DES COOKIES `_ga` : 13 mois au plus, jamais prolongée à chaque visite (recommandation de la CNIL ; page « Cookies et
+ *     traceurs ») — par défaut, gtag.js les garde deux ans et les renouvelle à chaque visite.
+ * Une seule fois par lancement ; ne jette jamais.
  */
-export function poserPlateforme(plateforme: string): void {
-  if (typeof window === "undefined") return;
+export const DUREE_COOKIE_GA_S = 13 * 30 * 24 * 3600;
+let gaCharge = false;
+
+export function chargerGoogleAnalytics(id: string, plateforme: string): void {
+  if (gaCharge || typeof window === "undefined" || !id) return;
+  gaCharge = true;
   try {
-    const w = window as unknown as { dataLayer?: unknown[] };
+    const w = window as unknown as { dataLayer?: unknown[]; gtag?: (...args: unknown[]) => void };
     w.dataLayer = w.dataLayer || [];
     // La forme exacte de gtag : il pousse son objet `arguments`, pas un tableau.
-    const gtag = function () {
+    w.gtag = function () {
       // eslint-disable-next-line prefer-rest-params
       w.dataLayer!.push(arguments);
     } as (...args: unknown[]) => void;
-    gtag("set", "user_properties", { plateforme_capsela: plateforme });
+    w.gtag("js", new Date());
+    w.gtag("set", "user_properties", { plateforme_capsela: plateforme });
+    w.gtag("config", id, { cookie_expires: DUREE_COOKIE_GA_S, cookie_update: false });
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`;
+    document.head.appendChild(script);
   } catch {
     // La mesure ne doit jamais casser l'écran.
   }
