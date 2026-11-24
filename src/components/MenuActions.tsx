@@ -29,6 +29,7 @@ export default function MenuActions() {
   // L'action contextuelle d'un écran (le Dressing et ses deux onglets) : le « + » la lance directement, sans menu.
   const contexte = useSyncExternalStore(abonnerMenuActions, () => (instantaneMenuActions(), actionContextuelle()), () => null);
   const clavier = useClavierOuvert();
+  const defile = useDefilementEnCours();
   const [ouvert, setOuvert] = useState(false);
   const boutonRef = useRef<HTMLButtonElement>(null);
   const premiereRef = useRef<HTMLButtonElement>(null);
@@ -119,11 +120,22 @@ export default function MenuActions() {
           "absolute right-4 flex items-center justify-center rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream cursor-pointer transition-transform active:scale-[.95] " +
           (ouvert ? "z-50" : "z-30")
         }
-        style={{ bottom: bas, width: 56, height: 56, boxShadow: "0 4px 14px rgba(29,26,22,.22)" }}
+        // COMPACT PENDANT LE DÉFILEMENT (24/11/2026, retour d'une testeuse : « le bouton sticky cache pas mal les entrées, il faudrait qu'au
+        // scroll le bouton rétrécisse », capture : il recouvrait la température de « Pour l'extérieur ») : 40 px au lieu de 56 pendant
+        // le défilement et un court instant après, puis il reprend sa taille. Ouvert, il ne rétrécit pas.
+        style={{
+          bottom: bas,
+          width: defile && !ouvert ? 40 : 56,
+          height: defile && !ouvert ? 40 : 56,
+          marginRight: defile && !ouvert ? 8 : 0,
+          opacity: defile && !ouvert ? 0.92 : 1,
+          boxShadow: "0 4px 14px rgba(29,26,22,.22)",
+          transition: "width 180ms ease-out, height 180ms ease-out, margin 180ms ease-out, opacity 180ms ease-out",
+        }}
       >
         <svg
-          width="24"
-          height="24"
+          width={defile && !ouvert ? 18 : 24}
+          height={defile && !ouvert ? 18 : 24}
           viewBox="0 0 24 24"
           aria-hidden="true"
           className={"transition-transform duration-200 ease-out motion-reduce:transition-none " + (ouvert ? "rotate-45" : "")}
@@ -133,6 +145,28 @@ export default function MenuActions() {
       </button>
     </>
   );
+}
+
+/**
+ * Un défilement est en cours, n'importe où dans l'app (les écrans défilent dans leur propre zone : écoute en phase de capture), et
+ * jusqu'à 700 ms après le dernier mouvement. Le défilement horizontal d'un carrousel compte aussi : le bouton s'efface de même.
+ */
+function useDefilementEnCours(): boolean {
+  const [enCours, setEnCours] = useState(false);
+  useEffect(() => {
+    let minuterie: ReturnType<typeof setTimeout> | null = null;
+    const surDefilement = () => {
+      setEnCours(true);
+      if (minuterie) clearTimeout(minuterie);
+      minuterie = setTimeout(() => setEnCours(false), 700);
+    };
+    document.addEventListener("scroll", surDefilement, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener("scroll", surDefilement, { capture: true });
+      if (minuterie) clearTimeout(minuterie);
+    };
+  }, []);
+  return enCours;
 }
 
 /** Le clavier est ouvert : un champ de saisie a le focus. Le bouton s'efface pour ne pas flotter au-dessus du clavier. */

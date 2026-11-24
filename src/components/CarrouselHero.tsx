@@ -13,17 +13,22 @@ import type { CategoryKey, Item } from "@/lib/types";
  * Une action discrète sous le look : une icône et un libellé (« Sauvegarder », « Autre idée »). Un seul bouton, cible tactile de 44 px.
  * Le CTA « Voir le look » reste l'action dominante de la carte.
  */
-export function ActionRonde({ icone, libelle, onClick, actif, disabled, label }: { icone: React.ReactNode; libelle: string; onClick: () => void; actif?: boolean; disabled?: boolean; label?: string }) {
+export function ActionRonde({ icone, libelle, onClick, actif, disabled, label, chevron = false }: { icone: React.ReactNode; libelle: string; onClick: () => void; actif?: boolean; disabled?: boolean; label?: string; /** Demi-gras et chevron gras (24/11/2026, demandé sur « Autre tenue » de la Capsule). */ chevron?: boolean }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       aria-pressed={actif}
       aria-label={label}
-      className="inline-flex items-center gap-[7px] min-h-[44px] px-1 text-[12.5px] text-ink-soft cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]"
+      className={"inline-flex items-center gap-[7px] min-h-[44px] px-1 text-[12.5px] cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97] " + (chevron ? "font-semibold text-ink" : "text-ink-soft")}
     >
       <span className="flex-shrink-0 text-ink">{icone}</span>
       <span>{libelle}</span>
+      {chevron && (
+        <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta" style={{ display: "block" }}>
+          <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
     </button>
   );
 }
@@ -51,7 +56,16 @@ export const IconeAvis = () => (
  */
 export function ActionsSousLeLook({ sauvegardee, onSauvegarder, onAvis, onAutre, autreDesactive }: { sauvegardee: boolean; onSauvegarder: () => void; onAvis: () => void; onAutre: () => void; autreDesactive?: boolean }) {
   // Calées par le haut : à 320 px, « Avis d'un proche » passe sur deux lignes ; les icônes restent alignées (mesuré le 19/11/2026).
-  const cellule = "flex flex-col items-center justify-start gap-[4px] min-h-[52px] pt-[6px] text-[12px] leading-[1.25] text-center text-ink-soft cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]";
+  // Des BOUTONS (24/11/2026, demandé, comme la page Tenue) : libellé demi-gras à l'encre et chevron gras terracotta au bout du libellé.
+  const cellule = "flex flex-col items-center justify-start gap-[4px] min-h-[52px] pt-[6px] text-[12px] font-semibold leading-[1.25] text-center text-ink cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]";
+  const libelle = (texte: string) => (
+    <span>
+      {texte}
+      <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="inline-block align-[-0.5px] ml-[4px] text-terracotta">
+        <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
   return (
     // data-actions-tenue : l'accueil masque le bouton flottant « + » tant qu'il recouvre cette ligne (21/11/2026).
     <div className="grid grid-cols-3" aria-live="polite" data-actions-tenue="">
@@ -59,20 +73,20 @@ export function ActionsSousLeLook({ sauvegardee, onSauvegarder, onAvis, onAutre,
         <span className="text-ink">
           <IconeCoeur plein={sauvegardee} />
         </span>
-        {sauvegardee ? t("Sauvegardée") : t("Sauvegarder")}
+        {libelle(sauvegardee ? t("Sauvegardée") : t("Sauvegarder"))}
       </button>
       <button type="button" onClick={onAvis} className={cellule}>
         <span className="text-ink">
           <IconeAvis />
         </span>
-        {t("Avis d'un proche")}
+        {libelle(t("Avis d'un proche"))}
       </button>
       {/* data-tour : la visite guidée de l'accueil (lib/visites.ts) met en évidence celle de la première slide, affichée à l'arrivée. */}
       <button type="button" data-tour="accueil-autre-tenue" onClick={onAutre} disabled={autreDesactive} aria-label={t("Propose-moi une autre tenue")} className={cellule}>
         <span className="text-ink">
           <IconeAutre />
         </span>
-        {t("Autre tenue")}
+        {libelle(t("Autre tenue"))}
       </button>
     </div>
   );

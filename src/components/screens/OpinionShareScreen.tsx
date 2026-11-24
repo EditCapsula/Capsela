@@ -596,6 +596,7 @@ export default function OpinionShareScreen() {
         )}
         {peutPartager ? (
           <Button onClick={partager} disabled={etat === "partage"} aria-busy={etat === "partage"} className="gap-[9px]">
+            {/* Sans icône (24/11/2026, demandé : « enlève les icônes dans les CTA principaux ») ; l'attente garde son indicateur. */}
             {etat === "partage" ? (
               <span
                 aria-hidden="true"
@@ -607,13 +608,7 @@ export default function OpinionShareScreen() {
                   borderTopColor: "var(--color-on-terracotta)",
                 }}
               />
-            ) : (
-              <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 15V3.5M7.5 8L12 3.5 16.5 8M5 12.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-6.5" />
-                </g>
-              </svg>
-            )}
+            ) : null}
             <span>{etat === "partage" ? "Préparation…" : "Partager ma tenue"}</span>
           </Button>
         ) : (

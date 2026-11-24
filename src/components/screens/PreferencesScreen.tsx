@@ -16,11 +16,9 @@ import {
   I_QUESTION,
   I_REGLAGES,
   I_REPERE,
-  I_SORTIE,
   I_THERMOMETRE,
   I_ETINCELLE,
   I_REPRENDRE,
-  Icone,
   LigneProfil,
   Surtitre,
 } from "@/components/ProfilUI";
@@ -457,7 +455,6 @@ export default function PreferencesScreen() {
 
           {/* La déconnexion existante (auth.signOut, puis l'écran de connexion), sans confirmation : il n'y en avait pas. */}
           <Button variante="contour" className="mt-8" onClick={seDeconnecter}>
-            <Icone taille={17}>{I_SORTIE}</Icone>
             Se déconnecter
           </Button>
           <div className="text-center text-[11px] text-placeholder mt-[12px]">Capsela · version {VERSION_APP}</div>

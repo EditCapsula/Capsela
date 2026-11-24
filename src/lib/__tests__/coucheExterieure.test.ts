@@ -127,3 +127,15 @@ describe("la température qui peut parler de météo", () => {
     expect(temperatureReelle({ decalage: 0, sourceMeteo: "defaut", tempDuJour: 13, prevue: null, minDuJour: 5 })).toBeNull();
   });
 });
+
+describe("la minimale dite à l'écran (24/11/2026)", () => {
+  it("vraie quand la température rendue est la minimale du jour", async () => {
+    const { temperatureEstMinimale, temperatureReelle } = await import("../coucheExterieure");
+    const ex = { decalage: 0, sourceMeteo: "position", tempDuJour: 4, prevue: null, minDuJour: 2 };
+    expect(temperatureReelle(ex)).toBe(2);
+    expect(temperatureEstMinimale(ex)).toBe(true);
+    expect(temperatureEstMinimale({ ...ex, minDuJour: null })).toBe(false);
+    expect(temperatureEstMinimale({ ...ex, sourceMeteo: "defaut" })).toBe(false);
+    expect(temperatureEstMinimale({ ...ex, decalage: 2 })).toBe(true);
+  });
+});

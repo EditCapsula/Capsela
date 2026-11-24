@@ -226,15 +226,6 @@ function Anneau({ parts, total }: { parts: [number, number]; total: number }) {
   );
 }
 
-/** Le signet de « Enregistrer cette tenue » (maquette du 05/11/2026) : plein une fois la tenue enregistrée. */
-function Signet({ plein }: { plein: boolean }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill={plein ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" aria-hidden="true">
-      <path d="M6 4h12v16l-6-4.2L6 20z" />
-    </svg>
-  );
-}
-
 /** Statut d'une pièce dans Explorer et Pièces clés : « Sélection Capsela » (maquette du 01/11/2026) ou « Dans ton dressing ». */
 function Pastille({ possedee }: { possedee: boolean }) {
   return possedee ? (
@@ -882,7 +873,7 @@ export default function CapsuleScreen() {
                 restent là pour la retoucher. */}
             {tenueDuMoteur && (
               <div className="flex items-center px-[14px] pb-[6px] -mt-[6px]" aria-live="polite">
-                <ActionRonde icone={<IconeAutre />} libelle="Autre tenue" label="Propose-moi une autre tenue" onClick={autreTenueComposer} />
+                <ActionRonde icone={<IconeAutre />} libelle="Autre tenue" label="Propose-moi une autre tenue" onClick={autreTenueComposer} chevron />
               </div>
             )}
             </div>
@@ -924,7 +915,7 @@ export default function CapsuleScreen() {
                 (« Pensées pour tes styles… »). La fonction des critères (criteresDeSelection) reste, testée. */}
             {piecesTenue.length >= 2 && (
               <Button variante={tenueEnregistree ? "contour" : "principal"} className="mt-[14px]" onClick={enregistrerTenue}>
-                <Signet plein={tenueEnregistree} />
+                {/* Sans icône (24/11/2026, demandé : « enlève les icônes dans les CTA principaux »). */}
                 {tenueEnregistree ? "Enregistrée dans mes looks" : "Enregistrer cette tenue"}
               </Button>
             )}
