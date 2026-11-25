@@ -3313,16 +3313,20 @@ export function getOutfitsForItem(
  * ses semblables (outfitFormality), jamais par index arbitraire : le titre
  * reflète une vraie différence entre les tenues plutôt qu'une rotation
  * cosmétique.
+ *
+ * Les titres décrivent la TENUE (accord au féminin de « tenue »), jamais la personne (25/11/2026, signalé sur un profil homme :
+ * « Féminine et minimaliste » dans « Et si on changeait de style ? ») : « Féminine » devient « Soignée » (date) et « Élégante »
+ * (événement perso), mêmes rangs de formalité. Aucun titre ne dépend du genre.
  */
 const OCCASION_STYLE_TITLES: Partial<Record<OccasionKey, string[]>> = {
   quotidien: ["Simple et facile à porter", "Décontractée mais affirmée", "Un cran plus habillée"],
   travail_formel: ["Structurée sans rigidité", "Professionnelle et posée", "Formelle et affirmée"],
-  date: ["Décontractée chic", "Féminine et minimaliste", "Plus habillée"],
+  date: ["Décontractée chic", "Soignée et minimaliste", "Plus habillée"],
   soiree: ["Décontractée du soir", "Chic sans en faire trop", "Sophistiquée"],
   sport: ["Confortable avant tout", "Technique et soignée", "Prête à performer"],
   cocooning: ["Relâchée à la maison", "Confortable et structurée", "Cocooning chic"],
   voyage: ["Pratique avant tout", "Confortable et soignée", "Prête pour toutes les étapes"],
-  evenement_perso: ["Soignée sans excès", "Féminine et posée", "À la hauteur de l'occasion"],
+  evenement_perso: ["Soignée sans excès", "Élégante et posée", "À la hauteur de l'occasion"],
 };
 
 const DEFAULT_STYLE_TITLES = ["Une tenue simple", "Une tenue équilibrée", "Une tenue plus habillée"];
