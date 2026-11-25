@@ -111,7 +111,7 @@ function Lien({ onClick, children, label }: { onClick: () => void; children: Rea
     <button
       onClick={onClick}
       aria-label={label}
-      className="inline-flex items-center gap-[6px] text-[12px] font-semibold text-terracotta-deep cursor-pointer flex-shrink-0 py-[13px] -my-[13px] whitespace-nowrap"
+      className="inline-flex items-center gap-[6px] text-[12px] font-semibold text-terracotta cursor-pointer flex-shrink-0 py-[13px] -my-[13px] whitespace-nowrap"
     >
       {children}
     </button>
@@ -490,12 +490,12 @@ function PanneauDressing() {
           {selectionMode ? (
             <button type="button" onClick={quitterSelection} className="h-[44px] text-[12px] text-muted flex-shrink-0 cursor-pointer">Annuler</button>
           ) : filtreExact ? (
-            <button type="button" onClick={() => actions.goWardrobePieces()} className="h-[44px] text-[12px] font-semibold text-terracotta-deep flex-shrink-0 cursor-pointer">Tout afficher</button>
+            <button type="button" onClick={() => actions.goWardrobePieces()} className="h-[44px] text-[12px] font-semibold text-terracotta flex-shrink-0 cursor-pointer">Tout afficher</button>
           ) : (
             <BoutonTri tri={tri} onChange={setTri} />
           )}
         </div>
-        {!selectionMode && affichees.length > 0 && <div className="text-[11px] text-placeholder -mt-[4px] mb-[6px]">Appui long sur une pièce pour la sélectionner</div>}
+        {!selectionMode && affichees.length > 0 && <div className="text-[11px] text-muted -mt-[4px] mb-[6px]">Appui long sur une pièce pour la sélectionner</div>}
 
         {affichees.length > 0 ? (
           <div className="grid grid-cols-3 gap-x-2 gap-y-[14px]">
@@ -545,7 +545,7 @@ function PanneauDressing() {
                     )}
                   </div>
                   <div className="text-[11.5px] font-medium leading-[1.3] mt-[6px]" style={{ textWrap: "pretty", opacity: selectionMode && !cochee ? 0.45 : 1 }}>{p.name}</div>
-                  <div className="text-[10px] text-placeholder mt-[1px] leading-[1.3]">
+                  <div className="text-[10px] text-muted mt-[1px] leading-[1.3]">
                     {/* Accordé à la pièce (participePorte) : « Jamais portées » pour des bottines. */}
                     {jamais ? "Jamais " + participePorte(p) : nb > 0 ? `${participePorteMaj(p)} ${nb} fois` : wornAgo(jours).replace(/^Porté/, participePorteMaj(p))}
                   </div>
@@ -565,7 +565,7 @@ function PanneauDressing() {
               <button type="button" onClick={() => { setRecherche(""); setGroupeId(null); setCouleurs([]); setJamaisPortees(false); }} className="h-[44px] px-[18px] rounded-full border border-border bg-card text-[13px] font-semibold text-ink cursor-pointer">
                 Voir tout le dressing
               </button>
-              <button type="button" onClick={ajouter} className="h-[44px] px-[18px] rounded-full border border-terracotta-deep bg-card text-[13px] font-semibold text-terracotta-deep cursor-pointer">
+              <button type="button" onClick={ajouter} className="h-[44px] px-[18px] rounded-full border border-terracotta-deep bg-card text-[13px] font-semibold text-terracotta cursor-pointer">
                 Ajouter une pièce
               </button>
             </div>
@@ -592,7 +592,7 @@ function PanneauDressing() {
                     <span className="italic text-terracotta">{pluriel ? "attendent leur moment" : "attend son moment"}</span>
                   </span>
                   {nbLooksRedecouvrir > 0 && (
-                    <span className="block text-[12px] font-semibold mt-[6px] text-terracotta-deep">
+                    <span className="block text-[12px] font-semibold mt-[6px] text-terracotta">
                       {nbLooksRedecouvrir} {nbLooksRedecouvrir === 1 ? "look cette saison" : "looks cette saison"}
                     </span>
                   )}

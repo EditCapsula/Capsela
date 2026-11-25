@@ -258,7 +258,7 @@ export function SlideIdeeLook({
           aria-label={enregistre ? "Retirer ce look de mes looks" : "Enregistrer ce look dans mes looks"}
           className="absolute top-[4px] right-[4px] w-[44px] h-[44px] flex items-center justify-center cursor-pointer motion-safe:transition-transform motion-safe:active:scale-[.94]"
         >
-          <span className="w-[34px] h-[34px] rounded-full bg-card border border-border flex items-center justify-center text-terracotta-deep">
+          <span className="w-[34px] h-[34px] rounded-full bg-card border border-border flex items-center justify-center text-terracotta">
             <IconeCoeur plein={enregistre} />
           </span>
         </button>

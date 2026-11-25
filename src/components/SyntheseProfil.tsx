@@ -255,7 +255,7 @@ export default function SyntheseProfil({
         style={{ background: "var(--color-hero-background)", ...delai(suivant() + 60) }}
       >
         <div className="flex items-center justify-between gap-3">
-          <h2 className="t-surtitre text-terracotta-deep">Ta première capsule</h2>
+          <h2 className="t-surtitre text-terracotta">Ta première capsule</h2>
           <Badge tone="plein">{saisonCapsule}</Badge>
         </div>
         <p className="t-titre-carte text-ink mt-[10px]">Ta première capsule sera celle de la saison en cours.</p>
@@ -263,7 +263,7 @@ export default function SyntheseProfil({
         {/* LE LIEN VERS LA CAPSULE (15/11/2026, demandé) : la capsule de cette saison, sur l'écran Capsule — le parcours se termine
             d'abord (profil enregistré), comme « Créer mon dressing ». */}
         {onVoirCapsule && (
-          <button type="button" onClick={onVoirCapsule} className="mt-[6px] -ml-1 px-1 min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer">
+          <button type="button" onClick={onVoirCapsule} className="mt-[6px] -ml-1 px-1 min-h-[44px] text-[13px] font-semibold text-terracotta cursor-pointer">
             Voir ma capsule →
           </button>
         )}

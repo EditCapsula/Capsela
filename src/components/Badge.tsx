@@ -22,7 +22,7 @@ const TONS: Record<string, { classe?: string; style?: CSSProperties }> = {
   possede: { classe: "bg-warm-bg text-ink border border-warm-border" },
   neutre: { classe: "bg-chip-soft-bg text-muted" },
   succes: { classe: "bg-success-bg text-success" },
-  surTerracotta: { style: { background: "rgba(158,91,67,.14)", color: "var(--color-terracotta-deep)" } },
+  surTerracotta: { style: { background: "rgba(158,91,67,.14)", color: "var(--color-terracotta)" } },
   surTerracottaContour: { style: { border: "1px solid rgba(29,26,22,.28)", color: "var(--color-ink-soft)" } },
 };
 

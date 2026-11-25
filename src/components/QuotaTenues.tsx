@@ -171,7 +171,7 @@ export function useQuotaTenues() {
                 onClick={regarderVideo}
                 className="w-full flex items-center gap-3 text-left mt-3 bg-card border border-border rounded-tuile px-4 py-[14px] cursor-pointer active:opacity-80"
               >
-                <span className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center" aria-hidden="true">
+                <span className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta flex items-center justify-center" aria-hidden="true">
                   <IconeVideo />
                 </span>
                 <span className="flex-1 min-w-0">

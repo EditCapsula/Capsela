@@ -467,7 +467,7 @@ export default function ImporterTenueScreen() {
         {/* Zone image : même hauteur à tous les états (ratio 1,3), sauf sur la liste des pièces, qui montre une photo par pièce. */}
         {listeAffichee ? null : phase === "choix" || phase === "echec" || phase === "vide" ? (
           <div className="rounded-[24px] bg-card border border-border aspect-[1.3] p-[18px] flex flex-col items-center justify-center text-center">
-            <span className="text-terracotta-deep" aria-hidden="true">
+            <span className="text-terracotta" aria-hidden="true">
               <CameraIcon />
             </span>
             <div className="t-titre-section text-ink mt-[10px]">Photographie ta tenue</div>
@@ -540,7 +540,7 @@ export default function ImporterTenueScreen() {
         {phase === "resultat" && plein && places !== null && (
           <div className="mt-3 rounded-[16px] border border-border bg-card px-4 py-3 text-[13px] text-ink">
             Il te reste {places} {places > 1 ? "places" : "place"} dans ton dressing gratuit. Choisis les pièces à garder.
-            <button type="button" onClick={() => actions.goPremium()} className="block min-h-[44px] text-[12.5px] font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer">
+            <button type="button" onClick={() => actions.goPremium()} className="block min-h-[44px] text-[12.5px] font-semibold text-terracotta underline underline-offset-[3px] cursor-pointer">
               Découvrir Premium
             </button>
           </div>
@@ -654,7 +654,7 @@ export default function ImporterTenueScreen() {
                       {!b.coche ? (
                         <span className="block text-[11.5px] text-[#8B8375] mt-[6px]">Plus de place dans ton dressing gratuit</span>
                       ) : (
-                        manques.length > 0 && <span className="block text-[11.5px] font-semibold text-terracotta-deep mt-[6px]">{phraseManque(manques)}</span>
+                        manques.length > 0 && <span className="block text-[11.5px] font-semibold text-terracotta mt-[6px]">{phraseManque(manques)}</span>
                       )}
                       <div className="mt-auto pt-3 flex flex-col gap-2">
                         {peutAPlat && (
@@ -739,11 +739,11 @@ export default function ImporterTenueScreen() {
                   {visuelRetenu && !parArticle && (
                     <div className="px-3 pb-3 -mt-1 flex flex-wrap items-center gap-2">
                       <span className="text-[12px] text-muted-3">Tu préfères ta photo ?</span>
-                      <button type="button" disabled={enAjout || photoCarteEnvoi !== null} onClick={() => choisirPhotoCarte(b.cle, true)} className="text-[12.5px] font-semibold text-terracotta-deep cursor-pointer disabled:opacity-50">
+                      <button type="button" disabled={enAjout || photoCarteEnvoi !== null} onClick={() => choisirPhotoCarte(b.cle, true)} className="text-[12.5px] font-semibold text-terracotta cursor-pointer disabled:opacity-50">
                         Prendre une photo
                       </button>
                       <span aria-hidden="true" className="text-placeholder">·</span>
-                      <button type="button" disabled={enAjout || photoCarteEnvoi !== null} onClick={() => choisirPhotoCarte(b.cle, false)} className="text-[12.5px] font-semibold text-terracotta-deep cursor-pointer disabled:opacity-50">
+                      <button type="button" disabled={enAjout || photoCarteEnvoi !== null} onClick={() => choisirPhotoCarte(b.cle, false)} className="text-[12.5px] font-semibold text-terracotta cursor-pointer disabled:opacity-50">
                         Galerie
                       </button>
                     </div>
@@ -807,7 +807,7 @@ export default function ImporterTenueScreen() {
                             );
                           })}
                         </div>
-                        <button type="button" onClick={() => setCouleurPour(b.cle)} className="min-h-[44px] text-[12.5px] font-semibold text-terracotta-deep cursor-pointer">
+                        <button type="button" onClick={() => setCouleurPour(b.cle)} className="min-h-[44px] text-[12.5px] font-semibold text-terracotta cursor-pointer">
                           Toutes les couleurs
                         </button>
                       </div>

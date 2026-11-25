@@ -6,7 +6,7 @@ import type { ButtonHTMLAttributes } from "react";
  * changent que la couleur :
  *
  *   principal    crème sur terracotta-deep — l'action de l'écran. `terracotta-deep` et non `terracotta` : le crème
- *                sur #A66950 donne un contraste de 3,82:1 (sous les 4,5:1 du texte courant), sur #9E5B43 de 4,51:1.
+ *                sur l'ancien #A66950 donnait 3,82:1 (sous les 4,5:1 du texte courant), sur #9E5B43 de 4,51:1.
  *   sombre       crème sur encre — l'action qui engage (confirmer, valider)
  *   destructif   crème sur rouille — supprimer, retirer
  *   secondaire   texte terracotta, filet — l'alternative à l'action principale

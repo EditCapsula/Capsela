@@ -42,7 +42,7 @@ const LENGTH_SUBTYPES = new Set(["Mini", "Midi", "Longue", "Courte"]);
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3">
-      <span className="t-surtitre text-placeholder flex-shrink-0">{label}</span>
+      <span className="t-surtitre text-muted flex-shrink-0">{label}</span>
       <span className="text-[13px] text-ink text-right">{value}</span>
     </div>
   );
@@ -373,7 +373,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
                 {titre.fin && (
                   <>
                     {" "}
-                    <span className="italic text-terracotta-deep">{titre.fin}</span>
+                    <span className="italic text-terracotta">{titre.fin}</span>
                   </>
                 )}
               </h1>
@@ -381,8 +381,8 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
               <div className="grid mt-[18px] border-y border-border" style={{ gridTemplateColumns: `repeat(${trio.length}, minmax(0, 1fr))` }}>
                 {trio.map((t, i) => (
                   <div key={t.label} className={"pt-[12px] pb-[13px] " + (i ? "border-l border-border pl-[14px]" : "")}>
-                    <div className="text-[12px] text-placeholder">{t.label}</div>
-                    <div className={"flex items-center gap-[6px] t-titre-ligne mt-[4px] " + (t.vide ? "text-placeholder" : "text-ink")}>
+                    <div className="text-[12px] text-muted">{t.label}</div>
+                    <div className={"flex items-center gap-[6px] t-titre-ligne mt-[4px] " + (t.vide ? "text-muted" : "text-ink")}>
                       {t.dot && <span className="w-[12px] h-[12px] rounded-full flex-shrink-0" style={{ background: t.dot, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }} aria-hidden="true" />}
                       {t.value}
                     </div>
@@ -415,7 +415,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
                 <div className="t-surtitre text-muted">Détails</div>
                 <button
                   onClick={() => actions.startEditItem(active)}
-                  className="min-h-[44px] inline-flex items-center gap-[5px] text-[12.5px] font-semibold text-terracotta-deep cursor-pointer"
+                  className="min-h-[44px] inline-flex items-center gap-[5px] text-[12.5px] font-semibold text-terracotta cursor-pointer"
                 >
                   <EditIcon /> Modifier
                 </button>
@@ -433,7 +433,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
               {manquants.length > 0 && (
                 <button
                   onClick={() => actions.startEditItem(active)}
-                  className="min-h-[44px] mt-[6px] inline-flex items-center gap-[6px] text-[12.5px] font-semibold text-terracotta-deep cursor-pointer"
+                  className="min-h-[44px] mt-[6px] inline-flex items-center gap-[6px] text-[12.5px] font-semibold text-terracotta cursor-pointer"
                 >
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 5v14M5 12h14" />

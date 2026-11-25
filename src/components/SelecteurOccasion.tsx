@@ -162,7 +162,7 @@ export default function SelecteurOccasion({ forme = "onglets" }: { forme?: Forme
         <p aria-live="polite" className="min-w-0 t-titre-section text-ink" style={{ textWrap: "balance" }}>
           {phrase && (
             <>
-              {libelle(phrase.debut)} <span className="italic" style={{ color: "var(--color-terracotta-deep)" }}>{libelle(phrase.fin)}</span>
+              {libelle(phrase.debut)} <span className="italic" style={{ color: "var(--color-terracotta)" }}>{libelle(phrase.fin)}</span>
             </>
           )}
         </p>
@@ -204,12 +204,12 @@ export default function SelecteurOccasion({ forme = "onglets" }: { forme?: Forme
                 </span>
                 <span
                   className={"flex-1 min-w-0 text-[14px] " + (actif ? "font-semibold" : "text-ink")}
-                  style={actif ? { color: "var(--color-terracotta-deep)" } : undefined}
+                  style={actif ? { color: "var(--color-terracotta)" } : undefined}
                 >
                   {libelle(sansBarre(v))}
                 </span>
                 {actif && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block", color: "var(--color-terracotta-deep)" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block", color: "var(--color-terracotta)" }}>
                     <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}

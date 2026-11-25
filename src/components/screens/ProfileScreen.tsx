@@ -173,7 +173,7 @@ export default function ProfileScreen() {
           {!photoUrl && <span className="font-sans font-semibold text-[22px] leading-none text-cream" style={{ fontFeatureSettings: '"tnum"' }}>{initial}</span>}
         </button>
         <div className="min-w-0 flex-1">
-          <div className={"t-titre-carte break-words " + (profile.displayName ? "text-ink" : "text-placeholder")}>
+          <div className={"t-titre-carte break-words " + (profile.displayName ? "text-ink" : "text-muted")}>
             {profile.displayName || "Ton nom"}
           </div>
           <div className="text-[12px] text-muted-3 mt-[2px] [overflow-wrap:anywhere]">{email ?? "E-mail non renseigné"}</div>
@@ -390,7 +390,7 @@ export default function ProfileScreen() {
             {valeur ? (
               <span className="block t-titre-ligne text-ink mt-[2px] truncate">{valeur}</span>
             ) : (
-              <span className="block text-[12px] text-placeholder leading-[1.3] mt-[3px]">Non renseignée</span>
+              <span className="block text-[12px] text-muted leading-[1.3] mt-[3px]">Non renseignée</span>
             )}
           </button>
         ))}

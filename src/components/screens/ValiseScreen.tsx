@@ -716,7 +716,7 @@ function EtapeActivites({
                     }
                     style={{ minHeight: 44 }}
                   >
-                    <span className={"flex-shrink-0 " + (on ? "text-on-terracotta" : "text-terracotta-deep")}>{glyphe(idee.activite)}</span>
+                    <span className={"flex-shrink-0 " + (on ? "text-on-terracotta" : "text-terracotta")}>{glyphe(idee.activite)}</span>
                     <span className="text-[13px] leading-[1.25]">{idee.libelle}</span>
                     <span className="flex-shrink-0 opacity-80" aria-hidden="true">
                       {on ? G_COCHE(13, "currentColor") : G_PLUS}
@@ -787,7 +787,7 @@ function EtapeActivites({
           <ul className="flex flex-col gap-2 mt-3">
             {choix.map((c, i) => (
               <li key={c.libelle} className="flex items-center gap-[10px] bg-card border border-border rounded-tuile pl-[14px] pr-[2px]" style={{ minHeight: 48 }}>
-                <span className="flex-shrink-0 text-terracotta-deep">{glyphe(c.activite)}</span>
+                <span className="flex-shrink-0 text-terracotta">{glyphe(c.activite)}</span>
                 {/* Une activité qui a sa tenue se date d'un toucher : « À planifier » tant qu'elle n'a pas de jour (06/11/2026). Une
                     activité que le moteur ne connaît pas ne change rien aux tenues : elle ne se date pas. */}
                 {sousIdDuChoix(c) ? (
@@ -817,7 +817,7 @@ function EtapeActivites({
             ))}
             {evtsDuSejour.map((e) => (
               <li key={e.id} className="flex items-center gap-[10px] bg-card border border-border rounded-tuile pl-[14px] pr-[2px]" style={{ minHeight: 48 }}>
-                <span className="flex-shrink-0 text-terracotta-deep">{GLYPHES_ACTIVITE.evenement}</span>
+                <span className="flex-shrink-0 text-terracotta">{GLYPHES_ACTIVITE.evenement}</span>
                 <span className="flex-1 min-w-0 py-[8px]">
                   <span className="block text-[13px] text-ink leading-[1.3]">{libelleEvenement(e)}</span>
                   <span className="block text-[11px] text-muted mt-[2px]">
@@ -954,7 +954,7 @@ function DestinationsDuVoyage({
                     setAutres((l) => l.filter((_, k) => k !== i - 1));
                     setOuvert(null);
                   }}
-                  className="t-lien text-terracotta-deep cursor-pointer min-h-[44px] -my-[12px]"
+                  className="t-lien text-terracotta cursor-pointer min-h-[44px] -my-[12px]"
                 >
                   Retirer
                 </button>
@@ -985,7 +985,7 @@ function DestinationsDuVoyage({
               }
               style={{ minHeight: 52 }}
             >
-              <span className={"flex-shrink-0 " + (lu ? "text-terracotta-deep" : "text-placeholder")}>{G_CALENDRIER}</span>
+              <span className={"flex-shrink-0 " + (lu ? "text-terracotta" : "text-muted")}>{G_CALENDRIER}</span>
               <span className="flex-1 min-w-0">
                 {lu ? (
                   <>
@@ -993,7 +993,7 @@ function DestinationsDuVoyage({
                     <span className="block text-[11px] text-muted mt-[1px]">{lu.nuits}</span>
                   </>
                 ) : (
-                  <span className="block text-[14px] text-placeholder">Sélectionner les dates</span>
+                  <span className="block text-[14px] text-muted">Sélectionner les dates</span>
                 )}
               </span>
             </button>
@@ -1850,7 +1850,7 @@ export default function ValiseScreen() {
                 return (
                   <li
                     key={libelle}
-                    className={"flex items-center gap-[12px] text-[13px] transition-opacity duration-300 " + (faite ? "text-ink" : enCours ? "text-muted-3" : "text-placeholder")}
+                    className={"flex items-center gap-[12px] text-[13px] transition-opacity duration-300 " + (faite ? "text-ink" : enCours ? "text-muted-3" : "text-muted")}
                     style={{ opacity: faite || enCours ? 1 : 0.55 }}
                   >
                     <span className={faite ? "text-terracotta" : ""}>{glyphe}</span>
@@ -2976,7 +2976,7 @@ function Resultat({
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] text-ink leading-[1.2] break-words">{p.name}</span>
                       <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">{raison.endsWith(".") ? raison : `${raison}.`}</span>
-                      <span className="block text-[11px] text-terracotta-deep mt-[1px]">Pas encore dans ton dressing</span>
+                      <span className="block text-[11px] text-terracotta mt-[1px]">Pas encore dans ton dressing</span>
                     </span>
                   </div>
                   {/* Un geste : l'ajouter au dressing — jamais dite possédée. « Achat à prévoir » est retiré (11/11/2026, demandé : « ne parle pas
@@ -3166,7 +3166,7 @@ function Resultat({
                   onClick={() => setADeplacer({ sousId: cleDeplacement(c), de: c.jour, libelle: c.libelle })}
                   aria-label={`Déplacer ${c.libelle} à un autre jour`}
                   // Discrète (06/11/2026, demandé : « l'icône déplacer discret ») : le geste principal est l'appui long ; la cible garde 44 px.
-                  className="w-11 h-11 -mr-[10px] flex items-center justify-center text-placeholder flex-shrink-0 cursor-pointer rounded-full active:bg-sand"
+                  className="w-11 h-11 -mr-[10px] flex items-center justify-center text-muted flex-shrink-0 cursor-pointer rounded-full active:bg-sand"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M8 4v15M8 4L4.5 7.5M8 4l3.5 3.5M16 20V5M16 20l-3.5-3.5M16 20l3.5-3.5" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
@@ -3228,7 +3228,7 @@ function Resultat({
                   type="button"
                   onClick={() => setADater(t.choix)}
                   aria-label={`${t.libelle} : choisir les jours`}
-                  className="flex-shrink-0 text-[12px] text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[44px] px-[6px]"
+                  className="flex-shrink-0 text-[12px] text-terracotta underline underline-offset-[3px] cursor-pointer min-h-[44px] px-[6px]"
                 >
                   Jours
                 </button>
@@ -3344,7 +3344,7 @@ function Resultat({
         <span className="t-titre-ligne text-ink">
           {NomBagage(valise.bagage)} · {depasse ? "trop plein" : `rempli à ${tauxRemplissage}\u00a0%`}
         </span>
-        <button onClick={() => setTailleOuverte(true)} className="t-lien text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[44px] flex-shrink-0">
+        <button onClick={() => setTailleOuverte(true)} className="t-lien text-terracotta underline underline-offset-[3px] cursor-pointer min-h-[44px] flex-shrink-0">
           Changer
         </button>
       </div>
@@ -3909,7 +3909,7 @@ function Resultat({
                               retirerDeLaChecklist(a);
                             }}
                             aria-label={`Retirer ${a.libelle} de la checklist`}
-                            className="w-[44px] h-[44px] -ml-[12px] flex items-center justify-center rounded-full text-placeholder cursor-pointer focus-visible:outline-2 focus-visible:outline-terracotta"
+                            className="w-[44px] h-[44px] -ml-[12px] flex items-center justify-center rounded-full text-muted cursor-pointer focus-visible:outline-2 focus-visible:outline-terracotta"
                           >
                             {G_CROIX}
                           </button>
@@ -4024,7 +4024,7 @@ function Resultat({
       <button onClick={recommencer} className="block mx-auto mt-6 t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[10px]">
         Créer une autre valise
       </button>
-      <div className="text-[11px] text-placeholder leading-[1.5] mt-2 text-center">
+      <div className="text-[11px] text-muted leading-[1.5] mt-2 text-center">
         <div>{`${dateCourte(valise.depart)} → ${dateCourte(valise.retour)}`}</div>
         {gardeeOu === "compte" && <div>Enregistrée dans ton compte.</div>}
         {gardeeOu === "appareil" && <div>Enregistrée sur cet appareil seulement.</div>}
@@ -4055,7 +4055,7 @@ function Pied({ gardeeOu, ajuster, recommencer, periode }: { gardeeOu: "compte" 
           Nouvelle valise
         </Button>
       </div>
-      <div className="text-[11px] text-placeholder leading-[1.5] mt-4">
+      <div className="text-[11px] text-muted leading-[1.5] mt-4">
         {periode && <div>{periode}</div>}
         {/* Où elle est gardée, tel que c'est : avant la migration 0038, ou
             sans réseau, elle ne suit pas sur un autre appareil. */}

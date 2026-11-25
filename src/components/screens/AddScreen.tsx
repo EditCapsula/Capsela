@@ -538,7 +538,7 @@ export default function AddScreen() {
           <>
             {/* État initial (maquette « Ajouter une pièce », 11/10/2026) : l'invitation, deux boutons l'un sous l'autre, puis les conseils. */}
             <div className="rounded-[24px] bg-card border border-border px-[18px] pt-[26px] pb-[18px] flex flex-col items-center text-center">
-              <span className="w-[64px] h-[64px] rounded-full flex items-center justify-center text-terracotta-deep" style={{ background: "rgba(158,91,67,.12)" }} aria-hidden="true">
+              <span className="w-[64px] h-[64px] rounded-full flex items-center justify-center text-terracotta" style={{ background: "rgba(158,91,67,.12)" }} aria-hidden="true">
                 <CameraIcon taille={28} />
               </span>
               {/* LES QUATRE FAÇONS D'AJOUTER (06/11/2026, brief « Refonte UX – Page Ajouter une pièce ») : à l'état initial, une seule carte
@@ -577,7 +577,7 @@ export default function AddScreen() {
               {etat === "initial" && (
                 <div className="w-full mt-[18px] border-t border-border text-left">
                   <Rangee onClick={() => setSaisieManuelle(true)} className="px-0 py-[12px] min-h-[56px]">
-                    <span className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center" aria-hidden="true">
+                    <span className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta flex items-center justify-center" aria-hidden="true">
                       <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3zM14.5 7.5l3 3" />
                       </svg>
@@ -594,7 +594,7 @@ export default function AddScreen() {
                       disabled={lectureTicket === "en_cours" || lectureTicket === "verification"}
                       className="px-0 py-[12px] min-h-[56px] disabled:opacity-60"
                     >
-                      <span className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center" aria-hidden="true">
+                      <span className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta flex items-center justify-center" aria-hidden="true">
                         {lectureTicket === "en_cours" ? (
                           <LoadingSpinner size={14} />
                         ) : (
@@ -628,7 +628,7 @@ export default function AddScreen() {
                 <ul className="list-none p-0 mt-[10px] flex flex-col gap-2">
                   {CONSEILS_PHOTO.map((c) => (
                     <li key={c.titre} className="flex items-center gap-3 rounded-[16px] bg-warm-bg px-3 py-[10px]">
-                      <span className="w-[32px] h-[32px] flex-shrink-0 flex items-center justify-center text-terracotta-deep" aria-hidden="true">
+                      <span className="w-[32px] h-[32px] flex-shrink-0 flex items-center justify-center text-terracotta" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                           <path d={c.icone} />
                         </svg>
@@ -670,7 +670,7 @@ export default function AddScreen() {
                   if (photoChoisie.current) confierPhoto({ fichier: photoChoisie.current, url: /^https?:/.test(state.addPhotoUrl ?? "") ? state.addPhotoUrl ?? undefined : undefined });
                   actions.openImporterTenue();
                 }}
-                className="mt-[10px] min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer"
+                className="mt-[10px] min-h-[44px] text-[13px] font-semibold text-terracotta cursor-pointer"
               >
                 Détecter toutes les pièces de la photo
               </button>
@@ -686,12 +686,12 @@ export default function AddScreen() {
               <button
                 type="button"
                 onClick={() => photoChoisie.current && actions.uploadAddPhoto(photoChoisie.current)}
-                className="mt-[10px] mr-4 min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer"
+                className="mt-[10px] mr-4 min-h-[44px] text-[13px] font-semibold text-terracotta cursor-pointer"
               >
                 Réessayer
               </button>
             )}
-            <button type="button" onClick={() => setSaisieManuelle(true)} className="mt-[10px] min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer">
+            <button type="button" onClick={() => setSaisieManuelle(true)} className="mt-[10px] min-h-[44px] text-[13px] font-semibold text-terracotta cursor-pointer">
               Saisir à la main
             </button>
           </div>
@@ -792,7 +792,7 @@ export default function AddScreen() {
         <button
           type="button"
           onClick={() => setToutesCouleurs(true)}
-          className="min-h-[44px] inline-flex items-center gap-1 text-[12.5px] font-semibold text-terracotta-deep cursor-pointer"
+          className="min-h-[44px] inline-flex items-center gap-1 text-[12.5px] font-semibold text-terracotta cursor-pointer"
         >
           Toutes les couleurs
           <svg viewBox="0 0 24 24" className="w-[13px] h-[13px]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -811,7 +811,7 @@ export default function AddScreen() {
                   <button
                     type="button"
                     onClick={actions.retablirAddManches}
-                    className="min-h-[44px] -my-[10px] text-[11.5px] font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer"
+                    className="min-h-[44px] -my-[10px] text-[11.5px] font-semibold text-terracotta underline underline-offset-[3px] cursor-pointer"
                   >
                     Rétablir
                   </button>
@@ -850,7 +850,7 @@ export default function AddScreen() {
                   <button
                     type="button"
                     onClick={actions.retablirAddMotif}
-                    className="min-h-[44px] -my-[10px] text-[11.5px] font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer"
+                    className="min-h-[44px] -my-[10px] text-[11.5px] font-semibold text-terracotta underline underline-offset-[3px] cursor-pointer"
                   >
                     Rétablir
                   </button>
@@ -907,7 +907,7 @@ export default function AddScreen() {
                       <button
                         type="button"
                         onClick={champ.retablir}
-                        className="min-h-[44px] -my-[10px] text-[11.5px] font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer"
+                        className="min-h-[44px] -my-[10px] text-[11.5px] font-semibold text-terracotta underline underline-offset-[3px] cursor-pointer"
                       >
                         Rétablir
                       </button>
@@ -1056,7 +1056,7 @@ export default function AddScreen() {
                   (confirmee
                     ? "bg-terracotta-deep border-terracotta-deep text-[#FBF3EA] border-solid"
                     : suggeree
-                      ? "bg-card border-[#A66950] text-terracotta-deep border-dashed"
+                      ? "bg-card border-[#A66950] text-terracotta border-dashed"
                       : "bg-card border-border text-ink")
                 }
               >

@@ -153,12 +153,12 @@ export function LigneProfil({
 }) {
   return (
     <Rangee onClick={onClick} className="gap-[13px]">
-      <span className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
+      <span className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta flex items-center justify-center">
         <Icone>{icone}</Icone>
       </span>
       <span className="flex-1 min-w-0">
         <span className="block t-titre-ligne text-ink">{titre}</span>
-        <span className={"block text-[13px] leading-[1.4] mt-[2px] " + (renseigne ? "text-ink" : "text-placeholder")}>{valeur}</span>
+        <span className={"block text-[13px] leading-[1.4] mt-[2px] " + (renseigne ? "text-ink" : "text-muted")}>{valeur}</span>
         {renseigne && explication && <span className="block text-[12px] text-muted leading-[1.4] mt-[3px]">{explication}</span>}
       </span>
       {onClick && <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>}
@@ -268,7 +268,7 @@ export function LigneInfo({ label, valeur, renseigne, onClick }: { label: string
   const contenu = (
     <>
       <span className="text-[13px] text-muted w-[118px] flex-shrink-0">{label}</span>
-      <span className={"flex-1 min-w-0 text-[13px] break-words " + (renseigne ? "text-ink" : "text-placeholder")}>{valeur}</span>
+      <span className={"flex-1 min-w-0 text-[13px] break-words " + (renseigne ? "text-ink" : "text-muted")}>{valeur}</span>
       {onClick && (
         <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">
           ›

@@ -228,7 +228,7 @@ function PremiumSansAchat() {
         {/* Venue de « Mettre à plat » (23/11/2026, miseAPlat.ts) : la même forme que la valise. */}
         {state.premiumOrigine === "mise_a_plat" && (
           <div className="flex items-start gap-[11px] mt-[14px] bg-warm-bg rounded-tuile px-[14px] py-[13px]">
-            <span className="flex-shrink-0 text-terracotta-deep mt-[1px]">
+            <span className="flex-shrink-0 text-terracotta mt-[1px]">
               <Glyphe>{G_CINTRE}</Glyphe>
             </span>
             <span className="min-w-0">
@@ -242,7 +242,7 @@ function PremiumSansAchat() {
         )}
         {state.premiumOrigine === "valise" && (
           <div className="flex items-start gap-[11px] mt-[14px] bg-warm-bg rounded-tuile px-[14px] py-[13px]">
-            <span className="flex-shrink-0 text-terracotta-deep mt-[1px]">
+            <span className="flex-shrink-0 text-terracotta mt-[1px]">
               <Glyphe>{G_VALISE}</Glyphe>
             </span>
             <span className="min-w-0">
@@ -262,7 +262,7 @@ function PremiumSansAchat() {
           {AVANTAGES.map((a) => (
             <div key={a.titre} className="py-[14px]" style={{ borderBottom: "1px solid var(--color-border)" }}>
               <div className="flex items-center gap-[9px]">
-                <span className="text-terracotta-deep">
+                <span className="text-terracotta">
                   <Glyphe>{a.glyphe}</Glyphe>
                 </span>
                 <div className="t-titre-carte text-ink">{a.titre}</div>
@@ -326,7 +326,7 @@ function PremiumSansAchat() {
                   </span>
                   <span className="block text-[11px] text-muted-3 mt-[2px]">{f.sous}</span>
                   {f.economie && (
-                    <span className="inline-flex items-center gap-[5px] mt-[6px] text-[11px] font-semibold text-terracotta-deep bg-warm-bg border border-sand-border rounded-full px-[9px] py-[3px] whitespace-nowrap">
+                    <span className="inline-flex items-center gap-[5px] mt-[6px] text-[11px] font-semibold text-terracotta bg-warm-bg border border-sand-border rounded-full px-[9px] py-[3px] whitespace-nowrap">
                       <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" style={{ display: "block" }}>
                         <path d="M12 3l1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9z" />
                       </svg>
@@ -405,7 +405,7 @@ function ListeAvantages() {
       {AVANTAGES.map((a) => (
         <div key={a.titre} className="py-[14px]" style={{ borderBottom: "1px solid var(--color-border)" }}>
           <div className="flex items-center gap-[9px]">
-            <span className="text-terracotta-deep">
+            <span className="text-terracotta">
               <Glyphe>{a.glyphe}</Glyphe>
             </span>
             <div className="t-titre-carte text-ink">{a.titre}</div>
@@ -527,7 +527,7 @@ function PremiumStore() {
             ) : liste.length === 0 ? (
               <div className="mt-[10px] text-[12px] text-muted-3 leading-[1.5]">
                 Les formules ne sont pas disponibles pour le moment.{" "}
-                <button type="button" className="text-terracotta-deep underline cursor-pointer" onClick={() => setEssai((n) => n + 1)}>
+                <button type="button" className="text-terracotta underline cursor-pointer" onClick={() => setEssai((n) => n + 1)}>
                   Réessayer
                 </button>
               </div>

@@ -95,7 +95,7 @@ export function CarteUnivers({
         </span>
       )}
       <span className="flex flex-col pt-3 pb-10 pl-3 pr-2" style={{ width: "calc(100% - clamp(56px, 38%, 92px))" }}>
-        <span className="flex items-center h-[22px] text-terracotta-deep">{glyphe}</span>
+        <span className="flex items-center h-[22px] text-terracotta">{glyphe}</span>
         {surtitre && <span className="t-surtitre text-muted-3 mt-[8px] !text-[9px] whitespace-nowrap">{surtitre}</span>}
         <span className={"block t-titre-vignette leading-[1.15] text-ink " + (surtitre ? "mt-[3px]" : "mt-3")}>
           {ligne1}
@@ -104,7 +104,7 @@ export function CarteUnivers({
         </span>
         <span className="block text-[11px] text-muted-3 leading-[1.4] mt-1" style={{ textWrap: "pretty" }}>
           {texte}
-          {accent && <span className="text-terracotta-deep font-semibold"> {accent}</span>}
+          {accent && <span className="text-terracotta font-semibold"> {accent}</span>}
         </span>
       </span>
     </button>
@@ -682,7 +682,7 @@ export default function HomeScreen() {
             la largeur de la carte : il n'y a pas de composition à côté. */}
         <div className="flex flex-col min-w-0" style={!passee && sansTenue ? { gridColumn: "1 / -1" } : undefined}>
           <div className="flex items-center gap-[7px]">
-            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta" style={{ display: "block" }}>
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="t-surtitre text-ink whitespace-nowrap">

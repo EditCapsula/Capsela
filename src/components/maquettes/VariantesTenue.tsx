@@ -203,7 +203,7 @@ export default function VariantesTenue({ b, architecture, traitement }: { b: Blo
   const cellule = "flex flex-col items-center justify-center gap-[4px] min-h-[56px] text-[11.5px] leading-[1.2] text-center px-1 cursor-pointer disabled:opacity-45 text-ink";
   const filet = { borderLeft: "1px solid var(--color-border)" } as const;
   const boutonPrecedente = precedente && (
-    <button type="button" onClick={revenir} className="inline-flex items-center gap-[6px] min-h-[36px] text-[12px] text-terracotta-deep cursor-pointer">
+    <button type="button" onClick={revenir} className="inline-flex items-center gap-[6px] min-h-[36px] text-[12px] text-terracotta cursor-pointer">
       <span aria-hidden="true">‹</span> Tenue précédente
     </button>
   );
@@ -272,7 +272,7 @@ export default function VariantesTenue({ b, architecture, traitement }: { b: Blo
             <div className="px-3 pt-2 pb-3">
               <div className="t-titre-vignette text-ink truncate">Avec {v.par.name.toLowerCase()}</div>
               <div className="text-[11px] text-muted truncate mt-[2px]">au lieu de {v.remplacee.name.toLowerCase()}</div>
-              <button type="button" onClick={() => b.appliquerVariante(v.remplacee.id, v.par.id)} className="mt-2 text-[12px] text-terracotta-deep cursor-pointer min-h-[32px]">
+              <button type="button" onClick={() => b.appliquerVariante(v.remplacee.id, v.par.id)} className="mt-2 text-[12px] text-terracotta cursor-pointer min-h-[32px]">
                 Voir cette variante →
               </button>
             </div>
@@ -292,7 +292,7 @@ export default function VariantesTenue({ b, architecture, traitement }: { b: Blo
               <span className="block t-titre-vignette text-ink truncate">Avec {v.par.name.toLowerCase()}</span>
               <span className="block text-[11px] text-muted truncate">au lieu de {v.remplacee.name.toLowerCase()}</span>
             </span>
-            <button type="button" onClick={() => b.appliquerVariante(v.remplacee.id, v.par.id)} className="flex-shrink-0 text-[12px] text-terracotta-deep cursor-pointer min-h-[40px] px-1">
+            <button type="button" onClick={() => b.appliquerVariante(v.remplacee.id, v.par.id)} className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer min-h-[40px] px-1">
               Voir →
             </button>
           </li>
@@ -438,7 +438,7 @@ export default function VariantesTenue({ b, architecture, traitement }: { b: Blo
         {/* Niveau 1 : le titre et les informations, sur leur propre carte. */}
         <div data-maquette="carte" className="mt-3 flex flex-col gap-3">
           <div className="-mx-2 rounded-hero px-4 pt-4 pb-3" style={CARTE}>
-            <div className="t-surtitre text-terracotta-deep">{b.libelleOccasion}</div>
+            <div className="t-surtitre text-terracotta">{b.libelleOccasion}</div>
             <div className="mt-2">
               <Titre b={b} classe="t-titre-section" />
             </div>
@@ -496,7 +496,7 @@ export default function VariantesTenue({ b, architecture, traitement }: { b: Blo
         <PlansDuJour depuis="tenues" className="mt-3" />
         <div className="mt-4 flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <div className="t-surtitre text-terracotta-deep">{b.libelleOccasion}</div>
+            <div className="t-surtitre text-terracotta">{b.libelleOccasion}</div>
             <div className="mt-[6px]">
               <Titre b={b} classe="t-titre-section" />
             </div>

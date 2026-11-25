@@ -36,7 +36,7 @@ export default function AccesAccueil({ ouvrir }: { ouvrir: Record<(typeof ACCES)
           aria-label={t(x.label)}
           className="flex flex-col items-center gap-[6px] rounded-carte bg-card border border-border py-3 cursor-pointer motion-safe:transition-transform motion-safe:active:scale-[.97] active:opacity-90"
         >
-          <span className="w-9 h-9 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">{glypheUnivers(x.d)}</span>
+          <span className="w-9 h-9 rounded-full bg-warm-bg text-terracotta flex items-center justify-center">{glypheUnivers(x.d)}</span>
           <span className="text-[11.5px] leading-[1.2] text-ink text-center font-semibold">
             {t(x.a)}
             <br />

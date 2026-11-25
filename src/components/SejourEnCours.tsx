@@ -36,7 +36,7 @@ export function SejourEnCours({ sejour, className = "" }: { sejour: Sejour; clas
       })}
       className={"w-full flex items-center gap-3 rounded-carte bg-card border border-border px-4 py-[11px] text-left cursor-pointer active:opacity-80 " + className}
     >
-      <span aria-hidden="true" className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
+      <span aria-hidden="true" className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta flex items-center justify-center">
         <IconeAvion />
       </span>
       <span aria-hidden="true" className="flex-1 min-w-0">

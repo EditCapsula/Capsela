@@ -75,7 +75,7 @@ export function VueCompte() {
       {demoMode || !email ? (
         <Rangee className="justify-between">
           <span className="text-[13px] text-muted flex-shrink-0">Modifier mon mot de passe</span>
-          <span className="text-[12px] text-placeholder text-right">Indisponible en mode démo</span>
+          <span className="text-[12px] text-muted text-right">Indisponible en mode démo</span>
         </Rangee>
       ) : (
         <Rangee
@@ -271,7 +271,7 @@ function EtatVideos() {
         </span>
       </span>
       {e.etape === "aucuneVideo" && (
-        <button type="button" onClick={reessayerVideo} className="min-h-[44px] text-[12px] font-semibold text-terracotta-deep cursor-pointer flex-shrink-0">
+        <button type="button" onClick={reessayerVideo} className="min-h-[44px] text-[12px] font-semibold text-terracotta cursor-pointer flex-shrink-0">
           Réessayer
         </button>
       )}

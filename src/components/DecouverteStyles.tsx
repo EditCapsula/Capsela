@@ -182,10 +182,10 @@ export function MesStylesSelectionnes({
     <div className="pt-[10px]">
       <div role="status" aria-live="polite" className="min-h-[20px]">
         {refus ? (
-          <span className="text-[12px] leading-[20px] text-terracotta-deep">{`${MAX_STYLES} styles au maximum : retire-en un pour ajouter ${refus}.`}</span>
+          <span className="text-[12px] leading-[20px] text-terracotta">{`${MAX_STYLES} styles au maximum : retire-en un pour ajouter ${refus}.`}</span>
         ) : (
           <span className="t-titre-ligne text-ink">
-            Mes styles sélectionnés <span className="text-terracotta-deep">({nb}/{MAX_STYLES})</span>
+            Mes styles sélectionnés <span className="text-terracotta">({nb}/{MAX_STYLES})</span>
           </span>
         )}
       </div>

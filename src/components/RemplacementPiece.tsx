@@ -152,7 +152,7 @@ export function useRemplacementPiece(): {
                     <PhotoPiece piece={p} ratio={0.8} rayon={10} entiere />
                   </div>
                   <span className="flex-1 min-w-0">
-                    {i === 0 && <span className="inline-block rounded-full bg-chip-soft-bg text-terracotta-deep t-pastille px-[7px] py-[3px] mb-[3px]">✦ Meilleur choix</span>}
+                    {i === 0 && <span className="inline-block rounded-full bg-chip-soft-bg text-terracotta t-pastille px-[7px] py-[3px] mb-[3px]">✦ Meilleur choix</span>}
                     <span className="block t-titre-vignette text-ink truncate">{p.name}</span>
                     <span className="block text-[11.5px] text-muted-3 mt-[1px]">
                       {justificationRemplacement(piece, p)} · {estSuggestion(p) ? "Suggestion" : "Ton dressing"}

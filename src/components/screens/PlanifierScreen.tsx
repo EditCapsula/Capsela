@@ -333,7 +333,7 @@ function CartePlanifier({
           />
         )}
         <span className="flex items-center justify-between gap-3">
-          <span className="w-10 h-10 flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center text-terracotta-deep">
+          <span className="w-10 h-10 flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center text-terracotta">
             <Glyphe>{glyphe}</Glyphe>
           </span>
           <span className="flex items-center gap-2">
@@ -2153,7 +2153,7 @@ export default function PlanifierScreen() {
                 {/* UNE TENUE A TOUJOURS SES CHAUSSURES (08/10/2026, demandé) : quand le moteur n'en a trouvé aucune pour la saison de
                     la date, la phrase le dit au lieu de présenter une tenue incomplète comme finie. */}
                 {!composition && pieces.length > 0 && !pieces.some((p) => p.cat === "chaussures") && (
-                  <div role="status" className="mt-3 text-[12px] leading-[1.45] text-terracotta-deep">
+                  <div role="status" className="mt-3 text-[12px] leading-[1.45] text-terracotta">
                     {dressingSeul
                       ? "Aucune paire de chaussures de ton dressing ne convient à cette date. Décoche « Uniquement mon dressing » pour en voir une, ou ajoute-en une."
                       : "Aucune paire de chaussures ne convient à cette date pour l'instant."}
@@ -2327,7 +2327,7 @@ export default function PlanifierScreen() {
                   Look <span className="italic text-terracotta">planifié</span>
                 </div>
                 {!passee && (
-                  <span className="inline-flex items-center gap-[6px] flex-shrink-0 rounded-full px-[12px] py-[6px] text-[12px] text-terracotta-deep" style={{ background: "var(--color-selected-bg)" }}>
+                  <span className="inline-flex items-center gap-[6px] flex-shrink-0 rounded-full px-[12px] py-[6px] text-[12px] text-terracotta" style={{ background: "var(--color-selected-bg)" }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       {t.confirme ? <path d="M5 12.5l4.5 4.5L19 7.5" /> : <><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>}
                     </svg>
@@ -2385,7 +2385,7 @@ export default function PlanifierScreen() {
                         setComposition(proposition.ids);
                         setEtape(2);
                       }}
-                      className="flex-shrink-0 inline-flex items-center gap-[5px] text-[12.5px] font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[32px]"
+                      className="flex-shrink-0 inline-flex items-center gap-[5px] text-[12.5px] font-semibold text-terracotta underline underline-offset-[3px] cursor-pointer min-h-[32px]"
                     >
                       Actualiser
                     </button>
@@ -2549,7 +2549,7 @@ export default function PlanifierScreen() {
           <>
             {/* LE MESSAGE DU BOUTON INACTIF, dit au tap (maquette V3) : « Continuer » n'est pas un `disabled` muet. */}
             {message && (
-              <div role="status" className="text-center text-[12px] text-terracotta-deep mb-2">
+              <div role="status" className="text-center text-[12px] text-terracotta mb-2">
                 {message}
               </div>
             )}

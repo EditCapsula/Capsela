@@ -324,13 +324,14 @@ function Screens() {
         >
           <div className="flex items-start gap-2">
             <span className="flex-1 break-words">{state.dressingError}</span>
-            <button onClick={actions.dismissDressingError} className="flex-shrink-0 font-semibold cursor-pointer">
+            <button onClick={actions.dismissDressingError} aria-label="Fermer le message" className="flex-shrink-0 font-semibold cursor-pointer">
               ✕
             </button>
           </div>
         </div>
       )}
-      <div className="relative flex-1 overflow-hidden">
+      {/* La zone principale (25/11/2026, audit d'accessibilité) : les lecteurs d'écran y sautent directement, hors en-tête et barre du bas. */}
+      <main className="relative flex-1 overflow-hidden">
         {state.screen === "welcome" && <WelcomeScreen />}
         {state.screen === "onboarding" && <OnboardingScreen />}
         {state.screen === "auth" && <AuthScreen />}
@@ -365,7 +366,7 @@ function Screens() {
         {state.screen === "itemOutfits" && <ItemOutfitsScreen />}
         {state.screen === "ideeLook" && <IdeeLookScreen />}
         {state.screen === "notifications" && <NotificationsScreen />}
-      </div>
+      </main>
       {showTabbar && <TabBar />}
       {/* Le menu d'actions flottant (12/11/2026, menuActions.ts) : un seul, pour toutes les pages principales. */}
       <MenuActions />

@@ -171,7 +171,7 @@ export function ChoixVille({
     <button
       onClick={utiliserPosition}
       disabled={position === "encours"}
-      className={(surtitre ? "-my-[12px] " : "mt-3 ") + "inline-flex items-center gap-[8px] text-[13px] text-terracotta-deep cursor-pointer flex-shrink-0 whitespace-nowrap"}
+      className={(surtitre ? "-my-[12px] " : "mt-3 ") + "inline-flex items-center gap-[8px] text-[13px] text-terracotta cursor-pointer flex-shrink-0 whitespace-nowrap"}
       style={{ minHeight: 44 }}
       aria-label={position === "encours" ? "Je cherche ta position" : "Utiliser ma position actuelle"}
     >
@@ -202,14 +202,14 @@ export function ChoixVille({
         <div className={titre ? "mt-5" : "mt-[10px]"}>
           {titre && <Surtitre>{titre}</Surtitre>}
           <div className={(titre ? "mt-[10px] " : "") + "flex items-center gap-[10px] rounded-bloc border border-border bg-card px-[14px]"} style={{ minHeight: 56 }}>
-            <span className="flex-shrink-0 text-terracotta-deep"><Epingle /></span>
+            <span className="flex-shrink-0 text-terracotta"><Epingle /></span>
             <span className="flex-1 min-w-0 t-titre-carte text-ink truncate">{lieu}</span>
             <button
               onClick={() => {
                 setEdition(true);
                 setTimeout(() => champ.current?.focus(), 0);
               }}
-              className="t-lien text-terracotta-deep cursor-pointer flex-shrink-0"
+              className="t-lien text-terracotta cursor-pointer flex-shrink-0"
               style={{ minHeight: 44, minWidth: 44 }}
               aria-label={`Modifier la destination : ${lieu}`}
             >
@@ -384,7 +384,7 @@ export default function EtapeLieu({
                   className="relative flex flex-col items-center justify-center gap-[6px] rounded-tuile px-2 py-3 text-center cursor-pointer bg-card transition-colors"
                   style={{ minHeight: 76, border: `2px solid ${actif ? "var(--color-terracotta-deep)" : "var(--color-border)"}` }}
                 >
-                  <span className={actif ? "text-terracotta-deep" : "text-muted-3"}><IconeTuile nom={ICONE_LIEU[t] ?? "maison"} /></span>
+                  <span className={actif ? "text-terracotta" : "text-muted-3"}><IconeTuile nom={ICONE_LIEU[t] ?? "maison"} /></span>
                   <span className={`text-[12px] leading-[1.2] ${actif ? "text-ink font-semibold" : "text-ink"}`}>{t}</span>
                   {actif && (
                     <span aria-hidden="true" className="absolute top-[6px] right-[6px] w-[16px] h-[16px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center">
@@ -408,7 +408,7 @@ function MeteoDuLieu({ meteo }: { meteo: MeteoEtapeLieu }) {
     return (
       <div className="mt-4" aria-live="polite">
         <div className="rounded-bloc border border-border bg-card px-[14px] py-[12px] flex items-center gap-[12px]">
-          <span className="text-terracotta-deep flex-shrink-0">
+          <span className="text-terracotta flex-shrink-0">
             <IconeTuile nom={/soleil|dégagé|ensoleill/i.test(meteo.label) ? "apresmidi" : "nuage"} taille={26} />
           </span>
           <span className="flex-1 min-w-0">

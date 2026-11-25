@@ -37,7 +37,8 @@ function IconeInfo() {
   );
 }
 
-const chevron = "w-[30px] h-[44px] flex items-center justify-center flex-shrink-0 cursor-pointer disabled:cursor-default disabled:opacity-30 text-terracotta";
+// La zone touchable déborde de 7 px de chaque côté (25/11/2026, audit d'accessibilité) : 44 × 44 px, le dessin ne bouge pas.
+const chevron = "relative after:absolute after:content-[''] after:-inset-x-[7px] after:inset-y-0 w-[30px] h-[44px] flex items-center justify-center flex-shrink-0 cursor-pointer disabled:cursor-default disabled:opacity-30 text-terracotta";
 
 export default function BarreDuJour({
   className = "",

@@ -128,7 +128,9 @@ export default function TabBar() {
   const rappelValise = useRappelValise();
 
   return (
-    <div
+    // Une zone de navigation pour VoiceOver et TalkBack (25/11/2026, audit d'accessibilité) : on y saute directement.
+    <nav
+      aria-label="Navigation principale"
       // z-20 (correctif 20/08/2026, bug scroll Tenue) : sans z-index explicite,
       // TabBar (z-index:auto) perdait face à tout élément à z-index positif du
       // contenu défilant (ex. pièces du flat-lay "La combinaison", jusqu'à
@@ -235,6 +237,6 @@ export default function TabBar() {
           </button>
         );
       })}
-    </div>
+    </nav>
   );
 }
