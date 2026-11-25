@@ -57,19 +57,30 @@ export const IconeAvis = () => (
 export function ActionsSousLeLook({ sauvegardee, onSauvegarder, onAvis, onAutre, autreDesactive }: { sauvegardee: boolean; onSauvegarder: () => void; onAvis: () => void; onAutre: () => void; autreDesactive?: boolean }) {
   // Calées par le haut : à 320 px, « Avis d'un proche » passe sur deux lignes ; les icônes restent alignées (mesuré le 19/11/2026).
   // Des BOUTONS (24/11/2026, demandé, comme la page Tenue) : libellé demi-gras à l'encre et chevron gras terracotta au bout du libellé.
-  const cellule = "flex flex-col items-center justify-start gap-[4px] min-h-[52px] pt-[6px] text-[12px] font-semibold leading-[1.25] text-center text-ink cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]";
-  const libelle = (texte: string) => (
-    <span>
-      {texte}
-      <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="inline-block align-[-0.5px] ml-[4px] text-terracotta">
-        <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-  );
+  const cellule = "flex-auto min-w-0 flex flex-col items-center justify-start gap-[4px] min-h-[52px] pt-[6px] text-[12px] font-semibold leading-[1.25] text-center text-ink cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]";
+  // Le chevron collé au DERNIER MOT (25/11/2026, signalé sur Android à 412 px : le chevron d'« Avis d'un proche » partait seul à la
+  // ligne) : si le libellé doit se couper, le chevron part avec son mot, jamais seul.
+  const libelle = (texte: string) => {
+    const coupe = texte.lastIndexOf(" ");
+    return (
+      <span>
+        {coupe > 0 ? texte.slice(0, coupe + 1) : ""}
+        <span className="whitespace-nowrap">
+          {coupe > 0 ? texte.slice(coupe + 1) : texte}
+          <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="inline-block align-[-0.5px] ml-[4px] text-terracotta">
+            <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </span>
+    );
+  };
   return (
     // data-actions-tenue : l'accueil masque le bouton flottant « + » tant qu'il recouvre cette ligne (21/11/2026).
-    <div className="grid grid-cols-3" aria-live="polite" data-actions-tenue="">
-      <button type="button" onClick={onSauvegarder} aria-pressed={sauvegardee} className={cellule}>
+    // Des colonnes à la largeur de leur libellé (25/11/2026) et non trois tiers égaux : « Avis d'un proche », plus long, prend la place
+    // que « Sauvegarder » et « Autre tenue » laissent libre, et tient sur une ligne dès 360 px. Les deux colonnes des bords ne rétrécissent
+    // pas : sous 360 px, seul le libellé du milieu passe sur deux lignes.
+    <div className="flex justify-between gap-[6px]" aria-live="polite" data-actions-tenue="">
+      <button type="button" onClick={onSauvegarder} aria-pressed={sauvegardee} className={cellule + " shrink-0"}>
         <span className="text-ink">
           <IconeCoeur plein={sauvegardee} />
         </span>
@@ -82,7 +93,7 @@ export function ActionsSousLeLook({ sauvegardee, onSauvegarder, onAvis, onAutre,
         {libelle(t("Avis d'un proche"))}
       </button>
       {/* data-tour : la visite guidée de l'accueil (lib/visites.ts) met en évidence celle de la première slide, affichée à l'arrivée. */}
-      <button type="button" data-tour="accueil-autre-tenue" onClick={onAutre} disabled={autreDesactive} aria-label={t("Propose-moi une autre tenue")} className={cellule}>
+      <button type="button" data-tour="accueil-autre-tenue" onClick={onAutre} disabled={autreDesactive} aria-label={t("Propose-moi une autre tenue")} className={cellule + " shrink-0"}>
         <span className="text-ink">
           <IconeAutre />
         </span>
