@@ -96,7 +96,7 @@ export default function DateNaissanceScreen({
       <Button pleine={false} className="mt-5" onClick={continuer} disabled={envoi}>
         {envoi ? t("Un instant…") : t("Continuer")}
       </Button>
-      <div className="text-[11px] text-placeholder text-center mt-4 leading-[1.5]">
+      <div className="text-[11px] text-muted text-center mt-4 leading-[1.5]">
         {t("Pourquoi ? Voir notre")}{" "}
         <button type="button" onClick={() => actions.openLegalDoc("confidentialite")} className="text-muted underline cursor-pointer">
           {t("Politique de confidentialité")}

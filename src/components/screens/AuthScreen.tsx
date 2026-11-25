@@ -124,7 +124,7 @@ export default function AuthScreen() {
         {busy ? t("Un instant…") : t("Créer mon compte")}
       </Button>
 
-      <div className="text-[11px] text-placeholder text-center mt-4 leading-[1.5]">
+      <div className="text-[11px] text-muted text-center mt-4 leading-[1.5]">
         {t("En continuant, tu acceptes nos")}{" "}
         <button type="button" onClick={() => actions.openLegalDoc("cgu")} className="text-muted underline cursor-pointer">
           {t("Conditions")}

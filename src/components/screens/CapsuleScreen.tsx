@@ -233,7 +233,7 @@ function Pastille({ possedee }: { possedee: boolean }) {
       <span aria-hidden="true">✓</span>Dans ton dressing
     </span>
   ) : (
-    <span className="inline-flex items-center gap-[4px] rounded-full px-[8px] py-[3px] text-[10px] leading-[12px] text-terracotta-deep whitespace-nowrap" style={{ background: "var(--color-chip-soft-bg)" }}>
+    <span className="inline-flex items-center gap-[4px] rounded-full px-[8px] py-[3px] text-[10px] leading-[12px] text-terracotta whitespace-nowrap" style={{ background: "var(--color-chip-soft-bg)" }}>
       <span aria-hidden="true">✦</span>Sélection Capsela
     </span>
   );
@@ -692,7 +692,8 @@ export default function CapsuleScreen() {
                 type="button"
                 onClick={() => setFeuille("saison")}
                 data-tour="capsule-saison"
-                className="italic cursor-pointer"
+                // Zone touchable portée à 44 px de haut sans changer le titre (25/11/2026, audit d'accessibilité).
+                className={"italic cursor-pointer relative after:absolute after:content-[''] after:-inset-y-[9px] after:inset-x-0"}
                 aria-label={`Saison ${capsuleSeason}, changer de saison`}
               >
                 {capsuleSeason.toLowerCase()}
@@ -733,7 +734,8 @@ export default function CapsuleScreen() {
                       <button
                         type="button"
                         onClick={() => actions.goProfileSetup(c.etape, true)}
-                        className="text-terracotta font-semibold cursor-pointer"
+                        // 18 px de haut à l'écran : la zone touchable déborde à 44 px (25/11/2026, audit d'accessibilité).
+                        className="relative text-terracotta font-semibold cursor-pointer after:absolute after:content-[''] after:-inset-y-[13px] after:inset-x-0"
                       >
                         {c.valeur}
                       </button>
@@ -805,7 +807,8 @@ export default function CapsuleScreen() {
                 if (Math.abs(dx) > 40 && Math.abs(dx) > 1.5 * Math.abs(dy)) avancerActif(dx < 0 ? 1 : -1);
               }}
             >
-              <div className="absolute inset-0" role="img" aria-label={"Composition : " + piecesTenue.map((p) => p.name).join(", ")}>
+              {/* Un groupe et non une image (25/11/2026, audit d'accessibilité) : une image masque ses enfants aux lecteurs d'écran, or chaque pièce de la planche se touche. */}
+              <div className="absolute inset-0" role="group" aria-label={"Composition : " + piecesTenue.map((p) => p.name).join(", ")}>
                 {piecesTenue.length > 0 && (
                   <FlatLayCapsela
                     items={piecesTenue}
@@ -899,7 +902,7 @@ export default function CapsuleScreen() {
                     onClick={() => changerSelection(selection, e.cle)}
                     className={
                       "flex-none w-[66px] rounded-tuile border py-[7px] flex flex-col items-center gap-[2px] cursor-pointer motion-safe:transition-colors motion-safe:duration-200 motion-safe:active:scale-[.97] " +
-                      (on ? "border-terracotta text-terracotta-deep" : "border-border bg-card text-ink")
+                      (on ? "border-terracotta text-terracotta" : "border-border bg-card text-ink")
                     }
                     style={on ? { background: "var(--color-chip-soft-bg)" } : undefined}
                   >
@@ -940,7 +943,7 @@ export default function CapsuleScreen() {
                     onClick={() => setFiltres({ ...filtresValides, categorie: t.cle })}
                     className={
                       "flex-none w-[78px] rounded-tuile border p-[5px] pb-[7px] flex flex-col items-center cursor-pointer motion-safe:transition-colors motion-safe:duration-200 " +
-                      (on ? "border-terracotta text-terracotta-deep" : "border-border bg-card text-ink")
+                      (on ? "border-terracotta text-terracotta" : "border-border bg-card text-ink")
                     }
                     style={on ? { background: "var(--color-chip-soft-bg)" } : undefined}
                   >
@@ -1087,7 +1090,7 @@ export default function CapsuleScreen() {
           <div className="mt-[16px]">
             {/* Le bandeau (maquette du 05/11/2026) : une icône et deux lignes, sans visuel de saison — la pièce mise en avant tient la place. */}
             <Card rayon="bloc" className="px-4 py-[14px] flex items-center gap-[12px]">
-              <span className="flex-none w-[38px] h-[38px] rounded-full flex items-center justify-center text-terracotta-deep" style={{ background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
+              <span className="flex-none w-[38px] h-[38px] rounded-full flex items-center justify-center text-terracotta" style={{ background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
                   <path d="M12 3.5l2.4 5.2 5.6.6-4.2 3.8 1.2 5.6L12 15.9l-5 2.8 1.2-5.6L4 9.3l5.6-.6z" />
                 </svg>
@@ -1159,7 +1162,7 @@ export default function CapsuleScreen() {
                     </div>
                     <div className="px-4 pt-[8px] pb-[16px] text-center">
                       <span
-                        className="inline-block rounded-full px-[9px] py-[3px] text-[10px] leading-[12px] text-terracotta-deep"
+                        className="inline-block rounded-full px-[9px] py-[3px] text-[10px] leading-[12px] text-terracotta"
                         style={{ background: "var(--color-chip-soft-bg)" }}
                       >
                         {cleVedette.famille === "signature" ? "Pièce signature" : "Indispensable"}

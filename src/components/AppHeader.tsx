@@ -89,7 +89,7 @@ export default function AppHeader({
     <button
       onClick={actions.goCalendrier}
       aria-label={rappelValise ? "Ouvrir mon calendrier, un départ approche" : "Ouvrir mon calendrier"}
-      className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70"
+      className="relative w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70 after:absolute after:content-[''] after:-inset-x-[4px] after:-inset-y-[5px]"
     >
       <span className="relative block">
         <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -106,7 +106,7 @@ export default function AppHeader({
     <button
       onClick={actions.goNotifications}
       aria-label={nonLues ? `Notifications, ${nonLues} non ${nonLues === 1 ? "lue" : "lues"}` : "Notifications"}
-      className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70"
+      className="relative w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70 after:absolute after:content-[''] after:-inset-x-[4px] after:-inset-y-[5px]"
     >
       <span className="relative block">
         <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -124,10 +124,14 @@ export default function AppHeader({
     (showAvatar && (
       <button
         onClick={actions.goProfile}
+        // Un nom pour les lecteurs d'écran (25/11/2026, audit d'accessibilité) : l'initiale seule était annoncée « L ».
+        aria-label="Mon profil"
         className={
           // L'initiale en Manrope demi-gras (12/11/2026, brief 2.3, point 5) : en Bodoni à 13 px, elle se lisait mal — et la règle du
           // 04/11/2026 ne veut plus de Bodoni sous 19 px.
-          "w-[34px] h-[34px] rounded-full flex items-center justify-center text-[14px] leading-none font-sans font-semibold cursor-pointer " +
+          // La zone touchable déborde du rond visible (25/11/2026, audit d'accessibilité) : 42 × 44 px sans toucher au dessin, ni
+          // empiéter sur la cloche voisine (8 px d'écart).
+          "relative w-[34px] h-[34px] rounded-full flex items-center justify-center text-[14px] leading-none font-sans font-semibold cursor-pointer after:absolute after:content-[''] after:-inset-x-[4px] after:-inset-y-[5px] " +
           (dark ? "bg-[rgba(243,238,229,.12)] text-cream" : "bg-ink text-cream")
         }
       >

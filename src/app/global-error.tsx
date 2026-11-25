@@ -26,7 +26,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           </p>
           <button
             onClick={reset}
-            style={{ marginTop: 32, background: "#A66950", color: "#F3EEE5", border: 0, borderRadius: 999, padding: "16px 40px", fontSize: 13, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer" }}
+            style={{ marginTop: 32, background: "#9E5B43", color: "#F3EEE5", border: 0, borderRadius: 999, padding: "16px 40px", fontSize: 13, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer" }}
           >
             Réessayer
           </button>

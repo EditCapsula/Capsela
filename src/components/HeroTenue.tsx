@@ -168,7 +168,7 @@ export function IndicateursTenue({ items }: { items: { cle: string; icone: React
           <span aria-hidden="true" className="text-terracotta flex-shrink-0 flex">{i.icone}</span>
           {i.texte}
           {i.coche && (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-shrink-0" style={{ color: "var(--color-terracotta-deep)" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-shrink-0" style={{ color: "var(--color-terracotta)" }}>
               <path d="M5 12.5l4.5 4.5L19 7.5" />
             </svg>
           )}

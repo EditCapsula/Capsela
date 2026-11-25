@@ -15,7 +15,7 @@ export default function ChoixTrancheAge({ valeur, onChange, className = "", sans
   return (
     <Select
       aria-label={t("Ta tranche d'âge")}
-      className={(valeur ? "" : "text-placeholder ") + className}
+      className={(valeur ? "" : "text-muted ") + className}
       value={valeur ?? ""}
       onChange={(e) => estTrancheAge(e.target.value) && onChange(e.target.value)}
     >

@@ -13,7 +13,12 @@
 
   --color-cream: #f3eee5;
   --color-ink: #1d1a16;
-  --color-terracotta: #a66950;
+  /* Accessibilité (25/11/2026, audit WCAG 2.2 AA, validé par la propriétaire sur capture avant/après) : le terracotta des TEXTES passe
+     de #a66950 à #8d5944 et le gris doux de #7b7366 à #6c655a. Les anciennes valeurs donnaient 3,5 à 4,2:1 (terracotta) et 3,7 à
+     4,4:1 (gris) sur les fonds crème, sous le seuil de 4,5:1 du texte courant ; les nouvelles atteignent 4,5:1 sur TOUS les fonds
+     clairs (crème, card, warm-bg, hero, selected, chip) et 5,2:1 pour --color-on-terracotta posé dessus. Ne pas les éclaircir sans
+     refaire ce calcul. Les couleurs de vêtements (palCouleurs.ts) gardent leur « Terracotta » #A66950 : ce n'est pas l'interface. */
+  --color-terracotta: #8d5944;
   --color-terracotta-hover: #8b5e4d;
   /*
    * Trois valeurs de la maquette « Tenue du jour V3 », ajoutées le
@@ -23,16 +28,21 @@
    * grandes surfaces — la card du look du jour et le chip d'occasion actif —
    * où l'accent manquait de contraste avec le crème posé dessus.
    */
+  /* Depuis le 25/11/2026 (audit d'accessibilité), plus jamais en couleur de TEXTE : #9e5b43 ne donne que 4,09 à 4,44:1 sur les fonds
+     hero, warm, selected et chip. Les 103 `text-terracotta-deep` sont passés à `text-terracotta` (#8d5944, 4,5:1 partout). Il reste le
+     fond plein des boutons et des cartes, où le crème posé dessus atteint 4,51 à 4,74:1. */
   --color-terracotta-deep: #9e5b43;
   --color-sand-text: #8c5540;
   --color-sand-border: #e2c9a8;
   --color-gold: #c9966f;
   --color-card: #fbf8f3;
   --color-border: #e6dccb;
-  --color-muted: #7b7366;
+  --color-muted: #6c655a;
   /* Retirés le 02/10/2026 (audit design system) : muted-2, muted-4, chip-soft-text et chip-soft-border n'avaient aucun usage ;
-     muted-2 et muted-4 doublaient muted et muted-3 à l'identique. Le terracotta de marque est #a66950 (arbitré le 02/10/2026). */
+     muted-2 et muted-4 doublaient muted et muted-3 à l'identique. Le terracotta de marque était #a66950 (arbitré le 02/10/2026), assombri en #8d5944 le 25/11/2026 (accessibilité, ci-dessus). */
   --color-muted-3: #5c5548;
+  /* Les textes d'exemple des champs, les états désactivés et les séparateurs décoratifs SEULEMENT (25/11/2026, audit d'accessibilité) :
+     2,0:1 sur le crème, jamais pour un texte à lire. Un texte « vide » (« Non renseignée », « Sélectionner les dates ») est en --color-muted. */
   --color-placeholder: #b3aa9b;
   --color-warm-bg: #f0e5d6;
   --color-warm-border: #dfd3be;
@@ -189,6 +199,16 @@
      * sans changer de police, de taille ni de graisse. Sans effet sur les chiffres (Manrope, sans axe opsz).
      */
     font-variation-settings: "opsz" 11;
+  }
+  /*
+   * LE CONTOUR DE FOCUS (25/11/2026, audit d'accessibilité) : au clavier (ou avec un clavier relié à la tablette), l'élément actif
+   * était marqué par le contour par défaut du navigateur, 1 px noir à peine visible. Un anneau terracotta de 2 px, détaché de 2 px.
+   * `:focus-visible` seulement : le toucher et la souris n'en montrent pas. Dans la couche base, pour que les règles propres à un
+   * composant (champs `capin`, visite guidée, `outline-none` d'un élément qui dessine son propre état) gardent la main.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-terracotta);
+    outline-offset: 2px;
   }
 }
 @layer utilities {
@@ -608,7 +628,7 @@ input.capin[type="date"]::-webkit-date-and-time-value {
 }
 .driver-popover.capsela-visite .driver-popover-close-btn:hover,
 .driver-popover.capsela-visite .driver-popover-close-btn:focus-visible {
-  color: var(--color-terracotta-deep);
+  color: var(--color-terracotta);
 }
 .driver-popover.capsela-visite .driver-popover-footer {
   margin-top: 16px;

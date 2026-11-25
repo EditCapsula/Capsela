@@ -58,7 +58,7 @@ export function CarteProchainDepart({ rappel, className = "" }: { rappel: Rappel
       aria-label={t("Ton prochain départ : {voyage}, {quand}{detail}. Voir ma valise", { voyage: `${rappel.valise.destination} · ${periodeCourte(rappel.valise.depart, rappel.valise.retour)}`, quand: compteAReboursCourt(rappel.jours), detail: detail ? `, ${detail.toLowerCase()}` : "" })}
       className={"w-full flex items-center gap-3 rounded-carte bg-card border border-border px-4 py-[11px] text-left cursor-pointer active:opacity-80 " + className}
     >
-      <span aria-hidden="true" className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
+      <span aria-hidden="true" className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta flex items-center justify-center">
         <IconeValise />
       </span>
       <span className="flex-1 min-w-0">

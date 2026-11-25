@@ -153,7 +153,7 @@ export default function NotificationsScreen() {
             {g.notifications.map((n) => (
               <li key={n.cle} className="border-b border-divider last:border-b-0">
                 <button type="button" onClick={() => ouvrir(n)} className="w-full flex items-start gap-3 px-4 py-[14px] text-left cursor-pointer active:bg-warm-bg" style={{ minHeight: 64 }}>
-                  <span aria-hidden="true" className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
+                  <span aria-hidden="true" className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta flex items-center justify-center">
                     {ICONES[n.categorie === "valise" ? "valise" : n.type === "alerte_meteo" ? "meteo" : n.type === "profil_a_completer" ? "profil" : n.type === "look_sauvegarde" ? "look" : n.type === "piece_remplacee_plan" ? "remplacement" : n.type === "mise_a_jour" ? "miseAJour" : "cintre"]}
                   </span>
                   <span className="flex-1 min-w-0">
@@ -186,7 +186,7 @@ export default function NotificationsScreen() {
             await chargerNotificationsPlusAnciennes();
             setSuite(false);
           }}
-          className="mt-[18px] w-full min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer disabled:opacity-60"
+          className="mt-[18px] w-full min-h-[44px] text-[13px] font-semibold text-terracotta cursor-pointer disabled:opacity-60"
         >
           {suite ? "Chargement…" : "Afficher les plus anciennes"}
         </button>

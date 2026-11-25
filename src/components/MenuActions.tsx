@@ -97,7 +97,7 @@ export default function MenuActions() {
               // L'ordre d'apparition suit l'ordre de lecture, de haut en bas, 30 ms d'écart : le menu se déplie sans traîner.
               style={{ minHeight: 56, boxShadow: "0 4px 14px rgba(29,26,22,.14)", animationDelay: `${(ACTIONS.length - 1 - i) * 30}ms` }}
             >
-              <span aria-hidden="true" className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
+              <span aria-hidden="true" className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta flex items-center justify-center">
                 {a.icone}
               </span>
               <span className="text-[14px] font-semibold text-ink whitespace-nowrap">{a.libelle}</span>

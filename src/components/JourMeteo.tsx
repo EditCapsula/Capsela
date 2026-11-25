@@ -150,7 +150,7 @@ export function JourEtMeteo({ className = "", retro }: { className?: string; ret
           </span>
         </button>
       </Card>
-      {note && <div className="text-[10px] text-placeholder mt-[6px] px-[5px] leading-[1.4]">{note}</div>}
+      {note && <div className="text-[10px] text-muted mt-[6px] px-[5px] leading-[1.4]">{note}</div>}
     </div>
   );
 }

@@ -333,7 +333,7 @@ export default function CalendrierScreen() {
       onClick={() => void actions.ouvrirValise(v.id)}
       className="mt-5 w-full flex items-start gap-3 rounded-carte bg-card border border-border p-5 text-left cursor-pointer active:opacity-80"
     >
-      <span className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
+      <span className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta flex items-center justify-center">
         <IconeValise />
       </span>
       <span className="flex-1 min-w-0">
@@ -341,7 +341,7 @@ export default function CalendrierScreen() {
         <span className="block text-[12.5px] text-muted mt-[2px]">
           {v.destination} · {periodeEnLettres(v.depart, v.retour)}
         </span>
-        <span className="block t-lien text-terracotta-deep mt-[6px]">Voir ma valise →</span>
+        <span className="block t-lien text-terracotta mt-[6px]">Voir ma valise →</span>
       </span>
     </button>
   ));
@@ -371,12 +371,12 @@ export default function CalendrierScreen() {
               </Button>
             </div>
             {peutPorter && (
-              <button onClick={() => actions.wearOutfitToday()} className="mt-1 w-full min-h-[44px] flex items-center justify-center gap-[6px] text-[13px] text-terracotta-deep cursor-pointer">
+              <button onClick={() => actions.wearOutfitToday()} className="mt-1 w-full min-h-[44px] flex items-center justify-center gap-[6px] text-[13px] text-terracotta cursor-pointer">
                 <span aria-hidden="true">♡</span> Porter cette tenue
               </button>
             )}
             {tenueSel.statut === "planifiee" && tenueSel.plan && ecart >= 1 && (
-              <button onClick={() => ouvrir(tenueSel)} className="mt-1 w-full min-h-[44px] flex items-center justify-center gap-[6px] text-[13px] text-terracotta-deep cursor-pointer">
+              <button onClick={() => ouvrir(tenueSel)} className="mt-1 w-full min-h-[44px] flex items-center justify-center gap-[6px] text-[13px] text-terracotta cursor-pointer">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" /></svg>
                 Modifier la tenue
               </button>
@@ -442,7 +442,7 @@ export default function CalendrierScreen() {
                 role="tab"
                 aria-selected={filtre === f.key}
                 onClick={() => setFiltre(f.key)}
-                className={"min-h-[44px] text-[13px] cursor-pointer " + (filtre === f.key ? "text-terracotta-deep font-semibold underline underline-offset-[6px]" : "text-muted")}
+                className={"min-h-[44px] text-[13px] cursor-pointer " + (filtre === f.key ? "text-terracotta font-semibold underline underline-offset-[6px]" : "text-muted")}
               >
                 {f.label}
               </button>
@@ -576,7 +576,7 @@ export default function CalendrierScreen() {
                     setFiltre("toutes");
                     setHistoriqueOuvert(true);
                   }}
-                  className="t-lien text-terracotta-deep min-h-[44px] mt-1 cursor-pointer"
+                  className="t-lien text-terracotta min-h-[44px] mt-1 cursor-pointer"
                 >
                   Voir toutes mes tenues →
                 </button>

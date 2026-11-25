@@ -153,7 +153,7 @@ function DiagnosticNotif({
             setEssai(r);
             setDiag(await diagnostiquerNotifications());
           }}
-          className="min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer disabled:opacity-60"
+          className="min-h-[44px] text-[13px] font-semibold text-terracotta cursor-pointer disabled:opacity-60"
         >
           {essai === "envoi" ? "Envoi…" : "M'envoyer une notification d'essai"}
         </button>
@@ -203,7 +203,7 @@ function AideBatterie({ actif }: { actif: boolean }) {
         <button
           type="button"
           onClick={async () => setEchec(!(await ouvrirReglagesBatterie()))}
-          className="min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer"
+          className="min-h-[44px] text-[13px] font-semibold text-terracotta cursor-pointer"
         >
           Ouvrir les réglages de batterie
         </button>
@@ -595,7 +595,7 @@ export default function PreferencesScreen() {
           <Rangee onClick={() => setVilleOuverte(true)} className="justify-between">
             <span className="text-[13px] text-ink">Ville</span>
             <span className="flex items-center gap-[10px] min-w-0">
-              <span className={"text-[13px] truncate " + (profile.city ? "text-muted-3" : "text-placeholder")}>{profile.city || "Non renseignée"}</span>
+              <span className={"text-[13px] truncate " + (profile.city ? "text-muted-3" : "text-muted")}>{profile.city || "Non renseignée"}</span>
               <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">
                 ›
               </span>

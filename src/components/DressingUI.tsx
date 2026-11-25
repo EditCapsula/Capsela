@@ -63,7 +63,7 @@ export function CarteSynthese({ nombre, libelle, action, onAction }: { nombre: R
         </span>
         <span className="text-[13px] text-muted-3">{libelle}</span>
       </div>
-      <button type="button" onClick={onAction} className="min-h-[44px] px-[10px] text-[13px] font-semibold text-terracotta-deep whitespace-nowrap cursor-pointer active:opacity-70">
+      <button type="button" onClick={onAction} className="min-h-[44px] px-[10px] text-[13px] font-semibold text-terracotta whitespace-nowrap cursor-pointer active:opacity-70">
         + {action}
       </button>
     </Card>

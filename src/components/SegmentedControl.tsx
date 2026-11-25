@@ -88,7 +88,7 @@ export default function SegmentedControl<K extends string>({
                   ? "bg-terracotta-deep text-cream"
                   : "bg-card text-ink border border-border"
                 : on
-                  ? "bg-card text-terracotta-deep"
+                  ? "bg-card text-terracotta"
                   : "text-muted-3 active:bg-[rgba(251,248,243,.5)]")
             }
             /* 44 px et non les 36 de la maquette : c'est le plancher de cible

@@ -158,7 +158,7 @@ function VisuelTenue() {
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-[7px]">
-          <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta" style={{ display: "block" }}>
             <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span className="t-surtitre text-ink whitespace-nowrap">{t("Pour le quotidien")}</span>

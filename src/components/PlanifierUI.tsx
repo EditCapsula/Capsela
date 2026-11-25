@@ -75,7 +75,7 @@ export function TuileOccasion({
           </span>
         )}
       </span>
-      <span className={"block text-[12px] mt-[6px] leading-[1.25] " + (actif ? "text-terracotta-deep font-semibold" : "text-ink")}>{label}</span>
+      <span className={"block text-[12px] mt-[6px] leading-[1.25] " + (actif ? "text-terracotta font-semibold" : "text-ink")}>{label}</span>
       {desc && <span className="block text-[11px] text-muted leading-[1.3] mt-[1px]">{desc}</span>}
     </button>
   );
@@ -125,9 +125,9 @@ export function LigneIcone({
       }
       style={{ minHeight: 52 }}
     >
-      <span className={actif ? "text-terracotta-deep" : "text-muted-3"}><IconeTuile nom={icone} /></span>
+      <span className={actif ? "text-terracotta" : "text-muted-3"}><IconeTuile nom={icone} /></span>
       <span className="flex-1 text-[13px] font-medium text-ink">{label}</span>
-      {actif && <span aria-hidden="true" className="text-terracotta-deep">{COCHE}</span>}
+      {actif && <span aria-hidden="true" className="text-terracotta">{COCHE}</span>}
     </button>
   );
 }

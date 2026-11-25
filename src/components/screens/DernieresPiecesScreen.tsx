@@ -76,7 +76,7 @@ export default function DernieresPiecesScreen() {
           {[libelleDuGroupe(p), libelleDateRecente(p.createdAt as number, maintenant)].filter(Boolean).join(" · ")}
         </div>
         {/* La ligne garde sa hauteur même vide : les cartes d'une rangée restent alignées pendant que les idées se calculent. */}
-        <div className="text-[12px] font-semibold mt-[2px] px-[2px]" style={{ color: "var(--color-terracotta-deep)", minHeight: 18 }}>{ligne}</div>
+        <div className="text-[12px] font-semibold mt-[2px] px-[2px]" style={{ color: "var(--color-terracotta)", minHeight: 18 }}>{ligne}</div>
       </button>
     );
   };
@@ -127,7 +127,7 @@ export default function DernieresPiecesScreen() {
           <div className="mt-8 text-[13px] leading-[1.55]" style={{ color: "var(--color-muted-3)" }}>
             Aucune pièce ajoutée ces 30 derniers jours.
             <div>
-              <button onClick={() => actions.goWardrobePieces()} className="t-lien text-terracotta-deep cursor-pointer mt-2" style={{ minHeight: 44 }}>
+              <button onClick={() => actions.goWardrobePieces()} className="t-lien text-terracotta cursor-pointer mt-2" style={{ minHeight: 44 }}>
                 Voir tout mon dressing →
               </button>
             </div>
@@ -161,7 +161,7 @@ export default function DernieresPiecesScreen() {
             </div>
             <button
               onClick={() => actions.openItemOutfits(exemples[0].piece.id, false, idees?.get(exemples[0].piece.id))}
-              className="mt-3 t-lien text-terracotta-deep cursor-pointer"
+              className="mt-3 t-lien text-terracotta cursor-pointer"
               style={{ minHeight: 44 }}
             >
               Voir tous ces looks →

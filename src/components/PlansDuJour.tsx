@@ -123,7 +123,7 @@ export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<Re
       <div className="text-[12.5px] leading-[1.45] text-ink-soft mt-[3px]" style={{ textWrap: "pretty" }}>
         {alerte.message}
       </div>
-      <button type="button" onClick={adapter} className="mt-[6px] min-h-[44px] text-[13px] font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer">
+      <button type="button" onClick={adapter} className="mt-[6px] min-h-[44px] text-[13px] font-semibold text-terracotta underline underline-offset-[3px] cursor-pointer">
         {alerte.cta} →
       </button>
     </div>

@@ -194,7 +194,7 @@ export function EnTeteTenue({ surtitre, titre, sousTitre, pourquoi, portee }: { 
   return (
     <>
       <div className="flex items-center gap-[7px]">
-        <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta" style={{ display: "block" }}>
           <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         <span className="t-surtitre text-ink">{allure}</span>
@@ -390,7 +390,9 @@ export function CarrouselHero({
     <div className={className} role="region" aria-roledescription={t("carrousel")} aria-label={t(label)}>
       {enveloppe ? enveloppe(pisteEtFleches) : pisteEtFleches}
       {n > 1 && (
-        <div className="flex items-center justify-center gap-[6px] mt-[10px]">
+        // Des points de 28 × 44 px jointifs (25/11/2026, audit d'accessibilité) au lieu de 22 × 22 espacés de 6 : même dessin, même
+        // pas entre les points ; les marges négatives rendent la hauteur gagnée pour que rien ne bouge autour.
+        <div className="flex items-center justify-center -mt-[1px] -mb-[11px]">
           {slides.map((_, i) => (
             <button
               key={i}
@@ -398,7 +400,7 @@ export function CarrouselHero({
               onClick={() => aller(i)}
               aria-label={t("Voir {libelle}", { libelle: libelles[i].toLowerCase() })}
               aria-current={i === indexActif}
-              className="flex items-center justify-center w-[22px] h-[22px] cursor-pointer"
+              className="flex items-center justify-center w-[28px] h-[44px] cursor-pointer"
             >
               <span className="block rounded-full motion-safe:transition-all" style={{ width: i === indexActif ? 18 : 6, height: 6, background: i === indexActif ? "var(--color-terracotta-deep)" : "rgba(29,26,22,.22)" }} />
             </button>

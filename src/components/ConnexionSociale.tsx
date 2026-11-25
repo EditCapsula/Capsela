@@ -75,7 +75,7 @@ export default function ConnexionSociale({ onApple, onGoogle, occupe }: { onAppl
       <div className="flex flex-col gap-[10px] mt-7">{boutons}</div>
       <div className="flex items-center gap-[11px] my-[22px]">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-[10.5px] tracking-[.14em] uppercase text-placeholder">{t("ou par e-mail")}</span>
+        <span className="text-[10.5px] tracking-[.14em] uppercase text-muted">{t("ou par e-mail")}</span>
         <div className="flex-1 h-px bg-border" />
       </div>
     </>

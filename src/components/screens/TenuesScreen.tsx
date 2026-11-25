@@ -1595,7 +1595,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
               <button
                 type="button"
                 onClick={() => (exterieurSuggere ? setManteauChoisi(autresExterieurs[0].id) : actions.remplacerDansTenue(exterieur.id, autresExterieurs[0].id))}
-                className="w-full rounded-full text-[12px] text-terracotta-deep cursor-pointer mt-1"
+                className="w-full rounded-full text-[12px] text-terracotta cursor-pointer mt-1"
                 style={{ minHeight: 44 }}
               >
                 {t("Voir une autre proposition")}
@@ -1764,7 +1764,7 @@ export default function TenuesScreen({ disposition, traitement = "flatlay" }: { 
           </div>
           <button
             onClick={actions.dismissTravelTip}
-            className="flex-shrink-0 text-[14px] text-placeholder cursor-pointer px-[2px]"
+            className="flex-shrink-0 text-[14px] text-muted cursor-pointer px-[2px]"
           >
             ×
           </button>

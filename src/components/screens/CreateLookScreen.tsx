@@ -528,7 +528,7 @@ export default function CreateLookScreen() {
                     <button
                       onClick={() => actions.dismissLookDraftSuggestion(p.key)}
                       aria-label="Ignorer ce conseil"
-                      className="absolute top-[10px] right-[10px] w-5 h-5 rounded-full flex items-center justify-center text-[12px] text-placeholder cursor-pointer"
+                      className="absolute top-[10px] right-[10px] w-5 h-5 rounded-full flex items-center justify-center text-[12px] text-muted cursor-pointer"
                     >
                       ✕
                     </button>
@@ -548,7 +548,7 @@ export default function CreateLookScreen() {
             {groups.map((g) => (
               <div key={g.key} ref={(el) => { groupRefs.current[g.key] = el; }} className="mt-8" style={{ scrollMarginTop: 12 }}>
                 <div className="t-groupe text-ink">
-                  {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
+                  {g.label} <span className="text-muted font-normal">({g.items.length})</span>
                 </div>
                 <div className="scrollarea flex items-start gap-[12px] overflow-x-auto mt-3 -mx-6 px-6 pb-[2px]" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
                   {g.items.map((it) => {

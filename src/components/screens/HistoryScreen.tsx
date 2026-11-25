@@ -466,7 +466,7 @@ function CompositionDressing({ parts, total, onVoirPieces }: { parts: PartDressi
               <button
                 type="button"
                 onClick={() => onVoirPieces(active)}
-                className="min-h-[44px] flex items-center gap-[6px] text-[12.5px] font-semibold text-terracotta-deep cursor-pointer flex-shrink-0"
+                className="min-h-[44px] flex items-center gap-[6px] text-[12.5px] font-semibold text-terracotta cursor-pointer flex-shrink-0"
               >
                 Voir les pièces
                 <span aria-hidden="true" className="text-[16px] leading-none">›</span>

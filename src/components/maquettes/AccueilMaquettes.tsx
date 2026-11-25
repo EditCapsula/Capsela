@@ -171,7 +171,7 @@ function Titre({ tenue, taille = "t-titre-section" }: { tenue: Tenue; taille?: s
 function Surtitre({ texte }: { texte: string }) {
   return (
     <div className="flex items-center gap-[7px]">
-      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta" style={{ display: "block" }}>
         <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <span className="t-surtitre text-ink whitespace-nowrap">{t(texte)}</span>
@@ -236,7 +236,7 @@ function AccesCompacts({ forme }: { forme: "rangee" | "grille" }) {
       <div className="grid grid-cols-4 gap-2">
         {ACCES.map((x) => (
           <button key={x.cle} type="button" onClick={ouvrir[x.cle]} aria-label={t(x.label)} className="flex flex-col items-center gap-[6px] rounded-carte bg-card border border-border py-3 cursor-pointer active:opacity-80">
-            <span className="w-9 h-9 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">{glypheUnivers(x.d)}</span>
+            <span className="w-9 h-9 rounded-full bg-warm-bg text-terracotta flex items-center justify-center">{glypheUnivers(x.d)}</span>
             <span className="text-[11.5px] leading-[1.2] text-ink text-center font-semibold">
               {t(x.a)}
               <br />
@@ -250,7 +250,7 @@ function AccesCompacts({ forme }: { forme: "rangee" | "grille" }) {
     <div className="grid grid-cols-2 gap-[10px]">
       {ACCES.map((x) => (
         <button key={x.cle} type="button" onClick={ouvrir[x.cle]} aria-label={t(x.label)} className="flex items-center gap-[10px] rounded-carte bg-card border border-border px-3 min-h-[60px] text-left cursor-pointer active:opacity-80">
-          <span className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">{glypheUnivers(x.d)}</span>
+          <span className="w-9 h-9 flex-shrink-0 rounded-full bg-warm-bg text-terracotta flex items-center justify-center">{glypheUnivers(x.d)}</span>
           <span className="t-titre-ligne text-ink leading-[1.2]">
             {t(x.a)} {t(x.b)}
           </span>
@@ -399,10 +399,10 @@ function OptionC({ tenue, voyage }: { tenue: Tenue; voyage: EtatVoyage }) {
               type="button"
               onClick={b.onClick}
               disabled={b.desactive}
-              className={`flex flex-col items-center justify-center gap-[5px] min-h-[60px] px-1 text-[11px] leading-[1.2] text-center cursor-pointer disabled:opacity-50 ${b.principal ? "text-terracotta-deep font-semibold" : "text-ink-soft"}`}
+              className={`flex flex-col items-center justify-center gap-[5px] min-h-[60px] px-1 text-[11px] leading-[1.2] text-center cursor-pointer disabled:opacity-50 ${b.principal ? "text-terracotta font-semibold" : "text-ink-soft"}`}
               style={i ? { borderLeft: "1px solid var(--color-border)" } : undefined}
             >
-              <span className={b.principal ? "text-terracotta-deep" : "text-ink"}>{b.icone}</span>
+              <span className={b.principal ? "text-terracotta" : "text-ink"}>{b.icone}</span>
               {b.libelle}
             </button>
           ))}

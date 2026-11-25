@@ -150,7 +150,7 @@ export default function FicheSuggestion({
         etat === "aimee" ? (
           // L'ÉTAT APRÈS UN VOTE (13/11/2026, planche) : la fiche le dit elle-même, et propose la suite — jamais de navigation imposée.
           <>
-            <div className="flex items-center justify-center gap-[8px] rounded-full bg-chip-soft-bg text-terracotta-deep text-[13px] font-semibold min-h-[40px]" role="status">
+            <div className="flex items-center justify-center gap-[8px] rounded-full bg-chip-soft-bg text-terracotta text-[13px] font-semibold min-h-[40px]" role="status">
               <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" fill="currentColor" /></svg>
               Ajoutée à ta sélection !
             </div>
