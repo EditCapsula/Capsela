@@ -252,11 +252,14 @@ export const notifAlerteMeteo = (planId: string, jour: string, cause: string, ti
 });
 
 /**
- * UNE MISE À JOUR DISPONIBLE DANS LE STORE (17/11/2026, miseAJour.ts) : une notification par version publiée — la même version n'est
+ * UNE MISE À JOUR DISPONIBLE DANS LE STORE (17/11/2026, miseAJour.ts) : une notification par build publié — le même build n'est
  * notée qu'une fois. Elle ouvre la fiche du store (`store:<adresse>`).
  */
-export const notifMiseAJour = (plateforme: "android" | "ios", version: string, url: string): NouvelleNotification => ({
-  cle: `mise_a_jour:${plateforme}:${version}`,
+// La clé suit le NUMÉRO DE BUILD, pas le nom de version (26/11/2026, signalé : aucune notification pour le build 103 alors que le store
+// proposait la mise à jour). Tous les builds de la 2.7 partageaient la clé « mise_a_jour:android:2.7 » : notée une fois (build 73), elle
+// bloquait toutes les suivantes, puisqu'un événement déjà noté ne l'est jamais deux fois (notificationsStore, contrainte dedup_key).
+export const notifMiseAJour = (plateforme: "android" | "ios", version: string, url: string, numero: number): NouvelleNotification => ({
+  cle: `mise_a_jour:${plateforme}:${numero}`,
   type: "mise_a_jour",
   categorie: "conseils",
   titre: "Mise à jour disponible",

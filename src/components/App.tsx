@@ -151,7 +151,7 @@ function Screens() {
     void lireVersionPubliee(plateforme).then((publiee) => {
       if (fini || !publiee || !miseAJourDisponible(numeroInstalle(), publiee)) return;
       const url = urlStore(plateforme, publiee.url);
-      if (url) noterNotifications([notifMiseAJour(plateforme, publiee.version, url)]);
+      if (url) noterNotifications([notifMiseAJour(plateforme, publiee.version, url, publiee.numero)]);
     });
     return () => {
       fini = true;

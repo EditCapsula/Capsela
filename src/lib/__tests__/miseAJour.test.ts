@@ -18,9 +18,11 @@ describe("la mise à jour de l'app (17/11/2026)", () => {
     expect(urlStore("ios", null)).toBeNull();
     expect(urlStore("ios", "https://apps.apple.com/app/id123")).toBe("https://apps.apple.com/app/id123");
   });
-  it("une notification par version, qui ouvre le store", () => {
-    const n = notifMiseAJour("android", "2.7", URL_GOOGLE_PLAY);
-    expect(n.cle).toBe("mise_a_jour:android:2.7");
+  it("une notification par BUILD publié, qui ouvre le store (26/11/2026)", () => {
+    const n = notifMiseAJour("android", "2.7", URL_GOOGLE_PLAY, 103);
+    expect(n.cle).toBe("mise_a_jour:android:103");
+    // Deux builds de la même version ne partagent plus leur clé : le second est annoncé lui aussi.
+    expect(notifMiseAJour("android", "2.7", URL_GOOGLE_PLAY, 104).cle).not.toBe(n.cle);
     expect(n.cible).toBe(`store:${URL_GOOGLE_PLAY}`);
     expect(n.message).toContain("Google Play");
   });
